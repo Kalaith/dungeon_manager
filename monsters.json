@@ -1,0 +1,640 @@
+[
+  {
+    "id": "imp",
+    "name": "Imp",
+    "description": "A small, mischievous worker imp, skilled at digging and crafting.",
+    "faction": "dungeon",
+    "role": "worker",
+    "stats": {
+      "health": 80,
+      "mana": 20,
+      "attack": 4,
+      "defense": 2,
+      "speed": 1.2,
+      "carry_capacity": 30,
+      "sight_radius": 5
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 1.0,
+        "satisfied_by": ["lair"]
+      },
+      "food": {
+        "decay_per_minute": 1.2,
+        "satisfied_by": ["hatchery"]
+      },
+      "gold": {
+        "decay_per_minute": 0.3,
+        "satisfied_by": ["treasury"],
+        "stash_amount": 30
+      }
+    },
+    "traits": ["loyal", "hard_worker"],
+    "ai": {
+      "base_mood": 70,
+      "anger_threshold": 30,
+      "desertion_threshold": 20,
+      "task_preferences": {
+        "dig": 1.5,
+        "work": 1.3,
+        "wander": 0.8
+      },
+      "room_desires": {
+        "workshop": 1.2,
+        "hatchery": 1.1
+      },
+      "discipline_response": {
+        "slap": -3,
+        "torture": -15,
+        "reward": 8
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [3, 6],
+      "attack_speed": 1.5,
+      "armor_type": "none",
+      "resistances": {},
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [0, 80, 200, 400, 700],
+      "stat_growth_per_level": {
+        "health": 8,
+        "attack": 1,
+        "defense": 1
+      },
+      "max_level": 5,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 1,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [5, 10]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 0,
+      "preferred_rooms": ["workshop"],
+      "spawn_weight": 2.0,
+      "max_population": 50
+    },
+    "visual": {
+      "sprite": "creatures/imp.png",
+      "scale": 0.8,
+      "animations": ["idle", "walk", "work", "fly"],
+      "voice_set": "imp"
+    }
+  },
+  {
+    "id": "goblin",
+    "name": "Goblin",
+    "description": "A weak but eager creature, easily satisfied and easily frightened.",
+    "faction": "dungeon",
+    "role": "fighter",
+    "stats": {
+      "health": 120,
+      "mana": 0,
+      "attack": 8,
+      "defense": 3,
+      "speed": 1.0,
+      "carry_capacity": 25,
+      "sight_radius": 6
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 1.0,
+        "satisfied_by": ["lair"]
+      },
+      "food": {
+        "decay_per_minute": 1.5,
+        "satisfied_by": ["hatchery"]
+      },
+      "gold": {
+        "decay_per_minute": 0.5,
+        "satisfied_by": ["treasury"],
+        "stash_amount": 50
+      },
+      "training": {
+        "decay_per_minute": 0.8,
+        "satisfied_by": ["training_hall"]
+      }
+    },
+    "traits": ["cowardly", "greedy"],
+    "ai": {
+      "base_mood": 60,
+      "anger_threshold": 25,
+      "desertion_threshold": 15,
+      "task_preferences": {
+        "guard": 1.2,
+        "train": 0.8,
+        "wander": 0.5
+      },
+      "room_desires": {
+        "training_hall": 1.1,
+        "treasury": 1.0
+      },
+      "discipline_response": {
+        "slap": -5,
+        "torture": -25,
+        "reward": 10
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [6, 10],
+      "attack_speed": 1.2,
+      "armor_type": "light",
+      "resistances": {},
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [0, 100, 250, 500, 900],
+      "stat_growth_per_level": {
+        "health": 12,
+        "attack": 2,
+        "defense": 1
+      },
+      "max_level": 10,
+      "mutations": [
+        {
+          "id": "hobgoblin",
+          "conditions": {
+            "level_at_least": 5,
+            "training_hall_tiles": 20
+          }
+        }
+      ]
+    },
+    "economy": {
+      "wage_per_minute": 2,
+      "steals_if_unpaid": true,
+      "drops_gold_on_death": [10, 25]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 10,
+      "preferred_rooms": ["training_hall"],
+      "spawn_weight": 1.5,
+      "max_population": 20
+    },
+    "visual": {
+      "sprite": "creatures/goblin.png",
+      "scale": 1.0,
+      "animations": ["idle", "walk", "attack", "sleep"],
+      "voice_set": "goblin"
+    }
+  },
+  {
+    "id": "orc",
+    "name": "Orc",
+    "description": "A brutish fighter, strong and aggressive but hard to please.",
+    "faction": "dungeon",
+    "role": "fighter",
+    "stats": {
+      "health": 200,
+      "mana": 0,
+      "attack": 15,
+      "defense": 8,
+      "speed": 0.9,
+      "carry_capacity": 40,
+      "sight_radius": 7
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 1.2,
+        "satisfied_by": ["lair"]
+      },
+      "food": {
+        "decay_per_minute": 2.0,
+        "satisfied_by": ["hatchery"]
+      },
+      "gold": {
+        "decay_per_minute": 0.7,
+        "satisfied_by": ["treasury"],
+        "stash_amount": 100
+      },
+      "training": {
+        "decay_per_minute": 1.0,
+        "satisfied_by": ["training_hall"]
+      }
+    },
+    "traits": ["aggressive", "greedy", "loyal"],
+    "ai": {
+      "base_mood": 50,
+      "anger_threshold": 20,
+      "desertion_threshold": 10,
+      "task_preferences": {
+        "guard": 1.5,
+        "train": 1.3,
+        "fight": 1.4
+      },
+      "room_desires": {
+        "training_hall": 1.2,
+        "prison": 1.1
+      },
+      "discipline_response": {
+        "slap": -8,
+        "torture": -30,
+        "reward": 15
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [12, 18],
+      "attack_speed": 0.8,
+      "armor_type": "medium",
+      "resistances": {},
+      "abilities": ["charge"]
+    },
+    "progression": {
+      "xp_to_level": [0, 150, 350, 700, 1200],
+      "stat_growth_per_level": {
+        "health": 20,
+        "attack": 3,
+        "defense": 2
+      },
+      "max_level": 10,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 4,
+      "steals_if_unpaid": true,
+      "drops_gold_on_death": [20, 50]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 50,
+      "preferred_rooms": ["training_hall", "guard_post"],
+      "spawn_weight": 0.8,
+      "max_population": 10
+    },
+    "visual": {
+      "sprite": "creatures/orc.png",
+      "scale": 1.2,
+      "animations": ["idle", "walk", "attack", "sleep"],
+      "voice_set": "orc"
+    }
+  },
+  {
+    "id": "warlock",
+    "name": "Warlock",
+    "description": "A magical creature skilled in spells and research.",
+    "faction": "dungeon",
+    "role": "mage",
+    "stats": {
+      "health": 100,
+      "mana": 100,
+      "attack": 5,
+      "defense": 2,
+      "speed": 0.8,
+      "carry_capacity": 20,
+      "sight_radius": 8
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 0.8,
+        "satisfied_by": ["lair"]
+      },
+      "food": {
+        "decay_per_minute": 1.0,
+        "satisfied_by": ["hatchery"]
+      },
+      "gold": {
+        "decay_per_minute": 0.4,
+        "satisfied_by": ["treasury"],
+        "stash_amount": 75
+      },
+      "training": {
+        "decay_per_minute": 0.6,
+        "satisfied_by": ["library", "ritual_circle"]
+      }
+    },
+    "traits": ["intelligent", "greedy"],
+    "ai": {
+      "base_mood": 65,
+      "anger_threshold": 30,
+      "desertion_threshold": 20,
+      "task_preferences": {
+        "research": 1.5,
+        "ritual": 1.4,
+        "wander": 0.6
+      },
+      "room_desires": {
+        "library": 1.3,
+        "ritual_circle": 1.2
+      },
+      "discipline_response": {
+        "slap": -4,
+        "torture": -20,
+        "reward": 12
+      }
+    },
+    "combat": {
+      "attack_type": "magic",
+      "damage_range": [8, 12],
+      "attack_speed": 1.0,
+      "armor_type": "none",
+      "resistances": {
+        "magic": 0.5
+      },
+      "abilities": ["fireball", "lightning"]
+    },
+    "progression": {
+      "xp_to_level": [0, 120, 300, 600, 1000],
+      "stat_growth_per_level": {
+        "health": 10,
+        "attack": 2,
+        "mana": 20
+      },
+      "max_level": 10,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 3,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [15, 35]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 75,
+      "preferred_rooms": ["library"],
+      "spawn_weight": 0.5,
+      "max_population": 5
+    },
+    "visual": {
+      "sprite": "creatures/warlock.png",
+      "scale": 1.0,
+      "animations": ["idle", "walk", "cast", "sleep"],
+      "voice_set": "warlock"
+    }
+  },
+  {
+    "id": "troll",
+    "name": "Troll",
+    "description": "A large, slow creature excellent at crafting and heavy labor.",
+    "faction": "dungeon",
+    "role": "worker",
+    "stats": {
+      "health": 300,
+      "mana": 0,
+      "attack": 12,
+      "defense": 10,
+      "speed": 0.6,
+      "carry_capacity": 60,
+      "sight_radius": 5
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 1.5,
+        "satisfied_by": ["lair"]
+      },
+      "food": {
+        "decay_per_minute": 2.5,
+        "satisfied_by": ["hatchery"]
+      },
+      "gold": {
+        "decay_per_minute": 0.8,
+        "satisfied_by": ["treasury"],
+        "stash_amount": 80
+      }
+    },
+    "traits": ["strong", "slow", "loyal"],
+    "ai": {
+      "base_mood": 55,
+      "anger_threshold": 25,
+      "desertion_threshold": 15,
+      "task_preferences": {
+        "work": 1.6,
+        "guard": 1.2,
+        "wander": 0.3
+      },
+      "room_desires": {
+        "workshop": 1.4,
+        "guard_post": 1.1
+      },
+      "discipline_response": {
+        "slap": -6,
+        "torture": -28,
+        "reward": 14
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [10, 15],
+      "attack_speed": 0.7,
+      "armor_type": "heavy",
+      "resistances": {},
+      "abilities": ["smash"]
+    },
+    "progression": {
+      "xp_to_level": [0, 200, 500, 1000, 1800],
+      "stat_growth_per_level": {
+        "health": 30,
+        "attack": 3,
+        "defense": 2
+      },
+      "max_level": 8,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 5,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [25, 60]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 100,
+      "preferred_rooms": ["workshop"],
+      "spawn_weight": 0.3,
+      "max_population": 3
+    },
+    "visual": {
+      "sprite": "creatures/troll.png",
+      "scale": 1.5,
+      "animations": ["idle", "walk", "work", "attack"],
+      "voice_set": "troll"
+    }
+  },
+  {
+    "id": "skeleton",
+    "name": "Skeleton",
+    "description": "An undead warrior, tireless but fragile and mindless.",
+    "faction": "dungeon",
+    "role": "fighter",
+    "stats": {
+      "health": 90,
+      "mana": 0,
+      "attack": 7,
+      "defense": 4,
+      "speed": 1.1,
+      "carry_capacity": 15,
+      "sight_radius": 6
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 0,
+        "satisfied_by": []
+      },
+      "food": {
+        "decay_per_minute": 0,
+        "satisfied_by": []
+      },
+      "gold": {
+        "decay_per_minute": 0.2,
+        "satisfied_by": ["treasury"],
+        "stash_amount": 20
+      }
+    },
+    "traits": ["undead", "mindless", "fearless"],
+    "ai": {
+      "base_mood": 100,
+      "anger_threshold": 0,
+      "desertion_threshold": 0,
+      "task_preferences": {
+        "guard": 2.0,
+        "fight": 1.8,
+        "wander": 0.1
+      },
+      "room_desires": {},
+      "discipline_response": {
+        "slap": 0,
+        "torture": 0,
+        "reward": 0
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [5, 9],
+      "attack_speed": 1.3,
+      "armor_type": "light",
+      "resistances": {
+        "poison": 1.0,
+        "necrotic": 0.5
+      },
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [0, 80, 200, 400, 700],
+      "stat_growth_per_level": {
+        "health": 9,
+        "attack": 1,
+        "defense": 1
+      },
+      "max_level": 8,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 1,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [5, 15]
+    },
+    "spawn": {
+      "source": "ritual",
+      "min_dungeon_reputation": 150,
+      "preferred_rooms": ["ritual_circle"],
+      "spawn_weight": 0.7,
+      "max_population": 15
+    },
+    "visual": {
+      "sprite": "creatures/skeleton.png",
+      "scale": 1.0,
+      "animations": ["idle", "walk", "attack"],
+      "voice_set": "skeleton"
+    }
+  },
+  {
+    "id": "demon_spawn",
+    "name": "Demon Spawn",
+    "description": "A powerful demonic entity with high combat prowess but demanding needs.",
+    "faction": "dungeon",
+    "role": "elite_fighter",
+    "stats": {
+      "health": 400,
+      "mana": 50,
+      "attack": 25,
+      "defense": 15,
+      "speed": 1.0,
+      "carry_capacity": 50,
+      "sight_radius": 9
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 0.5,
+        "satisfied_by": ["lair"]
+      },
+      "food": {
+        "decay_per_minute": 3.0,
+        "satisfied_by": ["hatchery"]
+      },
+      "gold": {
+        "decay_per_minute": 1.0,
+        "satisfied_by": ["treasury"],
+        "stash_amount": 200
+      },
+      "training": {
+        "decay_per_minute": 1.2,
+        "satisfied_by": ["training_hall", "ritual_circle"]
+      }
+    },
+    "traits": ["demonic", "aggressive", "greedy"],
+    "ai": {
+      "base_mood": 40,
+      "anger_threshold": 15,
+      "desertion_threshold": 5,
+      "task_preferences": {
+        "fight": 2.0,
+        "guard": 1.5,
+        "train": 1.0
+      },
+      "room_desires": {
+        "ritual_circle": 1.3,
+        "training_hall": 1.2
+      },
+      "discipline_response": {
+        "slap": -10,
+        "torture": -40,
+        "reward": 20
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [20, 30],
+      "attack_speed": 0.9,
+      "armor_type": "heavy",
+      "resistances": {
+        "fire": 0.8,
+        "magic": 0.3
+      },
+      "abilities": ["fire_breath", "berserk"]
+    },
+    "progression": {
+      "xp_to_level": [0, 300, 750, 1500, 2500],
+      "stat_growth_per_level": {
+        "health": 40,
+        "attack": 5,
+        "defense": 3
+      },
+      "max_level": 10,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 8,
+      "steals_if_unpaid": true,
+      "drops_gold_on_death": [50, 150]
+    },
+    "spawn": {
+      "source": "ritual",
+      "min_dungeon_reputation": 200,
+      "preferred_rooms": ["ritual_circle"],
+      "spawn_weight": 0.2,
+      "max_population": 2
+    },
+    "visual": {
+      "sprite": "creatures/demon_spawn.png",
+      "scale": 1.3,
+      "animations": ["idle", "walk", "attack", "rage"],
+      "voice_set": "demon"
+    }
+  }
+]

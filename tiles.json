@@ -1,0 +1,206 @@
+[
+  {
+    "id": "solid_rock",
+    "name": "Solid Rock",
+    "category": "rock",
+    "diggable": false,
+    "claimable": false,
+    "blocks_movement": true,
+    "blocks_vision": true,
+    "supports_rooms": false,
+    "resources": null,
+    "durability": 9999,
+    "visual": {
+      "sprite": "tiles/solid_rock.png",
+      "fogged_sprite": "tiles/solid_rock_fog.png"
+    }
+  },
+
+  {
+    "id": "earth",
+    "name": "Earth",
+    "category": "rock",
+    "diggable": true,
+    "claimable": false,
+    "blocks_movement": true,
+    "blocks_vision": true,
+    "supports_rooms": false,
+    "resources": null,
+    "durability": 100,
+    "visual": {
+      "sprite": "tiles/earth.png"
+    }
+  },
+
+  {
+    "id": "claimed_floor",
+    "name": "Claimed Floor",
+    "category": "floor",
+    "diggable": false,
+    "claimable": true,
+    "blocks_movement": false,
+    "blocks_vision": false,
+    "supports_rooms": true,
+    "resources": null,
+    "durability": 50,
+    "visual": {
+      "sprite": "tiles/claimed_floor.png"
+    }
+  },
+
+  {
+    "id": "reinforced_wall",
+    "name": "Reinforced Wall",
+    "category": "wall",
+    "diggable": false,
+    "claimable": false,
+    "blocks_movement": true,
+    "blocks_vision": true,
+    "supports_rooms": false,
+    "resources": null,
+    "durability": 2000,
+    "visual": {
+      "sprite": "tiles/reinforced_wall.png"
+    }
+  },
+
+  {
+    "id": "gold_vein",
+    "name": "Gold Vein",
+    "category": "resource",
+    "diggable": true,
+    "claimable": false,
+    "blocks_movement": true,
+    "blocks_vision": true,
+    "supports_rooms": false,
+    "resources": {
+      "type": "gold",
+      "amount": 750
+    },
+    "durability": 150,
+    "visual": {
+      "sprite": "tiles/gold_vein.png"
+    }
+  },
+
+  {
+    "id": "gem_seam",
+    "name": "Gem Seam",
+    "category": "resource",
+    "diggable": true,
+    "claimable": false,
+    "blocks_movement": true,
+    "blocks_vision": true,
+    "supports_rooms": false,
+    "resources": {
+      "type": "gold",
+      "amount": -1
+    },
+    "durability": 999,
+    "visual": {
+      "sprite": "tiles/gem_seam.png"
+    }
+  },
+
+  {
+    "id": "lava",
+    "name": "Lava",
+    "category": "hazard",
+    "diggable": false,
+    "claimable": false,
+    "blocks_movement": true,
+    "blocks_vision": false,
+    "supports_rooms": false,
+    "resources": null,
+    "damage_per_second": 25,
+    "durability": null,
+    "visual": {
+      "sprite": "tiles/lava.png",
+      "animated": true,
+      "light": {
+        "color": [255, 90, 40],
+        "intensity": 0.8
+      }
+    }
+  },
+
+  {
+    "id": "water",
+    "name": "Underground Water",
+    "category": "hazard",
+    "diggable": false,
+    "claimable": false,
+    "blocks_movement": true,
+    "blocks_vision": false,
+    "supports_rooms": false,
+    "resources": null,
+    "durability": null,
+    "visual": {
+      "sprite": "tiles/water.png",
+      "animated": true
+    }
+  },
+
+  {
+    "id": "bridge",
+    "name": "Bridge",
+    "category": "structure",
+    "diggable": false,
+    "claimable": true,
+    "blocks_movement": false,
+    "blocks_vision": false,
+    "supports_rooms": false,
+    "resources": null,
+    "durability": 300,
+    "visual": {
+      "sprite": "tiles/bridge.png"
+    }
+  },
+
+  {
+    "id": "corrupted_floor",
+    "name": "Corrupted Floor",
+    "category": "floor",
+    "diggable": false,
+    "claimable": true,
+    "blocks_movement": false,
+    "blocks_vision": false,
+    "supports_rooms": true,
+    "resources": null,
+    "aura": {
+      "radius": 3,
+      "effects": {
+        "hero_fear": 0.2,
+        "creature_morale": 0.1
+      }
+    },
+    "durability": 60,
+    "visual": {
+      "sprite": "tiles/corrupted_floor.png"
+    }
+  },
+
+  {
+    "id": "ancient_rune_floor",
+    "name": "Ancient Rune Floor",
+    "category": "special",
+    "diggable": false,
+    "claimable": false,
+    "blocks_movement": false,
+    "blocks_vision": false,
+    "supports_rooms": false,
+    "resources": null,
+    "special": {
+      "cannot_be_modified": true,
+      "triggers_event": "ancient_awakening"
+    },
+    "durability": null,
+    "visual": {
+      "sprite": "tiles/ancient_rune_floor.png",
+      "light": {
+        "color": [120, 80, 255],
+        "intensity": 0.6
+      }
+    }
+  }
+]

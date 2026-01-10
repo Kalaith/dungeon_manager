@@ -1,0 +1,550 @@
+[
+  {
+    "id": "dungeon_heart",
+    "name": "Dungeon Heart",
+    "description": "The pulsing core of your dungeon, generating mana and sustaining your evil presence.",
+    "category": "core",
+    "icon": "icons/rooms/dungeon_heart.png",
+    "build": {
+      "cost_per_tile": 0,
+      "mana_cost": 0,
+      "min_tiles": 1,
+      "max_tiles": 1,
+      "dig_required": false,
+      "requires_claimed": false,
+      "can_overlap": false,
+      "allowed_terrain": ["claimed_floor"],
+      "construction_time": 0
+    },
+    "requirements": {
+      "research": [],
+      "global_rooms_required": [],
+      "max_instances": 1,
+      "forbidden_if": []
+    },
+    "effects": {
+      "mana_generation_per_second": 1.0,
+      "happiness_modifier": 5
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "none",
+      "desirability": 0,
+      "max_creatures": 0,
+      "preferred_creatures": [],
+      "forbidden_creatures": [],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/dungeon_heart_floor.png",
+      "wall_sprite": "tiles/dungeon_heart_wall.png",
+      "object_spawn": [
+        {
+          "object": "dungeon_heart",
+          "density": 1.0
+        }
+      ],
+      "light": {
+        "color": [255, 0, 0],
+        "intensity": 1.0,
+        "flicker": true
+      }
+    }
+  },
+  {
+    "id": "lair",
+    "name": "Lair",
+    "description": "A cozy sleeping area where creatures rest and recover.",
+    "category": "habitation",
+    "icon": "icons/rooms/lair.png",
+    "build": {
+      "cost_per_tile": 50,
+      "mana_cost": 0,
+      "min_tiles": 4,
+      "max_tiles": 49,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": ["claimed_floor"],
+      "construction_time": 0.3
+    },
+    "requirements": {
+      "research": [],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "happiness_modifier": 10,
+      "sleep_recovery_rate": 1.0
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        { "tiles": 9, "multiplier": 1.0 },
+        { "tiles": 25, "multiplier": 1.5 }
+      ],
+      "shape_penalties": {
+        "thin_corridor": 0.8
+      }
+    },
+    "ai": {
+      "task_type": "sleep",
+      "desirability": 1.5,
+      "max_creatures": 10,
+      "preferred_creatures": [],
+      "forbidden_creatures": [],
+      "entry_conditions": {
+        "mood_below": 80
+      }
+    },
+    "visual": {
+      "floor_sprite": "tiles/lair_floor.png",
+      "wall_sprite": "tiles/lair_wall.png",
+      "object_spawn": [
+        {
+          "object": "bed",
+          "density": 0.2
+        }
+      ],
+      "light": {
+        "color": [100, 100, 255],
+        "intensity": 0.4,
+        "flicker": false
+      }
+    }
+  },
+  {
+    "id": "hatchery",
+    "name": "Hatchery",
+    "description": "Produces food to keep your creatures fed and happy.",
+    "category": "production",
+    "icon": "icons/rooms/hatchery.png",
+    "build": {
+      "cost_per_tile": 75,
+      "mana_cost": 0,
+      "min_tiles": 9,
+      "max_tiles": 64,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": ["claimed_floor"],
+      "construction_time": 0.4
+    },
+    "requirements": {
+      "research": [],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "food_generation_per_second": 0.5,
+      "happiness_modifier": 2
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        { "tiles": 9, "multiplier": 1.0 },
+        { "tiles": 25, "multiplier": 1.3 }
+      ],
+      "shape_penalties": {
+        "fragmented": 0.7
+      }
+    },
+    "ai": {
+      "task_type": "work",
+      "desirability": 1.0,
+      "max_creatures": 4,
+      "preferred_creatures": ["imp"],
+      "forbidden_creatures": [],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/hatchery_floor.png",
+      "wall_sprite": "tiles/hatchery_wall.png",
+      "object_spawn": [
+        {
+          "object": "hatchery_pod",
+          "density": 0.1
+        }
+      ],
+      "light": {
+        "color": [0, 255, 0],
+        "intensity": 0.5,
+        "flicker": false
+      }
+    }
+  },
+  {
+    "id": "treasury",
+    "name": "Treasury",
+    "description": "Stores gold and increases creature greed satisfaction.",
+    "category": "storage",
+    "icon": "icons/rooms/treasury.png",
+    "build": {
+      "cost_per_tile": 100,
+      "mana_cost": 0,
+      "min_tiles": 9,
+      "max_tiles": 81,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": ["claimed_floor"],
+      "construction_time": 0.5
+    },
+    "requirements": {
+      "research": [],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "gold_storage_capacity": 1000,
+      "happiness_modifier": 3
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        { "tiles": 9, "multiplier": 1.0 },
+        { "tiles": 25, "multiplier": 1.2 }
+      ],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "none",
+      "desirability": 0.5,
+      "max_creatures": 0,
+      "preferred_creatures": [],
+      "forbidden_creatures": [],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/treasury_floor.png",
+      "wall_sprite": "tiles/treasury_wall.png",
+      "object_spawn": [
+        {
+          "object": "gold_pile",
+          "density": 0.05
+        }
+      ],
+      "light": {
+        "color": [255, 255, 0],
+        "intensity": 0.6,
+        "flicker": false
+      }
+    }
+  },
+  {
+    "id": "workshop",
+    "name": "Workshop",
+    "description": "Creates traps and doors to defend your dungeon.",
+    "category": "production",
+    "icon": "icons/rooms/workshop.png",
+    "build": {
+      "cost_per_tile": 120,
+      "mana_cost": 0,
+      "min_tiles": 9,
+      "max_tiles": 49,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": ["claimed_floor"],
+      "construction_time": 0.6
+    },
+    "requirements": {
+      "research": ["workshop_tech"],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "trap_production_rate": 0.2,
+      "happiness_modifier": -1
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        { "tiles": 9, "multiplier": 1.0 },
+        { "tiles": 25, "multiplier": 1.4 }
+      ],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "work",
+      "desirability": 1.1,
+      "max_creatures": 3,
+      "preferred_creatures": ["troll"],
+      "forbidden_creatures": [],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/workshop_floor.png",
+      "wall_sprite": "tiles/workshop_wall.png",
+      "object_spawn": [
+        {
+          "object": "anvil",
+          "density": 0.1
+        }
+      ],
+      "light": {
+        "color": [255, 100, 0],
+        "intensity": 0.7,
+        "flicker": true
+      }
+    }
+  },
+  {
+    "id": "training_hall",
+    "name": "Training Hall",
+    "description": "Improves creature combat skills and stats.",
+    "category": "training",
+    "icon": "icons/rooms/training_hall.png",
+    "build": {
+      "cost_per_tile": 150,
+      "mana_cost": 0,
+      "min_tiles": 9,
+      "max_tiles": 81,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": ["claimed_floor"],
+      "construction_time": 0.5
+    },
+    "requirements": {
+      "research": ["training_tech"],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "creature_xp_per_second": 0.8,
+      "happiness_modifier": -2,
+      "stat_bonuses": {
+        "attack": 1.0,
+        "defense": 0.5
+      }
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        { "tiles": 9, "multiplier": 1.0 },
+        { "tiles": 25, "multiplier": 1.5 }
+      ],
+      "shape_penalties": {
+        "thin_corridor": 0.75
+      }
+    },
+    "ai": {
+      "task_type": "train",
+      "desirability": 1.2,
+      "max_creatures": 6,
+      "preferred_creatures": ["goblin", "orc"],
+      "forbidden_creatures": ["imp"],
+      "entry_conditions": {
+        "min_level": 2
+      }
+    },
+    "visual": {
+      "floor_sprite": "tiles/training_hall_floor.png",
+      "wall_sprite": "tiles/training_hall_wall.png",
+      "object_spawn": [
+        {
+          "object": "training_dummy",
+          "density": 0.15
+        }
+      ],
+      "light": {
+        "color": [255, 80, 80],
+        "intensity": 0.6,
+        "flicker": true
+      }
+    }
+  },
+  {
+    "id": "prison",
+    "name": "Prison",
+    "description": "Holds captured heroes for conversion or torture.",
+    "category": "special",
+    "icon": "icons/rooms/prison.png",
+    "build": {
+      "cost_per_tile": 80,
+      "mana_cost": 0,
+      "min_tiles": 4,
+      "max_tiles": 36,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": ["claimed_floor"],
+      "construction_time": 0.4
+    },
+    "requirements": {
+      "research": ["prison_tech"],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "hero_conversion_rate": 0.1,
+      "happiness_modifier": -5
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        { "tiles": 9, "multiplier": 1.0 }
+      ],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "guard",
+      "desirability": 0.8,
+      "max_creatures": 2,
+      "preferred_creatures": ["orc"],
+      "forbidden_creatures": [],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/prison_floor.png",
+      "wall_sprite": "tiles/prison_wall.png",
+      "object_spawn": [
+        {
+          "object": "cell",
+          "density": 0.2
+        }
+      ],
+      "light": {
+        "color": [50, 50, 50],
+        "intensity": 0.3,
+        "flicker": false
+      }
+    }
+  },
+  {
+    "id": "guard_post",
+    "name": "Guard Post",
+    "description": "Stationary defense point for creatures to patrol and attack intruders.",
+    "category": "defense",
+    "icon": "icons/rooms/guard_post.png",
+    "build": {
+      "cost_per_tile": 90,
+      "mana_cost": 0,
+      "min_tiles": 4,
+      "max_tiles": 25,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": ["claimed_floor"],
+      "construction_time": 0.3
+    },
+    "requirements": {
+      "research": [],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "defense_bonus": 1.5,
+      "aura": {
+        "radius": 5,
+        "effects": {
+          "combat_speed": 0.2
+        }
+      }
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "guard",
+      "desirability": 1.0,
+      "max_creatures": 4,
+      "preferred_creatures": ["goblin", "orc"],
+      "forbidden_creatures": [],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/guard_post_floor.png",
+      "wall_sprite": "tiles/guard_post_wall.png",
+      "object_spawn": [
+        {
+          "object": "banner",
+          "density": 0.1
+        }
+      ],
+      "light": {
+        "color": [255, 0, 0],
+        "intensity": 0.5,
+        "flicker": false
+      }
+    }
+  },
+  {
+    "id": "ritual_circle",
+    "name": "Ritual Circle",
+    "description": "Performs dark rituals to summon creatures or cast spells.",
+    "category": "magic",
+    "icon": "icons/rooms/ritual_circle.png",
+    "build": {
+      "cost_per_tile": 200,
+      "mana_cost": 50,
+      "min_tiles": 9,
+      "max_tiles": 49,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": ["claimed_floor"],
+      "construction_time": 1.0
+    },
+    "requirements": {
+      "research": ["ritual_tech"],
+      "global_rooms_required": ["library"],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "mana_generation_per_second": 0.5,
+      "spell_power_bonus": 1.2,
+      "happiness_modifier": -3
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        { "tiles": 9, "multiplier": 1.0 },
+        { "tiles": 25, "multiplier": 1.3 }
+      ],
+      "shape_penalties": {
+        "fragmented": 0.8
+      }
+    },
+    "ai": {
+      "task_type": "ritual",
+      "desirability": 0.9,
+      "max_creatures": 2,
+      "preferred_creatures": ["warlock"],
+      "forbidden_creatures": [],
+      "entry_conditions": {
+        "min_level": 5
+      }
+    },
+    "visual": {
+      "floor_sprite": "tiles/ritual_circle_floor.png",
+      "wall_sprite": "tiles/ritual_circle_wall.png",
+      "object_spawn": [
+        {
+          "object": "ritual_stone",
+          "density": 0.3
+        }
+      ],
+      "light": {
+        "color": [128, 0, 128],
+        "intensity": 0.8,
+        "flicker": true
+      }
+    }
+  }
+]
