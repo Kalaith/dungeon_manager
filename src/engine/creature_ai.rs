@@ -170,11 +170,23 @@ pub fn decide_task(
     // Get monster data
     let monster_data = match game_data.monsters.get(&creature.creature_id) {
         Some(data) => data,
-        None => return Some(Task::Idle),
+        None => {
+            eprintln!("[AI] No monster data for {}", creature.creature_id);
+            return Some(Task::Idle);
+        }
     };
+
+    // Debug: Log available rooms
+    eprintln!("[AI] Available rooms for {}: {:?}",
+        creature.creature_id,
+        game_state.rooms.iter()
+            .map(|r| format!("{}(id={}, active={}, quality={:.1})", r.room_type, r.id, r.active, r.quality))
+            .collect::<Vec<_>>()
+    );
 
     // If fleeing or deserting, flee
     if creature.is_deserting {
+        eprintln!("[AI] Creature {} is deserting!", creature.creature_id);
         return Some(Task::Flee);
     }
 
@@ -187,14 +199,19 @@ pub fn decide_task(
 
     // Check most urgent need
     if let Some((need_name, need_value)) = creature.get_most_urgent_need() {
+        eprintln!("[AI] Most urgent need for {}: {} = {:.1}%", creature.creature_id, need_name, need_value);
+
         // If need is critical (below 30), prioritize satisfying it
         if need_value < 30.0 {
+            eprintln!("[AI] Critical need {} detected!", need_name);
             // Find room that satisfies this need
             if let Some(need_data) = monster_data.needs.get(&need_name) {
+                eprintln!("[AI] Need {} satisfied by rooms: {:?}", need_name, need_data.satisfied_by);
                 for room_type in &need_data.satisfied_by {
                     if let Some(room_id) =
                         find_best_room(room_type, creature_pos, &game_state.rooms, 0.0)
                     {
+                        eprintln!("[AI] Found {} room (id={})", room_type, room_id);
                         // Determine task type based on need
                         match need_name.as_str() {
                             "sleep" => return Some(Task::Sleep(room_id)),
@@ -202,6 +219,8 @@ pub fn decide_task(
                             "gold" => return Some(Task::DepositGold(room_id)),
                             _ => {}
                         }
+                    } else {
+                        eprintln!("[AI] No {} room found!", room_type);
                     }
                 }
             }
@@ -212,11 +231,15 @@ pub fn decide_task(
     let mut candidate_tasks = Vec::new();
 
     // Add work tasks for preferred rooms
+    eprintln!("[AI] Evaluating room desires: {:?}", monster_data.ai.room_desires);
     for (room_type, desire) in &monster_data.ai.room_desires {
         if let Some(room_id) = find_best_room(room_type, creature_pos, &game_state.rooms, 0.0) {
             let task = Task::Work(room_id);
             let desirability = calculate_task_desirability(&task, creature, monster_data) * desire;
+            eprintln!("[AI] Candidate: Work({}) - desirability={:.2}", room_type, desirability);
             candidate_tasks.push((task, desirability));
+        } else {
+            eprintln!("[AI] No {} room found for work task", room_type);
         }
     }
 
@@ -227,6 +250,7 @@ pub fn decide_task(
         {
             let task = Task::Train(room_id);
             let desirability = calculate_task_desirability(&task, creature, monster_data);
+            eprintln!("[AI] Candidate: Train - desirability={:.2}", desirability);
             candidate_tasks.push((task, desirability));
         }
     }
@@ -235,17 +259,22 @@ pub fn decide_task(
     if let Some(room_id) = find_best_room("library", creature_pos, &game_state.rooms, 0.0) {
         let task = Task::Research(room_id);
         let desirability = calculate_task_desirability(&task, creature, monster_data) * 0.8;
+        eprintln!("[AI] Candidate: Research - desirability={:.2}", desirability);
         candidate_tasks.push((task, desirability));
     }
 
+    eprintln!("[AI] Total candidate tasks: {}", candidate_tasks.len());
+
     // Select best task
-    if let Some((task, _)) = candidate_tasks
+    if let Some((task, desirability)) = candidate_tasks
         .into_iter()
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
     {
+        eprintln!("[AI] Selected task: {:?} with desirability {:.2}", task, desirability);
         Some(task)
     } else {
         // No good tasks, just idle/wander
+        eprintln!("[AI] No candidate tasks, idling");
         Some(Task::Idle)
     }
 }
@@ -375,42 +404,92 @@ pub fn get_creatures_needing_attention(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::data::monsters::{AiData, NeedData};
+    use crate::data::monsters::{MonsterAIData, NeedData};
+    use std::collections::HashMap;
 
     fn create_test_monster_data() -> MonsterData {
         let mut needs = HashMap::new();
-        let mut sleep_need = NeedData {
+        let sleep_need = NeedData {
             decay_per_minute: 1.0,
             satisfied_by: vec!["lair".to_string()],
             stash_amount: None,
         };
         needs.insert("sleep".to_string(), sleep_need);
 
-        let ai = AiData {
-            base_mood: 70,
-            anger_threshold: 30,
-            desertion_threshold: 20,
+        let ai = MonsterAIData {
+            base_mood: 70.0,
+            anger_threshold: 30.0,
+            desertion_threshold: 20.0,
             task_preferences: HashMap::new(),
             room_desires: HashMap::new(),
             discipline_response: HashMap::new(),
         };
 
-        MonsterData {
-            id: "test_creature".to_string(),
-            name: "Test".to_string(),
-            description: "Test creature".to_string(),
-            faction: "dungeon".to_string(),
-            role: "worker".to_string(),
-            stats: Default::default(),
-            needs,
-            traits: vec![],
-            ai,
-            combat: Default::default(),
-            progression: Default::default(),
-            economy: Default::default(),
-            spawn: Default::default(),
-            visual: Default::default(),
-        }
+        // Load actual monster data from JSON instead of constructing manually
+        // For now, create minimal test data
+        serde_json::from_str(r#"{
+            "id": "test_creature",
+            "name": "Test",
+            "description": "Test creature",
+            "faction": "dungeon",
+            "role": "worker",
+            "stats": {
+                "health": 100,
+                "mana": 0,
+                "attack": 5,
+                "defense": 2,
+                "speed": 1.0,
+                "carry_capacity": 10,
+                "sight_radius": 5
+            },
+            "needs": {
+                "sleep": {
+                    "decay_per_minute": 1.0,
+                    "satisfied_by": ["lair"]
+                }
+            },
+            "traits": [],
+            "ai": {
+                "base_mood": 70,
+                "anger_threshold": 30,
+                "desertion_threshold": 20,
+                "task_preferences": {},
+                "room_desires": {},
+                "discipline_response": {}
+            },
+            "combat": {
+                "attack_type": "melee",
+                "damage_range": [3, 6],
+                "attack_speed": 1.0,
+                "armor_type": "none",
+                "resistances": {},
+                "abilities": []
+            },
+            "progression": {
+                "xp_to_level": [0, 100],
+                "stat_growth_per_level": {},
+                "max_level": 2,
+                "mutations": []
+            },
+            "economy": {
+                "wage_per_minute": 1,
+                "steals_if_unpaid": false,
+                "drops_gold_on_death": [5, 10]
+            },
+            "spawn": {
+                "source": "portal",
+                "min_dungeon_reputation": 0,
+                "preferred_rooms": [],
+                "spawn_weight": 1.0,
+                "max_population": 10
+            },
+            "visual": {
+                "sprite": "test.png",
+                "scale": 1.0,
+                "animations": ["idle"],
+                "voice_set": "test"
+            }
+        }"#).unwrap()
     }
 
     #[test]

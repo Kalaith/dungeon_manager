@@ -50,6 +50,16 @@ pub fn get_tile_color(tile_type: &str) -> Color {
         "bridge" => Color::new(0.5, 0.4, 0.3, 1.0),
         "corrupted_floor" => Color::new(0.5, 0.2, 0.6, 1.0),
         "ancient_rune_floor" => Color::new(0.5, 0.3, 0.8, 1.0),
+        // Room types
+        "lair" => Color::new(0.3, 0.3, 0.6, 1.0), // Blue-ish for sleeping
+        "hatchery" => Color::new(0.6, 0.5, 0.2, 1.0), // Yellow-ish for food
+        "treasury" => Color::new(0.8, 0.6, 0.1, 1.0), // Gold color
+        "training_room" => Color::new(0.7, 0.2, 0.2, 1.0), // Red for combat
+        "library" => Color::new(0.4, 0.2, 0.6, 1.0), // Purple for magic
+        "workshop" => Color::new(0.5, 0.4, 0.3, 1.0), // Brown for crafting
+        "dungeon_heart" => Color::new(0.8, 0.1, 0.1, 1.0), // Bright red
+        "monster_spawner" => Color::new(0.6, 0.2, 0.8, 1.0), // Purple for spawner
+        "stone_path" => Color::new(0.6, 0.6, 0.6, 1.0), // Gray for hero entrance
         _ => Color::new(0.5, 0.5, 0.5, 1.0),
     }
 }

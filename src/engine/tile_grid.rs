@@ -20,7 +20,12 @@ pub fn create_grid(width: usize, height: usize, game_data: &GameData) -> Grid {
             let tile_type = if x == 0 || y == 0 || x == width - 1 || y == height - 1 {
                 "solid_rock".to_string()
             } else {
-                "earth".to_string()
+                // 10% chance of gold vein
+                if rand::random::<f32>() < 0.10 {
+                    "gold_vein".to_string()
+                } else {
+                    "earth".to_string()
+                }
             };
 
             let mut tile = TileState::new(tile_type.clone(), pos);
@@ -32,6 +37,11 @@ pub fn create_grid(width: usize, height: usize, game_data: &GameData) -> Grid {
                         tile = tile.with_resources(resources.amount as u32);
                     }
                 }
+            }
+
+            // Gold veins have gold resources
+            if tile_type == "gold_vein" {
+                tile = tile.with_resources(100); // 100 gold per vein
             }
 
             row.push(tile);

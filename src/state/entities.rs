@@ -133,6 +133,15 @@ pub struct CreatureState {
 
     /// Active status effects
     pub status_effects: Vec<StatusEffect>,
+
+    /// Current path being followed
+    pub current_path: Option<Vec<TilePos>>,
+
+    /// Movement speed (tiles per second)
+    pub movement_speed: f32,
+
+    /// Time accumulator for movement
+    pub move_timer: f32,
 }
 
 impl CreatureState {
@@ -155,6 +164,9 @@ impl CreatureState {
             is_deserting: false,
             last_slapped: 0.0,
             status_effects: Vec::new(),
+            current_path: None,
+            movement_speed: 2.0, // 2 tiles per second default
+            move_timer: 0.0,
         }
     }
 
@@ -241,6 +253,15 @@ pub struct HeroState {
 
     /// Active status effects
     pub status_effects: Vec<StatusEffect>,
+
+    /// Current path being followed
+    pub current_path: Option<Vec<TilePos>>,
+
+    /// Movement speed (tiles per second)
+    pub movement_speed: f32,
+
+    /// Time accumulator for movement
+    pub move_timer: f32,
 }
 
 impl HeroState {
@@ -260,6 +281,9 @@ impl HeroState {
             kills: 0,
             is_fleeing: false,
             status_effects: Vec::new(),
+            current_path: None,
+            movement_speed: 1.5, // 1.5 tiles per second default
+            move_timer: 0.0,
         }
     }
 
@@ -437,6 +461,16 @@ impl EntityManager {
     /// Get all mutable entities
     pub fn all_mut(&mut self) -> impl Iterator<Item = &mut Entity> {
         self.entities.values_mut()
+    }
+
+    /// Get the entities map mutably (for combat resolution)
+    pub fn entities_mut(&mut self) -> &mut HashMap<EntityId, Entity> {
+        &mut self.entities
+    }
+
+    /// Get the entities map immutably
+    pub fn entities(&self) -> &HashMap<EntityId, Entity> {
+        &self.entities
     }
 
     /// Get all creatures

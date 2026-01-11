@@ -49,6 +49,7 @@ pub struct TileState {
     pub fog_state: FogState,
     pub resources_remaining: Option<u32>,
     pub marked_for_dig: bool,
+    pub claimed_by_entity: Option<usize>, // For lair tiles - which entity owns this space
 }
 
 impl TileState {
@@ -58,9 +59,10 @@ impl TileState {
             pos,
             ownership: Ownership::Unclaimed,
             room_id: None,
-            fog_state: FogState::Hidden,
+            fog_state: FogState::Revealed, // Start revealed so players can see the map
             resources_remaining: None,
             marked_for_dig: false,
+            claimed_by_entity: None,
         }
     }
 

@@ -53,7 +53,7 @@ impl PlayerState {
         unlocked_spells.insert("heal".to_string());
 
         Self {
-            gold: 5000,
+            gold: 200, // Start with limited gold - must dig for more
             mana: 1000,
             food: 100,
             max_mana: 10000,
