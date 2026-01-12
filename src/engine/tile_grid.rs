@@ -80,7 +80,7 @@ pub fn screen_to_tile(
 
     let (tile_x, tile_y) = iso_to_world(world_x, world_y, tile_width, tile_height);
 
-    TilePos::new(tile_x.floor() as i32, tile_y.floor() as i32)
+    TilePos::new(tile_x.round() as i32, tile_y.round() as i32)
 }
 
 /// Get a tile from the grid at the specified position
@@ -154,6 +154,54 @@ pub fn calculate_fog_state(
     }
 }
 
+/// Check if there's a clear line of sight between two positions (not blocked by solid tiles)
+fn has_line_of_sight(grid: &Grid, from: TilePos, to: TilePos) -> bool {
+    // Use Bresenham's line algorithm to check tiles between from and to
+    let mut x0 = from.x;
+    let mut y0 = from.y;
+    let x1 = to.x;
+    let y1 = to.y;
+
+    let dx = (x1 - x0).abs();
+    let dy = -(y1 - y0).abs();
+    let sx = if x0 < x1 { 1 } else { -1 };
+    let sy = if y0 < y1 { 1 } else { -1 };
+    let mut err = dx + dy;
+
+    loop {
+        // Check if current tile blocks vision (skip the start position)
+        if (x0, y0) != (from.x, from.y) {
+            let pos = TilePos::new(x0, y0);
+            if let Some(tile) = get_tile(grid, pos) {
+                // Solid tiles block vision
+                let blocks_vision = matches!(
+                    tile.tile_type.as_str(),
+                    "earth" | "solid_rock" | "gold_vein"
+                );
+                if blocks_vision {
+                    return false;
+                }
+            }
+        }
+
+        if x0 == x1 && y0 == y1 {
+            break;
+        }
+
+        let e2 = 2 * err;
+        if e2 >= dy {
+            err += dy;
+            x0 += sx;
+        }
+        if e2 <= dx {
+            err += dx;
+            y0 += sy;
+        }
+    }
+
+    true
+}
+
 /// Update fog of war based on claimed tiles and creature positions
 pub fn update_fog_of_war(
     grid: &mut Grid,
@@ -168,14 +216,24 @@ pub fn update_fog_of_war(
         visible_tiles.insert(*pos);
     }
 
-    // Add tiles around creatures
+    // Create a read-only snapshot of tile types for line-of-sight checks
+    let tile_types: Vec<Vec<String>> = grid
+        .iter()
+        .map(|row| row.iter().map(|t| t.tile_type.clone()).collect())
+        .collect();
+
+    // Add tiles around creatures (with line-of-sight check)
     for creature_pos in creature_positions {
         for dy in -sight_radius..=sight_radius {
             for dx in -sight_radius..=sight_radius {
                 let distance = (dx * dx + dy * dy) as f32;
                 if distance <= (sight_radius * sight_radius) as f32 {
                     let tile_pos = TilePos::new(creature_pos.x + dx, creature_pos.y + dy);
-                    visible_tiles.insert(tile_pos);
+                    
+                    // Check line of sight using the snapshot
+                    if has_line_of_sight_snapshot(&tile_types, *creature_pos, tile_pos) {
+                        visible_tiles.insert(tile_pos);
+                    }
                 }
             }
         }
@@ -187,6 +245,56 @@ pub fn update_fog_of_war(
             tile.fog_state = calculate_fog_state(tile, &visible_tiles);
         }
     }
+}
+
+/// Check line of sight using a snapshot of tile types (to avoid borrow issues)
+fn has_line_of_sight_snapshot(tile_types: &[Vec<String>], from: TilePos, to: TilePos) -> bool {
+    let mut x0 = from.x;
+    let mut y0 = from.y;
+    let x1 = to.x;
+    let y1 = to.y;
+
+    let dx = (x1 - x0).abs();
+    let dy = -(y1 - y0).abs();
+    let sx = if x0 < x1 { 1 } else { -1 };
+    let sy = if y0 < y1 { 1 } else { -1 };
+    let mut err = dx + dy;
+
+    loop {
+        // Check if current tile blocks vision (skip the start position)
+        if (x0, y0) != (from.x, from.y) {
+            if y0 >= 0 && (y0 as usize) < tile_types.len() {
+                let row = &tile_types[y0 as usize];
+                if x0 >= 0 && (x0 as usize) < row.len() {
+                    let tile_type = &row[x0 as usize];
+                    // Solid tiles block vision
+                    let blocks_vision = matches!(
+                        tile_type.as_str(),
+                        "earth" | "solid_rock" | "gold_vein"
+                    );
+                    if blocks_vision {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if x0 == x1 && y0 == y1 {
+            break;
+        }
+
+        let e2 = 2 * err;
+        if e2 >= dy {
+            err += dy;
+            x0 += sx;
+        }
+        if e2 <= dx {
+            err += dx;
+            y0 += sy;
+        }
+    }
+
+    true
 }
 
 /// Get the dimensions of the grid

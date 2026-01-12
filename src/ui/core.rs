@@ -86,3 +86,19 @@ pub fn draw_iso_tile(x: f32, y: f32, width: f32, height: f32, color: Color) {
     draw_line(bottom.0, bottom.1, left.0, left.1, 1.0, outline_color);
     draw_line(left.0, left.1, top.0, top.1, 1.0, outline_color);
 }
+
+/// Draw an isometric tile outline (no fill)
+pub fn draw_iso_tile_outline(x: f32, y: f32, width: f32, height: f32, color: Color, thickness: f32) {
+    let half_width = width / 2.0;
+    let half_height = height / 2.0;
+
+    let top = (x, y - half_height);
+    let right = (x + half_width, y);
+    let bottom = (x, y + half_height);
+    let left = (x - half_width, y);
+
+    draw_line(top.0, top.1, right.0, right.1, thickness, color);
+    draw_line(right.0, right.1, bottom.0, bottom.1, thickness, color);
+    draw_line(bottom.0, bottom.1, left.0, left.1, thickness, color);
+    draw_line(left.0, left.1, top.0, top.1, thickness, color);
+}

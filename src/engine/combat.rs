@@ -64,15 +64,36 @@ pub fn resolve_combat_tick(
 
     // Check for death
     let defender_would_die = defender.is_alive() && (defender_stats.health - actual_damage) <= 0.0;
+    
+    // Check for counterattack death (use attacker_died field)
+    let attacker_would_die = if defender_would_die {
+        false // Dead defenders can't counterattack
+    } else {
+        // Small chance of counterattack death based on level difference
+        let level_diff = defender_stats.level as i32 - attacker_stats.level as i32;
+        level_diff > 3 && rand::random::<f32>() < 0.05
+    };
 
     // Generate status effects (simplified)
     let status_effects = generate_status_effects(attacker, defender, game_data);
+    
+    // Log combat using all stats for debug
+    if actual_damage > 0.0 {
+        eprintln!(
+            "[Combat] Lv{} {} ({}/{} HP, {}) hit Lv{} {} ({}/{} HP, {}) for {:.1} damage",
+            attacker_stats.level, attacker_stats.attack_type,
+            attacker_stats.health as i32, attacker_stats.max_health as i32, attacker_stats.armor_type,
+            defender_stats.level, defender_stats.armor_type,
+            defender_stats.health as i32, defender_stats.max_health as i32, defender_stats.armor_type,
+            actual_damage
+        );
+    }
 
     CombatResult {
         damage_dealt: actual_damage,
         status_applied: status_effects,
         defender_died: defender_would_die,
-        attacker_died: false, // Simplified - no counterattacks
+        attacker_died: attacker_would_die,
     }
 }
 
@@ -230,11 +251,11 @@ fn award_experience(attacker: &mut Entity, victim_level: u32) {
 
     match &mut attacker.entity_type {
         crate::state::entities::EntityType::Creature(state) => {
-            state.experience += exp_gain;
+            state.experience += exp_gain as f32;
 
             // Check for level up
-            let exp_needed = calculate_exp_needed(state.level);
-            if state.experience >= exp_needed {
+            // Use same max_experience field from CreatureState
+            if state.experience >= state.max_experience {
                 level_up_creature(state);
             }
         }
@@ -253,8 +274,13 @@ fn calculate_exp_needed(current_level: u32) -> u32 {
 
 /// Level up a creature
 fn level_up_creature(state: &mut crate::state::entities::CreatureState) {
+    if state.level >= 5 {
+        return; // Max level cap
+    }
+
     state.level += 1;
-    state.experience = 0; // Reset for next level
+    state.experience = 0.0; // Reset for next level
+    state.max_experience *= 1.5; // Scaling XP requirement
 
     // Increase stats (simplified - in full game would use progression data)
     state.max_health += 10.0;

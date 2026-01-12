@@ -105,7 +105,13 @@ pub struct CreatureState {
     pub max_mana: f32,
 
     /// Current experience points
-    pub experience: u32,
+    pub experience: f32,
+
+    /// Experience required for next level
+    pub max_experience: f32,
+
+    /// Timer for training XP ticks
+    pub training_timer: f32,
 
     /// Needs tracking (0-100, higher = more satisfied)
     pub needs: HashMap<String, f32>,
@@ -154,7 +160,9 @@ impl CreatureState {
             max_health,
             mana: max_mana,
             max_mana,
-            experience: 0,
+            experience: 0.0,
+            max_experience: 100.0 * (level as f32), // 100 XP per level base
+            training_timer: 0.0,
             needs: HashMap::new(),
             mood: 70.0, // Start at decent mood
             current_task: None,

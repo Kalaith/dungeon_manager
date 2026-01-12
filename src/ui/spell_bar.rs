@@ -97,11 +97,39 @@ impl SpellBar {
         // If spell is selected and clicking on game world, try to cast
         if let Some(ref spell_id) = self.selected_spell {
             if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_panel() {
-                if let Some(tile) = mouse_tile {
-                    let action = SpellAction::CastSpell(spell_id.clone(), SpellTarget::Tile(tile));
-                    self.selected_spell = None; // Clear selection after cast
-                    return Some(action);
-                }
+                // Determine target type based on spell
+                let spell_data = spells.get(spell_id);
+                let target_type = spell_data.map(|s| s.targeting.target_type.as_str()).unwrap_or("tile");
+                
+                let target = match target_type {
+                    "global" => {
+                        // Global spells don't need a target
+                        SpellTarget::None
+                    }
+                    "creature" => {
+                        // For creature spells, we'd need entity detection
+                        // For now, fall back to tile targeting with entity ID placeholder
+                        // In a full implementation, we'd detect clicked entity
+                        if let Some(tile) = mouse_tile {
+                            // Placeholder: could extend to find entity at tile
+                            SpellTarget::Tile(tile)
+                        } else {
+                            SpellTarget::None
+                        }
+                    }
+                    _ => {
+                        // Tile-based targeting
+                        if let Some(tile) = mouse_tile {
+                            SpellTarget::Tile(tile)
+                        } else {
+                            SpellTarget::None
+                        }
+                    }
+                };
+                
+                let action = SpellAction::CastSpell(spell_id.clone(), target);
+                self.selected_spell = None; // Clear selection after cast
+                return Some(action);
             }
 
             // Cancel selection with right click or ESC
@@ -112,6 +140,16 @@ impl SpellBar {
         }
 
         None
+    }
+    
+    /// Create a spell target for an entity (for creature-targeted spells)
+    pub fn create_entity_target(entity_id: EntityId) -> SpellTarget {
+        SpellTarget::Entity(entity_id)
+    }
+    
+    /// Create a no-target for global spells
+    pub fn create_global_target() -> SpellTarget {
+        SpellTarget::None
     }
 
     /// Draw the spell bar

@@ -9,6 +9,7 @@ mod ui;
 use data::GameData;
 use state::game_state::GameState;
 use state::MapType;
+use state::Ownership;
 
 pub enum GamePhase {
     Loading,
@@ -121,6 +122,8 @@ pub struct Game {
     build_menu: ui::build_menu::BuildMenu,
     spell_bar: ui::spell_bar::SpellBar,
     selected_map_type: MapType,
+    selected_entity: Option<state::entities::EntityId>,
+    spell_shop_open: bool,
 }
 
 impl Game {
@@ -137,6 +140,8 @@ impl Game {
             build_menu: ui::build_menu::BuildMenu::new(),
             spell_bar,
             selected_map_type: MapType::Standard,
+            selected_entity: None,
+            spell_shop_open: false,
         }
     }
 
@@ -284,6 +289,8 @@ impl Game {
                 }
                 if is_key_pressed(KeyCode::Escape) {
                     self.interaction_mode = InteractionMode::None;
+                    // Also clear any selected spell
+                    self.spell_bar.clear_selection();
                 }
 
                 // Mouse input - get hovered tile
@@ -306,9 +313,10 @@ impl Game {
                                 eprintln!("Selected spell: {}", spell_id);
                             }
                             ui::spell_bar::SpellAction::CastSpell(spell_id, target) => {
-                                let target_pos = match target {
-                                    ui::spell_bar::SpellTarget::Tile(pos) => Some(pos),
-                                    _ => None,
+                                let (target_pos, target_entity) = match target {
+                                    ui::spell_bar::SpellTarget::Tile(pos) => (Some(pos), None),
+                                    ui::spell_bar::SpellTarget::Entity(entity_id) => (None, Some(entity_id)),
+                                    ui::spell_bar::SpellTarget::None => (None, None),
                                 };
 
                                 let cast_result = engine::spell_effects::cast_spell(
@@ -316,7 +324,7 @@ impl Game {
                                     state,
                                     game_data,
                                     target_pos,
-                                    None,
+                                    target_entity,
                                 );
 
                                 match cast_result {
@@ -329,6 +337,9 @@ impl Game {
                                     }
                                     engine::spell_effects::CastResult::OnCooldown => {
                                         eprintln!("Spell {} is on cooldown", spell_id);
+                                    }
+                                    engine::spell_effects::CastResult::MaxCapReached => {
+                                        eprintln!("Cannot cast {}: maximum capacity reached", spell_id);
                                     }
                                     _ => {
                                         eprintln!("Failed to cast spell: {:?}", cast_result);
@@ -350,6 +361,17 @@ impl Game {
                 // Check if mouse is over UI (build menu or spell bar)
                 let mouse_over_ui = self.build_menu.is_mouse_over_panel() || self.spell_bar.is_mouse_over_panel();
 
+                // Handle right-click to cancel dig marks
+                if is_mouse_button_pressed(MouseButton::Right) && !mouse_over_ui {
+                    if self.interaction_mode == InteractionMode::Dig {
+                        if let Some(tile) = state.get_tile_mut(hovered_tile) {
+                            if tile.marked_for_dig {
+                                tile.marked_for_dig = false;
+                            }
+                        }
+                    }
+                }
+
                 // Handle mouse click - only if not clicking on UI
                 if is_mouse_button_pressed(MouseButton::Left) && !mouse_over_ui {
                     use state::tile_state::Ownership;
@@ -358,7 +380,7 @@ impl Game {
                         InteractionMode::Dig => {
                             // Mark tile for digging (imps will dig it) - FREE
                             if let Some(tile) = state.get_tile_mut(hovered_tile) {
-                                if (tile.tile_type == "earth" || tile.tile_type == "gold_vein")
+                                if (tile.tile_type == "earth" || tile.tile_type == "gold_vein" || tile.tile_type == "gem_seam")
                                    && tile.ownership == Ownership::Unclaimed {
                                     tile.marked_for_dig = true;
                                 }
@@ -425,7 +447,31 @@ impl Game {
                                 eprintln!("Not enough gold! Need {} gold to place spawner", SPAWNER_COST);
                             }
                         }
-                        InteractionMode::None => {}
+                        InteractionMode::None => {
+                            // Select entity or open library shop
+                            let mut entity_found = false;
+                            
+                            // Check for entities at the hovered position
+                            if let Some(entity) = state.entities.at_position(hovered_tile).next() {
+                                self.selected_entity = Some(entity.id);
+                                eprintln!("Selected entity: {}", entity.id);
+                                entity_found = true;
+                            } else {
+                                self.selected_entity = None;
+                            }
+
+                            // If no entity selected, check if we clicked a library
+                            if !entity_found {
+                                if let Some(tile) = state.get_tile(hovered_tile) {
+                                    if tile.tile_type == "library" {
+                                        self.spell_shop_open = !self.spell_shop_open;
+                                        eprintln!("Toggled spell shop: {}", self.spell_shop_open);
+                                    } else {
+                                        self.spell_shop_open = false;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -598,8 +644,8 @@ impl Game {
 
                     // Apply fog of war
                     match tile.fog_state {
-                        FogState::Hidden => color = Color::new(0.0, 0.0, 0.0, 1.0), // Black for hidden
-                        FogState::Revealed => color = Color::new(0.5, 0.5, 0.5, 1.0), // Gray for revealed
+                        FogState::Hidden => color = ui::core::colors::FOG_HIDDEN,
+                        FogState::Revealed => color = ui::core::colors::FOG_REVEALED,
                         FogState::Visible => color = WHITE, // Full color for visible
                     }
 
@@ -608,14 +654,7 @@ impl Game {
                         color = Color::new(1.0, 1.0, 0.3, 1.0); // Yellow tint for marked tiles
                     }
 
-                    // Highlight hovered tile
-                    if let Some(hovered_pos) = self.hovered_tile {
-                        if tile.pos == hovered_pos {
-                            color.r = (color.r * 1.3).min(1.0);
-                            color.g = (color.g * 1.3).min(1.0);
-                            color.b = (color.b * 1.3).min(1.0);
-                        }
-                    }
+
 
                     // Draw the tile texture
                     draw_texture_ex(
@@ -646,13 +685,7 @@ impl Game {
                         color = Color::new(1.0, 0.8, 0.0, 1.0);
                     }
 
-                    if let Some(hovered_pos) = self.hovered_tile {
-                        if tile.pos == hovered_pos {
-                            color.r = (color.r + 0.3).min(1.0);
-                            color.g = (color.g + 0.3).min(1.0);
-                            color.b = (color.b + 0.3).min(1.0);
-                        }
-                    }
+
 
                     ui::core::draw_iso_tile(
                         screen_x,
@@ -661,6 +694,50 @@ impl Game {
                         ui::core::TILE_HEIGHT,
                         color,
                     );
+                }
+
+                // Draw selection outline if this is the hovered tile AND it's a valid target
+                if let Some(hovered_pos) = self.hovered_tile {
+                    if tile.pos == hovered_pos {
+                        let mut outline_color = None;
+
+                        match &self.interaction_mode {
+                            InteractionMode::None => {
+                                // Generic selection
+                                outline_color = Some(Color::new(1.0, 1.0, 1.0, 0.5));
+                            }
+                            InteractionMode::Dig => {
+                                // Valid dig targets: earth, gold, gems
+                                // Also allow marked tiles to be selected (to unmark)
+                                if tile.tile_type == "earth" || tile.tile_type == "gold_vein" || tile.tile_type == "gem_seam" {
+                                    outline_color = Some(ui::core::colors::ACCENT);
+                                }
+                            }
+                            InteractionMode::BuildRoom(_) => {
+                                // Valid build targets: claimed floors owned by player
+                                if tile.ownership == Ownership::Player && tile.tile_type == "claimed_floor" {
+                                    outline_color = Some(ui::core::colors::POSITIVE);
+                                }
+                            }
+                            InteractionMode::PlaceSpawner => {
+                                // Valid spawner location: claimed floors
+                                if tile.ownership == Ownership::Player && tile.tile_type == "claimed_floor" {
+                                    outline_color = Some(ui::core::colors::POSITIVE);
+                                }
+                            }
+                        }
+
+                        if let Some(color) = outline_color {
+                            ui::core::draw_iso_tile_outline(
+                                screen_x,
+                                screen_y,
+                                ui::core::TILE_WIDTH,
+                                ui::core::TILE_HEIGHT,
+                                color,
+                                2.0, // Thickness
+                            );
+                        }
+                    }
                 }
             }
         }
@@ -743,21 +820,62 @@ impl Game {
         };
 
         draw_text(
-            &format!("Deep Dominion - Tiles: {} | Gold: {} | Food: {}/{}",
-                state.player.claimed_tile_count, state.player.gold,
-                state.player.food, state.player.max_food),
+            &format!("Gold: {}/{} | Mana: {}/{} | Food: {}/{} | Imps: {}/{} | Monsters: {}/{}",
+                state.player.gold, state.player.max_gold,
+                state.player.mana, state.player.max_mana,
+                state.player.food, state.player.max_food,
+                state.count_imps(), GameState::MAX_IMPS,
+                state.count_monsters(), state.player.max_creatures),
             10.0,
             25.0,
             18.0,
             ui::core::colors::TEXT,
         );
+        // Draw mode text - use ACCENT for mode, NEGATIVE when can't afford
+        let mode_color = match &self.interaction_mode {
+            InteractionMode::None => ui::core::colors::TEXT_DIM,
+            InteractionMode::Dig => ui::core::colors::ACCENT,
+            InteractionMode::BuildRoom(room_type) => {
+                let cost = match room_type.as_str() {
+                    "lair" => 10,
+                    "hatchery" => 15,
+                    "treasury" => 20,
+                    "training_room" => 25,
+                    "library" => 30,
+                    _ => 10,
+                };
+                if state.player.gold >= cost {
+                    ui::core::colors::ACCENT
+                } else {
+                    ui::core::colors::NEGATIVE
+                }
+            }
+            InteractionMode::PlaceSpawner => {
+                if state.player.gold >= 50 {
+                    ui::core::colors::ACCENT
+                } else {
+                    ui::core::colors::NEGATIVE
+                }
+            }
+        };
         draw_text(
             &mode_text,
             10.0,
             45.0,
             16.0,
-            ui::core::colors::POSITIVE,
+            mode_color,
         );
+        
+        // Show selected spell indicator using get_selected_spell
+        if let Some(selected_spell) = self.spell_bar.get_selected_spell() {
+            draw_text(
+                &format!("Casting: {} (Click target)", selected_spell),
+                300.0,
+                45.0,
+                16.0,
+                ui::core::colors::ACCENT,
+            );
+        }
         draw_text(
             "1: Dig (Free) | 2: Lair (10g) | 3: Hatchery (15g) | 4: Treasury (20g) | 5: Spawner (50g)",
             10.0,
@@ -766,12 +884,44 @@ impl Game {
             ui::core::colors::TEXT_DIM,
         );
         draw_text(
-            "WASD: Camera | ESC: Cancel | Dig gold tiles for 50g each!",
+            "WASD: Camera | ESC: Cancel Mode | Right-click: Cancel Dig",
             10.0,
             screen_height() - 10.0,
             14.0,
             ui::core::colors::TEXT_DIM,
         );
+
+        // Draw resource warnings using WARNING, NEGATIVE, and POSITIVE colors
+        // Position relative to SIDEBAR_WIDTH
+        let status_x = screen_width() - ui::core::SIDEBAR_WIDTH + 150.0;
+        let mut warning_y = screen_height() - 40.0;
+        
+        // Show positive status when resources are good
+        if state.player.gold >= 100 {
+            draw_text(
+                "Food OK",
+                status_x,
+                warning_y,
+                14.0,
+                ui::core::colors::POSITIVE,
+            );
+        } else if state.player.food <= 0 {
+            draw_text(
+                "No Food!",
+                status_x,
+                warning_y,
+                14.0,
+                ui::core::colors::NEGATIVE,
+            );
+        } else if state.player.food < state.player.max_food / 4 {
+            draw_text(
+                "Low Food!",
+                status_x,
+                warning_y,
+                14.0,
+                ui::core::colors::WARNING,
+            );
+        }
 
         // Draw build menu
         self.build_menu.draw(&self.interaction_mode, &state.player);

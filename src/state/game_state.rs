@@ -99,7 +99,7 @@ impl GameState {
 
         let entities = EntityManager::new();
 
-        Self {
+        let mut state = Self {
             grid,
             width,
             height,
@@ -114,7 +114,12 @@ impl GameState {
             next_room_id,
             next_hero_spawn_time: 30.0, // Spawn first hero after 30 seconds
             next_creature_spawn_time: 10.0, // Spawn first creature after 10 seconds
-        }
+        };
+
+        // Spawn 3 starting imps
+        state.spawn_starting_imps(game_data, 3);
+
+        state
     }
 
     pub fn update(&mut self, dt: f32, game_data: &GameData) {
@@ -133,14 +138,7 @@ impl GameState {
         // Update spell cooldowns
         crate::engine::spell_effects::update_spell_cooldowns(self, dt);
 
-        // Imp auto-spawning when tiles are marked for digging
-        if self.has_marked_tiles() {
-            let imp_count = self.count_imps();
-            if imp_count < 5 {
-                // Spawn an imp if we don't have enough
-                self.spawn_imp(game_data);
-            }
-        }
+        // Imp spawning is now handled by the Summon Imp spell
 
         // Update imps first (they dig tiles)
         self.update_imp_digging(game_data, dt);
@@ -207,6 +205,46 @@ impl GameState {
             self.release_lair_tile(entity_id);
             self.entities.remove(entity_id);
         }
+
+        // Update fog of war based on claimed tiles and creature positions
+        self.update_fog_of_war_system();
+    }
+
+    /// Update fog of war using the tile_grid system
+    fn update_fog_of_war_system(&mut self) {
+        use std::collections::HashSet;
+        
+        // Collect claimed tiles
+        let mut claimed_tiles = HashSet::new();
+        let (width, height) = tile_grid::get_grid_dimensions(&self.grid);
+        
+        for y in 0..height {
+            for x in 0..width {
+                let pos = TilePos::new(x as i32, y as i32);
+                if let Some(tile) = tile_grid::get_tile(&self.grid, pos) {
+                    if tile.ownership == Ownership::Player {
+                        claimed_tiles.insert(pos);
+                    }
+                }
+            }
+        }
+        
+        // Collect creature positions (player's creatures provide vision, except imps)
+        let creature_positions: Vec<TilePos> = self.entities
+            .creatures()
+            .filter(|(_, creature)| creature.creature_id != "imp") // Imps don't provide vision
+            .map(|(id, _)| self.entities.get(id))
+            .flatten()
+            .map(|e| e.pos)
+            .collect();
+        
+        // Update fog of war with sight radius of 5
+        tile_grid::update_fog_of_war(&mut self.grid, &claimed_tiles, &creature_positions, 5);
+    }
+
+    /// Check if imps have work to do (dig marks exist)  
+    pub fn imps_have_work(&self) -> bool {
+        self.has_marked_tiles()
     }
 
     pub fn get_tile(&self, pos: TilePos) -> Option<&crate::state::tile_state::TileState> {
@@ -504,6 +542,34 @@ impl GameState {
                         }
                     }
                 }
+                Task::Train(room_id) => {
+                    if let Some(room) = self.rooms.iter().find(|r| r.id == *room_id) {
+                        if room.room_type == "training_room" {
+                            if let Some(creature) = self.entities.get_mut(creature_id)
+                                .and_then(|e| e.as_creature_mut()) {
+                                
+                                // Gain XP
+                                creature.training_timer += dt;
+                                if creature.training_timer >= 1.0 { // 1 sec tick
+                                    creature.training_timer = 0.0;
+                                    creature.experience += 10.0; // 10 XP per second
+                                    
+                                    // Check level up (Max level 5)
+                                    if creature.experience >= creature.max_experience && creature.level < 5 {
+                                        creature.level += 1;
+                                        creature.experience = 0.0;
+                                        creature.max_experience *= 1.5; // Harder to level up
+                                        creature.max_health *= 1.2;
+                                        creature.health = creature.max_health; // Heal on level up
+                                        eprintln!("Creature {} leveled up to {}", creature.creature_id, creature.level);
+                                    } else if creature.level >= 5 {
+                                        creature.experience = creature.max_experience; // Cap XP
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 Task::Dig(tile_pos) => {
                     // Imp digging logic (will add later)
                     if let Some(tile) = self.get_tile_mut(*tile_pos) {
@@ -628,6 +694,25 @@ impl GameState {
 
             self.rooms.push(room);
         }
+
+        // Recalculate max gold based on treasury rooms
+        let mut max_gold = 500; // Base capacity (throne room storage)
+        
+        for room in &self.rooms {
+            if let Some(room_data) = game_data.rooms.get(&room.room_type) {
+                if room_data.effects.gold_storage > 0 {
+                    max_gold += room.tiles.len() as i32 * room_data.effects.gold_storage;
+                }
+            }
+        }
+        
+        self.player.max_gold = max_gold;
+        // Ensure current gold doesn't exceed new max (though usually we want to keep it and just prevent adding more)
+        // actually, usually if capacity drops, you keep the gold but can't add more.
+        // But let's actally just let add_resources handle the clamping on next add.
+        // However, if we want to visually clamp immediately:
+        // self.player.gold = self.player.gold.min(self.player.max_gold); 
+        // Let's leave it unclamped so players don't lose gold instantly if a wall breaks.
     }
 
     fn flood_fill_room(
@@ -652,13 +737,8 @@ impl GameState {
                     visited.insert(pos);
                     result.insert(pos);
 
-                    // Add 4-way neighbors
-                    let neighbors = [
-                        TilePos::new(pos.x + 1, pos.y),
-                        TilePos::new(pos.x - 1, pos.y),
-                        TilePos::new(pos.x, pos.y + 1),
-                        TilePos::new(pos.x, pos.y - 1),
-                    ];
+                    // Use tile_grid helper to get 4-way neighbors
+                    let neighbors = tile_grid::get_cardinal_neighbors(&self.grid, pos);
 
                     for neighbor in neighbors {
                         if !visited.contains(&neighbor) {
@@ -920,7 +1000,7 @@ impl GameState {
     }
 
     /// Find the dungeon heart tile position
-    fn find_dungeon_heart_position(&self) -> Option<TilePos> {
+    pub fn find_dungeon_heart_position(&self) -> Option<TilePos> {
         for row in &self.grid {
             for tile in row {
                 if tile.tile_type == "dungeon_heart" && tile.ownership == Ownership::Player {
@@ -944,11 +1024,30 @@ impl GameState {
     }
 
     /// Count how many imps are currently spawned
-    fn count_imps(&self) -> usize {
+    pub fn count_imps(&self) -> usize {
         self.entities
             .creatures()
             .filter(|(_, creature)| creature.creature_id == "imp")
             .count()
+    }
+
+    /// Maximum number of imps allowed
+    pub const MAX_IMPS: usize = 10;
+
+    /// Count how many non-imp monsters are currently spawned
+    pub fn count_monsters(&self) -> usize {
+        self.entities
+            .creatures()
+            .filter(|(_, creature)| creature.creature_id != "imp")
+            .count()
+    }
+
+    /// Spawn starting imps at game initialization
+    pub fn spawn_starting_imps(&mut self, game_data: &GameData, count: usize) {
+        for _ in 0..count {
+            self.spawn_imp(game_data);
+        }
+        eprintln!("Spawned {} starting imps", count);
     }
 
     /// Spawn an imp at a claimed floor tile or dungeon heart
@@ -989,6 +1088,7 @@ impl GameState {
     /// Update imp digging behavior
     fn update_imp_digging(&mut self, game_data: &GameData, dt: f32) {
         use crate::engine::pathfinding::{find_path, Heuristic, PathfindingGrid, Pos};
+        use std::collections::HashSet;
 
         // Get all imp IDs
         let imp_ids: Vec<EntityId> = self.entities
@@ -996,6 +1096,23 @@ impl GameState {
             .filter(|(_, creature)| creature.creature_id == "imp")
             .map(|(id, _)| id)
             .collect();
+
+        // Track tiles being targeted by other imps to prevent multiple imps on one tile
+        let mut targeted_tiles = HashSet::new();
+        for &other_id in &imp_ids {
+            if let Some(entity) = self.entities.get(other_id) {
+                if let Some(creature) = entity.as_creature() {
+                     if let Some(path) = &creature.current_path {
+                         if let Some(last_pos) = path.last() {
+                             targeted_tiles.insert(*last_pos);
+                         }
+                     }
+                     if creature.current_path.is_none() {
+                         targeted_tiles.insert(entity.pos);
+                     }
+                }
+            }
+        }
 
         for imp_id in imp_ids {
             // Get imp position
@@ -1014,43 +1131,96 @@ impl GameState {
                 (creature.current_path.is_some(), creature.current_path.is_none())
             };
 
+            // Remove current imp's target from exclusion set
+            targeted_tiles.remove(&imp_pos);
+
             // If imp has no path, find nearest marked tile
             if should_check_dig {
-                if let Some(marked_pos) = self.find_nearest_marked_tile(imp_pos) {
+                // Find nearest marked tile NOT targeted by others
+                let mut nearest_marked = None;
+                let mut min_dist = std::f32::MAX;
+                
+                for y in 0..self.height {
+                    for x in 0..self.width {
+                        let pos = TilePos::new(x as i32, y as i32);
+                        if pos != imp_pos && targeted_tiles.contains(&pos) { continue; }
+                        if let Some(tile) = self.get_tile(pos) {
+                            if tile.marked_for_dig {
+                                let dx = (pos.x - imp_pos.x) as f32;
+                                let dy = (pos.y - imp_pos.y) as f32;
+                                let dist = dx*dx + dy*dy;
+                                if dist < min_dist { min_dist = dist; nearest_marked = Some(pos); }
+                            }
+                        }
+                    }
+                }
+
+                if let Some(marked_pos) = nearest_marked {
                     // Check if imp is already at the marked tile
                     if imp_pos == marked_pos {
-                        // Dig the tile!
-                        if let Some(tile) = self.get_tile_mut(marked_pos) {
-                            if tile.marked_for_dig {
-                                // Check if tile has resources (gold)
-                                let gold_gained = if tile.tile_type == "gold_vein" {
-                                    // Gold veins give 50 gold when dug
-                                    if let Some(resources) = tile.resources_remaining {
-                                        50.min(resources as i32)
-                                    } else {
-                                        50
-                                    }
-                                } else {
-                                    0
-                                };
-
-                                // Convert to claimed floor
-                                tile.tile_type = "claimed_floor".to_string();
-                                tile.ownership = Ownership::Player;
-                                tile.marked_for_dig = false;
-                                tile.resources_remaining = None;
-                                self.player.claimed_tile_count += 1;
-
-                                // Give gold to player
-                                if gold_gained > 0 {
-                                    self.player.gold += gold_gained;
-                                    eprintln!("Imp dug gold vein at {:?}, gained {} gold", marked_pos, gold_gained);
-                                } else {
-                                    eprintln!("Imp dug tile at {:?}", marked_pos);
+                        // Dig the tile with DELAY
+                        let mut task_complete = false;
+                        if let Some(entity) = self.entities.get_mut(imp_id) {
+                            if let Some(creature) = entity.as_creature_mut() {
+                                creature.task_time += dt;
+                                if creature.task_time >= 2.0 {
+                                    creature.task_time = 0.0;
+                                    task_complete = true;
                                 }
                             }
                         }
+
+                        if task_complete {
+                            // Dig the tile!
+                            if let Some(tile) = self.get_tile_mut(marked_pos) {
+                            if tile.marked_for_dig {
+                                // Check if tile has resources (gold or gems)
+                                let (gold_gained, is_gem_seam) = if tile.tile_type == "gold_vein" {
+                                    // Gold veins give 50 gold when dug
+                                    let gold = if let Some(resources) = tile.resources_remaining {
+                                        50.min(resources as i32)
+                                    } else {
+                                        50
+                                    };
+                                    (gold, false)
+                                } else if tile.tile_type == "gem_seam" {
+                                    // Gem seams give 25 gold per dig but are infinite
+                                    (25, true)
+                                } else {
+                                    (0, false)
+                                };
+
+                                if is_gem_seam {
+                                    // Gem seams stay marked - imps will keep mining them continuously
+                                    // tile.marked_for_dig stays true for infinite mining
+                                    self.player.gold += gold_gained;
+                                    eprintln!("Imp mined gem seam at {:?}, gained {} gold", marked_pos, gold_gained);
+                                } else {
+                                    // Convert to claimed floor
+                                    tile.tile_type = "claimed_floor".to_string();
+                                    tile.ownership = Ownership::Player;
+                                    tile.marked_for_dig = false;
+                                    tile.resources_remaining = None;
+                                    self.player.claimed_tile_count += 1;
+
+                                    // Give gold to player
+                                    if gold_gained > 0 {
+                                        self.player.gold += gold_gained;
+                                        eprintln!("Imp dug gold vein at {:?}, gained {} gold", marked_pos, gold_gained);
+                                    } else {
+                                        eprintln!("Imp dug tile at {:?}", marked_pos);
+                                    }
+                                }
+                            }
+                        }
+                        } // End task_complete check
                     } else {
+                        // Reset task time when moving
+                        if let Some(entity) = self.entities.get_mut(imp_id) {
+                            if let Some(creature) = entity.as_creature_mut() {
+                                creature.task_time = 0.0;
+                            }
+                        }
                         // Pathfind to the marked tile
                         let mut pf_grid = PathfindingGrid::new(self.width, self.height);
 
@@ -1150,6 +1320,18 @@ impl GameState {
                 }
             }
 
+            // Re-add potentially excluded target for next iterations
+            targeted_tiles.insert(imp_pos);
+            if let Some(entity) = self.entities.get(imp_id) {
+                 if let Some(creature) = entity.as_creature() {
+                     if let Some(path) = &creature.current_path {
+                         if let Some(last_pos) = path.last() {
+                             targeted_tiles.insert(*last_pos);
+                         }
+                     }
+                }
+            }
+
             // Handle movement along path (same logic as other creatures)
             let (should_move, next_waypoint) = {
                 let entity = self.entities.get_mut(imp_id).unwrap();
@@ -1191,28 +1373,7 @@ impl GameState {
         }
     }
 
-    /// Find the nearest marked tile to a given position
-    fn find_nearest_marked_tile(&self, pos: TilePos) -> Option<TilePos> {
-        let mut nearest = None;
-        let mut min_distance = f32::INFINITY;
 
-        for row in &self.grid {
-            for tile in row {
-                if tile.marked_for_dig {
-                    let dx = (tile.pos.x - pos.x).abs() as f32;
-                    let dy = (tile.pos.y - pos.y).abs() as f32;
-                    let distance = dx + dy; // Manhattan distance
-
-                    if distance < min_distance {
-                        min_distance = distance;
-                        nearest = Some(tile.pos);
-                    }
-                }
-            }
-        }
-
-        nearest
-    }
 
     fn resolve_combat(&mut self, game_data: &GameData, dt: f32) {
         let all_entities: Vec<EntityId> = self.entities.all().map(|e| e.id).collect();

@@ -11,6 +11,7 @@ pub struct PlayerState {
     pub gold: i32,
     pub mana: i32,
     pub food: i32,
+    pub max_gold: i32,
     pub max_mana: i32,
     pub max_food: i32,
 
@@ -59,6 +60,7 @@ impl PlayerState {
             gold: 200, // Start with limited gold - must dig for more
             mana: 1000,
             food: 100,
+            max_gold: 500, // Starting treasury capacity
             max_mana: 10000,
             max_food: 500,
 
@@ -102,7 +104,7 @@ impl PlayerState {
 
     /// Add resources, respecting max limits
     pub fn add_resources(&mut self, gold: i32, mana: i32, food: i32) {
-        self.gold += gold;
+        self.gold = (self.gold + gold).min(self.max_gold);
         self.mana = (self.mana + mana).min(self.max_mana);
         self.food = (self.food + food).min(self.max_food);
     }

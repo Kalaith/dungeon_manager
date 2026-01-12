@@ -244,9 +244,8 @@ pub fn decide_task(
     }
 
     // Add training if available and mood is good
-    if creature.mood > 50.0 {
-        if let Some(room_id) =
-            find_best_room("training_room", creature_pos, &game_state.rooms, 0.0)
+    if creature.mood > 50.0 && creature.level < 5 {
+        if let Some(room_id) = find_best_room("training_room", creature_pos, &game_state.rooms, 0.0)
         {
             let task = Task::Train(room_id);
             let desirability = calculate_task_desirability(&task, creature, monster_data);

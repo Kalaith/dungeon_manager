@@ -16,6 +16,7 @@ pub enum CastResult {
     InvalidTarget,
     OnCooldown,
     OutOfRange,
+    MaxCapReached,
 }
 
 /// Active spell cooldown tracker
@@ -23,6 +24,17 @@ pub enum CastResult {
 pub struct SpellCooldown {
     pub spell_id: String,
     pub remaining_time: f32,
+}
+
+/// Get active spell cooldowns as SpellCooldown structs
+pub fn get_active_cooldowns(game_state: &GameState) -> Vec<SpellCooldown> {
+    game_state.player.spell_cooldowns
+        .iter()
+        .map(|(spell_id, remaining)| SpellCooldown {
+            spell_id: spell_id.clone(),
+            remaining_time: *remaining,
+        })
+        .collect()
 }
 
 /// Check if a spell can be cast
@@ -47,13 +59,35 @@ pub fn can_cast_spell(
         return CastResult::InsufficientGold;
     }
 
-    // Check targeting validity
+    // Special handling for summon_imps - check max cap and calculate dynamic cost
+    if spell.id == "summon_imps" {
+        const MAX_IMPS: usize = 10;
+        let current_imps = game_state.count_imps();
+        if current_imps >= MAX_IMPS {
+            return CastResult::MaxCapReached;
+        }
+        // Dynamic cost: 10 base + 5 per existing imp
+        let dynamic_cost = 10 + (current_imps as i32 * 5);
+        if game_state.player.mana < dynamic_cost {
+            return CastResult::InsufficientMana;
+        }
+    }
+
+    // Check targeting validity and range
     match spell.targeting.target_type.as_str() {
         "tile" | "area" => {
             if target_pos.is_none() {
                 return CastResult::InvalidTarget;
             }
-            // Could add range check here
+            // Check range if specified
+            if let Some(pos) = target_pos {
+                if let Some(heart_pos) = game_state.find_dungeon_heart_position() {
+                    let distance = ((pos.x - heart_pos.x).abs() + (pos.y - heart_pos.y).abs()) as u32;
+                    if spell.targeting.range > 0 && distance > spell.targeting.range {
+                        return CastResult::OutOfRange;
+                    }
+                }
+            }
         }
         "creature" => {
             if target_entity.is_none() {
@@ -93,9 +127,17 @@ pub fn cast_spell(
         return can_cast;
     }
 
-    // Deduct costs
-    game_state.player.mana -= spell.cost.mana;
-    game_state.player.gold -= spell.cost.gold;
+    // Deduct costs - special handling for summon_imps
+    if spell_id == "summon_imps" {
+        let current_imps = game_state.count_imps();
+        let dynamic_cost = 10 + (current_imps as i32 * 5);
+        game_state.player.mana -= dynamic_cost;
+        eprintln!("Cast spell: {} (dynamic mana: {}, imps: {})", spell.name, dynamic_cost, current_imps);
+    } else {
+        game_state.player.mana -= spell.cost.mana;
+        game_state.player.gold -= spell.cost.gold;
+        eprintln!("Cast spell: {} (mana: {}, gold: {})", spell.name, spell.cost.mana, spell.cost.gold);
+    }
 
     // Apply effects
     for effect in &spell.effects {
@@ -109,8 +151,6 @@ pub fn cast_spell(
             .spell_cooldowns
             .insert(spell_id.to_string(), spell.cooldown);
     }
-
-    eprintln!("Cast spell: {} (mana: {}, gold: {})", spell.name, spell.cost.mana, spell.cost.gold);
 
     CastResult::Success
 }
@@ -304,23 +344,25 @@ fn spawn_entity_effect(
     game_data: &GameData,
 ) {
     if let Some(entity_type) = &effect.entity {
-        let count = 1; // Default to 1 spawn
+        // Try to spawn an imp
+        if entity_type == "imp" {
+            const MAX_IMPS: usize = 10;
+            if game_state.count_imps() >= MAX_IMPS {
+                eprintln!("Cannot summon imp: max cap of {} reached", MAX_IMPS);
+                return;
+            }
 
-        for _ in 0..count {
-            // Try to spawn an imp
-            if entity_type == "imp" {
-                if let Some(monster_data) = game_data.monsters.get("imp") {
-                    let creature_state = CreatureState::new(
-                        "imp".to_string(),
-                        1,
-                        monster_data.stats.health,
-                        monster_data.stats.mana,
-                    );
+            if let Some(monster_data) = game_data.monsters.get("imp") {
+                let creature_state = CreatureState::new(
+                    "imp".to_string(),
+                    1,
+                    monster_data.stats.health,
+                    monster_data.stats.mana,
+                );
 
-                    game_state.entities.spawn_creature(pos, creature_state);
+                game_state.entities.spawn_creature(pos, creature_state);
 
-                    eprintln!("Spell summoned imp at {:?}", pos);
-                }
+                eprintln!("Spell summoned imp at {:?} (total imps: {})", pos, game_state.count_imps());
             }
         }
     }
