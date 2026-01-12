@@ -1,4 +1,5 @@
 use macroquad::prelude::*;
+use std::collections::HashMap;
 
 mod data;
 mod engine;
@@ -7,6 +8,7 @@ mod ui;
 
 use data::GameData;
 use state::game_state::GameState;
+use state::MapType;
 
 pub enum GamePhase {
     Loading,
@@ -22,65 +24,218 @@ pub enum InteractionMode {
     PlaceSpawner,
 }
 
+pub struct GraphicsCache {
+    tile_textures: HashMap<String, Texture2D>,
+    monster_textures: HashMap<String, Texture2D>,
+    hero_textures: HashMap<String, Texture2D>,
+}
+
+impl GraphicsCache {
+    fn new() -> Self {
+        Self {
+            tile_textures: HashMap::new(),
+            monster_textures: HashMap::new(),
+            hero_textures: HashMap::new(),
+        }
+    }
+
+    async fn load_all() -> Result<Self, String> {
+        let mut cache = Self::new();
+
+        // List of all tile types
+        let tile_types = vec![
+            "solid_rock", "earth", "claimed_floor", "reinforced_wall",
+            "gold_vein", "gem_seam", "lava", "water", "bridge",
+            "corrupted_floor", "ancient_rune_floor", "dungeon_heart",
+            "lair", "hatchery", "treasury", "workshop", "training_room",
+            "prison", "guard_post", "ritual_circle", "monster_spawner"
+        ];
+
+        // Load tile textures
+        for tile_type in tile_types {
+            let path = format!("assets/tiles/{}.png", tile_type);
+            match load_texture(&path).await {
+                Ok(texture) => {
+                    texture.set_filter(FilterMode::Nearest);
+                    cache.tile_textures.insert(tile_type.to_string(), texture);
+                    eprintln!("Loaded tile texture: {}", tile_type);
+                }
+                Err(e) => {
+                    eprintln!("Warning: Failed to load tile texture {}: {:?}", tile_type, e);
+                }
+            }
+        }
+
+        // List of all monster types
+        let monster_types = vec![
+            "imp", "goblin", "orc", "warlock", "troll", "skeleton", "demon_spawn"
+        ];
+
+        // Load monster textures
+        for monster_type in monster_types {
+            let path = format!("assets/sprites/monsters/{}.png", monster_type);
+            match load_texture(&path).await {
+                Ok(texture) => {
+                    texture.set_filter(FilterMode::Nearest);
+                    cache.monster_textures.insert(monster_type.to_string(), texture);
+                    eprintln!("Loaded monster texture: {}", monster_type);
+                }
+                Err(e) => {
+                    eprintln!("Warning: Failed to load monster texture {}: {:?}", monster_type, e);
+                }
+            }
+        }
+
+        // List of all hero types
+        let hero_types = vec![
+            "peasant_militia", "scout", "acolyte", "knight", "archer",
+            "battle_cleric", "rogue", "paladin", "wizard", "inquisitor",
+            "knight_commander", "high_priest", "archmage", "champion_of_light"
+        ];
+
+        // Load hero textures
+        for hero_type in hero_types {
+            let path = format!("assets/sprites/heroes/{}.png", hero_type);
+            match load_texture(&path).await {
+                Ok(texture) => {
+                    texture.set_filter(FilterMode::Nearest);
+                    cache.hero_textures.insert(hero_type.to_string(), texture);
+                    eprintln!("Loaded hero texture: {}", hero_type);
+                }
+                Err(e) => {
+                    eprintln!("Warning: Failed to load hero texture {}: {:?}", hero_type, e);
+                }
+            }
+        }
+
+        Ok(cache)
+    }
+}
+
 pub struct Game {
     phase: GamePhase,
     game_data: Option<GameData>,
+    graphics_cache: Option<GraphicsCache>,
     interaction_mode: InteractionMode,
     hovered_tile: Option<state::tile_state::TilePos>,
     build_menu: ui::build_menu::BuildMenu,
+    spell_bar: ui::spell_bar::SpellBar,
+    selected_map_type: MapType,
 }
 
 impl Game {
     fn new() -> Self {
+        let mut spell_bar = ui::spell_bar::SpellBar::new();
+        spell_bar.update_position();
+
         Self {
             phase: GamePhase::Loading,
             game_data: None,
+            graphics_cache: None,
             interaction_mode: InteractionMode::None,
             hovered_tile: None,
             build_menu: ui::build_menu::BuildMenu::new(),
+            spell_bar,
+            selected_map_type: MapType::Standard,
+        }
+    }
+
+    async fn load_resources(&mut self) {
+        // Load game data
+        if self.game_data.is_none() {
+            match GameData::load() {
+                Ok(data) => {
+                    eprintln!("Successfully loaded game data!");
+                    eprintln!("  - {} tiles", data.tiles.len());
+                    eprintln!("  - {} rooms", data.rooms.len());
+                    eprintln!("  - {} monsters", data.monsters.len());
+                    eprintln!("  - {} heroes", data.heroes.len());
+                    eprintln!("  - {} spells", data.spells.len());
+                    self.game_data = Some(data);
+                }
+                Err(e) => {
+                    eprintln!("Failed to load game data: {}", e);
+                    return;
+                }
+            }
+        }
+
+        // Load graphics
+        if self.graphics_cache.is_none() {
+            eprintln!("Loading graphics...");
+            match GraphicsCache::load_all().await {
+                Ok(cache) => {
+                    eprintln!("Successfully loaded {} tile textures", cache.tile_textures.len());
+                    eprintln!("Successfully loaded {} monster textures", cache.monster_textures.len());
+                    eprintln!("Successfully loaded {} hero textures", cache.hero_textures.len());
+                    self.graphics_cache = Some(cache);
+                    self.phase = GamePhase::MainMenu;
+                }
+                Err(e) => {
+                    eprintln!("Failed to load graphics: {}", e);
+                }
+            }
         }
     }
 
     fn update(&mut self, dt: f32) {
         match &mut self.phase {
             GamePhase::Loading => {
-                if self.game_data.is_none() {
-                    match GameData::load() {
-                        Ok(data) => {
-                            eprintln!("Successfully loaded game data!");
-                            eprintln!("  - {} tiles", data.tiles.len());
-                            eprintln!("  - {} rooms", data.rooms.len());
-                            eprintln!("  - {} monsters", data.monsters.len());
-                            eprintln!("  - {} heroes", data.heroes.len());
-                            eprintln!("  - {} spells", data.spells.len());
-                            self.game_data = Some(data);
-                            self.phase = GamePhase::MainMenu;
-                        }
-                        Err(e) => {
-                            eprintln!("Failed to load game data: {}", e);
+                // Loading is handled asynchronously in main loop
+            }
+            GamePhase::MainMenu => {
+                let mouse_pos = mouse_position();
+
+                // Map type selection buttons
+                let map_button_y = screen_height() / 2.0 - 50.0;
+                let map_button_width = 160.0;
+                let map_button_height = 40.0;
+                let map_button_spacing = 10.0;
+                let total_width = (map_button_width + map_button_spacing) * 4.0 - map_button_spacing;
+                let map_button_start_x = screen_width() / 2.0 - total_width / 2.0;
+
+                // Check each map type button
+                let map_types = [
+                    (MapType::Standard, "Standard", 0),
+                    (MapType::Rich, "Rich", 1),
+                    (MapType::Hazardous, "Hazardous", 2),
+                    (MapType::Test, "Test", 3),
+                ];
+
+                if is_mouse_button_pressed(MouseButton::Left) {
+                    for (map_type, _label, index) in &map_types {
+                        let btn_x = map_button_start_x + (map_button_width + map_button_spacing) * (*index as f32);
+                        if mouse_pos.0 >= btn_x
+                            && mouse_pos.0 <= btn_x + map_button_width
+                            && mouse_pos.1 >= map_button_y
+                            && mouse_pos.1 <= map_button_y + map_button_height
+                        {
+                            self.selected_map_type = *map_type;
                         }
                     }
                 }
-            }
-            GamePhase::MainMenu => {
-                // Check for SPACE key or mouse click on start button
-                let should_start = is_key_pressed(KeyCode::Space) || {
-                    let mouse_pos = mouse_position();
-                    let button_x = screen_width() / 2.0 - 100.0;
-                    let button_y = screen_height() / 2.0 + 30.0;
-                    let button_width = 200.0;
-                    let button_height = 50.0;
 
-                    is_mouse_button_pressed(MouseButton::Left)
+                // Check for SPACE key or mouse click on start button
+                let button_x = screen_width() / 2.0 - 100.0;
+                let button_y = screen_height() / 2.0 + 60.0;
+                let button_width = 200.0;
+                let button_height = 50.0;
+
+                let should_start = is_key_pressed(KeyCode::Space)
+                    || (is_mouse_button_pressed(MouseButton::Left)
                         && mouse_pos.0 >= button_x
                         && mouse_pos.0 <= button_x + button_width
                         && mouse_pos.1 >= button_y
-                        && mouse_pos.1 <= button_y + button_height
-                };
+                        && mouse_pos.1 <= button_y + button_height);
 
                 if should_start {
                     if let Some(ref game_data) = self.game_data {
-                        let game_state = GameState::new(50, 50, game_data);
+                        let game_state = GameState::new_with_map_type(
+                            50,
+                            50,
+                            game_data,
+                            self.selected_map_type,
+                        );
                         self.phase = GamePhase::Playing(game_state);
                     }
                 }
@@ -143,13 +298,57 @@ impl Game {
                 );
                 self.hovered_tile = Some(hovered_tile);
 
+                // Handle spell bar input
+                if let Some(ref game_data) = self.game_data {
+                    if let Some(spell_action) = self.spell_bar.handle_input(&state.player, &game_data.spells, Some(hovered_tile)) {
+                        match spell_action {
+                            ui::spell_bar::SpellAction::SelectSpell(spell_id) => {
+                                eprintln!("Selected spell: {}", spell_id);
+                            }
+                            ui::spell_bar::SpellAction::CastSpell(spell_id, target) => {
+                                let target_pos = match target {
+                                    ui::spell_bar::SpellTarget::Tile(pos) => Some(pos),
+                                    _ => None,
+                                };
+
+                                let cast_result = engine::spell_effects::cast_spell(
+                                    &spell_id,
+                                    state,
+                                    game_data,
+                                    target_pos,
+                                    None,
+                                );
+
+                                match cast_result {
+                                    engine::spell_effects::CastResult::Success => {
+                                        eprintln!("Spell cast successfully: {}", spell_id);
+                                        state.player.record_spell_cast(spell_id);
+                                    }
+                                    engine::spell_effects::CastResult::InsufficientMana => {
+                                        eprintln!("Not enough mana to cast {}", spell_id);
+                                    }
+                                    engine::spell_effects::CastResult::OnCooldown => {
+                                        eprintln!("Spell {} is on cooldown", spell_id);
+                                    }
+                                    _ => {
+                                        eprintln!("Failed to cast spell: {:?}", cast_result);
+                                    }
+                                }
+                            }
+                            ui::spell_bar::SpellAction::CancelCast => {
+                                eprintln!("Spell cast cancelled");
+                            }
+                        }
+                    }
+                }
+
                 // Handle build menu clicks
                 if let Some(new_mode) = self.build_menu.handle_input(&state.player) {
                     self.interaction_mode = new_mode;
                 }
 
-                // Check if mouse is over UI (build menu)
-                let mouse_over_ui = self.build_menu.is_mouse_over_panel();
+                // Check if mouse is over UI (build menu or spell bar)
+                let mouse_over_ui = self.build_menu.is_mouse_over_panel() || self.spell_bar.is_mouse_over_panel();
 
                 // Handle mouse click - only if not clicking on UI
                 if is_mouse_button_pressed(MouseButton::Left) && !mouse_over_ui {
@@ -247,22 +446,85 @@ impl Game {
                 );
             }
             GamePhase::MainMenu => {
+                let mouse_pos = mouse_position();
+
                 // Draw title
                 draw_text(
                     "Deep Dominion",
-                    screen_width() / 2.0 - 120.0,
-                    screen_height() / 2.0 - 50.0,
+                    screen_width() / 2.0 - 150.0,
+                    screen_height() / 2.0 - 180.0,
                     48.0,
                     WHITE,
                 );
 
+                // Draw subtitle
+                draw_text(
+                    "Select Map Type:",
+                    screen_width() / 2.0 - 80.0,
+                    screen_height() / 2.0 - 90.0,
+                    20.0,
+                    Color::new(0.9, 0.9, 0.9, 1.0),
+                );
+
+                // Draw map type selection buttons
+                let map_button_y = screen_height() / 2.0 - 50.0;
+                let map_button_width = 160.0;
+                let map_button_height = 40.0;
+                let map_button_spacing = 10.0;
+                let total_width = (map_button_width + map_button_spacing) * 4.0 - map_button_spacing;
+                let map_button_start_x = screen_width() / 2.0 - total_width / 2.0;
+
+                let map_types = [
+                    (MapType::Standard, "Standard", "Balanced", 0),
+                    (MapType::Rich, "Rich", "Lots of gold", 1),
+                    (MapType::Hazardous, "Hazardous", "Many dangers", 2),
+                    (MapType::Test, "Test", "Fixed seed", 3),
+                ];
+
+                for (map_type, label, desc, index) in &map_types {
+                    let btn_x = map_button_start_x + (map_button_width + map_button_spacing) * (*index as f32);
+
+                    let is_hovered = mouse_pos.0 >= btn_x
+                        && mouse_pos.0 <= btn_x + map_button_width
+                        && mouse_pos.1 >= map_button_y
+                        && mouse_pos.1 <= map_button_y + map_button_height;
+
+                    let is_selected = self.selected_map_type == *map_type;
+
+                    let button_color = if is_selected {
+                        Color::new(0.2, 0.7, 0.3, 1.0) // Green for selected
+                    } else if is_hovered {
+                        Color::new(0.4, 0.6, 0.9, 1.0) // Blue for hover
+                    } else {
+                        Color::new(0.3, 0.3, 0.4, 1.0) // Gray default
+                    };
+
+                    draw_rectangle(btn_x, map_button_y, map_button_width, map_button_height, button_color);
+                    draw_rectangle_lines(btn_x, map_button_y, map_button_width, map_button_height, 2.0, WHITE);
+
+                    draw_text(
+                        label,
+                        btn_x + 10.0,
+                        map_button_y + 20.0,
+                        18.0,
+                        WHITE,
+                    );
+
+                    draw_text(
+                        desc,
+                        btn_x + 10.0,
+                        map_button_y + 35.0,
+                        12.0,
+                        Color::new(0.8, 0.8, 0.8, 1.0),
+                    );
+                }
+
                 // Draw start button
                 let button_x = screen_width() / 2.0 - 100.0;
-                let button_y = screen_height() / 2.0 + 30.0;
+                let button_y = screen_height() / 2.0 + 60.0;
                 let button_width = 200.0;
                 let button_height = 50.0;
 
-                let mouse_pos = mouse_position();
                 let is_hovered = mouse_pos.0 >= button_x
                     && mouse_pos.0 <= button_x + button_width
                     && mouse_pos.1 >= button_y
@@ -289,7 +551,7 @@ impl Game {
                 draw_text(
                     "Click to start or press SPACE",
                     screen_width() / 2.0 - 120.0,
-                    screen_height() / 2.0 + 110.0,
+                    screen_height() / 2.0 + 140.0,
                     16.0,
                     Color::new(0.7, 0.7, 0.7, 1.0),
                 );
@@ -303,6 +565,12 @@ impl Game {
     fn draw_game(&self, state: &GameState) {
         use engine::tile_grid;
         use state::tile_state::FogState;
+
+        let graphics = if let Some(ref cache) = self.graphics_cache {
+            cache
+        } else {
+            return; // Can't render without graphics
+        };
 
         // Draw grid
         for row in &state.grid {
@@ -324,40 +592,76 @@ impl Game {
                     continue;
                 }
 
-                let mut color = ui::core::get_tile_color(&tile.tile_type);
+                // Get texture for this tile type
+                if let Some(texture) = graphics.tile_textures.get(&tile.tile_type) {
+                    let mut color = WHITE;
 
-                // Apply fog of war
-                match tile.fog_state {
-                    FogState::Hidden => color = ui::core::colors::FOG_HIDDEN,
-                    FogState::Revealed => {
-                        color.r *= 0.5;
-                        color.g *= 0.5;
-                        color.b *= 0.5;
+                    // Apply fog of war
+                    match tile.fog_state {
+                        FogState::Hidden => color = Color::new(0.0, 0.0, 0.0, 1.0), // Black for hidden
+                        FogState::Revealed => color = Color::new(0.5, 0.5, 0.5, 1.0), // Gray for revealed
+                        FogState::Visible => color = WHITE, // Full color for visible
                     }
-                    FogState::Visible => {}
-                }
 
-                // Show marked tiles with a distinct color
-                if tile.marked_for_dig {
-                    color = Color::new(1.0, 0.8, 0.0, 1.0); // Bright yellow for marked tiles
-                }
-
-                // Highlight hovered tile
-                if let Some(hovered_pos) = self.hovered_tile {
-                    if tile.pos == hovered_pos {
-                        color.r = (color.r + 0.3).min(1.0);
-                        color.g = (color.g + 0.3).min(1.0);
-                        color.b = (color.b + 0.3).min(1.0);
+                    // Show marked tiles with yellow tint
+                    if tile.marked_for_dig {
+                        color = Color::new(1.0, 1.0, 0.3, 1.0); // Yellow tint for marked tiles
                     }
-                }
 
-                ui::core::draw_iso_tile(
-                    screen_x,
-                    screen_y,
-                    ui::core::TILE_WIDTH,
-                    ui::core::TILE_HEIGHT,
-                    color,
-                );
+                    // Highlight hovered tile
+                    if let Some(hovered_pos) = self.hovered_tile {
+                        if tile.pos == hovered_pos {
+                            color.r = (color.r * 1.3).min(1.0);
+                            color.g = (color.g * 1.3).min(1.0);
+                            color.b = (color.b * 1.3).min(1.0);
+                        }
+                    }
+
+                    // Draw the tile texture
+                    draw_texture_ex(
+                        texture,
+                        screen_x - ui::core::TILE_WIDTH / 2.0,
+                        screen_y - ui::core::TILE_HEIGHT / 2.0,
+                        color,
+                        DrawTextureParams {
+                            dest_size: Some(vec2(ui::core::TILE_WIDTH, ui::core::TILE_HEIGHT)),
+                            ..Default::default()
+                        },
+                    );
+                } else {
+                    // Fallback to colored diamond if texture not found
+                    let mut color = ui::core::get_tile_color(&tile.tile_type);
+
+                    match tile.fog_state {
+                        FogState::Hidden => color = ui::core::colors::FOG_HIDDEN,
+                        FogState::Revealed => {
+                            color.r *= 0.5;
+                            color.g *= 0.5;
+                            color.b *= 0.5;
+                        }
+                        FogState::Visible => {}
+                    }
+
+                    if tile.marked_for_dig {
+                        color = Color::new(1.0, 0.8, 0.0, 1.0);
+                    }
+
+                    if let Some(hovered_pos) = self.hovered_tile {
+                        if tile.pos == hovered_pos {
+                            color.r = (color.r + 0.3).min(1.0);
+                            color.g = (color.g + 0.3).min(1.0);
+                            color.b = (color.b + 0.3).min(1.0);
+                        }
+                    }
+
+                    ui::core::draw_iso_tile(
+                        screen_x,
+                        screen_y,
+                        ui::core::TILE_WIDTH,
+                        ui::core::TILE_HEIGHT,
+                        color,
+                    );
+                }
             }
         }
 
@@ -380,15 +684,42 @@ impl Game {
                 continue;
             }
 
-            // Draw entity based on type
-            let (color, size) = match &entity.entity_type {
-                state::entities::EntityType::Hero(_) => (Color::new(0.2, 0.8, 0.2, 1.0), 8.0), // Green for heroes
-                state::entities::EntityType::Creature(_) => (Color::new(0.8, 0.2, 0.2, 1.0), 8.0), // Red for creatures
+            // Get the appropriate sprite texture
+            let texture_opt = match &entity.entity_type {
+                state::entities::EntityType::Hero(hero_state) => {
+                    graphics.hero_textures.get(&hero_state.hero_id)
+                }
+                state::entities::EntityType::Creature(creature_state) => {
+                    graphics.monster_textures.get(&creature_state.creature_id)
+                }
             };
 
-            draw_circle(screen_x, screen_y - 10.0, size, color);
-            // Draw a small shadow/base
-            draw_circle(screen_x, screen_y - 2.0, size * 0.7, Color::new(0.0, 0.0, 0.0, 0.3));
+            if let Some(texture) = texture_opt {
+                // Draw sprite centered on tile position
+                let sprite_size = 48.0; // Size to draw the sprite
+                draw_texture_ex(
+                    texture,
+                    screen_x - sprite_size / 2.0,
+                    screen_y - sprite_size / 2.0 - 10.0, // Offset up slightly
+                    WHITE,
+                    DrawTextureParams {
+                        dest_size: Some(vec2(sprite_size, sprite_size)),
+                        ..Default::default()
+                    },
+                );
+
+                // Draw a small shadow/base
+                draw_circle(screen_x, screen_y - 2.0, 6.0, Color::new(0.0, 0.0, 0.0, 0.3));
+            } else {
+                // Fallback to colored circles if texture not found
+                let (color, size) = match &entity.entity_type {
+                    state::entities::EntityType::Hero(_) => (Color::new(0.2, 0.8, 0.2, 1.0), 8.0),
+                    state::entities::EntityType::Creature(_) => (Color::new(0.8, 0.2, 0.2, 1.0), 8.0),
+                };
+
+                draw_circle(screen_x, screen_y - 10.0, size, color);
+                draw_circle(screen_x, screen_y - 2.0, size * 0.7, Color::new(0.0, 0.0, 0.0, 0.3));
+            }
         }
 
         // Draw HUD
@@ -444,6 +775,11 @@ impl Game {
 
         // Draw build menu
         self.build_menu.draw(&self.interaction_mode, &state.player);
+
+        // Draw spell bar
+        if let Some(ref game_data) = self.game_data {
+            self.spell_bar.draw(&state.player, &game_data.spells);
+        }
     }
 }
 
@@ -460,8 +796,15 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf)]
 async fn main() {
     let mut game = Game::new();
+    let mut loading_started = false;
 
     loop {
+        // Handle loading phase
+        if matches!(game.phase, GamePhase::Loading) && !loading_started {
+            loading_started = true;
+            game.load_resources().await;
+        }
+
         let dt = get_frame_time();
         game.update(dt);
         game.draw();

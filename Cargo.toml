@@ -3,6 +3,7 @@ name = "dungeon_manager"
 version = "0.1.0"
 edition = "2021"
 authors = ["Deep Dominion Team"]
+default-run = "dungeon_manager"
 
 [dependencies]
 macroquad = "0.4"

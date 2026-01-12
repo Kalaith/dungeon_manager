@@ -28,6 +28,9 @@ pub struct PlayerState {
     pub current_creature_count: usize,
     pub claimed_tile_count: usize,
 
+    // Spell cooldowns (spell_id -> remaining time in seconds)
+    pub spell_cooldowns: HashMap<String, f32>,
+
     // Statistics
     pub kills: HashMap<String, u32>,
     pub deaths: HashMap<String, u32>,
@@ -70,6 +73,8 @@ impl PlayerState {
             max_creatures: 20,
             current_creature_count: 0,
             claimed_tile_count: 0,
+
+            spell_cooldowns: HashMap::new(),
 
             kills: HashMap::new(),
             deaths: HashMap::new(),

@@ -8,5 +8,6 @@ pub use entities::{
     CreatureState, Entity, EntityId, EntityManager, EntityType, HeroGoal, HeroState, StatusEffect,
     Task,
 };
+pub use game_state::MapType;
 pub use player_state::PlayerState;
 pub use tile_state::{FogState, Ownership, TilePos, TileState};

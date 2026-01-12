@@ -4,12 +4,21 @@
 use crate::data::GameData;
 use crate::engine::combat::{find_combat_targets, resolve_combat_tick, update_status_effects};
 use crate::engine::hero_ai::update_hero_ai;
+use crate::engine::map_generator;
 use crate::engine::room_validator::Room;
 use crate::engine::tile_grid::{self, Grid};
 use crate::state::entities::{EntityId, EntityManager, HeroState};
 use crate::state::player_state::PlayerState;
 use crate::state::tile_state::{self, Ownership, TilePos};
 use std::collections::HashSet;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MapType {
+    Standard,   // Balanced resources and hazards
+    Rich,       // Lots of gold and gems, few hazards
+    Hazardous,  // Many water/lava pools, less resources
+    Test,       // Fixed seed for testing
+}
 
 pub struct GameState {
     pub grid: Grid,
@@ -30,85 +39,65 @@ pub struct GameState {
 
 impl GameState {
     pub fn new(width: usize, height: usize, game_data: &GameData) -> Self {
-        let mut grid = tile_grid::create_grid(width, height, game_data);
+        Self::new_with_map_type(width, height, game_data, MapType::Standard)
+    }
+
+    pub fn new_with_map_type(width: usize, height: usize, game_data: &GameData, map_type: MapType) -> Self {
+        // Generate map using procedural generator
+        let mut grid = match map_type {
+            MapType::Standard => {
+                let config = map_generator::MapConfig::default();
+                map_generator::generate_map(&config, game_data)
+            }
+            MapType::Rich => map_generator::generate_rich_map(width, height, game_data),
+            MapType::Hazardous => map_generator::generate_hazardous_map(width, height, game_data),
+            MapType::Test => map_generator::generate_test_map(width, height, game_data),
+        };
+
         let mut rooms = Vec::new();
         let mut next_room_id = 0;
 
-        // Create player's starting area in the center
-        let center_x = width / 2;
-        let center_y = height / 2;
-        let start_size = 5;
+        // Detect and register starting rooms created by map generator
+        let mut room_tiles_by_type: std::collections::HashMap<String, HashSet<TilePos>> =
+            std::collections::HashMap::new();
 
-        let mut start_tiles = std::collections::HashSet::new();
-        for x in (center_x - start_size)..=(center_x + start_size) {
-            for y in (center_y - start_size)..=(center_y + start_size) {
-                if x >= 0 && x < width && y >= 0 && y < height {
-                    start_tiles.insert(TilePos::new(x as i32, y as i32));
+        for y in 0..grid.len() {
+            for x in 0..grid[0].len() {
+                let tile = &grid[y][x];
+                if tile.ownership == Ownership::Player {
+                    let room_type = tile.tile_type.clone();
+                    room_tiles_by_type
+                        .entry(room_type)
+                        .or_insert_with(HashSet::new)
+                        .insert(tile.pos);
                 }
             }
         }
 
-        // Convert starting tiles to floor tiles
-        for &pos in &start_tiles {
-            if let Some(tile) = tile_grid::get_tile_mut(&mut grid, pos) {
-                tile.tile_type = "claimed_floor".to_string();
-                tile.ownership = Ownership::Player;
-                tile.room_id = Some(next_room_id);
-            }
-        }
+        // Create room entries for each detected room type
+        for (room_type, tiles) in room_tiles_by_type {
+            let room_id = next_room_id;
+            next_room_id += 1;
 
-        rooms.push(crate::engine::room_validator::Room {
-            id: next_room_id,
-            room_type: "entrance".to_string(),
-            tiles: start_tiles.clone(),
-            quality: 1.0,
-            active: true,
-        });
-        next_room_id += 1;
-
-        // Place a dungeon heart in the center
-        let heart_pos = TilePos::new(center_x as i32, center_y as i32);
-        if let Some(tile) = tile_grid::get_tile_mut(&mut grid, heart_pos) {
-            tile.tile_type = "dungeon_heart".to_string();
-            tile.ownership = Ownership::Player;
-        }
-
-        // Create hero entrance at the edge of the map (top-left corner)
-        let hero_entrance_x = 5;
-        let hero_entrance_y = 5;
-        let hero_entrance_size = 3;
-
-        let mut hero_entrance_tiles = std::collections::HashSet::new();
-        for x in (hero_entrance_x - hero_entrance_size)..=(hero_entrance_x + hero_entrance_size) {
-            for y in (hero_entrance_y - hero_entrance_size)..=(hero_entrance_y + hero_entrance_size) {
-                if x >= 0 && x < width && y >= 0 && y < height {
-                    hero_entrance_tiles.insert(TilePos::new(x as i32, y as i32));
+            // Assign room IDs to tiles
+            for &pos in &tiles {
+                if let Some(tile) = tile_grid::get_tile_mut(&mut grid, pos) {
+                    tile.room_id = Some(room_id);
                 }
             }
+
+            rooms.push(Room {
+                id: room_id,
+                room_type: room_type.clone(),
+                tiles: tiles.clone(),
+                quality: 1.0,
+                active: true,
+            });
+
+            eprintln!("Registered starting room: {} with {} tiles", room_type, tiles.len());
         }
 
-        // Convert hero entrance tiles to unclaimed floor (neutral zone)
-        for &pos in &hero_entrance_tiles {
-            if let Some(tile) = tile_grid::get_tile_mut(&mut grid, pos) {
-                tile.tile_type = "stone_path".to_string();
-                tile.ownership = Ownership::Unclaimed;
-                tile.room_id = Some(next_room_id);
-            }
-        }
-
-        rooms.push(crate::engine::room_validator::Room {
-            id: next_room_id,
-            room_type: "hero_entrance".to_string(),
-            tiles: hero_entrance_tiles.clone(),
-            quality: 1.0,
-            active: true,
-        });
-        next_room_id += 1;
-
-        let mut entities = EntityManager::new();
-
-        // Don't spawn initial creatures - let them spawn from spawners
-        // Players must build spawners and have lair space first
+        let entities = EntityManager::new();
 
         Self {
             grid,
@@ -123,7 +112,7 @@ impl GameState {
             entities,
             player: PlayerState::new(),
             next_room_id,
-            next_hero_spawn_time: 5.0, // Spawn first hero after 5 seconds
+            next_hero_spawn_time: 30.0, // Spawn first hero after 30 seconds
             next_creature_spawn_time: 10.0, // Spawn first creature after 10 seconds
         }
     }
@@ -141,6 +130,9 @@ impl GameState {
     }
 
     fn tick(&mut self, game_data: &GameData, dt: f32) {
+        // Update spell cooldowns
+        crate::engine::spell_effects::update_spell_cooldowns(self, dt);
+
         // Imp auto-spawning when tiles are marked for digging
         if self.has_marked_tiles() {
             let imp_count = self.count_imps();
