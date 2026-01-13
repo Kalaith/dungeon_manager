@@ -85,7 +85,7 @@ pub struct HeroVisualData {
 }
 
 pub fn load_heroes() -> Result<HashMap<String, HeroData>, Box<dyn Error>> {
-    let json_content = include_str!("../../heroes.json");
+    let json_content = include_str!("../../assets/data/heroes.json");
     let heroes_vec: Vec<HeroData> = serde_json::from_str(json_content)?;
 
     let mut heroes_map = HashMap::new();

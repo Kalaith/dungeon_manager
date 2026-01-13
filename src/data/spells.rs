@@ -73,7 +73,7 @@ pub struct SpellVisualData {
 }
 
 pub fn load_spells() -> Result<HashMap<String, SpellData>, Box<dyn Error>> {
-    let json_content = include_str!("../../dungeon_spells.json");
+    let json_content = include_str!("../../assets/data/dungeon_spells.json");
     let spells_vec: Vec<SpellData> = serde_json::from_str(json_content)?;
 
     let mut spells_map = HashMap::new();

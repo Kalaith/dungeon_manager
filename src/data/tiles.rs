@@ -57,7 +57,7 @@ pub struct AuraData {
 }
 
 pub fn load_tiles() -> Result<HashMap<String, TileData>, Box<dyn Error>> {
-    let json_content = include_str!("../../tiles.json");
+    let json_content = include_str!("../../assets/data/tiles.json");
     let tiles_vec: Vec<TileData> = serde_json::from_str(json_content)?;
 
     let mut tiles_map = HashMap::new();

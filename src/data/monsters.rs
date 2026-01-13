@@ -106,7 +106,7 @@ pub struct MonsterVisualData {
 }
 
 pub fn load_monsters() -> Result<HashMap<String, MonsterData>, Box<dyn Error>> {
-    let json_content = include_str!("../../monsters.json");
+    let json_content = include_str!("../../assets/data/monsters.json");
     let monsters_vec: Vec<MonsterData> = serde_json::from_str(json_content)?;
 
     let mut monsters_map = HashMap::new();

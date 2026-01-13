@@ -107,7 +107,7 @@ pub struct LightEffect {
 }
 
 pub fn load_rooms() -> Result<HashMap<String, RoomData>, Box<dyn Error>> {
-    let json_content = include_str!("../../rooms.json");
+    let json_content = include_str!("../../assets/data/rooms.json");
     let rooms_vec: Vec<RoomData> = serde_json::from_str(json_content)?;
 
     let mut rooms_map = HashMap::new();
