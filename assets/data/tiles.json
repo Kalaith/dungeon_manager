@@ -15,7 +15,6 @@
       "fogged_sprite": "tiles/solid_rock_fog.png"
     }
   },
-
   {
     "id": "earth",
     "name": "Earth",
@@ -31,7 +30,6 @@
       "sprite": "tiles/earth.png"
     }
   },
-
   {
     "id": "claimed_floor",
     "name": "Claimed Floor",
@@ -47,7 +45,6 @@
       "sprite": "tiles/claimed_floor.png"
     }
   },
-
   {
     "id": "reinforced_wall",
     "name": "Reinforced Wall",
@@ -63,7 +60,6 @@
       "sprite": "tiles/reinforced_wall.png"
     }
   },
-
   {
     "id": "gold_vein",
     "name": "Gold Vein",
@@ -82,7 +78,6 @@
       "sprite": "tiles/gold_vein.png"
     }
   },
-
   {
     "id": "gem_seam",
     "name": "Gem Seam",
@@ -101,7 +96,32 @@
       "sprite": "tiles/gem_seam.png"
     }
   },
-
+  {
+    "id": "mana_crystal",
+    "name": "Mana Crystal",
+    "category": "resource",
+    "diggable": true,
+    "claimable": false,
+    "blocks_movement": true,
+    "blocks_vision": true,
+    "supports_rooms": false,
+    "resources": {
+      "type": "mana",
+      "amount": 250
+    },
+    "durability": 200,
+    "visual": {
+      "sprite": "tiles/mana_crystal.png",
+      "light": {
+        "color": [
+          50,
+          100,
+          255
+        ],
+        "intensity": 0.7
+      }
+    }
+  },
   {
     "id": "lava",
     "name": "Lava",
@@ -118,12 +138,15 @@
       "sprite": "tiles/lava.png",
       "animated": true,
       "light": {
-        "color": [255, 90, 40],
+        "color": [
+          255,
+          90,
+          40
+        ],
         "intensity": 0.8
       }
     }
   },
-
   {
     "id": "water",
     "name": "Underground Water",
@@ -140,7 +163,6 @@
       "animated": true
     }
   },
-
   {
     "id": "bridge",
     "name": "Bridge",
@@ -156,7 +178,6 @@
       "sprite": "tiles/bridge.png"
     }
   },
-
   {
     "id": "corrupted_floor",
     "name": "Corrupted Floor",
@@ -179,7 +200,6 @@
       "sprite": "tiles/corrupted_floor.png"
     }
   },
-
   {
     "id": "ancient_rune_floor",
     "name": "Ancient Rune Floor",
@@ -198,7 +218,11 @@
     "visual": {
       "sprite": "tiles/ancient_rune_floor.png",
       "light": {
-        "color": [120, 80, 255],
+        "color": [
+          120,
+          80,
+          255
+        ],
         "intensity": 0.6
       }
     }

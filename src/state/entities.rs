@@ -148,6 +148,9 @@ pub struct CreatureState {
 
     /// Time accumulator for movement
     pub move_timer: f32,
+    
+    /// Time accumulator for work production
+    pub work_timer: f32,
 }
 
 impl CreatureState {
@@ -163,7 +166,13 @@ impl CreatureState {
             experience: 0.0,
             max_experience: 100.0 * (level as f32), // 100 XP per level base
             training_timer: 0.0,
-            needs: HashMap::new(),
+            needs: {
+                let mut m = HashMap::new();
+                m.insert("sleep".to_string(), 100.0);
+                m.insert("food".to_string(), 100.0);
+                m.insert("gold".to_string(), 100.0);
+                m
+            },
             mood: 70.0, // Start at decent mood
             current_task: None,
             task_time: 0.0,
@@ -175,6 +184,7 @@ impl CreatureState {
             current_path: None,
             movement_speed: 2.0, // 2 tiles per second default
             move_timer: 0.0,
+            work_timer: 0.0,
         }
     }
 
@@ -498,6 +508,11 @@ impl EntityManager {
     /// Get entities at a specific position
     pub fn at_position(&self, pos: TilePos) -> impl Iterator<Item = &Entity> {
         self.entities.values().filter(move |e| e.pos == pos)
+    }
+
+    /// Get mutable entities at a specific position
+    pub fn at_position_mut(&mut self, pos: TilePos) -> impl Iterator<Item = &mut Entity> {
+        self.entities.values_mut().filter(move |e| e.pos == pos)
     }
 
     /// Count total entities

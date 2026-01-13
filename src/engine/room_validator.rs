@@ -14,6 +14,7 @@ pub struct Room {
     pub room_type: String,
     pub tiles: HashSet<TilePos>,
     pub quality: f32,
+    pub efficiency: f32,
     pub active: bool,
 }
 
@@ -25,6 +26,7 @@ impl Room {
             room_type,
             tiles,
             quality: 0.0,
+            efficiency: 1.0,
             active: false,
         }
     }
@@ -90,6 +92,57 @@ pub fn detect_rooms(grid: &Grid, room_type: &str) -> Vec<HashSet<TilePos>> {
     }
 
     rooms
+}
+
+/// Calculate the efficiency of a room based on its enclosure by walls/doors
+/// Returns a value between 0.0 and 1.0
+pub fn calculate_efficiency(room: &Room, grid: &Grid) -> f32 {
+    let mut total_perimeter_segments = 0.0;
+    let mut secured_segments = 0.0;
+    
+    // Check neighbors for each tile in the room
+    for tile_pos in &room.tiles {
+        let neighbors = [
+            TilePos::new(tile_pos.x + 1, tile_pos.y),
+            TilePos::new(tile_pos.x - 1, tile_pos.y),
+            TilePos::new(tile_pos.x, tile_pos.y + 1),
+            TilePos::new(tile_pos.x, tile_pos.y - 1),
+        ];
+
+        for neighbor in neighbors {
+            // If neighbor is NOT in the room, it's a perimeter segment
+            if !room.tiles.contains(&neighbor) {
+                total_perimeter_segments += 1.0;
+                
+                // Check if this perimeter segment is secured (Wall or Door)
+                // We need to check bounds first
+                if neighbor.x >= 0 && neighbor.y >= 0 && 
+                   (neighbor.y as usize) < grid.len() && 
+                   (neighbor.x as usize) < grid[0].len() {
+                    let tile = &grid[neighbor.y as usize][neighbor.x as usize];
+                    // Walls (rock/earth marked as wall?) and Doors count as secured
+                    // "wall", "reinforced_wall", "door", "rock" (unmined) are valid
+                    let is_secure = matches!(tile.tile_type.as_str(), 
+                        "wall" | "reinforced_wall" | "door" | "rock" | "gold_vein" | "gem_seam" | "earth"
+                    );
+                    
+                    if is_secure {
+                        secured_segments += 1.0;
+                    }
+                } else {
+                    // Map edge counts as secured (indestructible bedrock usually)
+                    secured_segments += 1.0;
+                }
+            }
+        }
+    }
+
+    if total_perimeter_segments == 0.0 {
+        return 1.0; // Should not happen for valid rooms
+    }
+
+    // Calculate ratio
+    secured_segments / total_perimeter_segments
 }
 
 /// Flood fill algorithm to find all contiguous tiles from a starting position
@@ -327,10 +380,11 @@ pub fn find_nearest_room(
         let distance = (dx * dx + dy * dy).sqrt();
 
         // Update best if this is closer
+        // Update best if this is closer
         match best {
-            None => best = Some((idx, distance)),
+            None => best = Some((room.id, distance)),
             Some((_, best_dist)) if distance < best_dist => {
-                best = Some((idx, distance));
+                best = Some((room.id, distance));
             }
             _ => {}
         }

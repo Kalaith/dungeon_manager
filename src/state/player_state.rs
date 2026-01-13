@@ -14,6 +14,8 @@ pub struct PlayerState {
     pub max_gold: i32,
     pub max_mana: i32,
     pub max_food: i32,
+    pub materials: i32,
+    pub max_materials: i32,
 
     // Research and unlocks
     pub unlocked_rooms: HashSet<String>,
@@ -53,8 +55,9 @@ impl PlayerState {
         unlocked_creatures.insert("imp".to_string());
 
         let mut unlocked_spells = HashSet::new();
-        unlocked_spells.insert("speed_up".to_string());
         unlocked_spells.insert("heal".to_string());
+        unlocked_spells.insert("summon_imps".to_string());
+        unlocked_spells.insert("lightning_strike".to_string());
 
         Self {
             gold: 200, // Start with limited gold - must dig for more
@@ -62,7 +65,10 @@ impl PlayerState {
             food: 100,
             max_gold: 500, // Starting treasury capacity
             max_mana: 10000,
+
             max_food: 500,
+            materials: 0,
+            max_materials: 100, // Starting material storage
 
             unlocked_rooms,
             unlocked_creatures,
@@ -103,10 +109,11 @@ impl PlayerState {
     }
 
     /// Add resources, respecting max limits
-    pub fn add_resources(&mut self, gold: i32, mana: i32, food: i32) {
+    pub fn add_resources(&mut self, gold: i32, mana: i32, food: i32, materials: i32) {
         self.gold = (self.gold + gold).min(self.max_gold);
         self.mana = (self.mana + mana).min(self.max_mana);
         self.food = (self.food + food).min(self.max_food);
+        self.materials = (self.materials + materials).min(self.max_materials);
     }
 
     /// Check if a room type is unlocked
@@ -222,8 +229,9 @@ mod tests {
     #[test]
     fn test_resource_caps() {
         let mut player = PlayerState::new();
-        player.add_resources(0, 20000, 1000);
+        player.add_resources(0, 20000, 1000, 1000);
         assert_eq!(player.mana, player.max_mana);
         assert_eq!(player.food, player.max_food);
+        assert_eq!(player.materials, player.max_materials);
     }
 }

@@ -4,17 +4,18 @@
     "name": "Lightning Strike",
     "description": "Calls down raw punishment from the Dungeon Heart.",
     "category": "combat",
-
-    "cost": { "mana": 35 },
-
+    "cost": {
+      "mana": 35
+    },
     "targeting": {
       "type": "tile",
       "range": 12,
       "area_radius": 1,
       "requires_visibility": true,
-      "valid_targets": ["enemy"]
+      "valid_targets": [
+        "enemy"
+      ]
     },
-
     "effects": [
       {
         "type": "damage",
@@ -22,91 +23,53 @@
         "damage_type": "lightning"
       }
     ],
-
     "cooldown": 2,
-
     "visual": {
       "icon": "icons/spells/lightning.png"
     }
   },
-
-  {
-    "id": "speed",
-    "name": "Speed",
-    "description": "Forces creatures into frantic efficiency.",
-    "category": "utility",
-
-    "cost": { "mana": 20 },
-
-    "targeting": {
-      "type": "creature",
-      "range": 8,
-      "valid_targets": ["friendly"]
-    },
-
-    "effects": [
-      {
-        "type": "stat_modifier",
-        "stat": "speed",
-        "multiplier": 1.5,
-        "duration": 15
-      },
-      {
-        "type": "status_apply",
-        "status": "exhausted",
-        "delay": 15
-      }
-    ],
-
-    "cooldown": 5,
-
-    "visual": {
-      "icon": "icons/spells/speed.png"
-    }
-  },
-
   {
     "id": "heal",
     "name": "Heal Creature",
     "description": "Mends flesh, not morale.",
     "category": "utility",
-
-    "cost": { "mana": 25 },
-
+    "cost": {
+      "mana": 25
+    },
     "targeting": {
       "type": "creature",
       "range": 8,
-      "valid_targets": ["friendly"]
+      "valid_targets": [
+        "friendly"
+      ]
     },
-
     "effects": [
       {
         "type": "heal",
         "amount": 50
       }
     ],
-
     "cooldown": 3,
-
     "visual": {
       "icon": "icons/spells/heal.png"
     }
   },
-
   {
     "id": "possess",
     "name": "Possession",
     "description": "Directly control a creature at great risk.",
     "category": "control",
-
-    "cost": { "mana": 60, "health": 10 },
-
+    "cost": {
+      "mana": 60,
+      "health": 10
+    },
     "targeting": {
       "type": "creature",
       "range": 6,
-      "valid_targets": ["friendly"]
+      "valid_targets": [
+        "friendly"
+      ]
     },
-
     "effects": [
       {
         "type": "status_apply",
@@ -114,29 +77,27 @@
         "duration": 30
       }
     ],
-
     "cooldown": 30,
-
     "visual": {
       "icon": "icons/spells/possess.png"
     }
   },
-
   {
     "id": "call_to_arms",
     "name": "Call to Arms",
     "description": "Drags all creatures toward a chosen point.",
     "category": "control",
-
-    "cost": { "mana": 45 },
-
+    "cost": {
+      "mana": 45
+    },
     "targeting": {
       "type": "tile",
       "range": 20,
       "area_radius": 6,
-      "valid_targets": ["friendly"]
+      "valid_targets": [
+        "friendly"
+      ]
     },
-
     "effects": [
       {
         "type": "status_apply",
@@ -144,28 +105,24 @@
         "duration": 20
       }
     ],
-
     "cooldown": 20,
-
     "visual": {
       "icon": "icons/spells/call_to_arms.png"
     }
   },
-
   {
     "id": "corrupt_land",
     "name": "Corrupt Land",
     "description": "Twists the dungeon floor to your influence.",
     "category": "ritual",
-
-    "cost": { "mana": 80 },
-
+    "cost": {
+      "mana": 80
+    },
     "targeting": {
       "type": "area",
       "range": 10,
       "area_radius": 4
     },
-
     "effects": [
       {
         "type": "tile_transform",
@@ -173,65 +130,55 @@
         "to": "corrupted_floor"
       }
     ],
-
     "cooldown": 60,
-
     "visual": {
       "icon": "icons/spells/corruption.png"
     }
   },
-
   {
     "id": "reveal_map",
     "name": "Dark Revelation",
     "description": "Temporarily exposes hidden dungeon areas.",
     "category": "utility",
-
-    "cost": { "mana": 40 },
-
+    "cost": {
+      "mana": 40
+    },
     "targeting": {
       "type": "area",
       "range": 999,
       "area_radius": 8
     },
-
     "effects": [
       {
         "type": "reveal_map",
         "duration": 20
       }
     ],
-
     "cooldown": 25,
-
     "visual": {
       "icon": "icons/spells/reveal.png"
     }
   },
-
   {
     "id": "summon_imps",
     "name": "Summon Imps",
     "description": "Creates new servants from raw mana.",
     "category": "utility",
-
-    "cost": { "mana": 50 },
-
+    "cost": {
+      "mana": 50
+    },
     "targeting": {
       "type": "tile",
       "range": 5
     },
-
     "effects": [
       {
         "type": "spawn_entity",
         "entity": "imp",
-        "count": 2
+        "count": 1
       }
     ],
-
     "cooldown": 15,
-
     "visual": {
       "icon": "icons/spells/summon.png"
     }

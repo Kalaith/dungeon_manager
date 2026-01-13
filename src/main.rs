@@ -22,7 +22,12 @@ pub enum InteractionMode {
     None,
     Dig,
     BuildRoom(String), // room_type_id
+    BuildTrap(String), // trap_type_id
     PlaceSpawner,
+    Pickup,
+    Drop,
+    Sell, // Sell room or cancel task
+    Inspect, // Inspect minion details
 }
 
 pub struct GraphicsCache {
@@ -49,7 +54,8 @@ impl GraphicsCache {
             "gold_vein", "gem_seam", "lava", "water", "bridge",
             "corrupted_floor", "ancient_rune_floor", "dungeon_heart",
             "lair", "hatchery", "treasury", "workshop", "training_room",
-            "prison", "guard_post", "ritual_circle", "monster_spawner"
+            "prison", "guard_post", "ritual_circle", "monster_spawner",
+            "mana_crystal", "door", "spike_trap"
         ];
 
         // Load tile textures
@@ -119,28 +125,27 @@ pub struct Game {
     graphics_cache: Option<GraphicsCache>,
     interaction_mode: InteractionMode,
     hovered_tile: Option<state::tile_state::TilePos>,
-    build_menu: ui::build_menu::BuildMenu,
-    spell_bar: ui::spell_bar::SpellBar,
+    sidebar: ui::sidebar::Sidebar,
     selected_map_type: MapType,
     selected_entity: Option<state::entities::EntityId>,
+    selected_room: Option<usize>,
+    held_entity: Option<state::entities::EntityId>,
     spell_shop_open: bool,
 }
 
 impl Game {
     fn new() -> Self {
-        let mut spell_bar = ui::spell_bar::SpellBar::new();
-        spell_bar.update_position();
-
         Self {
             phase: GamePhase::Loading,
             game_data: None,
             graphics_cache: None,
             interaction_mode: InteractionMode::None,
             hovered_tile: None,
-            build_menu: ui::build_menu::BuildMenu::new(),
-            spell_bar,
+            sidebar: ui::sidebar::Sidebar::new(),
             selected_map_type: MapType::Standard,
             selected_entity: None,
+            selected_room: None,
+            held_entity: None,
             spell_shop_open: false,
         }
     }
@@ -290,8 +295,13 @@ impl Game {
                 if is_key_pressed(KeyCode::Escape) {
                     self.interaction_mode = InteractionMode::None;
                     // Also clear any selected spell
-                    self.spell_bar.clear_selection();
+                    self.sidebar.clear_selection();
                 }
+
+                // Mouse input - get hovered tile
+                let mouse_pos = mouse_position();
+                // Update sidebar layout (animation)
+                self.sidebar.update_layout();
 
                 // Mouse input - get hovered tile
                 let mouse_pos = mouse_position();
@@ -305,89 +315,99 @@ impl Game {
                 );
                 self.hovered_tile = Some(hovered_tile);
 
-                // Handle spell bar input
+                // Handle Sidebar Input
                 if let Some(ref game_data) = self.game_data {
-                    if let Some(spell_action) = self.spell_bar.handle_input(&state.player, &game_data.spells, Some(hovered_tile)) {
-                        match spell_action {
-                            ui::spell_bar::SpellAction::SelectSpell(spell_id) => {
-                                eprintln!("Selected spell: {}", spell_id);
-                            }
-                            ui::spell_bar::SpellAction::CastSpell(spell_id, target) => {
-                                let (target_pos, target_entity) = match target {
-                                    ui::spell_bar::SpellTarget::Tile(pos) => (Some(pos), None),
-                                    ui::spell_bar::SpellTarget::Entity(entity_id) => (None, Some(entity_id)),
-                                    ui::spell_bar::SpellTarget::None => (None, None),
-                                };
-
-                                let cast_result = engine::spell_effects::cast_spell(
-                                    &spell_id,
-                                    state,
-                                    game_data,
-                                    target_pos,
-                                    target_entity,
-                                );
-
-                                match cast_result {
-                                    engine::spell_effects::CastResult::Success => {
-                                        eprintln!("Spell cast successfully: {}", spell_id);
-                                        state.player.record_spell_cast(spell_id);
-                                    }
-                                    engine::spell_effects::CastResult::InsufficientMana => {
-                                        eprintln!("Not enough mana to cast {}", spell_id);
-                                    }
-                                    engine::spell_effects::CastResult::OnCooldown => {
-                                        eprintln!("Spell {} is on cooldown", spell_id);
-                                    }
-                                    engine::spell_effects::CastResult::MaxCapReached => {
-                                        eprintln!("Cannot cast {}: maximum capacity reached", spell_id);
-                                    }
-                                    _ => {
-                                        eprintln!("Failed to cast spell: {:?}", cast_result);
-                                    }
-                                }
-                            }
-                            ui::spell_bar::SpellAction::CancelCast => {
-                                eprintln!("Spell cast cancelled");
-                            }
-                        }
+                    if let Some(new_mode) = self.sidebar.handle_input(
+                        &state.player, 
+                        &game_data.spells, 
+                        &self.interaction_mode,
+                        self.held_entity
+                    ) {
+                        self.interaction_mode = new_mode;
+                        // Clear selections when changing modes unless it's Inspect
+                        // if self.interaction_mode != InteractionMode::Inspect {
+                        //     self.selected_entity = None;
+                        // }
                     }
                 }
 
-                // Handle build menu clicks
-                if let Some(new_mode) = self.build_menu.handle_input(&state.player) {
-                    self.interaction_mode = new_mode;
+                // Check if mouse is over UI
+                let mouse_over_ui = self.sidebar.is_mouse_over();
+                
+                // Handle spell casting if a spell is selected
+                if let Some(spell_id) = self.sidebar.get_selected_spell().cloned() { // Clone to avoid borrow issues
+                     if is_mouse_button_pressed(MouseButton::Left) && !mouse_over_ui {
+                        if let Some(ref game_data) = self.game_data {
+                            // Determine target (basic tile target for now)
+                            let target_pos = Some(hovered_tile);
+                            let target_entity = None; // TODO: Hit test entities for creature targeting
+
+                            let cast_result = engine::spell_effects::cast_spell(
+                                &spell_id,
+                                state,
+                                game_data,
+                                target_pos,
+                                target_entity,
+                            );
+                            
+                            match cast_result {
+                                engine::spell_effects::CastResult::Success => {
+                                    eprintln!("Spell cast successfully: {}", spell_id);
+                                    state.player.record_spell_cast(spell_id.clone());
+                                    // self.sidebar.clear_selection(); // Optional: Keep selected for rapid fire?
+                                }
+                                engine::spell_effects::CastResult::MaxCapReached => {
+                                    eprintln!("Cannot cast {}: Maximum unit capacity reached!", spell_id);
+                                }
+                                engine::spell_effects::CastResult::InsufficientMana => {
+                                    eprintln!("Cannot cast {}: Not enough mana!", spell_id);
+                                }
+                                engine::spell_effects::CastResult::InsufficientGold => {
+                                    eprintln!("Cannot cast {}: Not enough gold!", spell_id);
+                                }
+                                engine::spell_effects::CastResult::OnCooldown => {
+                                    eprintln!("Cannot cast {}: Spell is on cooldown!", spell_id);
+                                }
+                                _ => eprintln!("Spell cast failed: {:?}", cast_result),
+                            }
+                        }
+                     }
                 }
 
-                // Check if mouse is over UI (build menu or spell bar)
-                let mouse_over_ui = self.build_menu.is_mouse_over_panel() || self.spell_bar.is_mouse_over_panel();
-
-                // Handle right-click to cancel dig marks
+                // Handle right-click to cancel interaction or dig marks
                 if is_mouse_button_pressed(MouseButton::Right) && !mouse_over_ui {
-                    if self.interaction_mode == InteractionMode::Dig {
-                        if let Some(tile) = state.get_tile_mut(hovered_tile) {
-                            if tile.marked_for_dig {
+                    match self.interaction_mode {
+                        InteractionMode::Dig => {
+                            if let Some(tile) = state.get_tile_mut(hovered_tile) {
                                 tile.marked_for_dig = false;
                             }
                         }
+                        InteractionMode::None => {
+                             // Deselect
+                             self.selected_entity = None;
+                             self.sidebar.clear_selection();
+                        }
+                        _ => {
+                            self.interaction_mode = InteractionMode::None;
+                            self.sidebar.clear_selection();
+                        }
                     }
                 }
 
-                // Handle mouse click - only if not clicking on UI
+                // Handle main interaction clicks
                 if is_mouse_button_pressed(MouseButton::Left) && !mouse_over_ui {
                     use state::tile_state::Ownership;
 
                     match &self.interaction_mode {
                         InteractionMode::Dig => {
-                            // Mark tile for digging (imps will dig it) - FREE
                             if let Some(tile) = state.get_tile_mut(hovered_tile) {
-                                if (tile.tile_type == "earth" || tile.tile_type == "gold_vein" || tile.tile_type == "gem_seam")
+                                if (tile.tile_type == "earth" || tile.tile_type == "gold_vein" || tile.tile_type == "gem_seam" || tile.tile_type == "mana_crystal")
                                    && tile.ownership == Ownership::Unclaimed {
                                     tile.marked_for_dig = true;
                                 }
                             }
                         }
                         InteractionMode::BuildRoom(room_type) => {
-                            // Build room on claimed tile - COSTS GOLD
                             let cost = match room_type.as_str() {
                                 "lair" => 10,
                                 "hatchery" => 15,
@@ -397,77 +417,169 @@ impl Game {
                                 _ => 10,
                             };
 
-                            // Check if player can afford and tile is valid
                             let can_build = state.player.gold >= cost;
                             let is_valid_tile = if let Some(tile) = state.get_tile(hovered_tile) {
-                                tile.ownership == Ownership::Player && tile.room_id.is_none()
-                            } else {
-                                false
-                            };
+                                tile.ownership == Ownership::Player && tile.room_id.is_none() && tile.tile_type == "claimed_floor"
+                            } else { false };
 
                             if can_build && is_valid_tile {
-                                // Deduct cost first
                                 state.player.gold -= cost;
-
-                                // Build room
                                 if let Some(tile) = state.get_tile_mut(hovered_tile) {
                                     tile.tile_type = room_type.clone();
                                 }
-
-                                // Trigger room detection
                                 if let Some(ref game_data) = self.game_data {
                                     state.detect_and_update_rooms(game_data);
                                 }
-                            } else if !can_build {
-                                eprintln!("Not enough gold! Need {} gold to build {}", cost, room_type);
+                            }
+                        }
+                        InteractionMode::BuildTrap(trap_type) => {
+                            // Valid build targets: claimed floors, owned by player, NO existing trap
+                            let mut valid = false;
+                            if let Some(tile) = state.get_tile(hovered_tile) {
+                                if tile.ownership == Ownership::Player && tile.tile_type == "claimed_floor" && tile.trap.is_none() {
+                                    valid = true;
+                                }
+                            }
+                            
+                            if valid {
+                                if let Some(tile_mut) = state.get_tile_mut(hovered_tile) {
+                                    tile_mut.trap = Some(crate::state::tile_state::TrapState {
+                                        trap_type: trap_type.clone(),
+                                        constructed: false, // It's a marker
+                                        construction_progress: 0.0,
+                                        active: false,
+                                        funded: false,
+                                    });
+                                    state.pending_trap_builds.insert(hovered_tile);
+                                }
                             }
                         }
                         InteractionMode::PlaceSpawner => {
-                            // Place monster spawner on claimed tile - COSTS 50 GOLD
-                            const SPAWNER_COST: i32 = 50;
-
-                            // Check if player can afford and tile is valid
-                            let can_afford = state.player.gold >= SPAWNER_COST;
-                            let is_valid_tile = if let Some(tile) = state.get_tile(hovered_tile) {
-                                tile.ownership == Ownership::Player && tile.tile_type == "claimed_floor"
-                            } else {
-                                false
-                            };
-
-                            if can_afford && is_valid_tile {
-                                // Deduct cost first
-                                state.player.gold -= SPAWNER_COST;
-
-                                // Place spawner
-                                if let Some(tile) = state.get_tile_mut(hovered_tile) {
-                                    tile.tile_type = "monster_spawner".to_string();
+                            // ... existing spawner logic ...
+                            let spawner_cost = 50;
+                             if state.player.gold >= spawner_cost {
+                                 if let Some(tile) = state.get_tile(hovered_tile) {
+                                     if tile.ownership == Ownership::Player && tile.tile_type == "claimed_floor" {
+                                         state.player.gold -= spawner_cost;
+                                         if let Some(tile_mut) = state.get_tile_mut(hovered_tile) {
+                                             tile_mut.tile_type = "monster_spawner".to_string();
+                                         }
+                                     }
+                                 }
+                             }
+                        }
+                        InteractionMode::Pickup => {
+                            // Pick up entity
+                            if let Some(entity) = state.entities.at_position(hovered_tile).next() {
+                                self.held_entity = Some(entity.id);
+                                eprintln!("Picked up entity: {}", entity.id);
+                                self.interaction_mode = InteractionMode::Drop; // Auto switch to drop
+                            }
+                        }
+                        InteractionMode::Drop => {
+                            // Drop entity
+                            if let Some(entity_id) = self.held_entity {
+                                if let Some(tile) = state.get_tile(hovered_tile) {
+                                    // Check if valid pos (claimed floor or specific room types)
+                                    let is_walkable = tile.ownership == Ownership::Player && 
+                                        (tile.tile_type == "claimed_floor" || 
+                                         tile.tile_type == "hatchery" || 
+                                         tile.tile_type == "lair" || 
+                                         tile.tile_type == "treasury" || 
+                                         tile.tile_type == "training_room" || 
+                                         tile.tile_type == "library");
+                                    
+                                    if is_walkable {
+                                        if let Some(entity) = state.entities.get_mut(entity_id) {
+                                            entity.pos = hovered_tile;
+                                            
+                                            // Reset creature state to prevent "snapping" back to old path
+                                            if let Some(creature) = entity.as_creature_mut() {
+                                                creature.current_path = None;
+                                                creature.current_task = None; // Force re-evaluation of tasks
+                                                creature.task_time = 0.0;
+                                                creature.move_timer = 0.0;
+                                            }
+                                            
+                                            eprintln!("Dropped entity {} at {:?}", entity_id, hovered_tile);
+                                            self.held_entity = None;
+                                            self.interaction_mode = InteractionMode::Pickup;
+                                        }
+                                    }
                                 }
-                                eprintln!("Placed monster spawner at {:?} for {} gold", hovered_tile, SPAWNER_COST);
-                            } else if !can_afford {
-                                eprintln!("Not enough gold! Need {} gold to place spawner", SPAWNER_COST);
+                            }
+                        }
+                        InteractionMode::Sell => {
+                            // Determine action first to avoid overlapping borrows
+                            let mut action = None;
+                            if let Some(tile) = state.get_tile(hovered_tile) {
+                                if tile.marked_for_dig {
+                                    action = Some("unmark");
+                                } else if state.player.is_room_unlocked(&tile.tile_type) && tile.ownership == Ownership::Player {
+                                    action = Some("sell");
+                                }
+                            }
+
+                            // Execute action
+                            match action {
+                                Some("unmark") => {
+                                    if let Some(tile) = state.get_tile_mut(hovered_tile) {
+                                        tile.marked_for_dig = false;
+                                    }
+                                }
+                                Some("sell") => {
+                                    state.player.gold += 5; // Flat refund
+                                    if let Some(tile) = state.get_tile_mut(hovered_tile) {
+                                        tile.tile_type = "claimed_floor".to_string();
+                                        tile.room_id = None;
+                                    }
+                                    if let Some(ref game_data) = self.game_data {
+                                        state.detect_and_update_rooms(game_data);
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                        InteractionMode::Inspect => {
+                            let mut found_entity = false;
+                            if let Some(entity) = state.entities.at_position(hovered_tile).next() {
+                                self.selected_entity = Some(entity.id);
+                                self.selected_room = None; // Deselect room
+                                found_entity = true;
+                            }
+                            
+                            if !found_entity {
+                                // Check for room
+                                if let Some(tile) = state.get_tile(hovered_tile) {
+                                    if let Some(room_id) = tile.room_id {
+                                        self.selected_room = Some(room_id);
+                                        self.selected_entity = None; // Deselect entity
+                                    } else {
+                                        self.selected_room = None;
+                                        self.selected_entity = None;
+                                    }
+                                }
                             }
                         }
                         InteractionMode::None => {
-                            // Select entity or open library shop
-                            let mut entity_found = false;
-                            
-                            // Check for entities at the hovered position
-                            if let Some(entity) = state.entities.at_position(hovered_tile).next() {
-                                self.selected_entity = Some(entity.id);
-                                eprintln!("Selected entity: {}", entity.id);
-                                entity_found = true;
-                            } else {
-                                self.selected_entity = None;
+                            // Default selection
+                            if is_mouse_button_pressed(MouseButton::Left) {
+                                if let Some(entity) = state.entities.at_position(hovered_tile).next() {
+                                    self.selected_entity = Some(entity.id);
+                                } else {
+                                    self.selected_entity = None;
+                                }
                             }
-
-                            // If no entity selected, check if we clicked a library
-                            if !entity_found {
-                                if let Some(tile) = state.get_tile(hovered_tile) {
-                                    if tile.tile_type == "library" {
-                                        self.spell_shop_open = !self.spell_shop_open;
-                                        eprintln!("Toggled spell shop: {}", self.spell_shop_open);
-                                    } else {
-                                        self.spell_shop_open = false;
+                            // Slap (Right Click)
+                            else if is_mouse_button_pressed(MouseButton::Right) {
+                                if let Some(entity) = state.entities.at_position_mut(hovered_tile).next() {
+                                    if let Some(creature) = entity.as_creature_mut() {
+                                        if let Some(monster_data) = self.game_data.as_ref().unwrap().monsters.get(&creature.creature_id) {
+                                            use crate::engine::creature_ai;
+                                            creature_ai::apply_slap(creature, monster_data, state.time_elapsed);
+                                            // Play slap sound? (TODO)
+                                            eprintln!("Slapped creature {}!", creature.creature_id);
+                                        }
                                     }
                                 }
                             }
@@ -667,6 +779,26 @@ impl Game {
                             ..Default::default()
                         },
                     );
+
+                    // Draw trap if present
+                    if let Some(trap) = &tile.trap {
+                        let trap_color = if trap.constructed { WHITE } else { Color::new(1.0, 1.0, 1.0, 0.5) };
+                        if let Some(trap_texture) = graphics.tile_textures.get(&trap.trap_type) {
+                             draw_texture_ex(
+                                trap_texture,
+                                screen_x - ui::core::TILE_WIDTH / 2.0,
+                                screen_y - ui::core::TILE_HEIGHT / 2.0,
+                                trap_color,
+                                DrawTextureParams {
+                                    dest_size: Some(vec2(ui::core::TILE_WIDTH, ui::core::TILE_HEIGHT)),
+                                    ..Default::default()
+                                },
+                            );
+                        } else {
+                            // Fallback
+                            draw_text("T", screen_x, screen_y, 20.0, trap_color);
+                        }
+                    }
                 } else {
                     // Fallback to colored diamond if texture not found
                     let mut color = ui::core::get_tile_color(&tile.tile_type);
@@ -719,11 +851,33 @@ impl Game {
                                     outline_color = Some(ui::core::colors::POSITIVE);
                                 }
                             }
+                            InteractionMode::BuildTrap(_) => {
+                                if tile.ownership == Ownership::Player && tile.tile_type == "claimed_floor" && tile.trap.is_none() {
+                                     outline_color = Some(ui::core::colors::POSITIVE);
+                                }
+                            }
                             InteractionMode::PlaceSpawner => {
                                 // Valid spawner location: claimed floors
                                 if tile.ownership == Ownership::Player && tile.tile_type == "claimed_floor" {
                                     outline_color = Some(ui::core::colors::POSITIVE);
                                 }
+                            }
+                            InteractionMode::Pickup => {
+                                // Highlight any entity's tile
+                                outline_color = Some(Color::new(0.0, 1.0, 0.0, 0.5));
+                            }
+                            InteractionMode::Drop => {
+                                // Highlight any tile
+                                outline_color = Some(Color::new(1.0, 1.0, 0.0, 0.5));
+                            }
+                            InteractionMode::Sell => {
+                                // Highlight any markable tile or owned room
+                                if tile.marked_for_dig || (tile.ownership == Ownership::Player && tile.room_id.is_some()) {
+                                    outline_color = Some(ui::core::colors::NEGATIVE);
+                                }
+                            }
+                            InteractionMode::Inspect => {
+                                outline_color = Some(Color::new(0.0, 0.5, 1.0, 0.5));
                             }
                         }
 
@@ -744,6 +898,11 @@ impl Game {
 
         // Draw entities (heroes and creatures)
         for entity in state.entities.all() {
+            // Skip drawing if held
+            if Some(entity.id) == self.held_entity {
+                continue;
+            }
+
             let (iso_x, iso_y) = tile_grid::world_to_iso(
                 entity.pos.x as f32,
                 entity.pos.y as f32,
@@ -803,8 +962,8 @@ impl Game {
         draw_rectangle(0.0, 0.0, screen_width(), ui::core::HUD_HEIGHT, ui::core::colors::PANEL);
 
         let mode_text = match &self.interaction_mode {
-            InteractionMode::None => "Mode: None (Press 1-5 to select)".to_string(),
-            InteractionMode::Dig => "Mode: Dig (FREE - Click to mark tiles)".to_string(),
+            InteractionMode::None => "Mode: None (Select tab below)".to_string(),
+            InteractionMode::Dig => "Mode: Dig (FREE)".to_string(),
             InteractionMode::BuildRoom(room_type) => {
                 let cost = match room_type.as_str() {
                     "lair" => 10,
@@ -814,121 +973,79 @@ impl Game {
                     "library" => 30,
                     _ => 10,
                 };
-                format!("Mode: Build {} (Cost: {}g per tile)", room_type, cost)
+                format!("Mode: Build {} ({}g)", room_type, cost)
             }
-            InteractionMode::PlaceSpawner => "Mode: Place Spawner (Cost: 50g)".to_string(),
+            InteractionMode::PlaceSpawner => "Mode: Place Spawner (50g)".to_string(),
+            InteractionMode::Pickup => "Mode: Pickup Minion".to_string(),
+            InteractionMode::Drop => "Mode: Drop Minion".to_string(),
+            InteractionMode::Sell => "Mode: Sell/Cancel".to_string(),
+            InteractionMode::Inspect => "Mode: Inspect (Click unit)".to_string(),
+            InteractionMode::BuildTrap(trap_type) => format!("Mode: Build {}", trap_type),
         };
 
         draw_text(
-            &format!("Gold: {}/{} | Mana: {}/{} | Food: {}/{} | Imps: {}/{} | Monsters: {}/{}",
+            &format!("Gold: {}/{} | Mana: {}/{} | Food: {} | Mats: {}/{} | Minions: {}/{}",
                 state.player.gold, state.player.max_gold,
                 state.player.mana, state.player.max_mana,
-                state.player.food, state.player.max_food,
-                state.count_imps(), GameState::MAX_IMPS,
-                state.count_monsters(), state.player.max_creatures),
+                state.player.food,
+                state.player.materials, state.player.max_materials,
+                state.entities.creatures().count(), state.player.max_creatures),
             10.0,
             25.0,
             18.0,
             ui::core::colors::TEXT,
         );
-        // Draw mode text - use ACCENT for mode, NEGATIVE when can't afford
-        let mode_color = match &self.interaction_mode {
-            InteractionMode::None => ui::core::colors::TEXT_DIM,
-            InteractionMode::Dig => ui::core::colors::ACCENT,
-            InteractionMode::BuildRoom(room_type) => {
-                let cost = match room_type.as_str() {
-                    "lair" => 10,
-                    "hatchery" => 15,
-                    "treasury" => 20,
-                    "training_room" => 25,
-                    "library" => 30,
-                    _ => 10,
-                };
-                if state.player.gold >= cost {
-                    ui::core::colors::ACCENT
-                } else {
-                    ui::core::colors::NEGATIVE
-                }
-            }
-            InteractionMode::PlaceSpawner => {
-                if state.player.gold >= 50 {
-                    ui::core::colors::ACCENT
-                } else {
-                    ui::core::colors::NEGATIVE
-                }
-            }
-        };
+
         draw_text(
             &mode_text,
             10.0,
             45.0,
             16.0,
-            mode_color,
+            ui::core::colors::ACCENT,
         );
-        
-        // Show selected spell indicator using get_selected_spell
-        if let Some(selected_spell) = self.spell_bar.get_selected_spell() {
-            draw_text(
-                &format!("Casting: {} (Click target)", selected_spell),
-                300.0,
-                45.0,
-                16.0,
-                ui::core::colors::ACCENT,
-            );
-        }
-        draw_text(
-            "1: Dig (Free) | 2: Lair (10g) | 3: Hatchery (15g) | 4: Treasury (20g) | 5: Spawner (50g)",
-            10.0,
-            screen_height() - 25.0,
-            14.0,
-            ui::core::colors::TEXT_DIM,
-        );
-        draw_text(
-            "WASD: Camera | ESC: Cancel Mode | Right-click: Cancel Dig",
-            10.0,
-            screen_height() - 10.0,
-            14.0,
-            ui::core::colors::TEXT_DIM,
-        );
+        let mouse_pos = mouse_position();
+                // Draw held entity if any
+            if let Some(entity_id) = self.held_entity {
+                 let texture_opt = if let Some(entity) = state.entities.get(entity_id) {
+                     match &entity.entity_type {
+                        state::entities::EntityType::Hero(hero_state) => {
+                            graphics.hero_textures.get(&hero_state.hero_id)
+                        }
+                        state::entities::EntityType::Creature(creature_state) => {
+                            graphics.monster_textures.get(&creature_state.creature_id)
+                        }
+                    }
+                 } else { None };
 
-        // Draw resource warnings using WARNING, NEGATIVE, and POSITIVE colors
-        // Position relative to SIDEBAR_WIDTH
-        let status_x = screen_width() - ui::core::SIDEBAR_WIDTH + 150.0;
-        let mut warning_y = screen_height() - 40.0;
-        
-        // Show positive status when resources are good
-        if state.player.gold >= 100 {
-            draw_text(
-                "Food OK",
-                status_x,
-                warning_y,
-                14.0,
-                ui::core::colors::POSITIVE,
-            );
-        } else if state.player.food <= 0 {
-            draw_text(
-                "No Food!",
-                status_x,
-                warning_y,
-                14.0,
-                ui::core::colors::NEGATIVE,
-            );
-        } else if state.player.food < state.player.max_food / 4 {
-            draw_text(
-                "Low Food!",
-                status_x,
-                warning_y,
-                14.0,
-                ui::core::colors::WARNING,
-            );
-        }
-
-        // Draw build menu
-        self.build_menu.draw(&self.interaction_mode, &state.player);
-
-        // Draw spell bar
+                 if let Some(texture) = texture_opt {
+                     draw_texture_ex(
+                        texture,
+                        mouse_pos.0 - 24.0,
+                        mouse_pos.1 - 24.0,
+                        Color::new(1.0, 1.0, 1.0, 0.8), // Slight transparency applied here
+                         DrawTextureParams {
+                            dest_size: Some(vec2(48.0, 48.0)),
+                            ..Default::default()
+                        },
+                    );
+                 }
+            } else {
+                 if is_mouse_button_down(MouseButton::Right) && !self.sidebar.is_mouse_over() {
+                    draw_circle(mouse_pos.0, mouse_pos.1, 5.0, RED);
+                 }
+            }
+        // Draw Sidebar
         if let Some(ref game_data) = self.game_data {
-            self.spell_bar.draw(&state.player, &game_data.spells);
+            self.sidebar.draw(
+                &self.interaction_mode, 
+                &state.player, 
+                &game_data.spells,
+                self.held_entity,
+                self.selected_entity,
+                self.selected_room,
+                &state.entities,
+                &state.rooms
+            );
         }
     }
 }

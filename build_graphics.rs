@@ -39,7 +39,9 @@ fn generate_tiles() {
     save_tile("water", create_water());
     save_tile("bridge", create_bridge());
     save_tile("corrupted_floor", create_corrupted_floor());
+    save_tile("corrupted_floor", create_corrupted_floor());
     save_tile("ancient_rune_floor", create_ancient_rune_floor());
+    save_tile("mana_crystal", create_mana_crystal());
 
     // Rooms
     save_tile("dungeon_heart", create_dungeon_heart());
@@ -217,6 +219,51 @@ fn create_gem_seam() -> RgbaImage {
         }
     }
     add_outline(&mut img, Rgba([50, 50, 60, 255]));
+    img
+}
+
+fn create_mana_crystal() -> RgbaImage {
+    let mut img = create_iso_tile_base(Rgba([40, 40, 60, 255])); // Dark blue-gray rock
+    // Add glowing blue crystals
+    let center_x = TILE_WIDTH / 2;
+    let center_y = TILE_HEIGHT / 2;
+    
+    // Draw crystal cluster
+    for y in 0..TILE_HEIGHT {
+        for x in 0..TILE_WIDTH {
+            if img.get_pixel(x, y)[3] > 0 {
+                // Crystal formation logic
+                let dx = (x as i32 - center_x as i32).abs();
+                let dy = (y as i32 - center_y as i32) as f32;
+                
+                // Central large crystal
+                if dx < 4 && dy < 0.0 && dy > -12.0 {
+                     img.put_pixel(x, y, Rgba([100, 200, 255, 255])); // Cyan core
+                }
+                
+                // Side crystals
+                if (dx > 4 && dx < 8) && (dy > -5.0 && dy < 2.0) {
+                    img.put_pixel(x, y, Rgba([50, 150, 255, 255])); // Blue side
+                }
+                
+                // Glow effect
+                if dx < 10 && dy.abs() < 8.0 && (x + y as u32) % 5 == 0 {
+                    let pixel = img.get_pixel(x, y);
+                    // Lighten existing color for glow
+                    if pixel[0] < 100 { // If it's rock base
+                         img.put_pixel(x, y, Rgba([60, 60, 90, 255]));
+                    }
+                }
+            }
+        }
+    }
+    
+    // Add highlights
+    img.put_pixel(center_x, center_y - 8, Rgba([255, 255, 255, 255]));
+    img.put_pixel(center_x - 5, center_y, Rgba([200, 200, 255, 255]));
+    img.put_pixel(center_x + 5, center_y, Rgba([200, 200, 255, 255]));
+
+    add_outline(&mut img, Rgba([30, 30, 50, 255]));
     img
 }
 

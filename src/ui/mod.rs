@@ -1,7 +1,6 @@
 // UI module - UI components
 pub mod core;
-pub mod build_menu;
-pub mod spell_bar;
+pub mod sidebar;
 
 // Will also contain:
 // - hud.rs

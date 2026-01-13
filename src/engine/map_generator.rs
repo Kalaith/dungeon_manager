@@ -14,6 +14,7 @@ pub struct MapConfig {
     pub seed: Option<u64>,
     pub gold_richness: f32,      // 0.0 - 1.0, affects gold vein frequency
     pub gem_richness: f32,        // 0.0 - 1.0, affects gem frequency
+    pub mana_richness: f32,       // 0.0 - 1.0, affects mana crystal frequency
     pub water_frequency: f32,     // 0.0 - 1.0, chance of water regions
     pub lava_frequency: f32,      // 0.0 - 1.0, chance of lava regions
     pub starting_area_size: usize, // Size of cleared starting area
@@ -27,6 +28,7 @@ impl Default for MapConfig {
             seed: None,
             gold_richness: 0.3,
             gem_richness: 0.15,
+            mana_richness: 0.2,
             water_frequency: 0.1,
             lava_frequency: 0.05,
             starting_area_size: 7,
@@ -103,6 +105,16 @@ fn add_resource_veins(grid: &mut Grid, config: &MapConfig, rng: &mut impl Rng) {
 
         create_vein_cluster(grid, center_x, center_y, cluster_size, "gem_seam", rng);
     }
+
+    // Generate mana crystal clusters
+    let num_mana_clusters = (config.mana_richness * 12.0) as usize + 2;
+    for _ in 0..num_mana_clusters {
+        let center_x = rng.gen_range(5..width - 5);
+        let center_y = rng.gen_range(5..height - 5);
+        let cluster_size = rng.gen_range(2..4);
+
+        create_vein_cluster(grid, center_x, center_y, cluster_size, "mana_crystal", rng);
+    }
 }
 
 /// Create a cluster of resource tiles
@@ -131,6 +143,7 @@ fn create_vein_cluster(
             let resources = match tile_type {
                 "gold_vein" => rng.gen_range(80..150),
                 "gem_seam" => rng.gen_range(100..200),
+                "mana_crystal" => rng.gen_range(200..300),
                 _ => 100,
             };
             grid[y][x].resources_remaining = Some(resources);
@@ -267,6 +280,7 @@ pub fn generate_test_map(width: usize, height: usize, game_data: &GameData) -> G
         seed: Some(12345), // Fixed seed for consistent testing
         gold_richness: 0.4,
         gem_richness: 0.2,
+        mana_richness: 0.2,
         water_frequency: 0.2,
         lava_frequency: 0.1,
         starting_area_size: 8,
@@ -283,6 +297,7 @@ pub fn generate_rich_map(width: usize, height: usize, game_data: &GameData) -> G
         seed: None,
         gold_richness: 0.6,
         gem_richness: 0.4,
+        mana_richness: 0.4,
         water_frequency: 0.05,
         lava_frequency: 0.02,
         starting_area_size: 9,
@@ -297,9 +312,10 @@ pub fn generate_hazardous_map(width: usize, height: usize, game_data: &GameData)
         width,
         height,
         seed: None,
-        gold_richness: 0.25,
-        gem_richness: 0.15,
-        water_frequency: 0.4,
+        gold_richness: 0.2,
+        gem_richness: 0.1,
+        mana_richness: 0.1,
+        water_frequency: 0.0,
         lava_frequency: 0.3,
         starting_area_size: 6,
     };

@@ -41,6 +41,15 @@ pub enum FogState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrapState {
+    pub trap_type: String,
+    pub constructed: bool,
+    pub construction_progress: f32,
+    pub active: bool,
+    pub funded: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TileState {
     pub tile_type: String,
     pub pos: TilePos,
@@ -50,6 +59,7 @@ pub struct TileState {
     pub resources_remaining: Option<u32>,
     pub marked_for_dig: bool,
     pub claimed_by_entity: Option<usize>, // For lair tiles - which entity owns this space
+    pub trap: Option<TrapState>,
 }
 
 impl TileState {
@@ -63,6 +73,7 @@ impl TileState {
             resources_remaining: None,
             marked_for_dig: false,
             claimed_by_entity: None,
+            trap: None,
         }
     }
 

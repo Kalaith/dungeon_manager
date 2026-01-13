@@ -28,6 +28,8 @@ pub struct GameState {
     pub tick_accumulator: f32,
     pub camera_x: f32,
     pub camera_y: f32,
+    // Track pending builds
+    pub pending_trap_builds: std::collections::HashSet<crate::state::tile_state::TilePos>,
     pub zoom: f32,
     pub rooms: Vec<Room>,
     pub entities: EntityManager,
@@ -86,13 +88,16 @@ impl GameState {
                 }
             }
 
-            rooms.push(Room {
-                id: room_id,
-                room_type: room_type.clone(),
-                tiles: tiles.clone(),
-                quality: 1.0,
-                active: true,
-            });
+            rooms.push(Room::new(
+                room_id,
+                room_type.clone(),
+                tiles.clone(),
+            ));
+            // Set active since these are starting rooms
+            if let Some(r) = rooms.last_mut() {
+                r.quality = 1.0;
+                r.active = true;
+            }
 
             eprintln!("Registered starting room: {} with {} tiles", room_type, tiles.len());
         }
@@ -107,6 +112,7 @@ impl GameState {
             tick_accumulator: 0.0,
             camera_x: 400.0,
             camera_y: 200.0,
+            pending_trap_builds: HashSet::new(),
             zoom: 1.0,
             rooms,
             entities,
@@ -208,6 +214,80 @@ impl GameState {
 
         // Update fog of war based on claimed tiles and creature positions
         self.update_fog_of_war_system();
+        
+        // Update traps
+        self.process_trap_construction(dt);
+    }
+
+    // Process trap construction progress
+    // Process trap construction progress
+    fn process_trap_construction(&mut self, dt: f32) {
+        let mut completed_traps = Vec::new();
+
+        // 1. Check pending traps to fund
+        {
+            let pending: Vec<crate::state::tile_state::TilePos> = self.pending_trap_builds.iter().cloned().collect();
+            let player = &mut self.player;
+            let grid = &mut self.grid;
+            
+            for pos in pending {
+                // Manual bounds check to access grid safely without self method
+                if pos.y >= 0 && (pos.y as usize) < grid.len() {
+                    let row = &mut grid[pos.y as usize];
+                    if pos.x >= 0 && (pos.x as usize) < row.len() {
+                        let tile = &mut row[pos.x as usize];
+                        
+                        if let Some(ref mut trap) = tile.trap {
+                            if !trap.funded && !trap.constructed {
+                                let cost = match trap.trap_type.as_str() {
+                                    "door" => 5,
+                                    "spike_trap" => 10,
+                                    _ => 5,
+                                };
+                                
+                                if player.materials >= cost {
+                                    player.materials -= cost;
+                                    trap.funded = true;
+                                    eprintln!("Funded trap at {:?}", pos);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 2. Progress funded traps
+        for pos in self.pending_trap_builds.clone() {
+             let mut finished = false;
+             if let Some(tile) = self.get_tile_mut(pos) {
+                 if let Some(ref mut trap) = tile.trap {
+                     if trap.funded && !trap.constructed {
+                         let build_time = match trap.trap_type.as_str() {
+                             "door" => 5.0,
+                             "spike_trap" => 10.0,
+                             _ => 5.0,
+                         };
+                         
+                         trap.construction_progress += dt;
+                         if trap.construction_progress >= build_time {
+                             trap.constructed = true;
+                             trap.active = true;
+                             finished = true;
+                             eprintln!("Trap construction complete at {:?}", pos);
+                         }
+                     }
+                 }
+             }
+             
+             if finished {
+                 completed_traps.push(pos);
+             }
+        }
+        
+        for pos in completed_traps {
+            self.pending_trap_builds.remove(&pos);
+        }
     }
 
     /// Update fog of war using the tile_grid system
@@ -293,12 +373,12 @@ impl GameState {
                     creature_ai::update_needs(creature, dt, monster_data);
                     creature_ai::update_mood(creature, monster_data);
 
-                    // Debug: Log creature needs periodically
-                    if creature.move_timer == 0.0 {
-                        eprintln!("[AI] Creature {} at {:?}: mood={:.1}, needs={:?}, task={:?}",
-                            creature.creature_id, current_pos, creature.mood,
-                            creature.needs, creature.current_task);
-                    }
+                    // Debug: Log creature needs (Reduced)
+                    // if creature.move_timer == 0.0 {
+                    //    eprintln!("[AI] Creature {} at {:?}: mood={:.1}, needs={:?}, task={:?}",
+                    //        creature.creature_id, current_pos, creature.mood,
+                    //        creature.needs, creature.current_task);
+                    // }
                 }
             }
 
@@ -405,7 +485,7 @@ impl GameState {
                             attempts += 1;
                         }
 
-                        eprintln!("[AI] Idle creature wandering to {:?}", wander_pos);
+                        // eprintln!("[AI] Idle creature wandering to {:?}", wander_pos);
                         wander_pos
                     } else {
                         task_target
@@ -415,7 +495,7 @@ impl GameState {
                 };
 
                 if let Some(target_pos) = target_pos {
-                    eprintln!("[AI] Pathfinding from {:?} to {:?}", current_pos, target_pos);
+                    // eprintln!("[AI] Pathfinding from {:?} to {:?}", current_pos, target_pos);
 
                     if current_pos != target_pos {
                         // Create pathfinding grid
@@ -452,7 +532,7 @@ impl GameState {
                             Heuristic::Manhattan,
                             false,
                         ) {
-                            eprintln!("[AI] Path found with {} waypoints", path.waypoints.len());
+                            // eprintln!("[AI] Path found with {} waypoints", path.waypoints.len());
 
                             // Convert Pos to TilePos and assign
                             let entity = self.entities.get_mut(creature_id).unwrap();
@@ -465,15 +545,15 @@ impl GameState {
                                     .collect(),
                             );
                         } else {
-                            eprintln!("[AI] No path found from {:?} to {:?}", current_pos, target_pos);
+                            // eprintln!("[AI] No path found from {:?} to {:?}", current_pos, target_pos);
                         }
                     } else {
-                        eprintln!("[AI] Already at target, performing task");
+                        // eprintln!("[AI] Already at target, performing task");
                         // Already at target, perform task
                         self.perform_creature_task(creature_id, game_data, dt);
                     }
                 } else {
-                    eprintln!("[AI] No target position for task");
+                    // eprintln!("[AI] No target position for task");
                 }
             }
         }
@@ -587,9 +667,32 @@ impl GameState {
                         }
                     }
                 }
-                _ => {
-                    // Other tasks not implemented yet
+                Task::Work(room_id) => {
+                    if let Some(room) = self.rooms.iter().find(|r| r.id == *room_id) {
+                        if room.room_type == "workshop" {
+                             if let Some(creature) = self.entities.get_mut(creature_id)
+                                .and_then(|e| e.as_creature_mut()) {
+                                
+                                // Work progress
+                                if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
+                                     let efficiency = creature_ai::calculate_work_efficiency(creature, monster_data);
+                                     creature.work_timer += dt * room.efficiency * efficiency; 
+                                } else {
+                                     creature.work_timer += dt * room.efficiency;
+                                }
+
+                                if creature.work_timer >= 20.0 { // 20 seconds per material
+                                    creature.work_timer = 0.0;
+                                    self.player.add_resources(0, 0, 0, 1); // Add 1 material
+                                    eprintln!("Creature {} produced generic material!", creature.creature_id);
+                                    
+                                    // Satisfy work need? (Maybe add satisfaction later)
+                                }
+                            }
+                        }
+                    }
                 }
+                _ => {}
             }
         }
     }
@@ -635,51 +738,42 @@ impl GameState {
         let room_types = vec!["lair", "hatchery", "treasury", "training_room", "library", "workshop"];
 
         for room_type in room_types {
-            // Find all tiles of this type
-            let mut visited = HashSet::new();
+            // Use reused logic from room_validator
+            let connected_rooms = room_validator::detect_rooms(&self.grid, room_type);
+            
+            for room_tiles in connected_rooms {
+                 if let Some(room_data) = game_data.rooms.get(room_type) {
+                      if let Err(e) = room_validator::validate_room_shape(&room_tiles, room_data) {
+                           // Log reason for invalid room (optional, maybe only for debug)
+                           // eprintln!("Invalid {} room: {}", room_type, e);
+                           continue;
+                      }
 
-            for row in &self.grid {
-                for tile in row {
-                    if visited.contains(&tile.pos) {
-                        continue;
-                    }
+                      // Create room
+                      let room_id = self.next_room_id;
+                      self.next_room_id += 1;
 
-                    if tile.tile_type == room_type && tile.ownership == Ownership::Player {
-                        // Flood fill to find contiguous room
-                        let room_tiles = self.flood_fill_room(tile.pos, room_type, &mut visited);
+                           // Calculate quality
+                           let mut room = room_validator::Room::new(
+                                room_id,
+                                room_type.to_string(),
+                                room_tiles.clone(),
+                           );
+                           room.active = true;
+                           room.quality = 100.0;
 
-                        if !room_tiles.is_empty() {
-                            // Check min size
-                            if let Some(room_data) = game_data.rooms.get(room_type) {
-                                if room_tiles.len() >= room_data.build.min_tiles as usize {
-                                    // Create room
-                                    let room_id = self.next_room_id;
-                                    self.next_room_id += 1;
-
-                                    // Calculate quality
-                                    let room = room_validator::Room {
-                                        id: room_id,
-                                        room_type: room_type.to_string(),
-                                        tiles: room_tiles.clone(),
-                                        quality: 100.0, // Simplified for now
-                                        active: true,
-                                    };
-
-                                    let quality = room_validator::calculate_room_quality(&room, room_data);
-
-                                    let mut final_room = room;
-                                    final_room.quality = quality;
-
-                                    let tile_count = room_tiles.len();
-                                    detected_rooms.push((final_room, room_tiles));
-                                    eprintln!("Detected {} room with {} tiles (quality: {:.1})",
-                                        room_type, tile_count, quality);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+                           let quality = room_validator::calculate_room_quality(&room, room_data);
+                           room.quality = quality;
+                           
+                       // Calculate efficiency
+                       room.efficiency = room_validator::calculate_efficiency(&room, &self.grid);
+                       
+                       let tile_count = room_tiles.len();
+                       detected_rooms.push((room, room_tiles));
+                       eprintln!("Detected {} room with {} tiles (quality: {:.1})",
+                            room_type, tile_count, quality);
+                  }
+             }
         }
 
         // Now apply room_ids to tiles (separate mutable pass)
@@ -715,42 +809,7 @@ impl GameState {
         // Let's leave it unclamped so players don't lose gold instantly if a wall breaks.
     }
 
-    fn flood_fill_room(
-        &self,
-        start: TilePos,
-        room_type: &str,
-        visited: &mut HashSet<TilePos>,
-    ) -> HashSet<TilePos> {
-        use std::collections::VecDeque;
 
-        let mut result = HashSet::new();
-        let mut queue = VecDeque::new();
-        queue.push_back(start);
-
-        while let Some(pos) = queue.pop_front() {
-            if visited.contains(&pos) {
-                continue;
-            }
-
-            if let Some(tile) = tile_grid::get_tile(&self.grid, pos) {
-                if tile.tile_type == room_type && tile.ownership == Ownership::Player {
-                    visited.insert(pos);
-                    result.insert(pos);
-
-                    // Use tile_grid helper to get 4-way neighbors
-                    let neighbors = tile_grid::get_cardinal_neighbors(&self.grid, pos);
-
-                    for neighbor in neighbors {
-                        if !visited.contains(&neighbor) {
-                            queue.push_back(neighbor);
-                        }
-                    }
-                }
-            }
-        }
-
-        result
-    }
 
     fn calculate_room_center(&self, room: &crate::engine::room_validator::Room) -> TilePos {
         if room.tiles.is_empty() {
@@ -957,14 +1016,14 @@ impl GameState {
 
         for room in &self.rooms {
             if room.room_type == "hatchery" && room.active {
-                // Each hatchery tile generates 1 food per second
-                let food_rate = room.tiles.len() as f32;
+                // Each hatchery tile generates 1 food per second * efficiency
+                let food_rate = room.tiles.len() as f32 * room.efficiency;
                 total_food_generated += (food_rate * dt) as i32;
             }
         }
 
         if total_food_generated > 0 {
-            self.player.add_resources(0, 0, total_food_generated);
+            self.player.add_resources(0, 0, total_food_generated, 0);
         }
     }
 
@@ -982,11 +1041,11 @@ impl GameState {
             if food_need < 10.0 {
                 // Creature is starving
                 if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
-                    // Check if mood is below desertion threshold
-                    if creature.mood < monster_data.ai.desertion_threshold as f32 {
+                    // Check if they should desert using AI logic
+                    if creature_ai::should_desert(creature, monster_data) {
                         deserting_ids.push(creature_id);
-                        eprintln!("Creature {} is deserting due to starvation (food: {:.1}, mood: {:.1})",
-                            creature.creature_id, food_need, creature.mood);
+                        eprintln!("Creature {} is deserting! (mood: {:.1})",
+                            creature.creature_id, creature.mood);
                     }
                 }
             }
@@ -1148,7 +1207,13 @@ impl GameState {
                             if tile.marked_for_dig {
                                 let dx = (pos.x - imp_pos.x) as f32;
                                 let dy = (pos.y - imp_pos.y) as f32;
-                                let dist = dx*dx + dy*dy;
+                                let mut dist = dx*dx + dy*dy;
+                                
+                                // Penalize gem seams (infinite gold) so they are lower priority than regular digging
+                                if tile.tile_type == "gem_seam" {
+                                    dist += 10000.0; 
+                                }
+                                
                                 if dist < min_dist { min_dist = dist; nearest_marked = Some(pos); }
                             }
                         }
@@ -1174,20 +1239,28 @@ impl GameState {
                             // Dig the tile!
                             if let Some(tile) = self.get_tile_mut(marked_pos) {
                             if tile.marked_for_dig {
-                                // Check if tile has resources (gold or gems)
-                                let (gold_gained, is_gem_seam) = if tile.tile_type == "gold_vein" {
+                                // Check if tile has resources (gold or gems or mana)
+                                let (gold_gained, mana_gained, is_gem_seam) = if tile.tile_type == "gold_vein" {
                                     // Gold veins give 50 gold when dug
                                     let gold = if let Some(resources) = tile.resources_remaining {
                                         50.min(resources as i32)
                                     } else {
                                         50
                                     };
-                                    (gold, false)
+                                    (gold, 0, false)
                                 } else if tile.tile_type == "gem_seam" {
                                     // Gem seams give 25 gold per dig but are infinite
-                                    (25, true)
+                                    (25, 0, true)
+                                } else if tile.tile_type == "mana_crystal" {
+                                     // Mana crystals give 20 mana
+                                    let mana = if let Some(resources) = tile.resources_remaining {
+                                        20.min(resources as i32)
+                                    } else {
+                                        20
+                                    };
+                                     (0, mana, false)
                                 } else {
-                                    (0, false)
+                                    (0, 0, false)
                                 };
 
                                 if is_gem_seam {
@@ -1203,10 +1276,13 @@ impl GameState {
                                     tile.resources_remaining = None;
                                     self.player.claimed_tile_count += 1;
 
-                                    // Give gold to player
+                                    // Give resources to player
                                     if gold_gained > 0 {
                                         self.player.gold += gold_gained;
                                         eprintln!("Imp dug gold vein at {:?}, gained {} gold", marked_pos, gold_gained);
+                                    } else if mana_gained > 0 {
+                                        self.player.mana = (self.player.mana + mana_gained).min(self.player.max_mana);
+                                        eprintln!("Imp mined mana crystal at {:?}, gained {} mana", marked_pos, mana_gained);
                                     } else {
                                         eprintln!("Imp dug tile at {:?}", marked_pos);
                                     }

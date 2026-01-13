@@ -76,38 +76,7 @@ pub fn should_desert(creature: &CreatureState, monster_data: &MonsterData) -> bo
 }
 
 /// Find the best room of a specific type for a creature
-pub fn find_best_room(
-    room_type: &str,
-    creature_pos: TilePos,
-    rooms: &[Room],
-    min_quality: f32,
-) -> Option<usize> {
-    let mut best: Option<(usize, f32)> = None;
 
-    for room in rooms {
-        // Check if room matches type and quality requirements
-        if room.room_type != room_type || room.quality < min_quality || !room.active {
-            continue;
-        }
-
-        // Calculate distance to room center
-        let center = room.get_center();
-        let dx = (center.x - creature_pos.x) as f32;
-        let dy = (center.y - creature_pos.y) as f32;
-        let distance = (dx * dx + dy * dy).sqrt();
-
-        // Update best if this is closer
-        match best {
-            None => best = Some((room.id, distance)),
-            Some((_, best_dist)) if distance < best_dist => {
-                best = Some((room.id, distance));
-            }
-            _ => {}
-        }
-    }
-
-    best.map(|(id, _)| id)
-}
 
 /// Calculate desirability of a task for a creature
 pub fn calculate_task_desirability(
@@ -176,13 +145,13 @@ pub fn decide_task(
         }
     };
 
-    // Debug: Log available rooms
-    eprintln!("[AI] Available rooms for {}: {:?}",
-        creature.creature_id,
-        game_state.rooms.iter()
-            .map(|r| format!("{}(id={}, active={}, quality={:.1})", r.room_type, r.id, r.active, r.quality))
-            .collect::<Vec<_>>()
-    );
+    // Debug: Log available rooms (Reduced)
+    // eprintln!("[AI] Available rooms for {}: {:?}",
+    //    creature.creature_id,
+    //    game_state.rooms.iter()
+    //        .map(|r| format!("{}(id={}, active={}, quality={:.1})", r.room_type, r.id, r.active, r.quality))
+    //        .collect::<Vec<_>>()
+    // );
 
     // If fleeing or deserting, flee
     if creature.is_deserting {
@@ -192,26 +161,28 @@ pub fn decide_task(
 
     // If carrying gold, prioritize depositing
     if creature.gold_carried > 20 {
-        if let Some(room_id) = find_best_room("treasury", creature_pos, &game_state.rooms, 0.0) {
+        use crate::engine::room_validator;
+        if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.rooms, "treasury", creature_pos, 0.0) {
             return Some(Task::DepositGold(room_id));
         }
     }
 
     // Check most urgent need
     if let Some((need_name, need_value)) = creature.get_most_urgent_need() {
-        eprintln!("[AI] Most urgent need for {}: {} = {:.1}%", creature.creature_id, need_name, need_value);
+        // eprintln!("[AI] Most urgent need for {}: {} = {:.1}%", creature.creature_id, need_name, need_value);
 
         // If need is critical (below 30), prioritize satisfying it
         if need_value < 30.0 {
             eprintln!("[AI] Critical need {} detected!", need_name);
             // Find room that satisfies this need
             if let Some(need_data) = monster_data.needs.get(&need_name) {
-                eprintln!("[AI] Need {} satisfied by rooms: {:?}", need_name, need_data.satisfied_by);
+                // eprintln!("[AI] Need {} satisfied by rooms: {:?}", need_name, need_data.satisfied_by);
                 for room_type in &need_data.satisfied_by {
-                    if let Some(room_id) =
-                        find_best_room(room_type, creature_pos, &game_state.rooms, 0.0)
+                    use crate::engine::room_validator;
+                    if let Some((room_id, _)) =
+                        room_validator::find_nearest_room(&game_state.rooms, room_type, creature_pos, 0.0)
                     {
-                        eprintln!("[AI] Found {} room (id={})", room_type, room_id);
+                        // eprintln!("[AI] Found {} room (id={})", room_type, room_id);
                         // Determine task type based on need
                         match need_name.as_str() {
                             "sleep" => return Some(Task::Sleep(room_id)),
@@ -231,38 +202,50 @@ pub fn decide_task(
     let mut candidate_tasks = Vec::new();
 
     // Add work tasks for preferred rooms
-    eprintln!("[AI] Evaluating room desires: {:?}", monster_data.ai.room_desires);
+    // eprintln!("[AI] Evaluating room desires: {:?}", monster_data.ai.room_desires);
     for (room_type, desire) in &monster_data.ai.room_desires {
-        if let Some(room_id) = find_best_room(room_type, creature_pos, &game_state.rooms, 0.0) {
+        use crate::engine::room_validator;
+        if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.rooms, room_type, creature_pos, 0.0) {
             let task = Task::Work(room_id);
-            let desirability = calculate_task_desirability(&task, creature, monster_data) * desire;
-            eprintln!("[AI] Candidate: Work({}) - desirability={:.2}", room_type, desirability);
+            let mut desirability = calculate_task_desirability(&task, creature, monster_data) * desire;
+            
+            // Adjust based on room factors
+            if let Some(room) = game_state.rooms.iter().find(|r| r.id == room_id) {
+                 if let Some(room_data) = game_data.rooms.get(room_type) {
+                      let room_factor = room_validator::calculate_task_desirability(room, room_data, creature_pos, 1.0);
+                      desirability *= room_factor;
+                 }
+            }
+
+            // eprintln!("[AI] Candidate: Work({}) - desirability={:.2}", room_type, desirability);
             candidate_tasks.push((task, desirability));
         } else {
-            eprintln!("[AI] No {} room found for work task", room_type);
+            // eprintln!("[AI] No {} room found for work task", room_type);
         }
     }
 
     // Add training if available and mood is good
     if creature.mood > 50.0 && creature.level < 5 {
-        if let Some(room_id) = find_best_room("training_room", creature_pos, &game_state.rooms, 0.0)
+        use crate::engine::room_validator;
+        if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.rooms, "training_room", creature_pos, 0.0)
         {
             let task = Task::Train(room_id);
             let desirability = calculate_task_desirability(&task, creature, monster_data);
-            eprintln!("[AI] Candidate: Train - desirability={:.2}", desirability);
+            // eprintln!("[AI] Candidate: Train - desirability={:.2}", desirability);
             candidate_tasks.push((task, desirability));
         }
     }
 
     // Add research if creature can research
-    if let Some(room_id) = find_best_room("library", creature_pos, &game_state.rooms, 0.0) {
+    use crate::engine::room_validator;
+    if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.rooms, "library", creature_pos, 0.0) {
         let task = Task::Research(room_id);
         let desirability = calculate_task_desirability(&task, creature, monster_data) * 0.8;
-        eprintln!("[AI] Candidate: Research - desirability={:.2}", desirability);
+        // eprintln!("[AI] Candidate: Research - desirability={:.2}", desirability);
         candidate_tasks.push((task, desirability));
     }
 
-    eprintln!("[AI] Total candidate tasks: {}", candidate_tasks.len());
+    // eprintln!("[AI] Total candidate tasks: {}", candidate_tasks.len());
 
     // Select best task
     if let Some((task, desirability)) = candidate_tasks
