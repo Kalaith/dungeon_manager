@@ -63,8 +63,8 @@ impl PlayerState {
             gold: 200, // Start with limited gold - must dig for more
             mana: 1000,
             food: 100,
-            max_gold: 500, // Starting treasury capacity
-            max_mana: 10000,
+            max_gold: 0, // Capacity determined by treasury/dungeon heart rooms
+            max_mana: 0,
 
             max_food: 500,
             materials: 0,

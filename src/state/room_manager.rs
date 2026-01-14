@@ -31,8 +31,8 @@ impl RoomManager {
         // Collect all detected rooms first (without mutating grid)
         let mut detected_rooms = Vec::new();
 
-        // Detect rooms for each room type
-        let room_types = vec!["lair", "hatchery", "treasury", "training_room", "library", "workshop"];
+        // Detect rooms for each room type from game data
+        let room_types: Vec<&String> = game_data.rooms.keys().collect();
 
         for room_type in room_types {
             // Use reused logic from room_validator

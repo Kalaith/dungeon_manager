@@ -42,6 +42,11 @@ impl Sidebar {
         }
     }
 
+    pub fn switch_to_tab(&mut self, tab: SidebarTab) {
+        self.current_tab = tab;
+        self.is_expanded = true;
+    }
+
     pub fn update_layout(&mut self) {
         let target_y = if self.is_expanded {
             screen_height() - PANEL_HEIGHT
@@ -56,7 +61,7 @@ impl Sidebar {
     pub fn handle_input(
         &mut self, 
         player: &PlayerState, 
-        spells: &HashMap<String, SpellData>,
+        game_data: &crate::data::GameData,
         _current_mode: &InteractionMode,
         held_entity: Option<EntityId>
     ) -> Option<InteractionMode> {
@@ -96,10 +101,10 @@ impl Sidebar {
             if is_mouse_button_pressed(MouseButton::Left) {
                 match self.current_tab {
                     SidebarTab::Build => {
-                        return self.handle_build_tab_click(mouse_pos, player);
+                        return self.handle_build_tab_click(mouse_pos, player, game_data);
                     }
                     SidebarTab::Magic => {
-                        return self.handle_magic_tab_click(mouse_pos, player, spells);
+                        return self.handle_magic_tab_click(mouse_pos, player, &game_data.spells);
                     }
                     SidebarTab::Minions => {
                         return self.handle_minions_tab_click(mouse_pos, held_entity);
@@ -120,19 +125,19 @@ impl Sidebar {
         None
     }
 
-    fn handle_build_tab_click(&mut self, mouse_pos: (f32, f32), player: &PlayerState) -> Option<InteractionMode> {
+    fn handle_build_tab_click(&mut self, mouse_pos: (f32, f32), player: &PlayerState, game_data: &crate::data::GameData) -> Option<InteractionMode> {
         let start_x = PADDING;
         let start_y = self.panel_y + PADDING;
         
         let buttons = vec![
             ("Dig", InteractionMode::Dig, 0, "1"),
-            ("Lair", InteractionMode::BuildRoom("lair".to_string()), 10, "2"),
-            ("Hatchery", InteractionMode::BuildRoom("hatchery".to_string()), 15, "3"),
-            ("Treasury", InteractionMode::BuildRoom("treasury".to_string()), 20, "4"),
-            ("Training", InteractionMode::BuildRoom("training_room".to_string()), 25, "T"),
-            ("Library", InteractionMode::BuildRoom("library".to_string()), 30, "L"),
-            ("Workshop", InteractionMode::BuildRoom("workshop".to_string()), 40, "W"),
-            ("Spawner", InteractionMode::PlaceSpawner, 50, "5"),
+            ("Lair", InteractionMode::BuildRoom("lair".to_string()), self.get_room_cost("lair", game_data), "2"),
+            ("Hatchery", InteractionMode::BuildRoom("hatchery".to_string()), self.get_room_cost("hatchery", game_data), "3"),
+            ("Treasury", InteractionMode::BuildRoom("treasury".to_string()), self.get_room_cost("treasury", game_data), "4"),
+            ("Training", InteractionMode::BuildRoom("training_hall".to_string()), self.get_room_cost("training_hall", game_data), "T"),
+            ("Library", InteractionMode::BuildRoom("library".to_string()), self.get_room_cost("library", game_data), "L"),
+            ("Workshop", InteractionMode::BuildRoom("workshop".to_string()), self.get_room_cost("workshop", game_data), "W"),
+            ("Spawner", InteractionMode::PlaceSpawner, crate::config::SPAWNER_COST, "5"),
             ("Sell/Cancel", InteractionMode::Sell, 0, "X"),
         ];
 
@@ -159,6 +164,12 @@ impl Sidebar {
         }
 
         None
+    }
+    
+    fn get_room_cost(&self, room_id: &str, game_data: &crate::data::GameData) -> i32 {
+        game_data.rooms.get(room_id)
+            .map(|r| r.build.cost_per_tile)
+            .unwrap_or_else(|| panic!("Room type '{}' defined in UI but missing in rooms.json", room_id))
     }
     
     fn handle_magic_tab_click(&mut self, mouse_pos: (f32, f32), player: &PlayerState, spells: &HashMap<String, SpellData>) -> Option<InteractionMode> {
@@ -227,8 +238,8 @@ impl Sidebar {
         
         // Trap items: Label, Mode, Material Cost, Hotkey (optional)
         let buttons = vec![
-            ("Door", InteractionMode::BuildTrap("door".to_string()), 5, "D"),
-            ("Spike Trap", InteractionMode::BuildTrap("spike_trap".to_string()), 10, "S"),
+            ("Door", InteractionMode::BuildTrap("door".to_string()), crate::config::DOOR_COST, "D"),
+            ("Spike Trap", InteractionMode::BuildTrap("spike_trap".to_string()), crate::config::SPIKE_TRAP_COST, "S"),
         ];
 
         let mut current_x = start_x;
@@ -254,7 +265,7 @@ impl Sidebar {
         None
     }
 
-    pub fn draw(&self, current_mode: &InteractionMode, player: &PlayerState, spells: &HashMap<String, SpellData>, held_entity: Option<EntityId>, selected_entity: Option<EntityId>, selected_room: Option<usize>, entities: &crate::state::entities::EntityManager, rooms: &[crate::engine::room_validator::Room]) {
+    pub fn draw(&self, current_mode: &InteractionMode, player: &PlayerState, game_data: &crate::data::GameData, held_entity: Option<EntityId>, selected_entity: Option<EntityId>, selected_room: Option<usize>, entities: &crate::state::entities::EntityManager, rooms: &[crate::engine::room_validator::Room]) {
         if !self.is_expanded {
             // Draw just tabs
             self.draw_tabs();
@@ -269,8 +280,8 @@ impl Sidebar {
 
         // Draw Content based on Tab
         match self.current_tab {
-            SidebarTab::Build => self.draw_build_content(current_mode, player),
-            SidebarTab::Magic => self.draw_magic_content(player, spells),
+            SidebarTab::Build => self.draw_build_content(current_mode, player, game_data),
+            SidebarTab::Magic => self.draw_magic_content(player, &game_data.spells),
             SidebarTab::Minions => self.draw_minions_content(current_mode, held_entity, selected_entity, selected_room, entities, rooms),
             SidebarTab::Traps => self.draw_traps_content(current_mode, player),
         }
@@ -291,7 +302,7 @@ impl Sidebar {
         let tabs = vec![
             (SidebarTab::Build, "Build"),
             (SidebarTab::Magic, "Magic"),
-            (SidebarTab::Minions, "Minions"),
+            (SidebarTab::Minions, "Inspect"),
             (SidebarTab::Traps, "Traps"),
         ];
 
@@ -339,15 +350,15 @@ impl Sidebar {
         );
     }
 
-    fn draw_build_content(&self, current_mode: &InteractionMode, player: &PlayerState) {
+    fn draw_build_content(&self, current_mode: &InteractionMode, player: &PlayerState, game_data: &crate::data::GameData) {
         let layout = vec![
             ("Dig", InteractionMode::Dig, 0, "1"),
-            ("Lair", InteractionMode::BuildRoom("lair".to_string()), 10, "2"),
-            ("Hatchery", InteractionMode::BuildRoom("hatchery".to_string()), 15, "3"),
-            ("Treasury", InteractionMode::BuildRoom("treasury".to_string()), 20, "4"),
-            ("Training", InteractionMode::BuildRoom("training_room".to_string()), 25, "T"),
-            ("Library", InteractionMode::BuildRoom("library".to_string()), 30, "L"),
-            ("Workshop", InteractionMode::BuildRoom("workshop".to_string()), 40, "W"),
+            ("Lair", InteractionMode::BuildRoom("lair".to_string()), self.get_room_cost("lair", game_data), "2"),
+            ("Hatchery", InteractionMode::BuildRoom("hatchery".to_string()), self.get_room_cost("hatchery", game_data), "3"),
+            ("Treasury", InteractionMode::BuildRoom("treasury".to_string()), self.get_room_cost("treasury", game_data), "4"),
+            ("Training", InteractionMode::BuildRoom("training_hall".to_string()), self.get_room_cost("training_hall", game_data), "T"),
+            ("Library", InteractionMode::BuildRoom("library".to_string()), self.get_room_cost("library", game_data), "L"),
+            ("Workshop", InteractionMode::BuildRoom("workshop".to_string()), self.get_room_cost("workshop", game_data), "W"),
             ("Spawner", InteractionMode::PlaceSpawner, 50, "5"),
             ("Sell/Cancel", InteractionMode::Sell, 0, "X"),
         ];
@@ -471,7 +482,7 @@ impl Sidebar {
         draw_text("Inspect", inspect_x + 10.0, start_y + 30.0, 16.0, WHITE);
 
         // Minion Count info
-        draw_text("Minion Controls", start_x, start_y + BUTTON_SIZE + 30.0, 18.0, LIGHTGRAY);
+        draw_text("Selection Controls", start_x, start_y + BUTTON_SIZE + 30.0, 18.0, LIGHTGRAY);
         
         // Selected Minion Details
         let details_x = inspect_x + BUTTON_SIZE * 2.5 + BUTTON_SPACING * 2.0;
@@ -490,7 +501,7 @@ impl Sidebar {
             }
 
         } else if let Some(room_id) = selected_room {
-             if let Some(room) = rooms.get(room_id) {
+             if let Some(room) = rooms.iter().find(|r| r.id == room_id) {
                   // Room details
                   draw_text(&format!("Room: {} (ID: {})", room.room_type, room.id), details_x, start_y + 20.0, 20.0, WHITE);
                   draw_text(&format!("Size: {} tiles", room.tiles.len()), details_x, start_y + 45.0, 16.0, WHITE);
@@ -514,8 +525,8 @@ impl Sidebar {
 
     fn draw_traps_content(&self, current_mode: &InteractionMode, player: &PlayerState) {
         let layout = vec![
-            ("Door", InteractionMode::BuildTrap("door".to_string()), 5, "D"),
-            ("Spike Trap", InteractionMode::BuildTrap("spike_trap".to_string()), 10, "S"),
+            ("Door", InteractionMode::BuildTrap("door".to_string()), crate::config::DOOR_COST, "D"),
+            ("Spike Trap", InteractionMode::BuildTrap("spike_trap".to_string()), crate::config::SPIKE_TRAP_COST, "S"),
         ];
 
         let start_x = PADDING;

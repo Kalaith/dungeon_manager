@@ -3,7 +3,7 @@ use crate::state::game_state::GameState;
 use crate::state::{GamePhase, InteractionMode, TilePos, MapType, Ownership};
 use crate::data::GameData;
 use crate::state::entities::EntityId;
-use crate::ui::sidebar::Sidebar;
+use crate::ui::sidebar::{Sidebar, SidebarTab};
 
 use crate::engine::spell_effects;
 use crate::engine::creature_ai;
@@ -146,7 +146,7 @@ impl InputHandler {
         // Handle Sidebar Input
         if let Some(new_mode) = sidebar.handle_input(
             &state.player, 
-            &game_data.spells, 
+            game_data, 
             interaction_mode,
             *held_entity
         ) {
@@ -169,7 +169,7 @@ impl InputHandler {
         if is_mouse_button_pressed(MouseButton::Left) && !mouse_over_ui {
             Self::handle_tile_interaction(
                 state, game_data, interaction_mode, held_entity, 
-                selected_entity, selected_room, tile_pos
+                selected_entity, selected_room, tile_pos, sidebar
             );
         }
     }
@@ -326,6 +326,7 @@ impl InputHandler {
         selected_entity: &mut Option<EntityId>,
         selected_room: &mut Option<usize>,
         tile_pos: TilePos,
+        sidebar: &mut Sidebar,
     ) {
         match interaction_mode {
             InteractionMode::Dig => {
@@ -353,11 +354,29 @@ impl InputHandler {
                 Self::handle_inspect(state, selected_entity, selected_room, tile_pos);
             }
             InteractionMode::None => {
-                // Select entity on click
+                // Select entity or room on click
+                let mut found_something = false;
+
+                // Try entity first
                 if let Some(entity) = state.entities.at_position(tile_pos).next() {
                     *selected_entity = Some(entity.id);
+                    *selected_room = None;
+                    found_something = true;
                 } else {
                     *selected_entity = None;
+                    // Try room
+                    if let Some(tile) = state.get_tile(tile_pos) {
+                        if let Some(room_id) = tile.room_id {
+                            *selected_room = Some(room_id);
+                            found_something = true;
+                        } else {
+                            *selected_room = None;
+                        }
+                    }
+                }
+
+                if found_something {
+                    sidebar.switch_to_tab(SidebarTab::Minions);
                 }
             }
         }
@@ -366,7 +385,7 @@ impl InputHandler {
     fn handle_dig(state: &mut GameState, tile_pos: TilePos) {
         if let Some(tile) = state.get_tile_mut(tile_pos) {
             if tile_types::is_diggable(&tile.tile_type) && tile.ownership == Ownership::Unclaimed {
-                tile.marked_for_dig = true;
+                tile.marked_for_dig = !tile.marked_for_dig;
             }
         }
     }
@@ -375,7 +394,7 @@ impl InputHandler {
         let cost = game_data.rooms
             .get(room_type)
             .map(|data| data.build.cost_per_tile)
-            .unwrap_or(50);
+            .unwrap_or_else(|| panic!("Room type '{}' missing in rooms.json", room_type));
 
         let can_build = state.player.gold >= cost;
         let is_valid_tile = if let Some(tile) = state.get_tile(tile_pos) {
@@ -417,11 +436,10 @@ impl InputHandler {
     }
 
     fn handle_place_spawner(state: &mut GameState, tile_pos: TilePos) {
-        let spawner_cost = 50;
-        if state.player.gold >= spawner_cost {
+        if state.player.gold >= crate::config::SPAWNER_COST {
             if let Some(tile) = state.get_tile(tile_pos) {
                 if tile.ownership == Ownership::Player && tile_types::can_build_room(&tile.tile_type) {
-                    state.player.gold -= spawner_cost;
+                    state.player.gold -= crate::config::SPAWNER_COST;
                     if let Some(tile_mut) = state.get_tile_mut(tile_pos) {
                         tile_mut.tile_type = tt::MONSTER_SPAWNER.to_string();
                     }

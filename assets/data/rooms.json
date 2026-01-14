@@ -13,7 +13,9 @@
       "dig_required": false,
       "requires_claimed": false,
       "can_overlap": false,
-      "allowed_terrain": ["claimed_floor"],
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
       "construction_time": 0
     },
     "requirements": {
@@ -24,7 +26,9 @@
     },
     "effects": {
       "mana_generation_per_second": 1.0,
-      "happiness_modifier": 5
+      "happiness_modifier": 5,
+      "gold_storage_capacity": 500,
+      "mana_storage_capacity": 100
     },
     "scaling": {
       "per_tile_multiplier": 1.0,
@@ -49,7 +53,11 @@
         }
       ],
       "light": {
-        "color": [255, 0, 0],
+        "color": [
+          255,
+          0,
+          0
+        ],
         "intensity": 1.0,
         "flicker": true
       }
@@ -69,7 +77,9 @@
       "dig_required": true,
       "requires_claimed": true,
       "can_overlap": false,
-      "allowed_terrain": ["claimed_floor"],
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
       "construction_time": 0.3
     },
     "requirements": {
@@ -85,8 +95,14 @@
     "scaling": {
       "per_tile_multiplier": 1.0,
       "size_thresholds": [
-        { "tiles": 9, "multiplier": 1.0 },
-        { "tiles": 25, "multiplier": 1.5 }
+        {
+          "tiles": 9,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 25,
+          "multiplier": 1.5
+        }
       ],
       "shape_penalties": {
         "thin_corridor": 0.8
@@ -112,7 +128,11 @@
         }
       ],
       "light": {
-        "color": [100, 100, 255],
+        "color": [
+          100,
+          100,
+          255
+        ],
         "intensity": 0.4,
         "flicker": false
       }
@@ -132,7 +152,9 @@
       "dig_required": true,
       "requires_claimed": true,
       "can_overlap": false,
-      "allowed_terrain": ["claimed_floor"],
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
       "construction_time": 0.4
     },
     "requirements": {
@@ -148,8 +170,14 @@
     "scaling": {
       "per_tile_multiplier": 1.0,
       "size_thresholds": [
-        { "tiles": 9, "multiplier": 1.0 },
-        { "tiles": 25, "multiplier": 1.3 }
+        {
+          "tiles": 9,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 25,
+          "multiplier": 1.3
+        }
       ],
       "shape_penalties": {
         "fragmented": 0.7
@@ -159,7 +187,9 @@
       "task_type": "work",
       "desirability": 1.0,
       "max_creatures": 4,
-      "preferred_creatures": ["imp"],
+      "preferred_creatures": [
+        "imp"
+      ],
       "forbidden_creatures": [],
       "entry_conditions": {}
     },
@@ -173,7 +203,11 @@
         }
       ],
       "light": {
-        "color": [0, 255, 0],
+        "color": [
+          0,
+          255,
+          0
+        ],
         "intensity": 0.5,
         "flicker": false
       }
@@ -188,12 +222,14 @@
     "build": {
       "cost_per_tile": 100,
       "mana_cost": 0,
-      "min_tiles": 9,
+      "min_tiles": 1,
       "max_tiles": 81,
       "dig_required": true,
       "requires_claimed": true,
       "can_overlap": false,
-      "allowed_terrain": ["claimed_floor"],
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
       "construction_time": 0.5
     },
     "requirements": {
@@ -203,14 +239,20 @@
       "forbidden_if": []
     },
     "effects": {
-      "gold_storage_capacity": 1000,
+      "gold_storage_capacity": 50,
       "happiness_modifier": 3
     },
     "scaling": {
       "per_tile_multiplier": 1.0,
       "size_thresholds": [
-        { "tiles": 9, "multiplier": 1.0 },
-        { "tiles": 25, "multiplier": 1.2 }
+        {
+          "tiles": 9,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 25,
+          "multiplier": 1.2
+        }
       ],
       "shape_penalties": {}
     },
@@ -232,8 +274,85 @@
         }
       ],
       "light": {
-        "color": [255, 255, 0],
+        "color": [
+          255,
+          255,
+          0
+        ],
         "intensity": 0.6,
+        "flicker": false
+      }
+    }
+  },
+  {
+    "id": "library",
+    "name": "Library",
+    "description": "A place for research and learning spells.",
+    "category": "research",
+    "icon": "icons/rooms/library.png",
+    "build": {
+      "cost_per_tile": 150,
+      "mana_cost": 0,
+      "min_tiles": 9,
+      "max_tiles": 64,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
+      "construction_time": 0.5
+    },
+    "requirements": {
+      "research": [],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "research_rate": 1.0,
+      "happiness_modifier": 2
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        {
+          "tiles": 9,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 25,
+          "multiplier": 1.2
+        }
+      ],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "research",
+      "desirability": 1.2,
+      "max_creatures": 4,
+      "preferred_creatures": [
+        "warlock"
+      ],
+      "forbidden_creatures": [],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/library_floor.png",
+      "wall_sprite": "tiles/library_wall.png",
+      "object_spawn": [
+        {
+          "object": "bookshelf",
+          "density": 0.1
+        }
+      ],
+      "light": {
+        "color": [
+          100,
+          100,
+          255
+        ],
+        "intensity": 0.5,
         "flicker": false
       }
     }
@@ -252,11 +371,15 @@
       "dig_required": true,
       "requires_claimed": true,
       "can_overlap": false,
-      "allowed_terrain": ["claimed_floor"],
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
       "construction_time": 0.6
     },
     "requirements": {
-      "research": ["workshop_tech"],
+      "research": [
+        "workshop_tech"
+      ],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -268,8 +391,14 @@
     "scaling": {
       "per_tile_multiplier": 1.0,
       "size_thresholds": [
-        { "tiles": 9, "multiplier": 1.0 },
-        { "tiles": 25, "multiplier": 1.4 }
+        {
+          "tiles": 9,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 25,
+          "multiplier": 1.4
+        }
       ],
       "shape_penalties": {}
     },
@@ -277,7 +406,9 @@
       "task_type": "work",
       "desirability": 1.1,
       "max_creatures": 3,
-      "preferred_creatures": ["troll"],
+      "preferred_creatures": [
+        "troll"
+      ],
       "forbidden_creatures": [],
       "entry_conditions": {}
     },
@@ -291,7 +422,11 @@
         }
       ],
       "light": {
-        "color": [255, 100, 0],
+        "color": [
+          255,
+          100,
+          0
+        ],
         "intensity": 0.7,
         "flicker": true
       }
@@ -311,11 +446,15 @@
       "dig_required": true,
       "requires_claimed": true,
       "can_overlap": false,
-      "allowed_terrain": ["claimed_floor"],
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
       "construction_time": 0.5
     },
     "requirements": {
-      "research": ["training_tech"],
+      "research": [
+        "training_tech"
+      ],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -331,8 +470,14 @@
     "scaling": {
       "per_tile_multiplier": 1.0,
       "size_thresholds": [
-        { "tiles": 9, "multiplier": 1.0 },
-        { "tiles": 25, "multiplier": 1.5 }
+        {
+          "tiles": 9,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 25,
+          "multiplier": 1.5
+        }
       ],
       "shape_penalties": {
         "thin_corridor": 0.75
@@ -342,8 +487,13 @@
       "task_type": "train",
       "desirability": 1.2,
       "max_creatures": 6,
-      "preferred_creatures": ["goblin", "orc"],
-      "forbidden_creatures": ["imp"],
+      "preferred_creatures": [
+        "goblin",
+        "orc"
+      ],
+      "forbidden_creatures": [
+        "imp"
+      ],
       "entry_conditions": {
         "min_level": 2
       }
@@ -358,7 +508,11 @@
         }
       ],
       "light": {
-        "color": [255, 80, 80],
+        "color": [
+          255,
+          80,
+          80
+        ],
         "intensity": 0.6,
         "flicker": true
       }
@@ -378,11 +532,15 @@
       "dig_required": true,
       "requires_claimed": true,
       "can_overlap": false,
-      "allowed_terrain": ["claimed_floor"],
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
       "construction_time": 0.4
     },
     "requirements": {
-      "research": ["prison_tech"],
+      "research": [
+        "prison_tech"
+      ],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -394,7 +552,10 @@
     "scaling": {
       "per_tile_multiplier": 1.0,
       "size_thresholds": [
-        { "tiles": 9, "multiplier": 1.0 }
+        {
+          "tiles": 9,
+          "multiplier": 1.0
+        }
       ],
       "shape_penalties": {}
     },
@@ -402,7 +563,9 @@
       "task_type": "guard",
       "desirability": 0.8,
       "max_creatures": 2,
-      "preferred_creatures": ["orc"],
+      "preferred_creatures": [
+        "orc"
+      ],
       "forbidden_creatures": [],
       "entry_conditions": {}
     },
@@ -416,7 +579,11 @@
         }
       ],
       "light": {
-        "color": [50, 50, 50],
+        "color": [
+          50,
+          50,
+          50
+        ],
         "intensity": 0.3,
         "flicker": false
       }
@@ -436,7 +603,9 @@
       "dig_required": true,
       "requires_claimed": true,
       "can_overlap": false,
-      "allowed_terrain": ["claimed_floor"],
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
       "construction_time": 0.3
     },
     "requirements": {
@@ -463,7 +632,10 @@
       "task_type": "guard",
       "desirability": 1.0,
       "max_creatures": 4,
-      "preferred_creatures": ["goblin", "orc"],
+      "preferred_creatures": [
+        "goblin",
+        "orc"
+      ],
       "forbidden_creatures": [],
       "entry_conditions": {}
     },
@@ -477,7 +649,11 @@
         }
       ],
       "light": {
-        "color": [255, 0, 0],
+        "color": [
+          255,
+          0,
+          0
+        ],
         "intensity": 0.5,
         "flicker": false
       }
@@ -497,12 +673,18 @@
       "dig_required": true,
       "requires_claimed": true,
       "can_overlap": false,
-      "allowed_terrain": ["claimed_floor"],
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
       "construction_time": 1.0
     },
     "requirements": {
-      "research": ["ritual_tech"],
-      "global_rooms_required": ["library"],
+      "research": [
+        "ritual_tech"
+      ],
+      "global_rooms_required": [
+        "library"
+      ],
       "max_instances": 0,
       "forbidden_if": []
     },
@@ -514,8 +696,14 @@
     "scaling": {
       "per_tile_multiplier": 1.0,
       "size_thresholds": [
-        { "tiles": 9, "multiplier": 1.0 },
-        { "tiles": 25, "multiplier": 1.3 }
+        {
+          "tiles": 9,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 25,
+          "multiplier": 1.3
+        }
       ],
       "shape_penalties": {
         "fragmented": 0.8
@@ -525,7 +713,9 @@
       "task_type": "ritual",
       "desirability": 0.9,
       "max_creatures": 2,
-      "preferred_creatures": ["warlock"],
+      "preferred_creatures": [
+        "warlock"
+      ],
       "forbidden_creatures": [],
       "entry_conditions": {
         "min_level": 5
@@ -541,7 +731,11 @@
         }
       ],
       "light": {
-        "color": [128, 0, 128],
+        "color": [
+          128,
+          0,
+          128
+        ],
         "intensity": 0.8,
         "flicker": true
       }

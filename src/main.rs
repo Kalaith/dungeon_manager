@@ -10,6 +10,7 @@ mod data;
 mod engine;
 mod state;
 mod ui;
+mod config;
 mod draw_utils;
 
 use data::GameData;

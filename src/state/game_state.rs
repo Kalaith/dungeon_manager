@@ -65,6 +65,9 @@ impl GameState {
             next_creature_spawn_time: 10.0, // Spawn first creature after 10 seconds
         };
 
+        // Recalculate max gold and other room-based stats
+        state.detect_and_update_rooms(game_data);
+
         // Spawn 3 starting imps
         state.spawn_starting_imps(game_data, 3);
 
@@ -335,18 +338,23 @@ impl GameState {
     pub fn detect_and_update_rooms(&mut self, game_data: &GameData) {
         self.room_manager.detect_and_update_rooms(&mut self.dungeon, game_data);
         
-        // Recalculate max gold based on treasury rooms
-        let mut max_gold = 500; // Base capacity (throne room storage)
+        // Recalculate max gold and mana based on rooms
+        let mut max_gold = 0; 
+        let mut max_mana = 0;
         
         for room in &self.room_manager.rooms {
             if let Some(room_data) = game_data.rooms.get(&room.room_type) {
-                if room_data.effects.gold_storage > 0 {
-                    max_gold += room.tiles.len() as i32 * room_data.effects.gold_storage;
+                if room_data.effects.gold_storage_capacity > 0 {
+                    max_gold += room.tiles.len() as i32 * room_data.effects.gold_storage_capacity;
+                }
+                if room_data.effects.mana_storage_capacity > 0 {
+                    max_mana += room.tiles.len() as i32 * room_data.effects.mana_storage_capacity;
                 }
             }
         }
         
         self.player.max_gold = max_gold;
+        self.player.max_mana = max_mana;
     }
 
 

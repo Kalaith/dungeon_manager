@@ -49,7 +49,7 @@ pub struct EffectsData {
     #[serde(default)]
     pub food_generation_per_second: f32,
     #[serde(default)]
-    pub gold_storage: i32,
+    pub gold_storage_capacity: i32,
     #[serde(default)]
     pub xp_per_minute: f32,
     #[serde(default)]
@@ -60,6 +60,8 @@ pub struct EffectsData {
     pub creature_defense_modifier: f32,
     #[serde(default)]
     pub spawn_rate_modifier: f32,
+    #[serde(default)]
+    pub mana_storage_capacity: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

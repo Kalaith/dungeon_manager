@@ -19,11 +19,14 @@ pub fn update_imp_digging(
     dt: f32,
 ) {
     // Get all imp IDs
-    let imp_ids: Vec<EntityId> = entities
+    let mut imp_ids: Vec<EntityId> = entities
         .creatures()
         .filter(|(_, creature)| creature.creature_id == "imp")
         .map(|(id, _)| id)
         .collect();
+
+    // Sort by ID for deterministic behavior to prevent task flapping
+    imp_ids.sort();
 
     // Track tiles being targeted by other imps to prevent multiple imps on one tile
     let mut targeted_tiles = collect_targeted_tiles(entities, &imp_ids);
@@ -42,8 +45,20 @@ pub fn update_imp_digging(
             creature.current_path.is_none()
         };
 
-        // Remove current imp's target from exclusion set
-        targeted_tiles.remove(&imp_pos);
+        // Remove THIS imp's targets from the exclusion set so it can 'find' its own job
+        if let Some(entity) = entities.get(imp_id) {
+             if let Some(creature) = entity.as_creature() {
+                  if let Some(crate::state::entities::Task::Dig(pos)) = creature.current_task {
+                       targeted_tiles.remove(&pos);
+                  }
+                  if let Some(path) = &creature.current_path {
+                       if let Some(last_pos) = path.last() {
+                            targeted_tiles.remove(last_pos);
+                       }
+                  }
+             }
+             targeted_tiles.remove(&imp_pos);
+        }
 
         // If imp has no path, find nearest marked tile
         if should_check_dig {
@@ -72,12 +87,17 @@ fn collect_targeted_tiles(entities: &EntityManager, imp_ids: &[EntityId]) -> Has
     for &other_id in imp_ids {
         if let Some(entity) = entities.get(other_id) {
             if let Some(creature) = entity.as_creature() {
+                // Check current task for Dig targets
+                if let Some(crate::state::entities::Task::Dig(pos)) = creature.current_task {
+                    targeted_tiles.insert(pos);
+                }
+
                 if let Some(path) = &creature.current_path {
                     if let Some(last_pos) = path.last() {
                         targeted_tiles.insert(*last_pos);
                     }
                 }
-                if creature.current_path.is_none() {
+                if creature.current_path.is_none() && creature.current_task.is_none() {
                     targeted_tiles.insert(entity.pos);
                 }
             }
@@ -119,18 +139,44 @@ fn process_idle_imp(
     let nearest_marked = find_nearest_marked_tile(dungeon, imp_pos, targeted_tiles);
 
     if let Some(marked_pos) = nearest_marked {
-        if imp_pos == marked_pos {
-            // Imp is at the marked tile - dig it
+        // Check if we are adjacent (or on top) of the marked tile
+        if imp_pos.manhattan_distance(&marked_pos) <= 1 {
+            // Imp is in position - dig it
             process_digging(dungeon, entities, player, imp_id, marked_pos, dt);
         } else {
-            // Reset task time when moving
+            // Reset task time when moving, but ONLY if we are starting a move to a new target
+            // If we are adjacent, we shouldn't be moving anyway?
+            // Actually, if we are NOT at distance <= 1, we must move.
             if let Some(entity) = entities.get_mut(imp_id) {
                 if let Some(creature) = entity.as_creature_mut() {
                     creature.task_time = 0.0;
+                    creature.current_task = None; // clear task if we have to move
                 }
             }
-            // Pathfind to the marked tile
-            pathfind_to_target(dungeon, entities, imp_id, imp_pos, marked_pos, true);
+            
+            // Find a valid standing spot next to the marked tile
+            let neighbors = crate::engine::tile_grid::get_cardinal_neighbors(&dungeon.grid, marked_pos);
+            let mut best_target = None;
+            let mut min_dist = f32::MAX;
+
+            for target in neighbors {
+                if let Some(tile) = dungeon.get_tile(target) {
+                    if tile_types::is_walkable(&tile.tile_type) {
+                        let d = imp_pos.distance_to(&target);
+                        if d < min_dist {
+                            min_dist = d;
+                            best_target = Some(target);
+                        }
+                    }
+                }
+            }
+
+            if let Some(target) = best_target {
+                pathfind_to_target(dungeon, entities, imp_id, imp_pos, target, false);
+            } else {
+                // Cannot reach the tile (surrounded by walls?)
+                wander_randomly(dungeon, entities, imp_id, imp_pos);
+            }
         }
     } else {
         // No marked tiles - imp should wander
@@ -187,9 +233,15 @@ fn process_digging(
     let mut task_complete = false;
     if let Some(entity) = entities.get_mut(imp_id) {
         if let Some(creature) = entity.as_creature_mut() {
+            // Set task if not set (ensures we "claim" the tile)
+            if creature.current_task.is_none() {
+                creature.current_task = Some(crate::state::entities::Task::Dig(marked_pos));
+            }
+            
             creature.task_time += dt;
             if creature.task_time >= 2.0 {
                 creature.task_time = 0.0;
+                creature.current_task = None; // Task done
                 task_complete = true;
             }
         }

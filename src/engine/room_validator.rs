@@ -79,11 +79,9 @@ pub fn detect_rooms(grid: &Grid, room_type: &str) -> Vec<HashSet<TilePos>> {
             }
 
             // Only detect rooms on tiles that match the room type
-            if let Some(ref tile_room_type) = tile.room_id {
-                // This is a placeholder - in reality we'd check tile.room_type == room_type
-                // For now, just detect contiguous claimed tiles
+            if tile.tile_type == room_type {
                 if tile.ownership == Ownership::Player {
-                    let room_tiles = flood_fill(grid, tile.pos, &mut visited);
+                    let room_tiles = flood_fill(grid, tile.pos, room_type, &mut visited);
                     if !room_tiles.is_empty() {
                         rooms.push(room_tiles);
                     }
@@ -143,7 +141,7 @@ pub fn calculate_efficiency(room: &Room, grid: &Grid) -> f32 {
 }
 
 /// Flood fill algorithm to find all contiguous tiles from a starting position
-fn flood_fill(grid: &Grid, start: TilePos, visited: &mut HashSet<TilePos>) -> HashSet<TilePos> {
+fn flood_fill(grid: &Grid, start: TilePos, target_type: &str, visited: &mut HashSet<TilePos>) -> HashSet<TilePos> {
     let mut result = HashSet::new();
     let mut queue = VecDeque::new();
     queue.push_back(start);
@@ -156,8 +154,8 @@ fn flood_fill(grid: &Grid, start: TilePos, visited: &mut HashSet<TilePos>) -> Ha
 
         // Check if this tile exists and is valid
         if let Some(tile) = get_tile(grid, pos) {
-            // Only include player-owned claimed tiles
-            if tile.ownership != Ownership::Player {
+            // Only include player-owned claimed tiles of the same type
+            if tile.ownership != Ownership::Player || tile.tile_type != target_type {
                 continue;
             }
 

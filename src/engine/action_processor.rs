@@ -188,7 +188,7 @@ fn process_build_room(
     // Get room cost from game data
     let cost = game_data.rooms.get(room_type)
         .map(|r| r.build.cost_per_tile as i32)
-        .unwrap_or(10);
+        .unwrap_or_else(|| panic!("Room type '{}' missing in rooms.json", room_type));
 
     let is_valid_tile = if let Some(tile) = game_state.get_tile(pos) {
         tile.ownership == Ownership::Player 
@@ -242,16 +242,14 @@ fn process_place_trap(
 }
 
 fn process_place_spawner(game_state: &mut GameState, pos: TilePos) {
-    const SPAWNER_COST: i32 = 50;
-
     let is_valid = if let Some(tile) = game_state.get_tile(pos) {
         tile.ownership == Ownership::Player && tile_types::can_build_room(&tile.tile_type)
     } else {
         false
     };
 
-    if game_state.player.gold >= SPAWNER_COST && is_valid {
-        game_state.player.gold -= SPAWNER_COST;
+    if game_state.player.gold >= crate::config::SPAWNER_COST && is_valid {
+        game_state.player.gold -= crate::config::SPAWNER_COST;
         
         if let Some(tile) = game_state.get_tile_mut(pos) {
             tile.tile_type = tt::MONSTER_SPAWNER.to_string();

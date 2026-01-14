@@ -217,17 +217,11 @@ impl GameRenderer {
             InteractionMode::None => "Mode: None (Select tab below)".to_string(),
             InteractionMode::Dig => "Mode: Dig (FREE)".to_string(),
             InteractionMode::BuildRoom(room_type) => {
-                let cost = match room_type.as_str() {
-                    "lair" => 10,
-                    "hatchery" => 15,
-                    "treasury" => 20,
-                    "training_room" => 25,
-                    "library" => 30,
-                    _ => 10,
-                };
+                let lookup_id = if room_type == "training_room" { "training_hall" } else { room_type };
+                let cost = self.get_room_cost(lookup_id, game_data);
                 format!("Mode: Build {} ({}g)", room_type, cost)
             }
-            InteractionMode::PlaceSpawner => "Mode: Place Spawner (50g)".to_string(),
+            InteractionMode::PlaceSpawner => format!("Mode: Place Spawner ({}g)", crate::config::SPAWNER_COST),
             InteractionMode::Pickup => "Mode: Pickup Minion".to_string(),
             InteractionMode::Drop => "Mode: Drop Minion".to_string(),
             InteractionMode::Sell => "Mode: Sell/Cancel".to_string(),
@@ -293,7 +287,7 @@ impl GameRenderer {
             self.sidebar.draw(
                 interaction_mode, 
                 &state.player, 
-                &data.spells,
+                data,
                 held_entity,
                 selected_entity,
                 selected_room,
@@ -301,6 +295,16 @@ impl GameRenderer {
                 &state.room_manager.rooms
             );
         }
+    }
+
+    fn get_room_cost(&self, room_type: &str, game_data: &Option<GameData>) -> i32 {
+         if let Some(data) = game_data {
+             data.rooms.get(room_type)
+                 .map(|r| r.build.cost_per_tile)
+                 .unwrap_or_else(|| panic!("Room type '{}' missing in rooms.json", room_type))
+         } else {
+             0 // Should not happen during gameplay
+         }
     }
 
     fn draw_tiles(
