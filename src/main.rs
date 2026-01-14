@@ -1,3 +1,9 @@
+// TODO: Remove this global warning suppression after cleaning up unused imports,
+// dead code, and other warnings identified in the codebase review
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+
 use macroquad::prelude::*;
 
 mod data;
@@ -10,7 +16,9 @@ use data::GameData;
 use state::MapType;
 use state::{GamePhase, InteractionMode};
 use ui::renderer::GameRenderer;
+use ui::actions::ActionQueue;
 use engine::input::InputHandler;
+use engine::action_processor;
 
 
 
@@ -27,6 +35,8 @@ pub struct Game {
     selected_room: Option<usize>,
     held_entity: Option<state::entities::EntityId>,
     spell_shop_open: bool,
+    action_queue: ActionQueue,
+    selected_spell: Option<String>,
 }
 
 impl Game {
@@ -42,6 +52,8 @@ impl Game {
             selected_room: None,
             held_entity: None,
             spell_shop_open: false,
+            action_queue: ActionQueue::new(),
+            selected_spell: None,
         }
     }
 
@@ -81,8 +93,25 @@ impl Game {
             &mut self.held_entity,
             &mut self.selected_entity,
             &mut self.selected_room,
-            &mut self.renderer.sidebar
+            &mut self.renderer.sidebar,
+            &mut self.action_queue,
         );
+
+        // Process queued actions
+        if let GamePhase::Playing(ref mut state) = self.phase {
+            if let Some(ref game_data) = self.game_data {
+                action_processor::process_actions(
+                    &mut self.action_queue,
+                    state,
+                    game_data,
+                    &mut self.interaction_mode,
+                    &mut self.held_entity,
+                    &mut self.selected_entity,
+                    &mut self.selected_room,
+                    &mut self.selected_spell,
+                );
+            }
+        }
     }
 
     fn draw(&mut self) {

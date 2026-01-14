@@ -8,6 +8,7 @@ use crate::ui::sidebar::Sidebar;
 use crate::engine::spell_effects;
 use crate::engine::creature_ai;
 use crate::engine::tile_types::{self, types as tt};
+use crate::ui::actions::{ActionQueue, UiAction, SpellTarget};
 
 pub struct InputHandler;
 
@@ -22,7 +23,8 @@ impl InputHandler {
         held_entity: &mut Option<EntityId>,
         selected_entity: &mut Option<EntityId>,
         selected_room: &mut Option<usize>,
-        sidebar: &mut Sidebar
+        sidebar: &mut Sidebar,
+        action_queue: &mut ActionQueue,
     ) {
         match phase {
             GamePhase::Loading => {
@@ -37,7 +39,8 @@ impl InputHandler {
                     
                     Self::handle_playing(
                         dt, state, data, interaction_mode, hovered_tile, 
-                        held_entity, selected_entity, selected_room, sidebar
+                        held_entity, selected_entity, selected_room, sidebar,
+                        action_queue
                     );
                 }
             }
@@ -114,7 +117,8 @@ impl InputHandler {
         held_entity: &mut Option<EntityId>,
         selected_entity: &mut Option<EntityId>,
         selected_room: &mut Option<usize>,
-        sidebar: &mut Sidebar
+        sidebar: &mut Sidebar,
+        action_queue: &mut ActionQueue,
     ) {
         // Camera controls
         Self::handle_camera_controls(dt, state);
@@ -134,7 +138,8 @@ impl InputHandler {
             mouse_pos.0,
             mouse_pos.1,
             &camera,
-            0.0, 0.0
+            0.0, 0.0,
+            Some(&state.dungeon.grid)
         );
         *hovered_tile = Some(tile_pos);
 
@@ -205,9 +210,10 @@ impl InputHandler {
 
         // Zoom control (scroll wheel)
         let scroll = mouse_wheel().1;
-        if scroll != 0.0 {
-            state.camera.distance -= scroll * 0.1;
-            state.camera.distance = state.camera.distance.clamp(5.0, 50.0);
+        if scroll > 0.0 {
+            state.camera.zoom_in();
+        } else if scroll < 0.0 {
+            state.camera.zoom_out();
         }
     }
 

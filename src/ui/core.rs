@@ -34,6 +34,7 @@ pub mod colors {
     // Fog colors
     pub const FOG_HIDDEN: Color = Color::new(0.0, 0.0, 0.0, 1.0);
     pub const FOG_REVEALED: Color = Color::new(0.3, 0.3, 0.3, 1.0);
+    pub const FOG_VISIBLE: Color = WHITE;
 }
 
 /// Get the color for a tile type

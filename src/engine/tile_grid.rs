@@ -68,70 +68,67 @@ pub fn iso_to_world(iso_x: f32, iso_y: f32, tile_width: f32, tile_height: f32) -
     (x, y)
 }
 
-/// Convert screen position to tile position (considering camera offset)
-/// Convert screen position to tile position using 3D raycasting
+/// Convert screen position to tile position using 3D raycasting with optional grid collision
 pub fn screen_to_tile(
     mouse_x: f32,
     mouse_y: f32,
     camera: &macroquad::camera::Camera3D,
-    _tile_width: f32,  // Unused in 3D physics
-    _tile_height: f32, // Unused in 3D physics
+    _tile_width: f32,
+    _tile_height: f32,
+    grid: Option<&Grid>, 
 ) -> TilePos {
-    // 1. Convert mouse coordinates to world space ray
-    // We can use the camera's matrices to unproject the mouse position
-    
-    // Normalized device coordinates (-1 to 1)
+    // 1. Calculate Normalized Device Coordinates (NDC)
     let ndc_x = (mouse_x / macroquad::window::screen_width()) * 2.0 - 1.0;
-    let ndc_y = 1.0 - (mouse_y / macroquad::window::screen_height()) * 2.0; // Flip Y for 3D
+    let ndc_y = 1.0 - (mouse_y / macroquad::window::screen_height()) * 2.0;
 
-    // View-Projection Matrix Inverse
-    let proj = camera.matrix();
-    let view = macroquad::math::Mat4::look_at_rh(
-        camera.position,
-        camera.target,
-        camera.up,
-    );
-    let inv_vp = (proj * view).inverse();
-
-    // Ray start (Near plane) and end (Far plane)
-    let ray_start = inv_vp.transform_point3(macroquad::math::vec3(ndc_x, ndc_y, -1.0));
-    let ray_end = inv_vp.transform_point3(macroquad::math::vec3(ndc_x, ndc_y, 1.0));
-
-    let ray_dir = (ray_end - ray_start).normalize();
-
-    // 2. Intersect ray with ground plane (y = 0 in 3D world, but we might want our tiles to be at y=0)
-    // IMPORTANT: In our 3D setup:
-    // x = grid x
-    // z = grid y
-    // y = height (0 = floor)
+    // 2. Calculate Ray in View Space
+    // Access fovy from camera (assuming 45 degrees as set in CameraState)
+    let fov_rad = 45.0f32.to_radians(); 
+    let aspect = macroquad::window::screen_width() / macroquad::window::screen_height();
     
-    // Ray: P = P0 + t * D
-    // Plane: y = 0
-    // 0 = P0.y + t * D.y
-    // t = -P0.y / D.y
+    let scale_y = (fov_rad * 0.5).tan();
+    let scale_x = scale_y * aspect;
 
-    if ray_dir.y.abs() < 0.0001 {
-        // Ray is parallel to plane, return origin or something safe
-        return TilePos::new(0, 0);
+    // (x, y, -1) points forward into the screen in OpenGL/Macroquad coordinates
+    let ray_view_dir = macroquad::math::vec3(ndc_x * scale_x, ndc_y * scale_y, -1.0).normalize();
+
+    // 3. Convert View Space Ray to World Space
+    // Construct camera basis vectors (Standard Right-Handed System)
+    let cam_fwd = (camera.target - camera.position).normalize();
+    let world_up = macroquad::math::vec3(0.0, 1.0, 0.0);
+    let cam_right = cam_fwd.cross(world_up).normalize();
+    let cam_up = cam_right.cross(cam_fwd).normalize();
+
+    // Transform direction: WorldDir = Right * View.x + Up * View.y + (-Forward) * View.z
+    let ray_world_dir = (cam_right * ray_view_dir.x + cam_up * ray_view_dir.y + (-cam_fwd) * ray_view_dir.z).normalize();
+    let ray_start = camera.position;
+
+    // Function to intersect ray with a horizontal plane at y = height
+    let intersect_plane = |height: f32| -> Option<TilePos> {
+        if ray_world_dir.y.abs() < 0.0001 { return None; }
+        
+        let t = (height - ray_start.y) / ray_world_dir.y;
+        
+        if t < 0.0 { return None; } // Hit is behind camera
+        
+        let p = ray_start + ray_world_dir * t;
+        Some(TilePos::new(p.x.round() as i32, p.z.round() as i32))
+    };
+
+    // 4. Check intersection with walls first (y = 0.5)
+    if let Some(grid) = grid {
+        if let Some(wall_hit) = intersect_plane(0.5) { 
+            // Check if there is actually a wall at this position
+            if let Some(tile) = get_tile(grid, wall_hit) {
+                if tile_types::is_wall(&tile.tile_type) {
+                    return wall_hit;
+                }
+            }
+        }
     }
 
-    let t = -ray_start.y / ray_dir.y;
-
-    if t < 0.0 {
-        // Intersection is behind camera
-        return TilePos::new(0, 0);
-    }
-
-    let intersect_point = ray_start + ray_dir * t;
-
-    // 3. Convert intersection point to integer tile coordinates
-    // Assuming 1 unit = 1 tile in our 3D world for simplicity
-    // If we used a scale factor, we'd divide by it here
-    
-    TilePos::new(
-        intersect_point.x.round() as i32,
-        intersect_point.z.round() as i32,
-    )
+    // 5. Fallback to floor intersection (y = 0.0)
+    intersect_plane(0.0).unwrap_or(TilePos::new(0, 0))
 }
 
 /// Get a tile from the grid at the specified position

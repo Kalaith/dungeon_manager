@@ -1,5 +1,10 @@
 //! Procedural graphics generator for Deep Dominion
 //! Generates consistent isometric tiles, rooms, and sprites
+// TODO: Remove this global warning suppression after cleaning up unused imports,
+// dead code, and other warnings identified in the codebase review
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 
 use image::{ImageBuffer, Rgba, RgbaImage};
 use std::path::Path;
@@ -537,407 +542,790 @@ fn draw_circle(img: &mut RgbaImage, cx: u32, cy: u32, radius: u32, color: Rgba<u
     }
 }
 
-// Monster sprites - each with distinctive shape
+// ============================================================================
+// 3D RENDERING INFRASTRUCTURE
+// ============================================================================
+
+// Light direction (normalized) - from top-left-front
+const LIGHT_X: f32 = -0.5;
+const LIGHT_Y: f32 = -0.7;
+const LIGHT_Z: f32 = 0.5;
+
+/// Material properties for 3D shading
+#[derive(Clone, Copy)]
+struct Material {
+    base_color: [u8; 3],
+    ambient: f32,
+    diffuse: f32,
+    specular: f32,
+    shininess: f32,
+}
+
+impl Material {
+    fn matte(r: u8, g: u8, b: u8) -> Self {
+        Material { base_color: [r, g, b], ambient: 0.3, diffuse: 0.7, specular: 0.0, shininess: 1.0 }
+    }
+    fn metallic(r: u8, g: u8, b: u8) -> Self {
+        Material { base_color: [r, g, b], ambient: 0.2, diffuse: 0.5, specular: 0.8, shininess: 32.0 }
+    }
+    fn glowing(r: u8, g: u8, b: u8) -> Self {
+        Material { base_color: [r, g, b], ambient: 0.9, diffuse: 0.1, specular: 0.3, shininess: 8.0 }
+    }
+    fn bone() -> Self {
+        Material { base_color: [240, 235, 220], ambient: 0.4, diffuse: 0.6, specular: 0.2, shininess: 4.0 }
+    }
+    fn leather(r: u8, g: u8, b: u8) -> Self {
+        Material { base_color: [r, g, b], ambient: 0.25, diffuse: 0.7, specular: 0.1, shininess: 2.0 }
+    }
+}
+
+/// Calculate shading for a surface normal
+fn shade_color(normal: (f32, f32, f32), mat: &Material, view_z: f32) -> Rgba<u8> {
+    // Normalize normal
+    let len = (normal.0*normal.0 + normal.1*normal.1 + normal.2*normal.2).sqrt();
+    let (nx, ny, nz) = if len > 0.0 { (normal.0/len, normal.1/len, normal.2/len) } else { (0.0, 0.0, 1.0) };
+    
+    // Diffuse lighting
+    let dot = -(nx * LIGHT_X + ny * LIGHT_Y + nz * LIGHT_Z);
+    let diffuse = dot.max(0.0) * mat.diffuse;
+    
+    // Specular (Blinn-Phong)
+    let hx = -LIGHT_X;
+    let hy = -LIGHT_Y;
+    let hz = -LIGHT_Z + 1.0;
+    let hlen = (hx*hx + hy*hy + hz*hz).sqrt();
+    let spec_dot = (nx * hx/hlen + ny * hy/hlen + nz * hz/hlen).max(0.0);
+    let specular = spec_dot.powf(mat.shininess) * mat.specular;
+    
+    let intensity = (mat.ambient + diffuse + specular).min(1.5);
+    
+    let r = ((mat.base_color[0] as f32 * intensity).min(255.0)) as u8;
+    let g = ((mat.base_color[1] as f32 * intensity).min(255.0)) as u8;
+    let b = ((mat.base_color[2] as f32 * intensity).min(255.0)) as u8;
+    
+    Rgba([r, g, b, 255])
+}
+
+/// Depth buffer for proper 3D overlap
+struct DepthBuffer {
+    data: Vec<f32>,
+    width: usize,
+    height: usize,
+}
+
+impl DepthBuffer {
+    fn new(w: u32, h: u32) -> Self {
+        DepthBuffer {
+            data: vec![f32::NEG_INFINITY; (w * h) as usize],
+            width: w as usize,
+            height: h as usize,
+        }
+    }
+    
+    fn test_and_set(&mut self, x: u32, y: u32, z: f32) -> bool {
+        if x >= self.width as u32 || y >= self.height as u32 { return false; }
+        let idx = y as usize * self.width + x as usize;
+        if z > self.data[idx] {
+            self.data[idx] = z;
+            true
+        } else {
+            false
+        }
+    }
+}
+
+/// Draw a 3D shaded sphere
+fn draw_sphere_3d(img: &mut RgbaImage, depth: &mut DepthBuffer, cx: f32, cy: f32, cz: f32, radius: f32, mat: &Material) {
+    let r_int = radius.ceil() as i32;
+    for dy in -r_int..=r_int {
+        for dx in -r_int..=r_int {
+            let dist_sq = (dx * dx + dy * dy) as f32;
+            if dist_sq <= radius * radius {
+                let px = (cx + dx as f32) as i32;
+                let py = (cy + dy as f32) as i32;
+                if px >= 0 && py >= 0 && px < SPRITE_SIZE as i32 && py < SPRITE_SIZE as i32 {
+                    // Calculate z on sphere surface
+                    let z_offset = (radius * radius - dist_sq).sqrt();
+                    let pz = cz + z_offset;
+                    
+                    // Normal at this point
+                    let normal = (dx as f32 / radius, dy as f32 / radius, z_offset / radius);
+                    
+                    if depth.test_and_set(px as u32, py as u32, pz) {
+                        let color = shade_color(normal, mat, pz);
+                        img.put_pixel(px as u32, py as u32, color);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Draw a 3D shaded ellipsoid
+fn draw_ellipsoid_3d(img: &mut RgbaImage, depth: &mut DepthBuffer, cx: f32, cy: f32, cz: f32, rx: f32, ry: f32, rz: f32, mat: &Material) {
+    let max_r = rx.max(ry).max(rz).ceil() as i32;
+    for dy in -max_r..=max_r {
+        for dx in -max_r..=max_r {
+            let nx = dx as f32 / rx;
+            let ny = dy as f32 / ry;
+            let dist_sq = nx * nx + ny * ny;
+            if dist_sq <= 1.0 {
+                let px = (cx + dx as f32) as i32;
+                let py = (cy + dy as f32) as i32;
+                if px >= 0 && py >= 0 && px < SPRITE_SIZE as i32 && py < SPRITE_SIZE as i32 {
+                    let nz = (1.0 - dist_sq).sqrt();
+                    let pz = cz + nz * rz;
+                    let normal = (nx, ny, nz);
+                    if depth.test_and_set(px as u32, py as u32, pz) {
+                        img.put_pixel(px as u32, py as u32, shade_color(normal, mat, pz));
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Draw a 3D shaded cylinder (vertical)
+fn draw_cylinder_3d(img: &mut RgbaImage, depth: &mut DepthBuffer, cx: f32, y_top: f32, y_bot: f32, cz: f32, radius: f32, mat: &Material) {
+    let r_int = radius.ceil() as i32;
+    for y in (y_top as i32)..=(y_bot as i32) {
+        for dx in -r_int..=r_int {
+            if (dx as f32).abs() <= radius {
+                let px = (cx + dx as f32) as i32;
+                if px >= 0 && y >= 0 && px < SPRITE_SIZE as i32 && y < SPRITE_SIZE as i32 {
+                    let z_offset = (radius * radius - (dx as f32) * (dx as f32)).sqrt().max(0.0);
+                    let pz = cz + z_offset;
+                    let normal = (dx as f32 / radius, 0.0, z_offset / radius);
+                    if depth.test_and_set(px as u32, y as u32, pz) {
+                        img.put_pixel(px as u32, y as u32, shade_color(normal, mat, pz));
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Draw a 3D cone (pointing up)
+fn draw_cone_3d(img: &mut RgbaImage, depth: &mut DepthBuffer, cx: f32, y_tip: f32, y_base: f32, cz: f32, base_radius: f32, mat: &Material) {
+    let height = y_base - y_tip;
+    if height <= 0.0 { return; }
+    for y in (y_tip as i32)..=(y_base as i32) {
+        let t = (y as f32 - y_tip) / height;
+        let r = base_radius * t;
+        let r_int = r.ceil() as i32;
+        for dx in -r_int..=r_int {
+            if (dx as f32).abs() <= r && r > 0.0 {
+                let px = (cx + dx as f32) as i32;
+                if px >= 0 && y >= 0 && px < SPRITE_SIZE as i32 && y < SPRITE_SIZE as i32 {
+                    let z_offset = (r * r - (dx as f32) * (dx as f32)).sqrt().max(0.0);
+                    let pz = cz + z_offset;
+                    // Cone normal tilts outward and up
+                    let slope = base_radius / height;
+                    let normal = (dx as f32 / r * slope, -slope, z_offset / r);
+                    if depth.test_and_set(px as u32, y as u32, pz) {
+                        img.put_pixel(px as u32, y as u32, shade_color(normal, mat, pz));
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Draw a simple ground shadow (ellipse)
+fn draw_shadow(img: &mut RgbaImage, cx: f32, cy: f32, rx: f32, ry: f32) {
+    for dy in -(ry as i32)..=(ry as i32) {
+        for dx in -(rx as i32)..=(rx as i32) {
+            let nx = dx as f32 / rx;
+            let ny = dy as f32 / ry;
+            if nx * nx + ny * ny <= 1.0 {
+                let px = (cx + dx as f32) as i32;
+                let py = (cy + dy as f32) as i32;
+                if px >= 0 && py >= 0 && px < SPRITE_SIZE as i32 && py < SPRITE_SIZE as i32 {
+                    let pixel = img.get_pixel(px as u32, py as u32);
+                    if pixel[3] == 0 {
+                        img.put_pixel(px as u32, py as u32, Rgba([20, 20, 25, 100]));
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ============================================================================
+// 3D SPRITE GENERATORS
+// ============================================================================
+
+// Monster sprites - 3D shaded versions
 fn create_imp_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Small red demon body
-    draw_circle(&mut img, center, center + 4, 10, Rgba([200, 50, 50, 255]));
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let body_mat = Material::matte(200, 50, 50);
+    let horn_mat = Material::matte(100, 20, 20);
+    let eye_mat = Material::glowing(255, 255, 0);
+    
+    // Shadow
+    draw_shadow(&mut img, cx, 54.0, 10.0, 4.0);
+    // Body (ellipsoid)
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 38.0, 5.0, 9.0, 11.0, 8.0, &body_mat);
     // Head
-    draw_circle(&mut img, center, center - 6, 8, Rgba([220, 60, 60, 255]));
+    draw_sphere_3d(&mut img, &mut depth, cx, 24.0, 8.0, 8.0, &body_mat);
     // Horns
-    draw_rect(&mut img, center - 10, center - 12, 3, 8, Rgba([100, 20, 20, 255]));
-    draw_rect(&mut img, center + 7, center - 12, 3, 8, Rgba([100, 20, 20, 255]));
-    // Eyes (yellow)
-    img.put_pixel(center - 3, center - 8, Rgba([255, 255, 0, 255]));
-    img.put_pixel(center + 3, center - 8, Rgba([255, 255, 0, 255]));
+    draw_cone_3d(&mut img, &mut depth, cx - 8.0, 12.0, 22.0, 6.0, 3.0, &horn_mat);
+    draw_cone_3d(&mut img, &mut depth, cx + 8.0, 12.0, 22.0, 6.0, 3.0, &horn_mat);
     // Tail
-    draw_rect(&mut img, center - 2, center + 10, 4, 8, Rgba([180, 40, 40, 255]));
-
+    draw_cylinder_3d(&mut img, &mut depth, cx, 46.0, 58.0, 3.0, 3.0, &body_mat);
+    // Eyes
+    draw_sphere_3d(&mut img, &mut depth, cx - 3.0, 22.0, 12.0, 2.0, &eye_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 3.0, 22.0, 12.0, 2.0, &eye_mat);
+    
     img
 }
 
 fn create_goblin_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Green hunched body
-    draw_circle(&mut img, center, center + 6, 12, Rgba([50, 150, 50, 255]));
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let body_mat = Material::matte(50, 150, 50);
+    let ear_mat = Material::matte(70, 170, 70);
+    let eye_mat = Material::glowing(255, 50, 0);
+    let wood_mat = Material::matte(139, 90, 43);
+    
+    draw_shadow(&mut img, cx, 56.0, 11.0, 4.0);
+    // Hunched body
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 42.0, 5.0, 11.0, 13.0, 9.0, &body_mat);
     // Large head
-    draw_circle(&mut img, center, center - 4, 10, Rgba([60, 160, 60, 255]));
+    draw_sphere_3d(&mut img, &mut depth, cx, 26.0, 8.0, 10.0, &body_mat);
     // Pointed ears
-    draw_rect(&mut img, center - 14, center - 6, 4, 8, Rgba([70, 170, 70, 255]));
-    draw_rect(&mut img, center + 10, center - 6, 4, 8, Rgba([70, 170, 70, 255]));
+    draw_cone_3d(&mut img, &mut depth, cx - 12.0, 18.0, 28.0, 5.0, 4.0, &ear_mat);
+    draw_cone_3d(&mut img, &mut depth, cx + 12.0, 18.0, 28.0, 5.0, 4.0, &ear_mat);
     // Eyes
-    img.put_pixel(center - 4, center - 6, Rgba([255, 0, 0, 255]));
-    img.put_pixel(center + 4, center - 6, Rgba([255, 0, 0, 255]));
-    // Crude weapon
-    draw_rect(&mut img, center + 12, center - 8, 3, 16, Rgba([139, 90, 43, 255]));
-
+    draw_sphere_3d(&mut img, &mut depth, cx - 4.0, 24.0, 12.0, 2.0, &eye_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 4.0, 24.0, 12.0, 2.0, &eye_mat);
+    // Crude club
+    draw_cylinder_3d(&mut img, &mut depth, cx + 16.0, 20.0, 44.0, 4.0, 3.0, &wood_mat);
+    
     img
 }
 
 fn create_orc_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Large muscular green body
-    draw_circle(&mut img, center, center + 4, 14, Rgba([100, 180, 80, 255]));
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let body_mat = Material::matte(100, 180, 80);
+    let tusk_mat = Material::bone();
+    let eye_mat = Material::glowing(255, 50, 0);
+    let axe_mat = Material::metallic(169, 169, 169);
+    let wood_mat = Material::matte(139, 90, 43);
+    
+    draw_shadow(&mut img, cx, 58.0, 14.0, 5.0);
+    // Large muscular body
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 6.0, 13.0, 16.0, 11.0, &body_mat);
     // Head
-    draw_circle(&mut img, center, center - 8, 10, Rgba([110, 190, 90, 255]));
+    draw_sphere_3d(&mut img, &mut depth, cx, 22.0, 9.0, 10.0, &body_mat);
     // Tusks
-    draw_rect(&mut img, center - 6, center - 4, 2, 6, Rgba([240, 240, 230, 255]));
-    draw_rect(&mut img, center + 4, center - 4, 2, 6, Rgba([240, 240, 230, 255]));
+    draw_cone_3d(&mut img, &mut depth, cx - 5.0, 28.0, 36.0, 10.0, 2.0, &tusk_mat);
+    draw_cone_3d(&mut img, &mut depth, cx + 5.0, 28.0, 36.0, 10.0, 2.0, &tusk_mat);
     // Eyes
-    img.put_pixel(center - 3, center - 10, Rgba([255, 0, 0, 255]));
-    img.put_pixel(center + 3, center - 10, Rgba([255, 0, 0, 255]));
-    // Battle axe
-    draw_rect(&mut img, center + 14, center - 12, 8, 3, Rgba([169, 169, 169, 255]));
-    draw_rect(&mut img, center + 17, center - 10, 2, 16, Rgba([139, 90, 43, 255]));
-
+    draw_sphere_3d(&mut img, &mut depth, cx - 4.0, 20.0, 13.0, 2.0, &eye_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 4.0, 20.0, 13.0, 2.0, &eye_mat);
+    // Battle axe handle
+    draw_cylinder_3d(&mut img, &mut depth, cx + 20.0, 16.0, 48.0, 5.0, 2.0, &wood_mat);
+    // Axe head
+    draw_ellipsoid_3d(&mut img, &mut depth, cx + 24.0, 18.0, 8.0, 8.0, 4.0, 3.0, &axe_mat);
+    
     img
 }
 
 fn create_warlock_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Purple robed figure
-    draw_circle(&mut img, center, center + 8, 12, Rgba([80, 40, 120, 255]));
-    // Hood/head
-    draw_circle(&mut img, center, center - 6, 9, Rgba([60, 30, 90, 255]));
-    // Glowing eyes
-    img.put_pixel(center - 3, center - 8, Rgba([150, 255, 150, 255]));
-    img.put_pixel(center + 3, center - 8, Rgba([150, 255, 150, 255]));
-    // Staff with glowing crystal
-    draw_rect(&mut img, center - 12, center - 16, 2, 24, Rgba([101, 67, 33, 255]));
-    draw_circle(&mut img, center - 11, center - 16, 4, Rgba([200, 100, 255, 255]));
-
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let robe_mat = Material::matte(80, 40, 120);
+    let hood_mat = Material::matte(60, 30, 90);
+    let eye_mat = Material::glowing(150, 255, 150);
+    let wood_mat = Material::matte(101, 67, 33);
+    let crystal_mat = Material::glowing(200, 100, 255);
+    
+    draw_shadow(&mut img, cx, 58.0, 11.0, 4.0);
+    // Robed body (cylinder)
+    draw_cylinder_3d(&mut img, &mut depth, cx, 34.0, 56.0, 5.0, 11.0, &robe_mat);
+    // Hood
+    draw_sphere_3d(&mut img, &mut depth, cx, 26.0, 7.0, 9.0, &hood_mat);
+    // Eyes
+    draw_sphere_3d(&mut img, &mut depth, cx - 3.0, 24.0, 12.0, 2.0, &eye_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 3.0, 24.0, 12.0, 2.0, &eye_mat);
+    // Staff
+    draw_cylinder_3d(&mut img, &mut depth, cx - 14.0, 12.0, 54.0, 4.0, 2.0, &wood_mat);
+    // Crystal on staff
+    draw_sphere_3d(&mut img, &mut depth, cx - 14.0, 10.0, 8.0, 5.0, &crystal_mat);
+    
     img
 }
 
 fn create_troll_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let body_mat = Material::matte(120, 140, 100);
+    let eye_mat = Material::glowing(255, 255, 0);
+    let club_mat = Material::matte(101, 67, 33);
+    
+    draw_shadow(&mut img, cx, 60.0, 16.0, 6.0);
     // Very large hunched body
-    draw_circle(&mut img, center, center + 6, 16, Rgba([120, 140, 100, 255]));
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 42.0, 6.0, 15.0, 18.0, 13.0, &body_mat);
     // Large head
-    draw_circle(&mut img, center, center - 6, 12, Rgba([130, 150, 110, 255]));
+    draw_sphere_3d(&mut img, &mut depth, cx, 22.0, 10.0, 12.0, &body_mat);
+    // Arms
+    draw_cylinder_3d(&mut img, &mut depth, cx - 16.0, 32.0, 52.0, 4.0, 5.0, &body_mat);
+    draw_cylinder_3d(&mut img, &mut depth, cx + 16.0, 32.0, 52.0, 4.0, 5.0, &body_mat);
     // Eyes
-    img.put_pixel(center - 5, center - 8, Rgba([255, 255, 0, 255]));
-    img.put_pixel(center + 5, center - 8, Rgba([255, 255, 0, 255]));
+    draw_sphere_3d(&mut img, &mut depth, cx - 5.0, 20.0, 14.0, 2.0, &eye_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 5.0, 20.0, 14.0, 2.0, &eye_mat);
     // Huge club
-    draw_circle(&mut img, center + 18, center - 8, 6, Rgba([101, 67, 33, 255]));
-    draw_rect(&mut img, center + 16, center - 2, 4, 12, Rgba([101, 67, 33, 255]));
-
+    draw_cylinder_3d(&mut img, &mut depth, cx + 22.0, 18.0, 50.0, 6.0, 4.0, &club_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 22.0, 14.0, 8.0, 7.0, &club_mat);
+    
     img
 }
 
 fn create_skeleton_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let bone_mat = Material::bone();
+    let eye_mat = Material::matte(20, 20, 20);
+    let sword_mat = Material::metallic(192, 192, 192);
+    
+    draw_shadow(&mut img, cx, 58.0, 8.0, 3.0);
     // Skull
-    draw_circle(&mut img, center, center - 6, 8, Rgba([240, 240, 240, 255]));
-    // Eye sockets (black)
-    draw_circle(&mut img, center - 3, center - 8, 2, Rgba([0, 0, 0, 255]));
-    draw_circle(&mut img, center + 3, center - 8, 2, Rgba([0, 0, 0, 255]));
-    // Ribcage
-    draw_rect(&mut img, center - 8, center + 2, 16, 2, Rgba([220, 220, 220, 255]));
-    draw_rect(&mut img, center - 8, center + 6, 16, 2, Rgba([220, 220, 220, 255]));
-    draw_rect(&mut img, center - 8, center + 10, 16, 2, Rgba([220, 220, 220, 255]));
+    draw_sphere_3d(&mut img, &mut depth, cx, 22.0, 8.0, 9.0, &bone_mat);
+    // Eye sockets
+    draw_sphere_3d(&mut img, &mut depth, cx - 3.0, 20.0, 12.0, 3.0, &eye_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 3.0, 20.0, 12.0, 3.0, &eye_mat);
     // Spine
-    draw_rect(&mut img, center - 1, center + 2, 2, 12, Rgba([230, 230, 230, 255]));
+    draw_cylinder_3d(&mut img, &mut depth, cx, 32.0, 54.0, 5.0, 2.0, &bone_mat);
+    // Ribs
+    for i in 0..3 {
+        let y = 36.0 + i as f32 * 5.0;
+        draw_ellipsoid_3d(&mut img, &mut depth, cx, y, 5.0, 8.0, 2.0, 4.0, &bone_mat);
+    }
+    // Arms
+    draw_cylinder_3d(&mut img, &mut depth, cx - 10.0, 34.0, 50.0, 3.0, 2.0, &bone_mat);
+    draw_cylinder_3d(&mut img, &mut depth, cx + 10.0, 34.0, 50.0, 3.0, 2.0, &bone_mat);
     // Sword
-    draw_rect(&mut img, center + 12, center - 12, 2, 20, Rgba([192, 192, 192, 255]));
-
+    draw_cylinder_3d(&mut img, &mut depth, cx + 16.0, 12.0, 46.0, 7.0, 2.0, &sword_mat);
+    
     img
 }
 
 fn create_demon_spawn_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let body_mat = Material::matte(180, 20, 20);
+    let horn_mat = Material::matte(80, 0, 0);
+    let eye_mat = Material::glowing(255, 100, 0);
+    let fire_mat = Material::glowing(255, 140, 0);
+    let claw_mat = Material::matte(100, 10, 10);
+    
+    // Fire at feet
+    draw_sphere_3d(&mut img, &mut depth, cx - 8.0, 56.0, 2.0, 4.0, &fire_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 8.0, 56.0, 2.0, 4.0, &fire_mat);
+    
+    draw_shadow(&mut img, cx, 58.0, 13.0, 5.0);
     // Dark red demon body
-    draw_circle(&mut img, center, center + 2, 14, Rgba([180, 20, 20, 255]));
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 6.0, 13.0, 16.0, 11.0, &body_mat);
     // Horned head
-    draw_circle(&mut img, center, center - 10, 10, Rgba([200, 30, 30, 255]));
+    draw_sphere_3d(&mut img, &mut depth, cx, 20.0, 9.0, 10.0, &body_mat);
     // Large horns
-    draw_rect(&mut img, center - 12, center - 18, 4, 12, Rgba([80, 0, 0, 255]));
-    draw_rect(&mut img, center + 8, center - 18, 4, 12, Rgba([80, 0, 0, 255]));
-    // Glowing eyes
-    img.put_pixel(center - 3, center - 12, Rgba([255, 100, 0, 255]));
-    img.put_pixel(center + 3, center - 12, Rgba([255, 100, 0, 255]));
-    // Claws
-    draw_rect(&mut img, center - 16, center + 4, 4, 6, Rgba([100, 10, 10, 255]));
-    draw_rect(&mut img, center + 12, center + 4, 4, 6, Rgba([100, 10, 10, 255]));
-    // Fire effect at feet
-    draw_circle(&mut img, center - 8, center + 14, 3, Rgba([255, 140, 0, 255]));
-    draw_circle(&mut img, center + 8, center + 14, 3, Rgba([255, 140, 0, 255]));
-
+    draw_cone_3d(&mut img, &mut depth, cx - 10.0, 4.0, 18.0, 7.0, 4.0, &horn_mat);
+    draw_cone_3d(&mut img, &mut depth, cx + 10.0, 4.0, 18.0, 7.0, 4.0, &horn_mat);
+    // Eyes
+    draw_sphere_3d(&mut img, &mut depth, cx - 4.0, 18.0, 13.0, 2.0, &eye_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 4.0, 18.0, 13.0, 2.0, &eye_mat);
+    // Claws/arms
+    draw_cylinder_3d(&mut img, &mut depth, cx - 16.0, 32.0, 48.0, 4.0, 4.0, &body_mat);
+    draw_cylinder_3d(&mut img, &mut depth, cx + 16.0, 32.0, 48.0, 4.0, 4.0, &body_mat);
+    draw_cone_3d(&mut img, &mut depth, cx - 18.0, 48.0, 56.0, 3.0, 3.0, &claw_mat);
+    draw_cone_3d(&mut img, &mut depth, cx + 18.0, 48.0, 56.0, 3.0, 3.0, &claw_mat);
+    
     img
 }
 
-// Hero sprites - distinctive shapes for each class
+
+// Hero sprites - 3D shaded versions
 fn create_peasant_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Simple cloth body (brown)
-    draw_circle(&mut img, center, center + 6, 10, Rgba([160, 140, 100, 255]));
-    // Head (skin tone)
-    draw_circle(&mut img, center, center - 6, 7, Rgba([230, 190, 150, 255]));
-    // Eyes
-    img.put_pixel(center - 2, center - 8, Rgba([0, 0, 0, 255]));
-    img.put_pixel(center + 2, center - 8, Rgba([0, 0, 0, 255]));
-    // Pitchfork
-    draw_rect(&mut img, center + 10, center - 16, 2, 22, Rgba([139, 90, 43, 255]));
-    draw_rect(&mut img, center + 6, center - 16, 10, 2, Rgba([169, 169, 169, 255]));
-
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let cloth_mat = Material::matte(160, 140, 100);
+    let skin_mat = Material::matte(230, 190, 150);
+    let wood_mat = Material::matte(139, 90, 43);
+    let metal_mat = Material::metallic(169, 169, 169);
+    
+    draw_shadow(&mut img, cx, 58.0, 10.0, 4.0);
+    // Body
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 42.0, 5.0, 9.0, 12.0, 8.0, &cloth_mat);
+    // Head
+    draw_sphere_3d(&mut img, &mut depth, cx, 26.0, 8.0, 7.0, &skin_mat);
+    // Pitchfork handle
+    draw_cylinder_3d(&mut img, &mut depth, cx + 14.0, 14.0, 50.0, 4.0, 2.0, &wood_mat);
+    // Pitchfork tines
+    draw_cylinder_3d(&mut img, &mut depth, cx + 10.0, 10.0, 18.0, 5.0, 1.0, &metal_mat);
+    draw_cylinder_3d(&mut img, &mut depth, cx + 14.0, 10.0, 18.0, 5.0, 1.0, &metal_mat);
+    draw_cylinder_3d(&mut img, &mut depth, cx + 18.0, 10.0, 18.0, 5.0, 1.0, &metal_mat);
+    
     img
 }
 
 fn create_scout_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Lean leather-clad body
-    draw_circle(&mut img, center, center + 4, 10, Rgba([100, 120, 80, 255]));
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let leather_mat = Material::leather(100, 120, 80);
+    let skin_mat = Material::matte(230, 190, 150);
+    let wood_mat = Material::matte(139, 90, 43);
+    
+    draw_shadow(&mut img, cx, 56.0, 9.0, 4.0);
+    // Lean body
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 5.0, 9.0, 13.0, 7.0, &leather_mat);
     // Head
-    draw_circle(&mut img, center, center - 8, 7, Rgba([230, 190, 150, 255]));
-    // Eyes
-    img.put_pixel(center - 2, center - 10, Rgba([0, 100, 0, 255]));
-    img.put_pixel(center + 2, center - 10, Rgba([0, 100, 0, 255]));
+    draw_sphere_3d(&mut img, &mut depth, cx, 24.0, 8.0, 7.0, &skin_mat);
+    // Hood
+    draw_sphere_3d(&mut img, &mut depth, cx, 22.0, 6.0, 8.0, &leather_mat);
     // Bow
-    draw_rect(&mut img, center - 14, center - 8, 2, 16, Rgba([139, 90, 43, 255]));
-
+    draw_cylinder_3d(&mut img, &mut depth, cx - 14.0, 18.0, 48.0, 4.0, 2.0, &wood_mat);
+    
     img
 }
 
 fn create_acolyte_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // White and gold robes
-    draw_circle(&mut img, center, center + 6, 11, Rgba([240, 240, 250, 255]));
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let robe_mat = Material::matte(240, 240, 250);
+    let skin_mat = Material::matte(230, 190, 150);
+    let gold_mat = Material::metallic(255, 215, 0);
+    
+    draw_shadow(&mut img, cx, 58.0, 10.0, 4.0);
+    // Robed body
+    draw_cylinder_3d(&mut img, &mut depth, cx, 34.0, 56.0, 5.0, 11.0, &robe_mat);
     // Head
-    draw_circle(&mut img, center, center - 6, 7, Rgba([230, 190, 150, 255]));
-    // Eyes
-    img.put_pixel(center - 2, center - 8, Rgba([100, 100, 200, 255]));
-    img.put_pixel(center + 2, center - 8, Rgba([100, 100, 200, 255]));
-    // Holy symbol (golden cross)
-    draw_rect(&mut img, center - 1, center + 2, 2, 10, Rgba([255, 215, 0, 255]));
-    draw_rect(&mut img, center - 4, center + 5, 8, 2, Rgba([255, 215, 0, 255]));
-
+    draw_sphere_3d(&mut img, &mut depth, cx, 26.0, 8.0, 7.0, &skin_mat);
+    // Holy symbol (cross)
+    draw_cylinder_3d(&mut img, &mut depth, cx, 38.0, 52.0, 8.0, 2.0, &gold_mat);
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 42.0, 9.0, 5.0, 2.0, 2.0, &gold_mat);
+    
     img
 }
 
 fn create_knight_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Silver armor body
-    draw_circle(&mut img, center, center + 4, 12, Rgba([180, 180, 200, 255]));
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let armor_mat = Material::metallic(180, 180, 200);
+    let plume_mat = Material::matte(200, 0, 0);
+    let shield_mat = Material::metallic(100, 100, 120);
+    let sword_mat = Material::metallic(220, 220, 220);
+    
+    draw_shadow(&mut img, cx, 58.0, 12.0, 5.0);
+    // Armored body
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 6.0, 11.0, 15.0, 10.0, &armor_mat);
     // Helmet
-    draw_circle(&mut img, center, center - 8, 8, Rgba([160, 160, 180, 255]));
-    // Helmet plume
-    draw_rect(&mut img, center - 2, center - 16, 4, 8, Rgba([200, 0, 0, 255]));
+    draw_sphere_3d(&mut img, &mut depth, cx, 22.0, 9.0, 9.0, &armor_mat);
+    // Plume
+    draw_cylinder_3d(&mut img, &mut depth, cx, 8.0, 20.0, 8.0, 3.0, &plume_mat);
     // Shield
-    draw_circle(&mut img, center - 14, center + 2, 6, Rgba([100, 100, 120, 255]));
+    draw_ellipsoid_3d(&mut img, &mut depth, cx - 16.0, 38.0, 10.0, 7.0, 10.0, 5.0, &shield_mat);
     // Sword
-    draw_rect(&mut img, center + 12, center - 12, 2, 20, Rgba([220, 220, 220, 255]));
-
+    draw_cylinder_3d(&mut img, &mut depth, cx + 16.0, 14.0, 48.0, 8.0, 2.0, &sword_mat);
+    
     img
 }
 
 fn create_archer_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Leather armor
-    draw_circle(&mut img, center, center + 4, 10, Rgba([120, 100, 70, 255]));
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let leather_mat = Material::leather(120, 100, 70);
+    let skin_mat = Material::matte(230, 190, 150);
+    let wood_mat = Material::matte(139, 90, 43);
+    let metal_mat = Material::metallic(169, 169, 169);
+    
+    draw_shadow(&mut img, cx, 56.0, 10.0, 4.0);
+    // Body
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 5.0, 9.0, 13.0, 8.0, &leather_mat);
     // Head
-    draw_circle(&mut img, center, center - 8, 7, Rgba([230, 190, 150, 255]));
-    // Eyes
-    img.put_pixel(center - 2, center - 10, Rgba([0, 0, 0, 255]));
-    img.put_pixel(center + 2, center - 10, Rgba([0, 0, 0, 255]));
+    draw_sphere_3d(&mut img, &mut depth, cx, 24.0, 8.0, 7.0, &skin_mat);
     // Longbow
-    draw_rect(&mut img, center - 16, center - 12, 2, 20, Rgba([139, 90, 43, 255]));
+    draw_cylinder_3d(&mut img, &mut depth, cx - 16.0, 14.0, 50.0, 4.0, 2.0, &wood_mat);
     // Arrow
-    draw_rect(&mut img, center - 15, center - 4, 12, 1, Rgba([139, 90, 43, 255]));
-    draw_rect(&mut img, center - 3, center - 5, 3, 3, Rgba([169, 169, 169, 255]));
-
+    draw_cylinder_3d(&mut img, &mut depth, cx - 10.0, 28.0, 30.0, 6.0, 1.0, &wood_mat);
+    draw_cone_3d(&mut img, &mut depth, cx - 4.0, 27.0, 30.0, 7.0, 2.0, &metal_mat);
+    
     img
 }
 
 fn create_battle_cleric_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Chainmail + robes
-    draw_circle(&mut img, center, center + 4, 12, Rgba([200, 200, 220, 255]));
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let armor_mat = Material::metallic(200, 200, 220);
+    let skin_mat = Material::matte(230, 190, 150);
+    let gold_mat = Material::metallic(255, 215, 0);
+    let wood_mat = Material::matte(139, 90, 43);
+    let mace_mat = Material::metallic(150, 150, 150);
+    
+    draw_shadow(&mut img, cx, 58.0, 11.0, 5.0);
+    // Armored body
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 6.0, 11.0, 14.0, 9.0, &armor_mat);
     // Head
-    draw_circle(&mut img, center, center - 8, 7, Rgba([230, 190, 150, 255]));
-    // Holy symbol on chest
-    draw_rect(&mut img, center - 1, center + 2, 2, 8, Rgba([255, 215, 0, 255]));
-    draw_rect(&mut img, center - 4, center + 4, 8, 2, Rgba([255, 215, 0, 255]));
-    // Mace
-    draw_circle(&mut img, center + 16, center - 4, 4, Rgba([150, 150, 150, 255]));
-    draw_rect(&mut img, center + 14, center, 4, 12, Rgba([139, 90, 43, 255]));
-
+    draw_sphere_3d(&mut img, &mut depth, cx, 24.0, 8.0, 7.0, &skin_mat);
+    // Holy symbol
+    draw_cylinder_3d(&mut img, &mut depth, cx, 36.0, 48.0, 8.0, 2.0, &gold_mat);
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 9.0, 5.0, 2.0, 2.0, &gold_mat);
+    // Mace handle
+    draw_cylinder_3d(&mut img, &mut depth, cx + 18.0, 26.0, 50.0, 5.0, 2.0, &wood_mat);
+    // Mace head
+    draw_sphere_3d(&mut img, &mut depth, cx + 18.0, 22.0, 8.0, 5.0, &mace_mat);
+    
     img
 }
 
 fn create_rogue_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Dark leather body
-    draw_circle(&mut img, center, center + 4, 10, Rgba([60, 60, 80, 255]));
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let cloak_mat = Material::matte(60, 60, 80);
+    let hood_mat = Material::matte(50, 50, 70);
+    let eye_mat = Material::glowing(255, 255, 0);
+    let dagger_mat = Material::metallic(192, 192, 192);
+    
+    draw_shadow(&mut img, cx, 56.0, 9.0, 4.0);
+    // Dark body
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 5.0, 9.0, 13.0, 7.0, &cloak_mat);
     // Hooded head
-    draw_circle(&mut img, center, center - 6, 8, Rgba([50, 50, 70, 255]));
-    // Just eyes visible
-    img.put_pixel(center - 2, center - 8, Rgba([255, 255, 0, 255]));
-    img.put_pixel(center + 2, center - 8, Rgba([255, 255, 0, 255]));
+    draw_sphere_3d(&mut img, &mut depth, cx, 26.0, 7.0, 8.0, &hood_mat);
+    // Eyes (only visible part)
+    draw_sphere_3d(&mut img, &mut depth, cx - 3.0, 24.0, 10.0, 2.0, &eye_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 3.0, 24.0, 10.0, 2.0, &eye_mat);
     // Daggers
-    draw_rect(&mut img, center - 12, center + 2, 1, 10, Rgba([192, 192, 192, 255]));
-    draw_rect(&mut img, center + 12, center + 2, 1, 10, Rgba([192, 192, 192, 255]));
-
+    draw_cylinder_3d(&mut img, &mut depth, cx - 14.0, 32.0, 48.0, 5.0, 1.0, &dagger_mat);
+    draw_cylinder_3d(&mut img, &mut depth, cx + 14.0, 32.0, 48.0, 5.0, 1.0, &dagger_mat);
+    
     img
 }
 
 fn create_paladin_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Golden glowing armor
-    draw_circle(&mut img, center, center + 2, 14, Rgba([220, 200, 100, 255]));
-    // Helmet with divine glow
-    draw_circle(&mut img, center, center - 10, 9, Rgba([255, 230, 150, 255]));
-    // Holy aura
-    draw_circle(&mut img, center, center - 4, 20, Rgba([255, 255, 200, 80]));
-    // Holy sword (glowing)
-    draw_rect(&mut img, center + 14, center - 14, 3, 24, Rgba([255, 255, 255, 255]));
-    // Shield with cross
-    draw_circle(&mut img, center - 16, center + 2, 7, Rgba([200, 200, 220, 255]));
-    draw_rect(&mut img, center - 17, center, 2, 6, Rgba([255, 215, 0, 255]));
-    draw_rect(&mut img, center - 19, center + 2, 6, 2, Rgba([255, 215, 0, 255]));
-
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let armor_mat = Material::metallic(220, 200, 100);
+    let glow_mat = Material::glowing(255, 255, 200);
+    let sword_mat = Material::glowing(255, 255, 255);
+    let shield_mat = Material::metallic(200, 200, 220);
+    let gold_mat = Material::metallic(255, 215, 0);
+    
+    draw_shadow(&mut img, cx, 58.0, 13.0, 5.0);
+    // Golden armored body
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 38.0, 7.0, 12.0, 16.0, 11.0, &armor_mat);
+    // Helmet with glow
+    draw_sphere_3d(&mut img, &mut depth, cx, 20.0, 10.0, 10.0, &armor_mat);
+    // Holy aura (behind)
+    draw_sphere_3d(&mut img, &mut depth, cx, 34.0, -5.0, 18.0, &glow_mat);
+    // Holy sword
+    draw_cylinder_3d(&mut img, &mut depth, cx + 18.0, 10.0, 48.0, 9.0, 2.0, &sword_mat);
+    // Shield
+    draw_ellipsoid_3d(&mut img, &mut depth, cx - 18.0, 36.0, 10.0, 8.0, 11.0, 6.0, &shield_mat);
+    // Cross on shield
+    draw_cylinder_3d(&mut img, &mut depth, cx - 18.0, 30.0, 42.0, 12.0, 1.0, &gold_mat);
+    
     img
 }
 
 fn create_wizard_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Blue robes
-    draw_circle(&mut img, center, center + 6, 11, Rgba([50, 80, 200, 255]));
-    // Pointed wizard hat
-    draw_rect(&mut img, center - 6, center - 14, 12, 8, Rgba([40, 70, 180, 255]));
-    draw_rect(&mut img, center - 3, center - 22, 6, 8, Rgba([40, 70, 180, 255]));
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let robe_mat = Material::matte(50, 80, 200);
+    let hat_mat = Material::matte(40, 70, 180);
+    let skin_mat = Material::matte(230, 190, 150);
+    let wood_mat = Material::matte(139, 90, 43);
+    let orb_mat = Material::glowing(100, 200, 255);
+    let star_mat = Material::glowing(255, 255, 0);
+    
+    draw_shadow(&mut img, cx, 58.0, 10.0, 4.0);
+    // Robed body
+    draw_cylinder_3d(&mut img, &mut depth, cx, 36.0, 56.0, 5.0, 10.0, &robe_mat);
+    // Wizard hat (cone)
+    draw_cone_3d(&mut img, &mut depth, cx, 6.0, 28.0, 6.0, 8.0, &hat_mat);
     // Face
-    draw_circle(&mut img, center, center - 6, 6, Rgba([230, 190, 150, 255]));
+    draw_sphere_3d(&mut img, &mut depth, cx, 28.0, 8.0, 6.0, &skin_mat);
     // Stars on robe
-    img.put_pixel(center - 4, center + 4, Rgba([255, 255, 0, 255]));
-    img.put_pixel(center + 4, center + 8, Rgba([255, 255, 0, 255]));
-    // Glowing staff
-    draw_rect(&mut img, center - 14, center - 18, 2, 28, Rgba([139, 90, 43, 255]));
-    draw_circle(&mut img, center - 13, center - 18, 5, Rgba([100, 200, 255, 255]));
-
+    draw_sphere_3d(&mut img, &mut depth, cx - 4.0, 44.0, 8.0, 2.0, &star_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 4.0, 48.0, 8.0, 2.0, &star_mat);
+    // Staff
+    draw_cylinder_3d(&mut img, &mut depth, cx - 14.0, 10.0, 54.0, 4.0, 2.0, &wood_mat);
+    // Orb on staff
+    draw_sphere_3d(&mut img, &mut depth, cx - 14.0, 8.0, 8.0, 6.0, &orb_mat);
+    
     img
 }
 
 fn create_inquisitor_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Dark red and black robes
-    draw_circle(&mut img, center, center + 6, 12, Rgba([140, 30, 30, 255]));
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let robe_mat = Material::matte(140, 30, 30);
+    let hood_mat = Material::matte(60, 10, 10);
+    let eye_mat = Material::glowing(255, 0, 0);
+    let sword_mat = Material::metallic(220, 220, 220);
+    let fire_mat = Material::glowing(255, 100, 0);
+    
+    draw_shadow(&mut img, cx, 58.0, 11.0, 4.0);
+    // Dark robed body
+    draw_cylinder_3d(&mut img, &mut depth, cx, 34.0, 56.0, 5.0, 11.0, &robe_mat);
     // Grim hood
-    draw_circle(&mut img, center, center - 6, 8, Rgba([60, 10, 10, 255]));
-    // Eyes
-    img.put_pixel(center - 3, center - 8, Rgba([255, 0, 0, 255]));
-    img.put_pixel(center + 3, center - 8, Rgba([255, 0, 0, 255]));
+    draw_sphere_3d(&mut img, &mut depth, cx, 26.0, 7.0, 8.0, &hood_mat);
+    // Red eyes
+    draw_sphere_3d(&mut img, &mut depth, cx - 3.0, 24.0, 11.0, 2.0, &eye_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 3.0, 24.0, 11.0, 2.0, &eye_mat);
     // Flaming sword
-    draw_rect(&mut img, center + 12, center - 12, 3, 20, Rgba([220, 220, 220, 255]));
-    draw_circle(&mut img, center + 13, center - 14, 4, Rgba([255, 100, 0, 255]));
-
+    draw_cylinder_3d(&mut img, &mut depth, cx + 16.0, 14.0, 48.0, 8.0, 2.0, &sword_mat);
+    // Fire on sword
+    draw_sphere_3d(&mut img, &mut depth, cx + 16.0, 12.0, 10.0, 5.0, &fire_mat);
+    
     img
 }
 
 fn create_knight_commander_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Ornate armor
-    draw_circle(&mut img, center, center + 2, 14, Rgba([200, 200, 220, 255]));
-    // Helmet with plume
-    draw_circle(&mut img, center, center - 10, 9, Rgba([180, 180, 200, 255]));
-    draw_rect(&mut img, center - 3, center - 20, 6, 10, Rgba([180, 0, 0, 255]));
-    // Cape
-    draw_rect(&mut img, center - 16, center, 8, 16, Rgba([150, 0, 0, 255]));
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let armor_mat = Material::metallic(200, 200, 220);
+    let plume_mat = Material::matte(180, 0, 0);
+    let cape_mat = Material::matte(150, 0, 0);
+    let wood_mat = Material::matte(139, 90, 43);
+    let banner_mat = Material::metallic(255, 215, 0);
+    
+    draw_shadow(&mut img, cx, 58.0, 13.0, 5.0);
+    // Ornate armored body
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 38.0, 7.0, 12.0, 16.0, 11.0, &armor_mat);
+    // Helmet
+    draw_sphere_3d(&mut img, &mut depth, cx, 20.0, 10.0, 10.0, &armor_mat);
+    // Plume
+    draw_cylinder_3d(&mut img, &mut depth, cx, 4.0, 18.0, 9.0, 4.0, &plume_mat);
+    // Cape (behind)
+    draw_cylinder_3d(&mut img, &mut depth, cx - 10.0, 32.0, 56.0, -2.0, 8.0, &cape_mat);
+    // Banner pole
+    draw_cylinder_3d(&mut img, &mut depth, cx + 16.0, 6.0, 52.0, 5.0, 2.0, &wood_mat);
     // Banner
-    draw_rect(&mut img, center + 12, center - 20, 2, 28, Rgba([139, 90, 43, 255]));
-    draw_rect(&mut img, center + 14, center - 20, 10, 8, Rgba([255, 215, 0, 255]));
-
+    draw_ellipsoid_3d(&mut img, &mut depth, cx + 22.0, 12.0, 6.0, 8.0, 6.0, 3.0, &banner_mat);
+    
     img
 }
 
 fn create_high_priest_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Elaborate white and gold robes
-    draw_circle(&mut img, center, center + 6, 13, Rgba([240, 230, 200, 255]));
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let robe_mat = Material::matte(240, 230, 200);
+    let gold_mat = Material::metallic(255, 215, 0);
+    let skin_mat = Material::matte(230, 190, 150);
+    let orb_mat = Material::glowing(255, 255, 255);
+    
+    draw_shadow(&mut img, cx, 58.0, 12.0, 5.0);
+    // Elaborate robes
+    draw_cylinder_3d(&mut img, &mut depth, cx, 34.0, 56.0, 5.0, 12.0, &robe_mat);
     // Ornate headdress
-    draw_circle(&mut img, center, center - 8, 8, Rgba([255, 215, 0, 255]));
-    draw_rect(&mut img, center - 10, center - 16, 20, 4, Rgba([255, 215, 0, 255]));
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 16.0, 8.0, 12.0, 5.0, 6.0, &gold_mat);
     // Face
-    draw_circle(&mut img, center, center - 6, 6, Rgba([230, 190, 150, 255]));
-    // Ornate staff
-    draw_rect(&mut img, center - 16, center - 20, 3, 32, Rgba([255, 215, 0, 255]));
-    draw_circle(&mut img, center - 15, center - 20, 6, Rgba([255, 255, 255, 255]));
-
+    draw_sphere_3d(&mut img, &mut depth, cx, 26.0, 9.0, 6.0, &skin_mat);
+    // Golden staff
+    draw_cylinder_3d(&mut img, &mut depth, cx - 16.0, 8.0, 54.0, 5.0, 2.0, &gold_mat);
+    // Divine orb
+    draw_sphere_3d(&mut img, &mut depth, cx - 16.0, 6.0, 9.0, 7.0, &orb_mat);
+    
     img
 }
 
 fn create_archmage_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
-    // Purple robes crackling with energy
-    draw_circle(&mut img, center, center + 4, 14, Rgba([100, 50, 200, 255]));
-    // Floating effect (aura)
-    draw_circle(&mut img, center, center, 22, Rgba([150, 100, 255, 60]));
-    // Wizard hat
-    draw_rect(&mut img, center - 8, center - 16, 16, 10, Rgba([80, 40, 180, 255]));
-    draw_rect(&mut img, center - 4, center - 26, 8, 10, Rgba([80, 40, 180, 255]));
-    // Glowing staff with massive energy
-    draw_rect(&mut img, center - 18, center - 22, 3, 34, Rgba([139, 90, 43, 255]));
-    draw_circle(&mut img, center - 17, center - 22, 8, Rgba([200, 150, 255, 255]));
-
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let robe_mat = Material::matte(100, 50, 200);
+    let hat_mat = Material::matte(80, 40, 180);
+    let aura_mat = Material::glowing(150, 100, 255);
+    let wood_mat = Material::matte(139, 90, 43);
+    let energy_mat = Material::glowing(200, 150, 255);
+    
+    // Magical aura (drawn first, behind)
+    draw_sphere_3d(&mut img, &mut depth, cx, 36.0, -8.0, 20.0, &aura_mat);
+    
+    draw_shadow(&mut img, cx, 58.0, 12.0, 5.0);
+    // Purple robes
+    draw_cylinder_3d(&mut img, &mut depth, cx, 34.0, 54.0, 5.0, 12.0, &robe_mat);
+    // Wizard hat (tall cone)
+    draw_cone_3d(&mut img, &mut depth, cx, 4.0, 28.0, 6.0, 9.0, &hat_mat);
+    // Staff
+    draw_cylinder_3d(&mut img, &mut depth, cx - 18.0, 6.0, 54.0, 4.0, 2.0, &wood_mat);
+    // Massive energy orb
+    draw_sphere_3d(&mut img, &mut depth, cx - 18.0, 4.0, 10.0, 9.0, &energy_mat);
+    
     img
 }
 
 fn create_champion_sprite() -> RgbaImage {
     let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
-    let center = SPRITE_SIZE / 2;
-
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    let armor_mat = Material::metallic(255, 215, 100);
+    let divine_mat = Material::glowing(255, 255, 200);
+    let sword_mat = Material::glowing(255, 255, 255);
+    let shield_mat = Material::metallic(255, 240, 180);
+    let gold_mat = Material::metallic(255, 215, 0);
+    
+    // Divine aura (behind)
+    draw_sphere_3d(&mut img, &mut depth, cx, 32.0, -10.0, 24.0, &divine_mat);
+    
+    draw_shadow(&mut img, cx, 60.0, 14.0, 6.0);
     // Radiant golden armor
-    draw_circle(&mut img, center, center, 16, Rgba([255, 215, 100, 255]));
-    // Divine aura
-    draw_circle(&mut img, center, center - 4, 26, Rgba([255, 255, 200, 100]));
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 36.0, 8.0, 14.0, 18.0, 12.0, &armor_mat);
     // Helmet
-    draw_circle(&mut img, center, center - 12, 10, Rgba([255, 230, 150, 255]));
-    // Divine greatsword (glowing bright)
-    draw_rect(&mut img, center + 16, center - 18, 4, 32, Rgba([255, 255, 255, 255]));
-    draw_circle(&mut img, center + 18, center - 20, 6, Rgba([255, 255, 200, 255]));
-    // Shield with holy symbol
-    draw_circle(&mut img, center - 18, center, 8, Rgba([255, 240, 180, 255]));
-    draw_rect(&mut img, center - 19, center - 2, 2, 8, Rgba([255, 215, 0, 255]));
-    draw_rect(&mut img, center - 22, center + 1, 8, 2, Rgba([255, 215, 0, 255]));
-
+    draw_sphere_3d(&mut img, &mut depth, cx, 16.0, 11.0, 11.0, &armor_mat);
+    // Halo
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 6.0, 10.0, 10.0, 2.0, 8.0, &divine_mat);
+    // Divine greatsword
+    draw_cylinder_3d(&mut img, &mut depth, cx + 20.0, 6.0, 52.0, 10.0, 3.0, &sword_mat);
+    // Sword glow
+    draw_sphere_3d(&mut img, &mut depth, cx + 20.0, 4.0, 12.0, 7.0, &divine_mat);
+    // Shield
+    draw_ellipsoid_3d(&mut img, &mut depth, cx - 20.0, 34.0, 12.0, 9.0, 12.0, 7.0, &shield_mat);
+    // Cross on shield
+    draw_cylinder_3d(&mut img, &mut depth, cx - 20.0, 28.0, 42.0, 14.0, 2.0, &gold_mat);
+    
     img
 }
+

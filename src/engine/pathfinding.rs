@@ -30,6 +30,13 @@ impl Pos {
         (dx * dx + dy * dy).sqrt()
     }
 
+    /// Calculate squared Euclidean distance (faster than euclidean_distance)
+    pub fn euclidean_distance_squared(&self, other: &Pos) -> f32 {
+        let dx = (self.x - other.x) as f32;
+        let dy = (self.y - other.y) as f32;
+        dx * dx + dy * dy
+    }
+
     /// Get 4-way neighbors (N, S, E, W)
     pub fn neighbors_4way(&self) -> [Pos; 4] {
         [

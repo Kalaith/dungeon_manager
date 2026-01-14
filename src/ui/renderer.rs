@@ -189,196 +189,8 @@ impl GameRenderer {
 
         set_camera(&camera);
 
-        // Draw grid (Tiles)
-        for row in &state.dungeon.grid {
-            for tile in row {
-                 // In 3D: x = x, y = height (0), z = y
-                 let pos_x = tile.pos.x as f32;
-                 let pos_z = tile.pos.y as f32;
-                 
-                 // Optimization: simple frustum cull check (distance from camera target)
-                 let dx = pos_x - state.camera.target.0;
-                 let dz = pos_z - state.camera.target.2;
-                 if dx*dx + dz*dz > 2500.0 { // Radius 50
-                      continue; 
-                 }
-
-                // Get texture for this tile type
-                let texture_opt = graphics.tile_textures.get(&tile.tile_type);
-                let mut color = WHITE;
-
-                 // Apply fog of war
-                 match tile.fog_state {
-                     FogState::Hidden => {
-                         color = crate::ui::core::colors::FOG_HIDDEN;
-                     },
-                     FogState::Revealed => color = crate::ui::core::colors::FOG_REVEALED,
-                     FogState::Visible => color = WHITE,
-                 }
-
-                 // Show marked tiles with yellow tint
-                 if tile.marked_for_dig {
-                     color = Color::new(1.0, 1.0, 0.3, 1.0);
-                 }
-
-                let is_wall = tile_types::is_wall(&tile.tile_type);
-
-                if let Some(texture) = texture_opt {
-                    if is_wall {
-                        draw_cube(
-                            vec3(pos_x, 0.5, pos_z),
-                            vec3(1.0, 1.0, 1.0),
-                            Some(texture),
-                            color
-                        );
-                    } else {
-                        draw_plane(
-                             vec3(pos_x, 0.0, pos_z),
-                             vec2(1.0, 1.0),
-                             Some(texture),
-                             color
-                        );
-                    }
-
-                    // Draw trap if present
-                    if let Some(trap) = &tile.trap {
-                         let trap_color = if trap.constructed { WHITE } else { Color::new(1.0, 1.0, 1.0, 0.5) };
-                         if let Some(trap_texture) = graphics.tile_textures.get(&trap.trap_type) {
-                               // Draw trap slightly above floor
-                                draw_plane(
-                                      vec3(pos_x, 0.05, pos_z), 
-                                      vec2(0.8, 0.8), 
-                                      Some(trap_texture), 
-                                      trap_color
-                                );
-                         } 
-                    }
-                } else {
-                    // Fallback to colored plane/cube if texture not found
-                    let mut tile_color = crate::ui::core::get_tile_color(&tile.tile_type);
-
-                    // Apply fog/tint to tile_color
-                    match tile.fog_state {
-                        FogState::Hidden => tile_color = crate::ui::core::colors::FOG_HIDDEN,
-                        FogState::Revealed => {
-                            tile_color.r *= 0.5;
-                            tile_color.g *= 0.5;
-                            tile_color.b *= 0.5;
-                        }
-                        FogState::Visible => {}
-                    }
-                    if tile.marked_for_dig {
-                        tile_color = Color::new(1.0, 0.8, 0.0, 1.0);
-                    }
-
-                    if is_wall {
-                        draw_cube(
-                            vec3(pos_x, 0.5, pos_z),
-                            vec3(1.0, 1.0, 1.0),
-                            None,
-                            tile_color
-                        );
-                    } else {
-                        draw_plane(
-                            vec3(pos_x, 0.0, pos_z),
-                            vec2(1.0, 1.0),
-                            None,
-                            tile_color
-                        );
-                    }
-                }
-
-                // Draw selection outline if this is the hovered tile AND it's a valid target
-                if let Some(hovered_pos) = hovered_tile {
-                    if tile.pos == hovered_pos {
-                        let mut outline_color = None;
-
-                        match interaction_mode {
-                            InteractionMode::None => {
-                                // Generic selection
-                                outline_color = Some(Color::new(1.0, 1.0, 1.0, 0.5));
-                            }
-                            InteractionMode::Dig => {
-                                // Valid dig targets: earth, gold, gems
-                                // Also allow marked tiles to be selected (to unmark)
-                                if tile_types::is_diggable(&tile.tile_type) {
-                                    outline_color = Some(crate::ui::core::colors::ACCENT);
-                                }
-                            }
-                            InteractionMode::BuildRoom(_) => {
-                                // Valid build targets: claimed floors owned by player
-                                if tile.ownership == Ownership::Player && tile_types::can_build_room(&tile.tile_type) {
-                                    outline_color = Some(crate::ui::core::colors::POSITIVE);
-                                }
-                            }
-                            InteractionMode::BuildTrap(_) => {
-                                if tile.ownership == Ownership::Player && tile_types::can_build_room(&tile.tile_type) && tile.trap.is_none() {
-                                     outline_color = Some(crate::ui::core::colors::POSITIVE);
-                                }
-                            }
-                            InteractionMode::PlaceSpawner => {
-                                // Valid spawner location: claimed floors
-                                if tile.ownership == Ownership::Player && tile_types::can_build_room(&tile.tile_type) {
-                                    outline_color = Some(crate::ui::core::colors::POSITIVE);
-                                }
-                            }
-                            InteractionMode::Pickup => {
-                                // Highlight any entity's tile
-                                outline_color = Some(Color::new(0.0, 1.0, 0.0, 0.5));
-                            }
-                            InteractionMode::Drop => {
-                                // Highlight any tile
-                                outline_color = Some(Color::new(1.0, 1.0, 0.0, 0.5));
-                            }
-                            InteractionMode::Sell => {
-                                // Highlight any markable tile or owned room
-                                if tile.marked_for_dig || (tile.ownership == Ownership::Player && tile.room_id.is_some()) {
-                                    outline_color = Some(crate::ui::core::colors::NEGATIVE);
-                                }
-                            }
-                            InteractionMode::Inspect => {
-                                outline_color = Some(Color::new(0.0, 0.5, 1.0, 0.5));
-                            }
-                        }
-
-                        if let Some(color) = outline_color {
-                             // Draw selection wireframe
-                             draw_cube_wires(
-                                  vec3(pos_x, 0.05, pos_z),
-                                  vec3(1.0, 0.0, 1.0),
-                                  color
-                             );
-                        }
-                    }
-                }
-            }
-        }
-
-        // Draw entities (heroes and creatures)
-        for entity in state.entities.all() {
-             let (x, z) = entity.visual_pos;
-              
-             let texture = match &entity.entity_type {
-                 crate::state::entities::EntityType::Creature(c) => graphics.monster_textures.get(&c.creature_id),
-                 crate::state::entities::EntityType::Hero(h) => graphics.hero_textures.get(&h.hero_id),
-             };
-             
-             if let Some(tex) = texture {
-                 crate::draw_utils::draw_billboard(
-                     vec3(x, 0.5, z),
-                     vec2(0.8, 0.8),
-                     tex,
-                     camera.position
-                 );
-             } else {
-                 // Fallback to simple colored cylinder/sphere/cube
-                 let color = match &entity.entity_type {
-                     crate::state::entities::EntityType::Hero(_) => Color::new(0.2, 0.8, 0.2, 1.0),
-                     crate::state::entities::EntityType::Creature(_) => Color::new(0.8, 0.2, 0.2, 1.0),
-                 };
-                 draw_cube_wires(vec3(x, 0.5, z), vec3(0.5, 1.0, 0.5), color);
-             }
-        }
+        self.draw_tiles(graphics, state, interaction_mode, hovered_tile);
+        self.draw_entities(graphics, state, &camera);
 
         set_default_camera(); // Go back to 2D for UI
     }
@@ -490,4 +302,231 @@ impl GameRenderer {
             );
         }
     }
+
+    fn draw_tiles(
+        &self,
+        graphics: &GraphicsCache,
+        state: &GameState,
+        interaction_mode: &InteractionMode,
+        hovered_tile: Option<TilePos>,
+    ) {
+        // Draw grid (Tiles)
+        for row in &state.dungeon.grid {
+            for tile in row {
+                // In 3D: x = x, y = height (0), z = y
+                let pos_x = tile.pos.x as f32;
+                let pos_z = tile.pos.y as f32;
+
+                // Optimization: simple frustum cull check (distance from camera target)
+                let dx = pos_x - state.camera.target.0;
+                let dz = pos_z - state.camera.target.2;
+                if dx * dx + dz * dz > 2500.0 {
+                    // Radius 50
+                    continue;
+                }
+
+                // Get texture for this tile type
+                let texture_opt = graphics.tile_textures.get(&tile.tile_type);
+                let mut color = match tile.fog_state {
+                    FogState::Hidden => crate::ui::core::colors::FOG_HIDDEN,
+                    FogState::Revealed => crate::ui::core::colors::FOG_REVEALED,
+                    FogState::Visible => crate::ui::core::colors::FOG_VISIBLE,
+                };
+
+                // Show marked tiles with yellow tint
+                if tile.marked_for_dig {
+                    color = Color::new(1.0, 1.0, 0.3, 1.0);
+                }
+
+                let is_wall = tile_types::is_wall(&tile.tile_type);
+
+                if let Some(texture) = texture_opt {
+                    if is_wall {
+                        draw_cube(
+                            vec3(pos_x, 0.5, pos_z),
+                            vec3(1.0, 1.0, 1.0),
+                            Some(texture),
+                            color,
+                        );
+                    } else {
+                        // Render floor as a thick block (0.5 units thick, extending down from 0.0)
+                        draw_cube(
+                            vec3(pos_x, -0.25, pos_z),
+                            vec3(1.0, 0.5, 1.0),
+                            Some(texture),
+                            color,
+                        );
+                    }
+
+                    // Draw trap if present
+                    if let Some(trap) = &tile.trap {
+                        let trap_color = if trap.constructed {
+                            WHITE
+                        } else {
+                            Color::new(1.0, 1.0, 1.0, 0.5)
+                        };
+                        if let Some(trap_texture) = graphics.tile_textures.get(&trap.trap_type) {
+                            // Draw trap slightly above floor
+                            draw_plane(
+                                vec3(pos_x, 0.02, pos_z), // Reduced offset to look grounded but avoid Z-fighting
+                                vec2(0.8, 0.8),
+                                Some(trap_texture),
+                                trap_color,
+                            );
+                        }
+                    }
+                } else {
+                    // Fallback to colored plane/cube if texture not found
+                    let mut tile_color = crate::ui::core::get_tile_color(&tile.tile_type);
+
+                    // Apply fog/tint to tile_color
+                    match tile.fog_state {
+                        FogState::Hidden => tile_color = crate::ui::core::colors::FOG_HIDDEN,
+                        FogState::Revealed => {
+                            tile_color.r *= 0.5;
+                            tile_color.g *= 0.5;
+                            tile_color.b *= 0.5;
+                        }
+                        FogState::Visible => {}
+                    }
+                    if tile.marked_for_dig {
+                        tile_color = Color::new(1.0, 0.8, 0.0, 1.0);
+                    }
+
+                    if is_wall {
+                        draw_cube(
+                            vec3(pos_x, 0.5, pos_z),
+                            vec3(1.0, 1.0, 1.0),
+                            None,
+                            tile_color,
+                        );
+                    } else {
+                        draw_cube(
+                            vec3(pos_x, -0.25, pos_z),
+                            vec3(1.0, 0.5, 1.0),
+                            None,
+                            tile_color,
+                        );
+                    }
+                }
+
+                // Draw selection outline if this is the hovered tile AND it's a valid target
+                if let Some(hovered_pos) = hovered_tile {
+                    if tile.pos == hovered_pos {
+                        let mut outline_color = None;
+
+                        match interaction_mode {
+                            InteractionMode::None => {
+                                // Generic selection
+                                outline_color = Some(Color::new(1.0, 1.0, 1.0, 0.5));
+                            }
+                            InteractionMode::Dig => {
+                                // Valid dig targets: earth, gold, gems
+                                // Also allow marked tiles to be selected (to unmark)
+                                if tile_types::is_diggable(&tile.tile_type) {
+                                    outline_color = Some(crate::ui::core::colors::ACCENT);
+                                }
+                            }
+                            InteractionMode::BuildRoom(_) => {
+                                // Valid build targets: claimed floors owned by player
+                                if tile.ownership == Ownership::Player
+                                    && tile_types::can_build_room(&tile.tile_type)
+                                {
+                                    outline_color = Some(crate::ui::core::colors::POSITIVE);
+                                }
+                            }
+                            InteractionMode::BuildTrap(_) => {
+                                if tile.ownership == Ownership::Player
+                                    && tile_types::can_build_room(&tile.tile_type)
+                                    && tile.trap.is_none()
+                                {
+                                    outline_color = Some(crate::ui::core::colors::POSITIVE);
+                                }
+                            }
+                            InteractionMode::PlaceSpawner => {
+                                // Valid spawner location: claimed floors
+                                if tile.ownership == Ownership::Player
+                                    && tile_types::can_build_room(&tile.tile_type)
+                                {
+                                    outline_color = Some(crate::ui::core::colors::POSITIVE);
+                                }
+                            }
+                            InteractionMode::Pickup => {
+                                // Highlight any entity's tile
+                                outline_color = Some(Color::new(0.0, 1.0, 0.0, 0.5));
+                            }
+                            InteractionMode::Drop => {
+                                // Highlight any tile
+                                outline_color = Some(Color::new(1.0, 1.0, 0.0, 0.5));
+                            }
+                            InteractionMode::Sell => {
+                                // Highlight any markable tile or owned room
+                                if tile.marked_for_dig
+                                    || (tile.ownership == Ownership::Player
+                                        && tile.room_id.is_some())
+                                {
+                                    outline_color = Some(crate::ui::core::colors::NEGATIVE);
+                                }
+                            }
+                            InteractionMode::Inspect => {
+                                outline_color = Some(Color::new(0.0, 0.5, 1.0, 0.5));
+                            }
+                        }
+
+                        if let Some(color) = outline_color {
+                            // Draw selection wireframe
+                            draw_cube_wires(vec3(pos_x, 0.05, pos_z), vec3(1.0, 0.0, 1.0), color);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    fn draw_entities(&self, graphics: &GraphicsCache, state: &GameState, camera: &Camera3D) {
+        // Collect and sort entities by distance from camera (far to near) for proper transparency
+        let mut sorted_entities: Vec<_> = state.entities.all().collect();
+        sorted_entities.sort_by(|a, b| {
+            let dist_a = (camera.position - vec3(a.visual_pos.0, 0.5, a.visual_pos.1)).length_squared();
+            let dist_b = (camera.position - vec3(b.visual_pos.0, 0.5, b.visual_pos.1)).length_squared();
+            // Sort far to near (largest distance first)
+            dist_b.partial_cmp(&dist_a).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        // Draw sorted entities
+        for entity in sorted_entities {
+            let (x, z) = entity.visual_pos;
+
+            let texture = match &entity.entity_type {
+                crate::state::entities::EntityType::Creature(c) => {
+                    graphics.monster_textures.get(&c.creature_id)
+                }
+                crate::state::entities::EntityType::Hero(h) => {
+                    graphics.hero_textures.get(&h.hero_id)
+                }
+            };
+
+            if let Some(tex) = texture {
+                crate::draw_utils::draw_billboard(
+                    vec3(x, 0.5, z),
+                    vec2(0.8, 0.8),
+                    tex,
+                    camera.position,
+                );
+            } else {
+                // Fallback to simple colored cylinder/sphere/cube
+                let color = match &entity.entity_type {
+                    crate::state::entities::EntityType::Hero(_) => Color::new(0.2, 0.8, 0.2, 1.0),
+                    crate::state::entities::EntityType::Creature(_) => {
+                        Color::new(0.8, 0.2, 0.2, 1.0)
+                    }
+                };
+                draw_cube_wires(vec3(x, 0.5, z), vec3(0.5, 1.0, 0.5), color);
+            }
+        }
+    }
 }
+
+
+

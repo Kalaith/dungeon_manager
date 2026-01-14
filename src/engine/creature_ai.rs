@@ -4,11 +4,314 @@
 use crate::data::monsters::MonsterData;
 use crate::data::rooms::RoomData;
 use crate::data::GameData;
+use crate::engine::pathfinding::{find_path, Heuristic, PathfindingGrid, Pos};
 use crate::engine::room_validator::Room;
-use crate::state::entities::{CreatureState, Task};
+use crate::engine::tile_types;
+use crate::state::dungeon::Dungeon;
+use crate::state::entities::{CreatureState, EntityId, EntityManager, Task};
 use crate::state::game_state::GameState;
+use crate::state::player_state::PlayerState;
+use crate::state::room_manager::RoomManager;
 use crate::state::tile_state::TilePos;
 use std::collections::HashMap;
+
+/// Main entry point: Update all creature AI and movement
+/// This replaces the old GameState::update_creature_ai_and_movement method
+pub fn update_creatures(
+    dungeon: &Dungeon,
+    entities: &mut EntityManager,
+    room_manager: &RoomManager,
+    game_data: &GameData,
+    dt: f32,
+    get_task_target: impl Fn(&Task, &RoomManager) -> Option<TilePos>,
+) {
+    let creature_ids: Vec<EntityId> = entities.creatures()
+        .filter(|(_, c)| c.creature_id != "imp") // Imps have their own AI (digging)
+        .map(|(id, _)| id)
+        .collect();
+
+    for creature_id in creature_ids {
+        update_single_creature(
+            creature_id,
+            dungeon,
+            entities,
+            room_manager,
+            game_data,
+            dt,
+            &get_task_target,
+        );
+    }
+}
+
+/// Update AI and movement for a single creature
+fn update_single_creature(
+    creature_id: EntityId,
+    dungeon: &Dungeon,
+    entities: &mut EntityManager,
+    room_manager: &RoomManager,
+    game_data: &GameData,
+    dt: f32,
+    get_task_target: &impl Fn(&Task, &RoomManager) -> Option<TilePos>,
+) {
+    // Get current position and state
+    let (current_pos, needs_new_task, needs_path, task_target, creature_type) = {
+        let entity = match entities.get(creature_id) {
+            Some(e) => e,
+            None => return,
+        };
+
+        let creature = match entity.as_creature() {
+            Some(c) => c,
+            None => return,
+        };
+
+        let needs_new_task = creature.current_path.is_none() && creature.current_task.is_none();
+        let needs_path = creature.current_path.is_none() && creature.current_task.is_some();
+        let task_target = creature.current_task.as_ref().and_then(|task| get_task_target(task, room_manager));
+
+        (entity.pos, needs_new_task, needs_path, task_target, creature.creature_id.clone())
+    };
+
+    // Update needs and mood
+    if let Some(monster_data) = game_data.monsters.get(&creature_type) {
+        if let Some(entity) = entities.get_mut(creature_id) {
+            if let Some(creature) = entity.as_creature_mut() {
+                update_needs(creature, dt, monster_data);
+                update_mood(creature, monster_data);
+            }
+        }
+    }
+
+    // Handle movement along path
+    crate::engine::movement::process_entity_movement(entities, creature_id, dt);
+
+    // Decide new task if needed
+    if needs_new_task {
+        decide_and_assign_task(creature_id, current_pos, entities, room_manager, game_data);
+    }
+
+    // Pathfind to task if needed
+    if needs_path {
+        pathfind_to_target(
+            creature_id,
+            current_pos,
+            task_target,
+            dungeon,
+            entities,
+        );
+    }
+}
+
+
+// process_creature_movement removed in favor of shared movement::process_entity_movement
+
+/// Decide and assign a new task to a creature
+fn decide_and_assign_task(
+    creature_id: EntityId,
+    current_pos: TilePos,
+    entities: &mut EntityManager,
+    room_manager: &RoomManager,
+    game_data: &GameData,
+) {
+    // Get creature data for decision
+    let new_task = {
+        let entity = match entities.get(creature_id) {
+            Some(e) => e,
+            None => return,
+        };
+        let creature = match entity.as_creature() {
+            Some(c) => c,
+            None => return,
+        };
+
+        // Create a temporary GameState-like access for decide_task
+        // For now, we'll pass room_manager directly since that's what decide_task needs
+        decide_task_from_rooms(creature, current_pos, room_manager, game_data)
+    };
+
+    // Apply the new task
+    if let Some(entity) = entities.get_mut(creature_id) {
+        if let Some(creature) = entity.as_creature_mut() {
+            if new_task.is_some() {
+                eprintln!("[AI] Creature {} decided new task: {:?}", creature.creature_id, new_task);
+            }
+            creature.current_task = new_task;
+        }
+    }
+}
+
+/// Simplified decide_task that works with RoomManager directly
+fn decide_task_from_rooms(
+    creature: &CreatureState,
+    creature_pos: TilePos,
+    room_manager: &RoomManager,
+    game_data: &GameData,
+) -> Option<Task> {
+    let monster_data = match game_data.monsters.get(&creature.creature_id) {
+        Some(data) => data,
+        None => return Some(Task::Idle),
+    };
+
+    // If fleeing or deserting, flee
+    if creature.is_deserting {
+        return Some(Task::Flee);
+    }
+
+    // If carrying gold, prioritize depositing
+    if creature.gold_carried > 20 {
+        use crate::engine::room_validator;
+        if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, "treasury", creature_pos, 0.0) {
+            return Some(Task::DepositGold(room_id));
+        }
+    }
+
+    // Check most urgent need
+    if let Some((need_name, need_value)) = creature.get_most_urgent_need() {
+        if need_value < 30.0 {
+            if let Some(need_data) = monster_data.needs.get(&need_name) {
+                for room_type in &need_data.satisfied_by {
+                    use crate::engine::room_validator;
+                    if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, room_type, creature_pos, 0.0) {
+                        match need_name.as_str() {
+                            "sleep" => return Some(Task::Sleep(room_id)),
+                            "food" => return Some(Task::Eat(room_id)),
+                            "gold" => return Some(Task::DepositGold(room_id)),
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Evaluate all possible tasks
+    let mut candidate_tasks = Vec::new();
+
+    for (room_type, desire) in &monster_data.ai.room_desires {
+        use crate::engine::room_validator;
+        if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, room_type, creature_pos, 0.0) {
+            let task = Task::Work(room_id);
+            let desirability = calculate_task_desirability(&task, creature, monster_data) * desire;
+            candidate_tasks.push((task, desirability));
+        }
+    }
+
+    // Add training if available
+    if creature.mood > 50.0 && creature.level < 5 {
+        use crate::engine::room_validator;
+        if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, "training_room", creature_pos, 0.0) {
+            let task = Task::Train(room_id);
+            let desirability = calculate_task_desirability(&task, creature, monster_data);
+            candidate_tasks.push((task, desirability));
+        }
+    }
+
+    // Add research
+    use crate::engine::room_validator;
+    if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, "library", creature_pos, 0.0) {
+        let task = Task::Research(room_id);
+        let desirability = calculate_task_desirability(&task, creature, monster_data) * 0.8;
+        candidate_tasks.push((task, desirability));
+    }
+
+    // Select best task
+    if let Some((task, _)) = candidate_tasks
+        .into_iter()
+        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+    {
+        Some(task)
+    } else {
+        Some(Task::Idle)
+    }
+}
+
+/// Pathfind creature to target position
+fn pathfind_to_target(
+    creature_id: EntityId,
+    current_pos: TilePos,
+    mut target_pos: Option<TilePos>,
+    dungeon: &Dungeon,
+    entities: &mut EntityManager,
+) {
+    // Special case for Idle: pick a random wander position
+    if target_pos.is_none() {
+        let is_idle = {
+            let entity = match entities.get(creature_id) {
+                Some(e) => e,
+                None => return,
+            };
+            let creature = match entity.as_creature() {
+                Some(c) => c,
+                None => return,
+            };
+            matches!(creature.current_task, Some(Task::Idle))
+        };
+
+        if is_idle {
+            target_pos = pick_wander_position(dungeon, current_pos);
+        }
+    }
+
+    let target = match target_pos {
+        Some(t) => t,
+        None => return,
+    };
+
+    if current_pos == target {
+        return; // Already at target
+    }
+
+    // Create pathfinding grid
+    let mut pf_grid = PathfindingGrid::new(dungeon.width, dungeon.height);
+
+    // Mark walkable tiles
+    for y in 0..dungeon.height {
+        for x in 0..dungeon.width {
+            let tile_pos = TilePos::new(x as i32, y as i32);
+            if let Some(tile) = dungeon.get_tile(tile_pos) {
+                let walkable = tile_types::is_walkable(&tile.tile_type);
+                pf_grid.set_walkable(Pos::new(x as i32, y as i32), walkable);
+            }
+        }
+    }
+
+    // Find path
+    let start = Pos::new(current_pos.x, current_pos.y);
+    let goal = Pos::new(target.x, target.y);
+
+    if let Some(path) = find_path(start, goal, &pf_grid, Heuristic::Manhattan, false) {
+        if let Some(entity) = entities.get_mut(creature_id) {
+            if let Some(creature) = entity.as_creature_mut() {
+                creature.current_path = Some(
+                    path.waypoints
+                        .iter()
+                        .map(|p| TilePos::new(p.x, p.y))
+                        .collect(),
+                );
+            }
+        }
+    }
+}
+
+/// Pick a random walkable tile for wandering
+fn pick_wander_position(dungeon: &Dungeon, current_pos: TilePos) -> Option<TilePos> {
+    let wander_radius = 5;
+    let mut attempts = 0;
+
+    while attempts < 10 {
+        let dx = rand::random::<i32>() % (wander_radius * 2 + 1) - wander_radius;
+        let dy = rand::random::<i32>() % (wander_radius * 2 + 1) - wander_radius;
+        let candidate = TilePos::new(current_pos.x + dx, current_pos.y + dy);
+
+        if let Some(tile) = dungeon.get_tile(candidate) {
+            if tile_types::is_walkable(&tile.tile_type) {
+                return Some(candidate);
+            }
+        }
+        attempts += 1;
+    }
+    None
+}
 
 /// Update all needs for a creature based on time passed
 pub fn update_needs(creature: &mut CreatureState, dt: f32, monster_data: &MonsterData) {

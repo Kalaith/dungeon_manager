@@ -74,6 +74,7 @@ impl GameState {
     pub fn update(&mut self, dt: f32, game_data: &GameData) {
         self.time_elapsed += dt;
         self.tick_accumulator += dt;
+        self.camera.update(dt); // Update smooth camera zoom
 
         // Smooth movement interpolation
         for entity in self.entities.all_mut() {
@@ -242,351 +243,70 @@ impl GameState {
 
     fn update_creature_ai_and_movement(&mut self, game_data: &GameData, dt: f32) {
         use crate::engine::creature_ai;
-        use crate::engine::pathfinding::{find_path, Heuristic, PathfindingGrid, Pos};
 
-        let creature_ids: Vec<EntityId> = self.entities.creatures()
-            .filter(|(_, c)| c.creature_id != "imp") // Imps have their own AI (digging)
-            .map(|(id, _)| id)
-            .collect();
+        // Delegate to the creature_ai module
+        creature_ai::update_creatures(
+            &self.dungeon,
+            &mut self.entities,
+            &self.room_manager,
+            game_data,
+            dt,
+            |task, room_manager| GameState::get_task_target_position_static(task, room_manager),
+        );
+    }
 
-        for creature_id in creature_ids {
-            // Get current position and state first
-            let (current_pos, needs_new_task, needs_path, task_target) = {
-                let entity = match self.entities.get(creature_id) {
-                    Some(e) => e,
-                    None => continue,
-                };
+    /// Static version of get_task_target_position that doesn't require &self
+    fn get_task_target_position_static(task: &crate::state::entities::Task, room_manager: &crate::state::room_manager::RoomManager) -> Option<TilePos> {
+        use crate::state::entities::Task;
 
-                let creature = match entity.as_creature() {
-                    Some(c) => c,
-                    None => continue,
-                };
-
-                let needs_new_task = creature.current_path.is_none() && creature.current_task.is_none();
-                let needs_path = creature.current_path.is_none() && creature.current_task.is_some();
-                let task_target = creature.current_task.as_ref().and_then(|task| self.get_task_target_position(task));
-
-                (entity.pos, needs_new_task, needs_path, task_target)
-            };
-
-            // Update needs and mood
-            {
-                let entity = self.entities.get_mut(creature_id).unwrap();
-                let creature = entity.as_creature_mut().unwrap();
-
-                if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
-                    creature_ai::update_needs(creature, dt, monster_data);
-                    creature_ai::update_mood(creature, monster_data);
-
-                    // Debug: Log creature needs (Reduced)
-                    // if creature.move_timer == 0.0 {
-                    //    eprintln!("[AI] Creature {} at {:?}: mood={:.1}, needs={:?}, task={:?}",
-                    //        creature.creature_id, current_pos, creature.mood,
-                    //        creature.needs, creature.current_task);
-                    // }
-                }
+        match task {
+            Task::Sleep(room_id)
+            | Task::Eat(room_id)
+            | Task::Work(room_id)
+            | Task::Train(room_id)
+            | Task::Research(room_id)
+            | Task::DepositGold(room_id) => {
+                room_manager.rooms.iter()
+                    .find(|r| r.id == *room_id)
+                    .map(|room| room.get_center())
             }
-
-            // Handle movement along path
-            let (should_move, next_waypoint) = {
-                let entity = self.entities.get_mut(creature_id).unwrap();
-                let creature = entity.as_creature_mut().unwrap();
-
-                let mut should_move = false;
-                let mut next_waypoint = None;
-
-                if let Some(ref mut path) = creature.current_path {
-                    if !path.is_empty() {
-                        creature.move_timer += dt;
-                        let move_interval = 1.0 / creature.movement_speed;
-
-                        if creature.move_timer >= move_interval {
-                            creature.move_timer = 0.0;
-                            should_move = true;
-                            next_waypoint = path.first().copied();
-                        }
-                    }
-                }
-
-                (should_move, next_waypoint)
-            }; // Borrow ends here
-
-            // Apply movement (now we can mutate entity)
-            if should_move {
-                if let Some(next_pos) = next_waypoint {
-                    let entity = self.entities.get_mut(creature_id).unwrap();
-                    entity.pos = next_pos;
-
-                    let creature = entity.as_creature_mut().unwrap();
-                    if let Some(ref mut path) = creature.current_path {
-                        path.remove(0);
-                        if path.is_empty() {
-                            creature.current_path = None;
-                        }
-                    }
-                }
-            }
-
-            // Decide new task if needed
-            if needs_new_task {
-                // First, get creature data immutably to pass to decide_task
-                let new_task = {
-                    let entity = self.entities.get(creature_id).unwrap();
-                    let creature = entity.as_creature().unwrap();
-
-                    let task = creature_ai::decide_task(
-                        creature,
-                        current_pos,
-                        self,
-                        game_data,
-                    );
-
-                    eprintln!("[AI] Creature {} decided new task: {:?}", creature.creature_id, task);
-                    task
-                }; // Immutable borrow ends here
-
-                // Now apply the new task with a mutable borrow
-                if let Some(entity) = self.entities.get_mut(creature_id) {
-                    if let Some(creature) = entity.as_creature_mut() {
-                        creature.current_task = new_task;
-                    }
-                }
-            }
-
-            // Pathfind to task if needed
-            if needs_path {
-                // Special case for Idle: pick a random wander position
-                let target_pos = if task_target.is_none() {
-                    // Check if this is an Idle task
-                    let is_idle = {
-                        let entity = self.entities.get(creature_id).unwrap();
-                        let creature = entity.as_creature().unwrap();
-                        matches!(creature.current_task, Some(crate::state::entities::Task::Idle))
-                    };
-
-                    if is_idle {
-                        // Pick a random walkable tile within 5 tiles
-                        let wander_radius = 5;
-                        let mut attempts = 0;
-                        let mut wander_pos = None;
-
-                        while attempts < 10 && wander_pos.is_none() {
-                            let dx = rand::random::<i32>() % (wander_radius * 2 + 1) - wander_radius;
-                            let dy = rand::random::<i32>() % (wander_radius * 2 + 1) - wander_radius;
-                            let candidate = TilePos::new(current_pos.x + dx, current_pos.y + dy);
-
-                            if let Some(tile) = self.get_tile(candidate) {
-                                // Only wander on claimed/room tiles
-                                if tile_types::is_walkable(&tile.tile_type) {
-                                    wander_pos = Some(candidate);
-                                }
-                            }
-                            attempts += 1;
-                        }
-
-                        // eprintln!("[AI] Idle creature wandering to {:?}", wander_pos);
-                        wander_pos
-                    } else {
-                        task_target
-                    }
-                } else {
-                    task_target
-                };
-
-                if let Some(target_pos) = target_pos {
-                    // eprintln!("[AI] Pathfinding from {:?} to {:?}", current_pos, target_pos);
-
-                    if current_pos != target_pos {
-                        // Create pathfinding grid
-                        let mut pf_grid = PathfindingGrid::new(self.dungeon.width, self.dungeon.height);
-
-                        // Mark walkable tiles
-                        for y in 0..self.dungeon.height {
-                            for x in 0..self.dungeon.width {
-                                let tile_pos = TilePos::new(x as i32, y as i32);
-                                if let Some(tile) = self.get_tile(tile_pos) {
-                                    // Only claimed floors and room tiles are walkable
-                                    let walkable = tile_types::is_walkable(&tile.tile_type);
-                                    pf_grid.set_walkable(
-                                        Pos::new(x as i32, y as i32),
-                                        walkable,
-                                    );
-                                }
-                            }
-                        }
-
-                        // Find path
-                        let start = Pos::new(current_pos.x, current_pos.y);
-                        let goal = Pos::new(target_pos.x, target_pos.y);
-
-                        if let Some(path) = find_path(
-                            start,
-                            goal,
-                            &pf_grid,
-                            Heuristic::Manhattan,
-                            false,
-                        ) {
-                            // eprintln!("[AI] Path found with {} waypoints", path.waypoints.len());
-
-                            // Convert Pos to TilePos and assign
-                            let entity = self.entities.get_mut(creature_id).unwrap();
-                            let creature = entity.as_creature_mut().unwrap();
-
-                            creature.current_path = Some(
-                                path.waypoints
-                                    .iter()
-                                    .map(|p| TilePos::new(p.x, p.y))
-                                    .collect(),
-                            );
-                        } else {
-                            // eprintln!("[AI] No path found from {:?} to {:?}", current_pos, target_pos);
-                        }
-                    } else {
-                        // eprintln!("[AI] Already at target, performing task");
-                        // Already at target, perform task
-                        self.perform_creature_task(creature_id, game_data, dt);
-                    }
-                } else {
-                    // eprintln!("[AI] No target position for task");
-                }
-            }
+            Task::Dig(pos) => Some(*pos),
+            Task::MoveTo(pos) => Some(*pos),
+            Task::Attack(entity_id) => None, // Would need entity positions
+            Task::Idle | Task::Flee => None,
         }
     }
 
     fn perform_creature_task(&mut self, creature_id: EntityId, game_data: &GameData, dt: f32) {
-        use crate::engine::creature_ai;
-        use crate::state::entities::Task;
+        use crate::engine::task_system;
 
-        let entity = match self.entities.get(creature_id) {
-            Some(e) => e,
-            None => return,
-        };
+        // Delegate to task_system module
+        let result = task_system::execute_task(
+            creature_id,
+            &mut self.entities,
+            &self.room_manager,
+            &self.player,
+            game_data,
+            dt,
+            |pos| self.dungeon.get_tile(pos).cloned(),
+        );
 
-        let creature = match entity.as_creature() {
-            Some(c) => c,
-            None => return,
-        };
-
-        if let Some(ref task) = creature.current_task {
-            match task {
-                Task::Sleep(room_id) => {
-                    // Find the room
-                    if let Some(room) = self.room_manager.rooms.iter().find(|r| r.id == *room_id) {
-                        if room.room_type == "lair" {
-                            // Satisfy sleep need
-                            if let Some(creature) = self.entities.get_mut(creature_id)
-                                .and_then(|e| e.as_creature_mut()) {
-                                creature_ai::satisfy_need(creature, "sleep", 10.0, dt);
-                            }
-                        }
-                    }
-                }
-                Task::Eat(room_id) => {
-                    if let Some(room) = self.room_manager.rooms.iter().find(|r| r.id == *room_id) {
-                        if room.room_type == "hatchery" {
-                            // Check if we have food available
-                            if self.player.food > 0 {
-                                // Consume food (1 unit per tick while eating)
-                                let food_consumed = (dt * 5.0).min(self.player.food as f32) as i32;
-                                self.player.food -= food_consumed;
-
-                                // Satisfy food need
-                                if let Some(creature) = self.entities.get_mut(creature_id)
-                                    .and_then(|e| e.as_creature_mut()) {
-                                    creature_ai::satisfy_need(creature, "food", food_consumed as f32 * 2.0, dt);
-                                }
-                            } else {
-                                // No food available - creature stays hungry
-                                eprintln!("Warning: No food available in hatchery");
-                            }
-                        }
-                    }
-                }
-                Task::DepositGold(room_id) => {
-                    if let Some(room) = self.room_manager.rooms.iter().find(|r| r.id == *room_id) {
-                        if room.room_type == "treasury" {
-                            if let Some(creature) = self.entities.get_mut(creature_id)
-                                .and_then(|e| e.as_creature_mut()) {
-                                // Deposit gold
-                                self.player.gold += creature.gold_carried;
-                                creature.gold_carried = 0;
-                                creature_ai::satisfy_need(creature, "gold", 10.0, dt);
-                                creature.current_task = None; // Task complete
-                            }
-                        }
-                    }
-                }
-                Task::Train(room_id) => {
-                    if let Some(room) = self.room_manager.rooms.iter().find(|r| r.id == *room_id) {
-                        if room.room_type == "training_room" {
-                            if let Some(creature) = self.entities.get_mut(creature_id)
-                                .and_then(|e| e.as_creature_mut()) {
-                                
-                                // Gain XP
-                                creature.training_timer += dt;
-                                if creature.training_timer >= 1.0 { // 1 sec tick
-                                    creature.training_timer = 0.0;
-                                    creature.experience += 10.0; // 10 XP per second
-                                    
-                                    // Check level up (Max level 5)
-                                    if creature.experience >= creature.max_experience && creature.level < 5 {
-                                        creature.level += 1;
-                                        creature.experience = 0.0;
-                                        creature.max_experience *= 1.5; // Harder to level up
-                                        creature.max_health *= 1.2;
-                                        creature.health = creature.max_health; // Heal on level up
-                                        eprintln!("Creature {} leveled up to {}", creature.creature_id, creature.level);
-                                    } else if creature.level >= 5 {
-                                        creature.experience = creature.max_experience; // Cap XP
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                Task::Dig(tile_pos) => {
-                    // Imp digging logic (will add later)
-                    if let Some(tile) = self.get_tile_mut(*tile_pos) {
-                        if tile.marked_for_dig {
-                            tile.tile_type = "claimed_floor".to_string();
-                            tile.ownership = Ownership::Player;
-                            tile.marked_for_dig = false;
-                            self.player.claimed_tile_count += 1;
-
-                            // Task complete
-                            if let Some(creature) = self.entities.get_mut(creature_id)
-                                .and_then(|e| e.as_creature_mut()) {
-                                creature.current_task = None;
-                            }
-                        }
-                    }
-                }
-                Task::Work(room_id) => {
-                    if let Some(room) = self.room_manager.rooms.iter().find(|r| r.id == *room_id) {
-                        if room.room_type == "workshop" {
-                             if let Some(creature) = self.entities.get_mut(creature_id)
-                                .and_then(|e| e.as_creature_mut()) {
-                                
-                                // Work progress
-                                if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
-                                     let efficiency = creature_ai::calculate_work_efficiency(creature, monster_data);
-                                     creature.work_timer += dt * room.efficiency * efficiency; 
-                                } else {
-                                     creature.work_timer += dt * room.efficiency;
-                                }
-
-                                if creature.work_timer >= 20.0 { // 20 seconds per material
-                                    creature.work_timer = 0.0;
-                                    self.player.add_resources(0, 0, 0, 1); // Add 1 material
-                                    eprintln!("Creature {} produced generic material!", creature.creature_id);
-                                    
-                                    // Satisfy work need? (Maybe add satisfaction later)
-                                }
-                            }
-                        }
-                    }
-                }
-                _ => {}
+        // Apply state changes from task result
+        if result.gold_change != 0 {
+            self.player.gold += result.gold_change;
+        }
+        if result.food_change != 0 {
+            self.player.food += result.food_change;
+        }
+        if result.materials_change != 0 {
+            self.player.add_resources(0, 0, 0, result.materials_change);
+        }
+        if let Some(tile_pos) = result.claimed_tile {
+            if let Some(tile) = self.get_tile_mut(tile_pos) {
+                tile.tile_type = crate::engine::tile_types::types::CLAIMED_FLOOR.to_string();
+                tile.ownership = Ownership::Player;
+                tile.marked_for_dig = false;
+                self.player.claimed_tile_count += 1;
             }
         }
     }

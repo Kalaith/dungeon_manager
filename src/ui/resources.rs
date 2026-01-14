@@ -47,9 +47,11 @@ impl GraphicsCache {
         }
 
         // Load unit textures (creatures)
-        let creatures = vec!["imp", "goblin", "warlock", "troll"];
+        let creatures = vec![
+            "imp", "goblin", "orc", "warlock", "troll", "skeleton", "demon_spawn"
+        ];
         for creature in creatures {
-            let path = format!("assets/sprites/{}.png", creature);
+            let path = format!("assets/sprites/monsters/{}.png", creature);
             match load_texture(&path).await {
                 Ok(tex) => {
                     tex.set_filter(FilterMode::Nearest);
@@ -60,9 +62,13 @@ impl GraphicsCache {
         }
         
         // Load hero textures
-        let heroes = vec!["knight", "archer", "wizard"];
+        let heroes = vec![
+            "peasant_militia", "scout", "acolyte", "knight", "archer", "battle_cleric", 
+            "rogue", "paladin", "wizard", "inquisitor", "knight_commander", 
+            "high_priest", "archmage", "champion_of_light"
+        ];
         for hero in heroes {
-            let path = format!("assets/sprites/{}.png", hero);
+            let path = format!("assets/sprites/heroes/{}.png", hero);
             match load_texture(&path).await {
                 Ok(tex) => {
                     tex.set_filter(FilterMode::Nearest);

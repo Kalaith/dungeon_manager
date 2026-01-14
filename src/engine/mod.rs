@@ -10,8 +10,11 @@ pub mod spell_effects;
 pub mod imp_ai;
 pub mod trap_system;
 pub mod tile_types;
+pub mod task_system;
+pub mod action_processor;
 
 pub mod spawner;
+pub mod movement;
 
 pub mod input;
 

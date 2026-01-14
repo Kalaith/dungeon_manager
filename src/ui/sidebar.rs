@@ -64,9 +64,10 @@ impl Sidebar {
         
         // Handle Tab Switching
         if mouse_pos.1 >= self.panel_y - TAB_HEIGHT && mouse_pos.1 <= self.panel_y {
-            let tab_width = 100.0;
-            let start_x = 20.0;
-            
+            if is_mouse_button_pressed(MouseButton::Left) {
+                let tab_width = 100.0;
+                let start_x = 20.0;
+                
                 if mouse_pos.0 >= start_x && mouse_pos.0 < start_x + tab_width {
                     self.current_tab = SidebarTab::Build;
                     self.is_expanded = true;
@@ -84,6 +85,7 @@ impl Sidebar {
                     self.is_expanded = !self.is_expanded;
                 }
             }
+        }
         
         if !self.is_expanded {
             return None;

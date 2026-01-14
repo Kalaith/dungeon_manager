@@ -62,7 +62,7 @@ pub fn update_imp_digging(
         update_targeted_tiles(entities, imp_id, imp_pos, &mut targeted_tiles);
 
         // Handle movement along path
-        process_imp_movement(entities, imp_id, dt);
+        crate::engine::movement::process_entity_movement(entities, imp_id, dt);
     }
 }
 
@@ -155,9 +155,8 @@ fn find_nearest_marked_tile(
             }
             if let Some(tile) = dungeon.get_tile(pos) {
                 if tile.marked_for_dig {
-                    let dx = (pos.x - imp_pos.x) as f32;
-                    let dy = (pos.y - imp_pos.y) as f32;
-                    let mut dist = dx * dx + dy * dy;
+                    let dist_sq = Pos::new(pos.x, pos.y).euclidean_distance_squared(&Pos::new(imp_pos.x, imp_pos.y));
+                    let mut dist = dist_sq;
 
                     // Penalize gem seams (infinite gold) so they are lower priority
                     if tile.tile_type == tt::GEM_SEAM {
@@ -334,49 +333,5 @@ fn wander_randomly(
     }
 }
 
-/// Handle imp movement along its path
-fn process_imp_movement(entities: &mut EntityManager, imp_id: EntityId, dt: f32) {
-    let (should_move, next_waypoint) = {
-        let entity = match entities.get_mut(imp_id) {
-            Some(e) => e,
-            None => return,
-        };
-        let creature = match entity.as_creature_mut() {
-            Some(c) => c,
-            None => return,
-        };
 
-        let mut should_move = false;
-        let mut next_waypoint = None;
-
-        if let Some(ref mut path) = creature.current_path {
-            if !path.is_empty() {
-                creature.move_timer += dt;
-                let move_interval = 1.0 / creature.movement_speed;
-
-                if creature.move_timer >= move_interval {
-                    creature.move_timer = 0.0;
-                    should_move = true;
-                    next_waypoint = path.first().copied();
-                }
-            }
-        }
-
-        (should_move, next_waypoint)
-    };
-
-    if should_move {
-        if let Some(next_pos) = next_waypoint {
-            let entity = entities.get_mut(imp_id).unwrap();
-            entity.pos = next_pos;
-
-            let creature = entity.as_creature_mut().unwrap();
-            if let Some(ref mut path) = creature.current_path {
-                path.remove(0);
-                if path.is_empty() {
-                    creature.current_path = None;
-                }
-            }
-        }
-    }
-}
+// process_imp_movement removed in favor of shared movement::process_entity_movement
