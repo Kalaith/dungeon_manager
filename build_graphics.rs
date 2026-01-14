@@ -60,6 +60,12 @@ fn generate_tiles() {
     save_tile("guard_post", create_guard_post());
     save_tile("ritual_circle", create_ritual_circle());
     save_tile("monster_spawner", create_monster_spawner());
+    
+    // Traps
+    save_tile("door", create_door());
+    save_tile("spike_trap", create_spike_trap());
+    save_tile("boulder_trap", create_boulder_trap());
+    save_tile("alarm_trap", create_alarm_trap());
 }
 
 fn save_tile(name: &str, img: RgbaImage) {
@@ -487,6 +493,64 @@ fn create_monster_spawner() -> RgbaImage {
     }
     img
 }
+
+// Trap tiles
+fn create_door() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([100, 60, 30, 255])); // Wood
+    // Planks
+    for x in (0..TILE_WIDTH).step_by(8) {
+        for y in 0..TILE_HEIGHT {
+            img.put_pixel(x, y, Rgba([90, 50, 25, 255]));
+        }
+    }
+    // Frame
+    draw_rect(&mut img, 0, 0, TILE_WIDTH, 4, Rgba([60, 40, 20, 255]));
+    draw_rect(&mut img, 0, TILE_HEIGHT-4, TILE_WIDTH, 4, Rgba([60, 40, 20, 255]));
+    draw_rect(&mut img, 0, 0, 4, TILE_HEIGHT, Rgba([60, 40, 20, 255]));
+    draw_rect(&mut img, TILE_WIDTH-4, 0, 4, TILE_HEIGHT, Rgba([60, 40, 20, 255]));
+    
+    // Handle
+    draw_circle(&mut img, TILE_WIDTH-10, TILE_HEIGHT/2, 4, Rgba([200, 200, 200, 255]));
+    
+    img
+}
+
+fn create_spike_trap() -> RgbaImage {
+    let mut img = create_solid_rock();
+    // Spikes holes
+    for y in (10..TILE_HEIGHT-10).step_by(10) {
+        for x in (10..TILE_WIDTH-10).step_by(10) {
+             draw_circle(&mut img, x, y, 2, Rgba([30, 30, 30, 255]));
+             // Shiny spike tip
+             img.put_pixel(x, y, Rgba([200, 200, 200, 255]));
+        }
+    }
+    img
+}
+
+fn create_boulder_trap() -> RgbaImage {
+    let mut img = create_solid_rock();
+    // Large boulder
+    let cx = TILE_WIDTH / 2;
+    let cy = TILE_HEIGHT / 2;
+    draw_circle(&mut img, cx, cy, 20, Rgba([80, 80, 85, 255]));
+    // Shading
+    draw_circle(&mut img, cx-5, cy-5, 10, Rgba([100, 100, 105, 255]));
+    img
+}
+
+fn create_alarm_trap() -> RgbaImage {
+    let mut img = create_solid_rock();
+    // Mechanical mechanism
+    let cx = TILE_WIDTH / 2;
+    let cy = TILE_HEIGHT / 2;
+    draw_rect(&mut img, cx-10, cy-10, 20, 20, Rgba([150, 100, 50, 255])); // Bronze plate
+    draw_circle(&mut img, cx, cy, 8, Rgba([200, 50, 50, 255])); // Red light/gem
+    // Wires
+    draw_rect(&mut img, 0, cy, TILE_WIDTH, 2, Rgba([100, 100, 100, 255]));
+    img
+}
+
 
 // Sprite generators
 fn generate_monster_sprites() {

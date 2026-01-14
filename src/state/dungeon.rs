@@ -43,12 +43,14 @@ impl Dungeon {
         &mut self,
         claimed_tiles: &std::collections::HashSet<TilePos>,
         creature_positions: &[TilePos],
+        game_data: &GameData,
     ) {
         tile_grid::update_fog_of_war(
             &mut self.grid,
             claimed_tiles,
             creature_positions,
             8, // Sight radius
+            game_data,
         );
     }
     pub fn find_dungeon_heart(&self) -> Option<TilePos> {

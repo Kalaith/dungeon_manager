@@ -15,9 +15,10 @@ pub fn update_imp_digging(
     dungeon: &mut Dungeon,
     entities: &mut EntityManager,
     player: &mut PlayerState,
-    _game_data: &GameData,
+    game_data: &GameData,
     dt: f32,
 ) {
+
     // Get all imp IDs
     let mut imp_ids: Vec<EntityId> = entities
         .creatures()
@@ -69,6 +70,7 @@ pub fn update_imp_digging(
                 imp_id,
                 imp_pos,
                 &targeted_tiles,
+                game_data,
                 dt,
             );
         }
@@ -133,10 +135,11 @@ fn process_idle_imp(
     imp_id: EntityId,
     imp_pos: TilePos,
     targeted_tiles: &HashSet<TilePos>,
+    game_data: &GameData,
     dt: f32,
 ) {
     // Find nearest marked tile NOT targeted by others
-    let nearest_marked = find_nearest_marked_tile(dungeon, imp_pos, targeted_tiles);
+    let nearest_marked = find_nearest_marked_tile(dungeon, imp_pos, targeted_tiles, player);
 
     if let Some(marked_pos) = nearest_marked {
         // Check if we are adjacent (or on top) of the marked tile
@@ -161,7 +164,7 @@ fn process_idle_imp(
 
             for target in neighbors {
                 if let Some(tile) = dungeon.get_tile(target) {
-                    if tile_types::is_walkable(&tile.tile_type) {
+                    if tile_types::is_walkable(&tile.tile_type, game_data) {
                         let d = imp_pos.distance_to(&target);
                         if d < min_dist {
                             min_dist = d;
@@ -175,12 +178,12 @@ fn process_idle_imp(
                 pathfind_to_target(dungeon, entities, imp_id, imp_pos, target, false);
             } else {
                 // Cannot reach the tile (surrounded by walls?)
-                wander_randomly(dungeon, entities, imp_id, imp_pos);
+                wander_randomly(dungeon, entities, imp_id, imp_pos, game_data);
             }
         }
     } else {
         // No marked tiles - imp should wander
-        wander_randomly(dungeon, entities, imp_id, imp_pos);
+        wander_randomly(dungeon, entities, imp_id, imp_pos, game_data);
     }
 }
 
@@ -189,6 +192,7 @@ fn find_nearest_marked_tile(
     dungeon: &Dungeon,
     imp_pos: TilePos,
     targeted_tiles: &HashSet<TilePos>,
+    player: &PlayerState,
 ) -> Option<TilePos> {
     let mut nearest_marked = None;
     let mut min_dist = f32::MAX;
@@ -206,6 +210,9 @@ fn find_nearest_marked_tile(
 
                     // Penalize gem seams (infinite gold) so they are lower priority
                     if tile.tile_type == tt::GEM_SEAM {
+                        if player.gold >= player.max_gold {
+                            continue; // Don't mine infinite gold if full
+                        }
                         dist += 10000.0;
                     }
 
@@ -275,35 +282,41 @@ fn complete_dig(dungeon: &mut Dungeon, player: &mut PlayerState, marked_pos: Til
 
         if is_gem_seam {
             // Gem seams stay marked - imps will keep mining them continuously
-            player.gold += gold_gained;
+            // Do NOT unmark the tile, do NOT convert to floor
+            player.add_resources(gold_gained, 0, 0, 0);
             eprintln!(
                 "Imp mined gem seam at {:?}, gained {} gold",
                 marked_pos, gold_gained
             );
-        } else {
-            // Convert to claimed floor
-            tile.tile_type = tt::CLAIMED_FLOOR.to_string();
-            tile.ownership = Ownership::Player;
-            tile.marked_for_dig = false;
-            tile.resources_remaining = None;
-            player.claimed_tile_count += 1;
+            return; // Exit early to preserve tile state
+        }
+        
+        // Safety check: if gem seam and gold full, do nothing (should be handled by target selection but good for safety)
+        if is_gem_seam && player.gold >= player.max_gold {
+             return;
+        }
 
-            // Give resources to player
-            if gold_gained > 0 {
-                player.gold += gold_gained;
-                eprintln!(
-                    "Imp dug gold vein at {:?}, gained {} gold",
-                    marked_pos, gold_gained
-                );
-            } else if mana_gained > 0 {
-                player.mana = (player.mana + mana_gained as i32).min(player.max_mana);
-                eprintln!(
-                    "Imp mined mana crystal at {:?}, gained {} mana",
-                    marked_pos, mana_gained
-                );
-            } else {
-                eprintln!("Imp dug tile at {:?}", marked_pos);
-            }
+        // For non-infinite resources:
+        // Convert to claimed floor
+        tile.tile_type = tt::CLAIMED_FLOOR.to_string();
+        tile.ownership = Ownership::Player;
+        tile.marked_for_dig = false;
+        tile.resources_remaining = None;
+        player.claimed_tile_count += 1;
+
+        // Give resources to player
+        if gold_gained > 0 {
+            player.add_resources(gold_gained, 0, 0, 0);
+            eprintln!(
+                "Imp dug gold vein at {:?}, gained {} gold",
+                marked_pos, gold_gained
+            );
+        } else if mana_gained > 0 {
+            player.mana = (player.mana + mana_gained as i32).min(player.max_mana);
+            eprintln!(
+                "Imp mined mana crystal at {:?}, gained {} mana",
+                marked_pos, mana_gained
+            );
         }
     }
 }
@@ -360,6 +373,7 @@ fn wander_randomly(
     entities: &mut EntityManager,
     imp_id: EntityId,
     imp_pos: TilePos,
+    game_data: &GameData,
 ) {
     let wander_radius = 5;
     let mut attempts = 0;
@@ -371,7 +385,7 @@ fn wander_randomly(
         let candidate = TilePos::new(imp_pos.x + dx, imp_pos.y + dy);
 
         if let Some(tile) = dungeon.get_tile(candidate) {
-            if tile_types::is_walkable(&tile.tile_type) {
+            if tile_types::is_walkable(&tile.tile_type, game_data) {
                 wander_pos = Some(candidate);
             }
         }

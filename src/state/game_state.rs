@@ -35,6 +35,8 @@ pub struct GameState {
     pub player: PlayerState,
     pub next_hero_spawn_time: f32,
     pub next_creature_spawn_time: f32,
+    pub pay_day_timer: f32,
+    pub paused: bool,
 }
 
 impl GameState {
@@ -60,9 +62,11 @@ impl GameState {
             pending_trap_builds: HashSet::new(),
 
             entities,
-            player: PlayerState::new(),
+            player: PlayerState::new(game_data),
             next_hero_spawn_time: 30.0, // Spawn first hero after 30 seconds
             next_creature_spawn_time: 10.0, // Spawn first creature after 10 seconds
+            pay_day_timer: 0.0,
+            paused: false,
         };
 
         // Recalculate max gold and other room-based stats
@@ -125,6 +129,12 @@ impl GameState {
         // Update creature AI and movement
         self.update_creature_ai_and_movement(game_data, dt);
 
+        // Execute creature tasks (Work, Eat, Sleep, etc.)
+        let creature_ids: Vec<crate::state::entities::EntityId> = self.entities.creatures().map(|(id, _)| id).collect();
+        for id in creature_ids {
+            self.perform_creature_task(id, game_data, dt);
+        }
+
         // Hero spawning
         self.next_hero_spawn_time -= dt;
         if self.next_hero_spawn_time <= 0.0 {
@@ -137,6 +147,13 @@ impl GameState {
         if self.next_creature_spawn_time <= 0.0 {
             self.spawn_random_creature(game_data);
             self.next_creature_spawn_time = 15.0 + rand::random::<f32>() * 15.0; // 15-30 seconds
+        }
+
+        // Pay Day Logic
+        self.pay_day_timer += dt;
+        if self.pay_day_timer >= 300.0 { // 5 minutes
+            self.pay_day_timer = 0.0;
+            self.trigger_pay_day();
         }
 
         // Update hero AI
@@ -186,7 +203,7 @@ impl GameState {
         }
 
         // Update fog of war based on claimed tiles and creature positions
-        self.update_fog_of_war_system();
+        self.update_fog_of_war_system(game_data);
         
         // Update traps
         crate::engine::trap_system::process_trap_construction(
@@ -196,10 +213,13 @@ impl GameState {
             game_data,
             dt,
         );
+
+        // Update creature count (excluding imps)
+        self.player.current_creature_count = self.count_monsters();
     }
 
     /// Update fog of war using the tile_grid system
-    fn update_fog_of_war_system(&mut self) {
+    fn update_fog_of_war_system(&mut self, game_data: &GameData) {
         use std::collections::HashSet;
         
         // Collect claimed tiles
@@ -228,7 +248,7 @@ impl GameState {
             .collect();
         
         // Update fog of war with sight radius of 5
-        self.dungeon.update_fog_of_war(&claimed_tiles, &creature_positions);
+        self.dungeon.update_fog_of_war(&claimed_tiles, &creature_positions, game_data);
     }
 
     /// Check if imps have work to do (dig marks exist)  
@@ -268,7 +288,8 @@ impl GameState {
             | Task::Work(room_id)
             | Task::Train(room_id)
             | Task::Research(room_id)
-            | Task::DepositGold(room_id) => {
+            | Task::DepositGold(room_id)
+            | Task::CollectWages(room_id) => {
                 room_manager.rooms.iter()
                     .find(|r| r.id == *room_id)
                     .map(|room| room.get_center())
@@ -296,10 +317,10 @@ impl GameState {
 
         // Apply state changes from task result
         if result.gold_change != 0 {
-            self.player.gold += result.gold_change;
+            self.player.add_resources(result.gold_change, 0, 0, 0);
         }
         if result.food_change != 0 {
-            self.player.food += result.food_change;
+            self.player.add_resources(0, 0, result.food_change, 0);
         }
         if result.materials_change != 0 {
             self.player.add_resources(0, 0, 0, result.materials_change);
@@ -321,7 +342,7 @@ impl GameState {
             Task::Dig(pos) => Some(*pos),
             Task::MoveTo(pos) => Some(*pos),
             Task::Sleep(room_id) | Task::Eat(room_id) | Task::DepositGold(room_id)
-            | Task::Work(room_id) | Task::Train(room_id) | Task::Research(room_id) => {
+            | Task::Work(room_id) | Task::Train(room_id) | Task::Research(room_id) | Task::CollectWages(room_id) => {
                 // Find room center
                 self.room_manager.rooms
                     .iter()
@@ -518,6 +539,18 @@ impl GameState {
             self.entities.spawn_creature(pos, creature_state);
             eprintln!("Spawned imp at {:?}", pos);
         }
+    }
+
+    /// Trigger Pay Day: All creatures become unpaid and seek wages
+    pub fn trigger_pay_day(&mut self) {
+        eprintln!("PAY DAY! All creatures are demanding wages!");
+        for entity in self.entities.all_mut() {
+            if let Some(creature) = entity.as_creature_mut() {
+                // Set gold need to 0 (Critical) to force them to collect wages
+                creature.set_need("gold".to_string(), 0.0);
+            }
+        }
+        // TODO: Show on-screen notification
     }
 
 

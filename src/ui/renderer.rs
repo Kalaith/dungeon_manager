@@ -58,7 +58,9 @@ impl GameRenderer {
             }
             GamePhase::Playing(_) => {
                 if let Some(inner_state) = state {
-                    self.draw_game(inner_state, interaction_mode, hovered_tile, held_entity);
+                    if let Some(ref data) = game_data {
+                        self.draw_game(inner_state, interaction_mode, hovered_tile, held_entity, data);
+                    }
                     self.draw_gui(inner_state, interaction_mode, held_entity, selected_entity, selected_room, game_data);
                 }
             }
@@ -177,7 +179,7 @@ impl GameRenderer {
         );
     }
 
-    fn draw_game(&self, state: &GameState, interaction_mode: &InteractionMode, hovered_tile: Option<TilePos>, held_entity: Option<EntityId>) {
+    fn draw_game(&self, state: &GameState, interaction_mode: &InteractionMode, hovered_tile: Option<TilePos>, held_entity: Option<EntityId>, game_data: &GameData) {
         let graphics = if let Some(ref cache) = self.graphics_cache {
             cache
         } else {
@@ -189,7 +191,7 @@ impl GameRenderer {
 
         set_camera(&camera);
 
-        self.draw_tiles(graphics, state, interaction_mode, hovered_tile);
+        self.draw_tiles(graphics, state, interaction_mode, hovered_tile, game_data);
         self.draw_entities(graphics, state, &camera);
 
         set_default_camera(); // Go back to 2D for UI
@@ -235,7 +237,7 @@ impl GameRenderer {
                 state.player.mana, state.player.max_mana,
                 state.player.food,
                 state.player.materials, state.player.max_materials,
-                state.entities.creatures().count(), state.player.max_creatures),
+                state.player.current_creature_count, state.player.max_creatures),
             10.0,
             25.0,
             18.0,
@@ -295,6 +297,10 @@ impl GameRenderer {
                 &state.room_manager.rooms
             );
         }
+
+        if state.paused {
+            self.draw_pause_menu();
+        }
     }
 
     fn get_room_cost(&self, room_type: &str, game_data: &Option<GameData>) -> i32 {
@@ -313,6 +319,7 @@ impl GameRenderer {
         state: &GameState,
         interaction_mode: &InteractionMode,
         hovered_tile: Option<TilePos>,
+        game_data: &GameData,
     ) {
         // Draw grid (Tiles)
         for row in &state.dungeon.grid {
@@ -342,7 +349,7 @@ impl GameRenderer {
                     color = Color::new(1.0, 1.0, 0.3, 1.0);
                 }
 
-                let is_wall = tile_types::is_wall(&tile.tile_type);
+                let is_wall = tile_types::is_wall(&tile.tile_type, game_data);
 
                 if let Some(texture) = texture_opt {
                     if is_wall {
@@ -427,21 +434,21 @@ impl GameRenderer {
                             InteractionMode::Dig => {
                                 // Valid dig targets: earth, gold, gems
                                 // Also allow marked tiles to be selected (to unmark)
-                                if tile_types::is_diggable(&tile.tile_type) {
+                                if tile_types::is_diggable(&tile.tile_type, game_data) {
                                     outline_color = Some(crate::ui::core::colors::ACCENT);
                                 }
                             }
                             InteractionMode::BuildRoom(_) => {
                                 // Valid build targets: claimed floors owned by player
                                 if tile.ownership == Ownership::Player
-                                    && tile_types::can_build_room(&tile.tile_type)
+                                    && tile_types::can_build_room(&tile.tile_type, game_data)
                                 {
                                     outline_color = Some(crate::ui::core::colors::POSITIVE);
                                 }
                             }
                             InteractionMode::BuildTrap(_) => {
                                 if tile.ownership == Ownership::Player
-                                    && tile_types::can_build_room(&tile.tile_type)
+                                    && tile_types::can_build_room(&tile.tile_type, game_data)
                                     && tile.trap.is_none()
                                 {
                                     outline_color = Some(crate::ui::core::colors::POSITIVE);
@@ -450,7 +457,7 @@ impl GameRenderer {
                             InteractionMode::PlaceSpawner => {
                                 // Valid spawner location: claimed floors
                                 if tile.ownership == Ownership::Player
-                                    && tile_types::can_build_room(&tile.tile_type)
+                                    && tile_types::can_build_room(&tile.tile_type, game_data)
                                 {
                                     outline_color = Some(crate::ui::core::colors::POSITIVE);
                                 }
@@ -529,6 +536,84 @@ impl GameRenderer {
                 draw_cube_wires(vec3(x, 0.5, z), vec3(0.5, 1.0, 0.5), color);
             }
         }
+    }
+
+    pub fn draw_pause_menu(&self) {
+        // Semi-transparent overlay
+        draw_rectangle(
+            0.0, 0.0, 
+            screen_width(), screen_height(), 
+            Color::new(0.0, 0.0, 0.0, 0.7)
+        );
+
+        let screen_center_x = screen_width() / 2.0;
+        let screen_center_y = screen_height() / 2.0;
+        let button_width = 200.0;
+        let button_height = 50.0;
+        let spacing = 20.0;
+        let start_y = screen_center_y - 50.0;
+
+        // Title
+        let title = "PAUSED";
+        let title_dims = measure_text(title, None, 60, 1.0);
+        draw_text(
+            title, 
+            screen_center_x - title_dims.width / 2.0, 
+            start_y - 80.0, 
+            60.0, 
+            WHITE
+        );
+
+        // Resume Button
+        let resume_y = start_y;
+        draw_rectangle(
+            screen_center_x - button_width / 2.0, resume_y, 
+            button_width, button_height, 
+            Color::new(0.2, 0.6, 0.2, 1.0)
+        );
+        let resume_text = "RESUME";
+        let resume_dims = measure_text(resume_text, None, 30, 1.0);
+        draw_text(
+            resume_text, 
+            screen_center_x - resume_dims.width / 2.0, 
+            resume_y + 35.0, 
+            30.0, 
+            WHITE
+        );
+
+        // Main Menu Button
+        let menu_y = start_y + button_height + spacing;
+        draw_rectangle(
+            screen_center_x - button_width / 2.0, menu_y, 
+            button_width, button_height, 
+            Color::new(0.6, 0.4, 0.2, 1.0)
+        );
+        let menu_text = "MAIN MENU";
+        let menu_dims = measure_text(menu_text, None, 30, 1.0);
+        draw_text(
+            menu_text, 
+            screen_center_x - menu_dims.width / 2.0, 
+            menu_y + 35.0, 
+            30.0, 
+            WHITE
+        );
+
+        // Exit Button
+        let exit_y = start_y + (button_height + spacing) * 2.0;
+        draw_rectangle(
+            screen_center_x - button_width / 2.0, exit_y, 
+            button_width, button_height, 
+            Color::new(0.8, 0.2, 0.2, 1.0)
+        );
+        let exit_text = "EXIT";
+        let exit_dims = measure_text(exit_text, None, 30, 1.0);
+        draw_text(
+            exit_text, 
+            screen_center_x - exit_dims.width / 2.0, 
+            exit_y + 35.0, 
+            30.0, 
+            WHITE
+        );
     }
 }
 

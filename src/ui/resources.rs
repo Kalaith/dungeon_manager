@@ -27,7 +27,7 @@ impl GraphicsCache {
             "corrupted_floor", "ancient_rune_floor",
             "dungeon_heart", "lair", "hatchery", "treasury", "workshop",
             "training_room", "library", "prison", "guard_post", "ritual_circle", "monster_spawner",
-            "basic_trap", "spike_trap",
+            "spike_trap",
         ];
 
         for tile_type in tile_types {

@@ -31,76 +31,73 @@ pub mod types {
     pub const WORKSHOP: &str = "workshop";
 }
 
+use crate::data::GameData;
+
 /// Check if a tile type is a wall/blocking tile
-pub fn is_wall(tile_type: &str) -> bool {
-    matches!(
-        tile_type,
-        types::EARTH | types::GOLD_VEIN | types::GEM_SEAM | types::MANA_CRYSTAL | types::BEDROCK | types::SOLID_ROCK
-    )
+pub fn is_wall(tile_type: &str, game_data: &GameData) -> bool {
+    // Treat reinforced wall as wall, plus anything that blocks vision (rocks, earth, resources)
+    tile_type == types::REINFORCED_WALL || 
+    game_data.tiles.get(tile_type)
+        .map(|t| t.blocks_vision)
+        .unwrap_or(false)
 }
 
 /// Check if a tile type is diggable
-pub fn is_diggable(tile_type: &str) -> bool {
-    matches!(
-        tile_type,
-        types::EARTH | types::GOLD_VEIN | types::GEM_SEAM | types::MANA_CRYSTAL
-    )
+pub fn is_diggable(tile_type: &str, game_data: &GameData) -> bool {
+    game_data.tiles.get(tile_type)
+        .map(|t| t.diggable)
+        .unwrap_or(false)
 }
 
 /// Check if a tile type is a resource tile
-pub fn is_resource(tile_type: &str) -> bool {
-    matches!(
-        tile_type,
-        types::GOLD_VEIN | types::GEM_SEAM | types::MANA_CRYSTAL
-    )
+pub fn is_resource(tile_type: &str, game_data: &GameData) -> bool {
+    game_data.tiles.get(tile_type)
+        .map(|t| t.resources.is_some())
+        .unwrap_or(false)
 }
 
 /// Check if a tile type is walkable for creatures
-pub fn is_walkable(tile_type: &str) -> bool {
-    matches!(
-        tile_type,
-        types::CLAIMED_FLOOR
-            | types::LAIR
-            | types::HATCHERY
-            | types::TREASURY
-            | types::TRAINING_ROOM
-            | types::LIBRARY
-            | types::WORKSHOP
-            | types::DUNGEON_HEART
-            | types::MONSTER_SPAWNER
-    )
+pub fn is_walkable(tile_type: &str, game_data: &GameData) -> bool {
+    // If it's a room, it's walkable (unless room data says otherwise, but tiles here)
+    // If it's a known tile, check !blocks_movement
+    if is_room(tile_type, game_data) {
+        return true;
+    }
+    
+    game_data.tiles.get(tile_type)
+        .map(|t| !t.blocks_movement)
+        .unwrap_or(false) // unknown tiles not walkable
 }
 
 /// Check if a tile type is a room tile
-pub fn is_room(tile_type: &str) -> bool {
-    matches!(
-        tile_type,
-        types::LAIR
-            | types::HATCHERY
-            | types::TREASURY
-            | types::TRAINING_ROOM
-            | types::LIBRARY
-            | types::WORKSHOP
-    )
+pub fn is_room(tile_type: &str, game_data: &GameData) -> bool {
+    game_data.rooms.contains_key(tile_type)
 }
 
 /// Check if a tile type can have a room built on it
-pub fn can_build_room(tile_type: &str) -> bool {
-    tile_type == types::CLAIMED_FLOOR
+pub fn can_build_room(tile_type: &str, game_data: &GameData) -> bool {
+    game_data.tiles.get(tile_type)
+        .map(|t| t.supports_rooms)
+        .unwrap_or(false)
 }
 
 /// Check if a tile type is secure (blocks vision/movement)
-pub fn is_secure(tile_type: &str) -> bool {
-    matches!(
-        tile_type,
-        types::SOLID_ROCK | types::EARTH | types::REINFORCED_WALL | types::BEDROCK
-    )
+pub fn is_secure(tile_type: &str, game_data: &GameData) -> bool {
+    // Old implementation included SOLID_ROCK, EARTH, REINFORCED_WALL, BEDROCK
+    // Excluded resources.
+    // We can check blocks_movement && !diggable? No, earth is diggable.
+    // Secure means "solid wall".
+    if tile_type == types::REINFORCED_WALL { return true; }
+    
+    game_data.tiles.get(tile_type)
+        .map(|t| t.blocks_movement) // Simplification: if it blocks movement, it's secure enough? 
+        // Resources block movement too.
+        .unwrap_or(false)
 }
 
 /// Check if a tile type blocks line of sight
-pub fn blocks_vision(tile_type: &str) -> bool {
-    matches!(
-        tile_type,
-        types::EARTH | types::SOLID_ROCK | types::GOLD_VEIN | types::GEM_SEAM | types::BEDROCK
-    )
+pub fn blocks_vision(tile_type: &str, game_data: &GameData) -> bool {
+    game_data.tiles.get(tile_type)
+        .map(|t| t.blocks_vision)
+        .unwrap_or(false)
 }

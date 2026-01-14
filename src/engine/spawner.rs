@@ -112,20 +112,40 @@ impl SpawnSystem {
         // Pick a random connected spawner
         let spawn_pos = connected_spawners[rand::random::<usize>() % connected_spawners.len()];
 
-        // Pick a random creature type (exclude imps - they spawn differently)
-        let creature_ids: Vec<&String> = game_data.monsters.keys()
-            .filter(|id| *id != "imp")
+        // Determine potential creatures based on existing rooms
+        let mut potential_creatures = Vec::new();
+
+        // Goblins are always available if we have lair space (checked above)
+        potential_creatures.push("goblin");
+
+        // Check for specific rooms to unlock other creatures
+        let has_workshop = room_manager.rooms.iter().any(|r| r.room_type == "workshop");
+        let has_library = room_manager.rooms.iter().any(|r| r.room_type == "library");
+
+        if has_workshop {
+            potential_creatures.push("orc");
+            potential_creatures.push("troll");
+        }
+
+        if has_library {
+            potential_creatures.push("warlock");
+        }
+
+        // Filter out creature IDs that don't exist in game_data
+        let valid_creatures: Vec<&str> = potential_creatures.into_iter()
+            .filter(|id| game_data.monsters.contains_key(*id))
             .collect();
 
-        if creature_ids.is_empty() {
+        if valid_creatures.is_empty() {
+            eprintln!("Warning: No valid creatures to spawn based on current rooms");
             return;
         }
 
-        if let Some(&creature_id) = creature_ids.get(rand::random::<usize>() % creature_ids.len()) {
+        if let Some(&creature_id) = valid_creatures.get(rand::random::<usize>() % valid_creatures.len()) {
             if let Some(monster_data) = game_data.monsters.get(creature_id) {
                 // Create creature with food need initialized
                 let mut creature_state = CreatureState::new(
-                    creature_id.clone(),
+                    creature_id.to_string(),
                     1,
                     monster_data.stats.health,
                     monster_data.stats.mana,

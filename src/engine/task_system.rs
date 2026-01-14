@@ -75,16 +75,23 @@ pub fn execute_task(
         Task::Train(room_id) => {
             execute_train(creature_id, *room_id, entities, room_manager, dt);
         }
-        Task::Dig(tile_pos) => {
-            if let Some(tile) = get_tile(*tile_pos) {
-                if tile.marked_for_dig {
-                    result.claimed_tile = Some(*tile_pos);
-                    result.task_complete = true;
-                }
-            }
+        Task::Dig(_) => {
+            // Do nothing here.
+            // Digging is handled by imp_ai system which manages the task timer.
+            // If we complete it here, the imp will stop digging instantly every frame.
         }
         Task::Work(room_id) => {
             result.materials_change = execute_work(creature_id, *room_id, entities, room_manager, game_data, dt);
+        }
+        Task::CollectWages(room_id) => {
+            result.gold_change = execute_collect_wages(creature_id, *room_id, entities, room_manager, player, game_data, dt);
+            if result.gold_change < 0 {
+                // If we successfully collected gold (negative change), task is done
+                // But simplified: satisfaction happens over time or instant?
+                // Let's make it periodic satisfaction
+                // Actually, wages are paid incrementally or lump sum?
+                // For now, simple rate of wage collection
+            }
         }
         _ => {}
     }
@@ -160,8 +167,9 @@ fn execute_deposit_gold(
             {
                 let gold = creature.gold_carried;
                 creature.gold_carried = 0;
-                creature_ai::satisfy_need(creature, "gold", 10.0, dt);
-                creature.current_task = None;
+                // Minor satisfaction for doing good work
+                // But NOT main gold satisfaction (that's wages)
+                creature_ai::satisfy_need(creature, "gold", 5.0, dt);
                 return gold;
             }
         }
@@ -228,10 +236,62 @@ fn execute_work(
                 
                 creature.work_timer += dt * room.efficiency * efficiency;
                 
-                if creature.work_timer >= 20.0 {
+                if creature.work_timer >= 5.0 {
                     creature.work_timer = 0.0;
                     eprintln!("Creature {} produced generic material!", creature.creature_id);
                     return 1;
+                }
+            }
+        }
+    }
+    0
+}
+
+/// Handle CollectWages task - returns gold consumed from player (negative)
+fn execute_collect_wages(
+    creature_id: EntityId,
+    room_id: usize,
+    entities: &mut EntityManager,
+    room_manager: &RoomManager,
+    player: &PlayerState,
+    game_data: &GameData,
+    dt: f32,
+) -> i32 {
+    if let Some(room) = room_manager.rooms.iter().find(|r| r.id == room_id) {
+        if room.room_type == "treasury" {
+            // Determine wage rate from monster data
+            if let Some(creature) = entities.get_mut(creature_id)
+                .and_then(|e| e.as_creature_mut()) 
+            {
+                if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
+                    let wage_per_minute = monster_data.economy.wage_per_minute.max(1) as f32;
+                    let wage_per_second = wage_per_minute / 60.0;
+                    
+                    // Logic:
+                    // Creature collects gold at a fast rate to satisfy need
+                    // Player pays that gold
+                    
+                    // If player has gold
+                    if player.gold > 0 {
+                        // Take gold roughly 10x faster than wage accumulation so they don't spend forever collecting
+                        // But precise amount matters. 
+                        // Simplified: Pay 1 gold per tick (0.1s) until need is full?
+                        // Or calculate how much 'gold need' is missing and charge player proportional cost?
+                        // "Gold Need" 0..100 roughly maps to "Unpaid Wages"?
+                        // If decay is 1.0/min, and wage is 1g/min.
+                        // Then 1 unit of need = 1 unit of gold?
+                        // Let's assume 1 unit of need = 1 gold for simplicity for now.
+                        
+                        let gold_taken = 1; // 1 gold per tick = 10 gold per second
+                        
+                        creature_ai::satisfy_need(creature, "gold", 5.0, dt); // Restore need quickly
+                        
+                        return -gold_taken;
+                    } else {
+                        // Player is broke!
+                        // Creature gets angry?
+                        // For now just stand there
+                    }
                 }
             }
         }

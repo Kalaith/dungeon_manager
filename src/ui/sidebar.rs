@@ -129,22 +129,38 @@ impl Sidebar {
         let start_x = PADDING;
         let start_y = self.panel_y + PADDING;
         
-        let buttons = vec![
-            ("Dig", InteractionMode::Dig, 0, "1"),
-            ("Lair", InteractionMode::BuildRoom("lair".to_string()), self.get_room_cost("lair", game_data), "2"),
-            ("Hatchery", InteractionMode::BuildRoom("hatchery".to_string()), self.get_room_cost("hatchery", game_data), "3"),
-            ("Treasury", InteractionMode::BuildRoom("treasury".to_string()), self.get_room_cost("treasury", game_data), "4"),
-            ("Training", InteractionMode::BuildRoom("training_hall".to_string()), self.get_room_cost("training_hall", game_data), "T"),
-            ("Library", InteractionMode::BuildRoom("library".to_string()), self.get_room_cost("library", game_data), "L"),
-            ("Workshop", InteractionMode::BuildRoom("workshop".to_string()), self.get_room_cost("workshop", game_data), "W"),
-            ("Spawner", InteractionMode::PlaceSpawner, crate::config::SPAWNER_COST, "5"),
-            ("Sell/Cancel", InteractionMode::Sell, 0, "X"),
+        // Start with Dig
+        let mut layout = vec![
+            ("Dig".to_string(), InteractionMode::Dig, 0, "1".to_string()),
         ];
+        
+        // Add rooms dynamically from data
+        let mut rooms: Vec<&crate::data::rooms::RoomData> = game_data.rooms.values().collect();
+        // Sort by cost, then by name for stability
+        rooms.sort_by(|a, b| {
+            match a.build.cost_per_tile.cmp(&b.build.cost_per_tile) {
+                std::cmp::Ordering::Equal => a.name.cmp(&b.name),
+                other => other,
+            }
+        });
+
+        for room in rooms {
+            layout.push((
+                room.name.clone(),
+                InteractionMode::BuildRoom(room.id.clone()),
+                room.build.cost_per_tile,
+                String::new() // Hotkey doesn't matter for click handler
+            ));
+        }
+
+        // Add utility items
+        layout.push(("Spawner".to_string(), InteractionMode::PlaceSpawner, crate::config::SPAWNER_COST, "5".to_string()));
+        layout.push(("Sell/Cancel".to_string(), InteractionMode::Sell, 0, "X".to_string()));
 
         let mut current_x = start_x;
         let mut current_y = start_y;
 
-        for (label, mode, cost, _hotkey) in buttons {
+        for (label, mode, cost, _hotkey) in layout {
             // Suppress unused label warning
             let _ = label;
             if mouse_pos.0 >= current_x && mouse_pos.0 <= current_x + BUTTON_SIZE * 2.5
@@ -351,17 +367,46 @@ impl Sidebar {
     }
 
     fn draw_build_content(&self, current_mode: &InteractionMode, player: &PlayerState, game_data: &crate::data::GameData) {
-        let layout = vec![
-            ("Dig", InteractionMode::Dig, 0, "1"),
-            ("Lair", InteractionMode::BuildRoom("lair".to_string()), self.get_room_cost("lair", game_data), "2"),
-            ("Hatchery", InteractionMode::BuildRoom("hatchery".to_string()), self.get_room_cost("hatchery", game_data), "3"),
-            ("Treasury", InteractionMode::BuildRoom("treasury".to_string()), self.get_room_cost("treasury", game_data), "4"),
-            ("Training", InteractionMode::BuildRoom("training_hall".to_string()), self.get_room_cost("training_hall", game_data), "T"),
-            ("Library", InteractionMode::BuildRoom("library".to_string()), self.get_room_cost("library", game_data), "L"),
-            ("Workshop", InteractionMode::BuildRoom("workshop".to_string()), self.get_room_cost("workshop", game_data), "W"),
-            ("Spawner", InteractionMode::PlaceSpawner, 50, "5"),
-            ("Sell/Cancel", InteractionMode::Sell, 0, "X"),
+        // Start with Dig
+        let mut layout = vec![
+            ("Dig".to_string(), InteractionMode::Dig, 0, "1".to_string()),
         ];
+
+        // Add rooms dynamically from data
+        let mut rooms: Vec<&crate::data::rooms::RoomData> = game_data.rooms.values().collect();
+        // Sort by cost, then by name for stability
+        rooms.sort_by(|a, b| {
+            match a.build.cost_per_tile.cmp(&b.build.cost_per_tile) {
+                std::cmp::Ordering::Equal => a.name.cmp(&b.name),
+                other => other,
+            }
+        });
+
+        for room in rooms {
+            // Assign hotkeys for common rooms to maintain familiarity
+            let hotkey = match room.id.as_str() {
+                "lair" => "2",
+                "hatchery" => "3",
+                "treasury" => "4",
+                "training_hall" => "T",
+                "library" => "L",
+                "workshop" => "W",
+                "guard_post" => "G",
+                "prison" => "P",
+                _ => "",
+            }.to_string();
+
+            layout.push((
+                room.name.clone(),
+                InteractionMode::BuildRoom(room.id.clone()),
+                room.build.cost_per_tile,
+                hotkey
+            ));
+        }
+
+        // Add utility items
+        layout.push(("Spawner".to_string(), InteractionMode::PlaceSpawner, crate::config::SPAWNER_COST, "5".to_string()));
+        layout.push(("Sell/Cancel".to_string(), InteractionMode::Sell, 0, "X".to_string()));
 
         let start_x = PADDING;
         let start_y = self.panel_y + PADDING;
@@ -383,11 +428,13 @@ impl Sidebar {
             draw_rectangle(current_x, current_y, BUTTON_SIZE * 2.5, BUTTON_SIZE, color);
             draw_rectangle_lines(current_x, current_y, BUTTON_SIZE * 2.5, BUTTON_SIZE, 2.0, Color::new(0.4, 0.4, 0.5, 1.0));
 
-            draw_text(label, current_x + 5.0, current_y + 18.0, 16.0, WHITE);
+            draw_text(&label, current_x + 5.0, current_y + 18.0, 16.0, WHITE);
             if cost > 0 {
                 draw_text(&format!("{}g", cost), current_x + 5.0, current_y + 40.0, 14.0, GOLD);
             }
-            draw_text(hotkey, current_x + BUTTON_SIZE * 2.5 - 15.0, current_y + 15.0, 12.0, GRAY);
+            if !hotkey.is_empty() {
+                draw_text(&hotkey, current_x + BUTTON_SIZE * 2.5 - 15.0, current_y + 15.0, 12.0, GRAY);
+            }
 
             current_x += BUTTON_SIZE * 2.5 + BUTTON_SPACING;
             if current_x + BUTTON_SIZE * 2.5 > screen_width() {

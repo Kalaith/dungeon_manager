@@ -75,7 +75,8 @@ pub fn screen_to_tile(
     camera: &macroquad::camera::Camera3D,
     _tile_width: f32,
     _tile_height: f32,
-    grid: Option<&Grid>, 
+    grid: Option<&Grid>,
+    game_data: &GameData,
 ) -> TilePos {
     // 1. Calculate Normalized Device Coordinates (NDC)
     let ndc_x = (mouse_x / macroquad::window::screen_width()) * 2.0 - 1.0;
@@ -120,7 +121,7 @@ pub fn screen_to_tile(
         if let Some(wall_hit) = intersect_plane(0.5) { 
             // Check if there is actually a wall at this position
             if let Some(tile) = get_tile(grid, wall_hit) {
-                if tile_types::is_wall(&tile.tile_type) {
+                if tile_types::is_wall(&tile.tile_type, game_data) {
                     return wall_hit;
                 }
             }
@@ -203,7 +204,7 @@ pub fn calculate_fog_state(
 }
 
 /// Check if there's a clear line of sight between two positions (not blocked by solid tiles)
-fn has_line_of_sight(grid: &Grid, from: TilePos, to: TilePos) -> bool {
+fn has_line_of_sight(grid: &Grid, from: TilePos, to: TilePos, game_data: &GameData) -> bool {
     // Use Bresenham's line algorithm to check tiles between from and to
     let mut x0 = from.x;
     let mut y0 = from.y;
@@ -222,7 +223,7 @@ fn has_line_of_sight(grid: &Grid, from: TilePos, to: TilePos) -> bool {
             let pos = TilePos::new(x0, y0);
             if let Some(tile) = get_tile(grid, pos) {
                 // Solid tiles block vision
-                if tile_types::blocks_vision(&tile.tile_type) {
+                if tile_types::blocks_vision(&tile.tile_type, game_data) {
                     return false;
                 }
             }
@@ -252,6 +253,7 @@ pub fn update_fog_of_war(
     claimed_tiles: &HashSet<TilePos>,
     creature_positions: &[TilePos],
     sight_radius: i32,
+    game_data: &GameData,
 ) {
     let mut visible_tiles = HashSet::new();
 
@@ -275,7 +277,7 @@ pub fn update_fog_of_war(
                     let tile_pos = TilePos::new(creature_pos.x + dx, creature_pos.y + dy);
                     
                     // Check line of sight using the snapshot
-                    if has_line_of_sight_snapshot(&tile_types, *creature_pos, tile_pos) {
+                    if has_line_of_sight_snapshot(&tile_types, *creature_pos, tile_pos, game_data) {
                         visible_tiles.insert(tile_pos);
                     }
                 }
@@ -292,7 +294,7 @@ pub fn update_fog_of_war(
 }
 
 /// Check line of sight using a snapshot of tile types (to avoid borrow issues)
-fn has_line_of_sight_snapshot(tile_types: &[Vec<String>], from: TilePos, to: TilePos) -> bool {
+fn has_line_of_sight_snapshot(tile_types: &[Vec<String>], from: TilePos, to: TilePos, game_data: &GameData) -> bool {
     let mut x0 = from.x;
     let mut y0 = from.y;
     let x1 = to.x;
@@ -312,7 +314,7 @@ fn has_line_of_sight_snapshot(tile_types: &[Vec<String>], from: TilePos, to: Til
                 if x0 >= 0 && (x0 as usize) < row.len() {
                     let tile_type = &row[x0 as usize];
                     // Solid tiles block vision
-                    if tile_types::blocks_vision(tile_type) {
+                    if tile_types::blocks_vision(tile_type, game_data) {
                         return false;
                     }
                 }

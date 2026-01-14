@@ -2,6 +2,7 @@
 //! Stateless service for detecting rooms, validating shapes, and calculating quality
 
 use crate::data::rooms::RoomData;
+use crate::data::GameData;
 use crate::engine::tile_grid::{get_tile, Grid};
 use crate::engine::tile_types;
 use crate::state::tile_state::{Ownership, TilePos};
@@ -95,9 +96,9 @@ pub fn detect_rooms(grid: &Grid, room_type: &str) -> Vec<HashSet<TilePos>> {
 
 /// Calculate the efficiency of a room based on its enclosure by walls/doors
 /// Returns a value between 0.0 and 1.0
-pub fn calculate_efficiency(room: &Room, grid: &Grid) -> f32 {
-    let mut total_perimeter_segments = 0.0;
-    let mut secured_segments = 0.0;
+pub fn calculate_efficiency(room: &Room, grid: &Grid, game_data: &GameData) -> f32 {
+    let mut total_perimeter_segments = 0.0f32;
+    let mut secured_segments = 0.0f32;
     
     // Check neighbors for each tile in the room
     for tile_pos in &room.tiles {
@@ -121,7 +122,7 @@ pub fn calculate_efficiency(room: &Room, grid: &Grid) -> f32 {
                     let tile = &grid[neighbor.y as usize][neighbor.x as usize];
                     // Walls (rock/earth marked as wall?) and Doors count as secured
                     // "wall", "reinforced_wall", "door", "rock" (unmined) are valid
-                    if tile_types::is_secure(&tile.tile_type) {
+                    if tile_types::is_secure(&tile.tile_type, game_data) {
                         secured_segments += 1.0;
                     }
                 } else {
@@ -137,7 +138,7 @@ pub fn calculate_efficiency(room: &Room, grid: &Grid) -> f32 {
     }
 
     // Calculate ratio
-    secured_segments / total_perimeter_segments
+    (secured_segments / total_perimeter_segments).max(0.25)
 }
 
 /// Flood fill algorithm to find all contiguous tiles from a starting position

@@ -364,6 +364,9 @@ pub enum Task {
 
     /// Fleeing from combat
     Flee,
+
+    /// Collecting wages from treasury
+    CollectWages(usize), // room_id
 }
 
 impl Task {
@@ -378,6 +381,7 @@ impl Task {
             Task::Train(_) => "train",
             Task::Research(_) => "research",
             Task::DepositGold(_) => "deposit_gold",
+            Task::CollectWages(_) => "collect_wages",
             Task::MoveTo(_) => "move",
             Task::Attack(_) => "attack",
             Task::Flee => "flee",
@@ -392,7 +396,8 @@ impl Task {
             | Task::Eat(id)
             | Task::Train(id)
             | Task::Research(id)
-            | Task::DepositGold(id) => Some(*id),
+            | Task::DepositGold(id)
+            | Task::CollectWages(id) => Some(*id),
             _ => None,
         }
     }

@@ -90,7 +90,7 @@ fn process_single_action(
 
         UiAction::MarkTileForDig(pos) => {
             if let Some(tile) = game_state.get_tile_mut(pos) {
-                if tile_types::is_diggable(&tile.tile_type) && tile.ownership == Ownership::Unclaimed {
+                if tile_types::is_diggable(&tile.tile_type, game_data) && tile.ownership == Ownership::Unclaimed {
                     tile.marked_for_dig = true;
                 }
             }
@@ -111,7 +111,7 @@ fn process_single_action(
         }
 
         UiAction::PlaceSpawner(pos) => {
-            process_place_spawner(game_state, pos);
+            process_place_spawner(game_state, game_data, pos);
         }
 
         UiAction::SellTile(pos) => {
@@ -125,7 +125,7 @@ fn process_single_action(
         }
 
         UiAction::DropEntity { entity_id, pos } => {
-            process_drop_entity(game_state, entity_id, pos);
+            process_drop_entity(game_state, game_data, entity_id, pos);
             result.held_entity = None;
         }
 
@@ -193,7 +193,7 @@ fn process_build_room(
     let is_valid_tile = if let Some(tile) = game_state.get_tile(pos) {
         tile.ownership == Ownership::Player 
             && tile.room_id.is_none() 
-            && tile_types::can_build_room(&tile.tile_type)
+            && tile_types::can_build_room(&tile.tile_type, game_data)
     } else {
         false
     };
@@ -220,7 +220,7 @@ fn process_place_trap(
 
     let is_valid = if let Some(tile) = game_state.get_tile(pos) {
         tile.ownership == Ownership::Player
-            && tile_types::can_build_room(&tile.tile_type)
+            && tile_types::can_build_room(&tile.tile_type, game_data)
             && tile.trap.is_none()
     } else {
         false
@@ -241,9 +241,9 @@ fn process_place_trap(
     }
 }
 
-fn process_place_spawner(game_state: &mut GameState, pos: TilePos) {
+fn process_place_spawner(game_state: &mut GameState, game_data: &GameData, pos: TilePos) {
     let is_valid = if let Some(tile) = game_state.get_tile(pos) {
-        tile.ownership == Ownership::Player && tile_types::can_build_room(&tile.tile_type)
+        tile.ownership == Ownership::Player && tile_types::can_build_room(&tile.tile_type, game_data)
     } else {
         false
     };
@@ -280,10 +280,10 @@ fn process_sell_tile(game_state: &mut GameState, pos: TilePos) {
     }
 }
 
-fn process_drop_entity(game_state: &mut GameState, entity_id: EntityId, pos: TilePos) {
+fn process_drop_entity(game_state: &mut GameState, game_data: &GameData, entity_id: EntityId, pos: TilePos) {
     // Check if target tile is walkable
     let is_valid = if let Some(tile) = game_state.get_tile(pos) {
-        tile_types::is_walkable(&tile.tile_type)
+        tile_types::is_walkable(&tile.tile_type, game_data)
     } else {
         false
     };

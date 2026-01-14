@@ -98,6 +98,7 @@ fn update_single_creature(
             task_target,
             dungeon,
             entities,
+            game_data,
         );
     }
 }
@@ -175,7 +176,7 @@ fn decide_task_from_rooms(
                         match need_name.as_str() {
                             "sleep" => return Some(Task::Sleep(room_id)),
                             "food" => return Some(Task::Eat(room_id)),
-                            "gold" => return Some(Task::DepositGold(room_id)),
+                            "gold" => return Some(Task::CollectWages(room_id)),
                             _ => {}
                         }
                     }
@@ -232,6 +233,7 @@ fn pathfind_to_target(
     mut target_pos: Option<TilePos>,
     dungeon: &Dungeon,
     entities: &mut EntityManager,
+    game_data: &GameData,
 ) {
     // Special case for Idle: pick a random wander position
     if target_pos.is_none() {
@@ -248,7 +250,7 @@ fn pathfind_to_target(
         };
 
         if is_idle {
-            target_pos = pick_wander_position(dungeon, current_pos);
+            target_pos = pick_wander_position(dungeon, current_pos, game_data);
         }
     }
 
@@ -269,7 +271,7 @@ fn pathfind_to_target(
         for x in 0..dungeon.width {
             let tile_pos = TilePos::new(x as i32, y as i32);
             if let Some(tile) = dungeon.get_tile(tile_pos) {
-                let walkable = tile_types::is_walkable(&tile.tile_type);
+                let walkable = tile_types::is_walkable(&tile.tile_type, game_data);
                 pf_grid.set_walkable(Pos::new(x as i32, y as i32), walkable);
             }
         }
@@ -294,7 +296,7 @@ fn pathfind_to_target(
 }
 
 /// Pick a random walkable tile for wandering
-fn pick_wander_position(dungeon: &Dungeon, current_pos: TilePos) -> Option<TilePos> {
+fn pick_wander_position(dungeon: &Dungeon, current_pos: TilePos, game_data: &GameData) -> Option<TilePos> {
     let wander_radius = 5;
     let mut attempts = 0;
 
@@ -304,7 +306,7 @@ fn pick_wander_position(dungeon: &Dungeon, current_pos: TilePos) -> Option<TileP
         let candidate = TilePos::new(current_pos.x + dx, current_pos.y + dy);
 
         if let Some(tile) = dungeon.get_tile(candidate) {
-            if tile_types::is_walkable(&tile.tile_type) {
+            if tile_types::is_walkable(&tile.tile_type, game_data) {
                 return Some(candidate);
             }
         }
@@ -426,6 +428,10 @@ pub fn calculate_task_desirability(
                 desirability *= 0.5;
             }
         }
+        Task::CollectWages(_) => {
+            let gold_need = 100.0 - creature.get_need("gold");
+            desirability *= 2.0 + (gold_need / 100.0);
+        }
         _ => {}
     }
 
@@ -490,7 +496,7 @@ pub fn decide_task(
                         match need_name.as_str() {
                             "sleep" => return Some(Task::Sleep(room_id)),
                             "food" => return Some(Task::Eat(room_id)),
-                            "gold" => return Some(Task::DepositGold(room_id)),
+                            "gold" => return Some(Task::CollectWages(room_id)),
                             _ => {}
                         }
                     } else {
@@ -636,7 +642,8 @@ pub fn can_perform_task(
         | Task::Work(room_id)
         | Task::Train(room_id)
         | Task::Research(room_id)
-        | Task::DepositGold(room_id) => {
+        | Task::DepositGold(room_id)
+        | Task::CollectWages(room_id) => {
             // Check if room exists and is active
             game_state
                 .room_manager.rooms

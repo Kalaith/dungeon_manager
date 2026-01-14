@@ -35,13 +35,17 @@ impl InputHandler {
             }
             GamePhase::Playing(state) => {
                 if let Some(ref data) = game_data {
-                    state.update(dt, data);
+                    if !state.paused {
+                        state.update(dt, data);
+                    }
                     
-                    Self::handle_playing(
+                    if Self::handle_playing(
                         dt, state, data, interaction_mode, hovered_tile, 
                         held_entity, selected_entity, selected_room, sidebar,
                         action_queue
-                    );
+                    ) {
+                        *phase = GamePhase::MainMenu;
+                    }
                 }
             }
         }
@@ -119,7 +123,62 @@ impl InputHandler {
         selected_room: &mut Option<usize>,
         sidebar: &mut Sidebar,
         action_queue: &mut ActionQueue,
-    ) {
+    ) -> bool {
+        if is_key_pressed(KeyCode::Escape) {
+            state.paused = !state.paused;
+            // Clear selection when pausing/unpausing
+            *interaction_mode = InteractionMode::None;
+            sidebar.clear_selection();
+        }
+
+        if state.paused {
+            // Handle Pause Menu Input
+            let screen_center_x = screen_width() / 2.0;
+            let screen_center_y = screen_height() / 2.0;
+            let button_width = 200.0;
+            let button_height = 50.0;
+            let spacing = 20.0;
+            let start_y = screen_center_y - 50.0;
+
+            let mouse_pos = mouse_position();
+            let is_click = is_mouse_button_pressed(MouseButton::Left);
+
+            // Resume Button
+            let resume_y = start_y;
+            if is_click && 
+               mouse_pos.0 >= screen_center_x - button_width / 2.0 && 
+               mouse_pos.0 <= screen_center_x + button_width / 2.0 &&
+               mouse_pos.1 >= resume_y && 
+               mouse_pos.1 <= resume_y + button_height 
+            {
+                state.paused = false;
+            }
+
+            // Main Menu Button
+            let menu_y = start_y + button_height + spacing;
+            if is_click && 
+               mouse_pos.0 >= screen_center_x - button_width / 2.0 && 
+               mouse_pos.0 <= screen_center_x + button_width / 2.0 &&
+               mouse_pos.1 >= menu_y && 
+               mouse_pos.1 <= menu_y + button_height 
+            {
+               return true;
+            }
+
+            // Exit Button
+            let exit_y = start_y + (button_height + spacing) * 2.0;
+            if is_click && 
+               mouse_pos.0 >= screen_center_x - button_width / 2.0 && 
+               mouse_pos.0 <= screen_center_x + button_width / 2.0 &&
+               mouse_pos.1 >= exit_y && 
+               mouse_pos.1 <= exit_y + button_height 
+            {
+                std::process::exit(0);
+            }
+            
+            return false; // Skip normal game input when paused
+        }
+
         // Camera controls
         Self::handle_camera_controls(dt, state);
 
@@ -139,7 +198,8 @@ impl InputHandler {
             mouse_pos.1,
             &camera,
             0.0, 0.0,
-            Some(&state.dungeon.grid)
+            Some(&state.dungeon.grid),
+            game_data
         );
         *hovered_tile = Some(tile_pos);
 
@@ -172,6 +232,8 @@ impl InputHandler {
                 selected_entity, selected_room, tile_pos, sidebar
             );
         }
+        
+        false
     }
 
     /// Handle WASD camera movement, Q/E rotation, and scroll zoom
@@ -330,22 +392,22 @@ impl InputHandler {
     ) {
         match interaction_mode {
             InteractionMode::Dig => {
-                Self::handle_dig(state, tile_pos);
+                Self::handle_dig(state, game_data, tile_pos);
             }
             InteractionMode::BuildRoom(room_type) => {
                 Self::handle_build_room(state, game_data, room_type, tile_pos);
             }
             InteractionMode::BuildTrap(trap_type) => {
-                Self::handle_build_trap(state, trap_type, tile_pos);
+                Self::handle_build_trap(state, game_data, trap_type, tile_pos);
             }
             InteractionMode::PlaceSpawner => {
-                Self::handle_place_spawner(state, tile_pos);
+                Self::handle_place_spawner(state, game_data, tile_pos);
             }
             InteractionMode::Pickup => {
                 Self::handle_pickup(state, held_entity, interaction_mode, tile_pos);
             }
             InteractionMode::Drop => {
-                Self::handle_drop(state, held_entity, interaction_mode, tile_pos);
+                Self::handle_drop(state, held_entity, interaction_mode, tile_pos, game_data);
             }
             InteractionMode::Sell => {
                 Self::handle_sell(state, game_data, tile_pos);
@@ -382,10 +444,10 @@ impl InputHandler {
         }
     }
 
-    fn handle_dig(state: &mut GameState, tile_pos: TilePos) {
+    fn handle_dig(state: &mut GameState, game_data: &GameData, tile_pos: TilePos) {
         if let Some(tile) = state.get_tile_mut(tile_pos) {
-            if tile_types::is_diggable(&tile.tile_type) && tile.ownership == Ownership::Unclaimed {
-                tile.marked_for_dig = !tile.marked_for_dig;
+            if tile_types::is_diggable(&tile.tile_type, game_data) && tile.ownership == Ownership::Unclaimed {
+                 tile.marked_for_dig = !tile.marked_for_dig;
             }
         }
     }
@@ -398,7 +460,7 @@ impl InputHandler {
 
         let can_build = state.player.gold >= cost;
         let is_valid_tile = if let Some(tile) = state.get_tile(tile_pos) {
-            tile.ownership == Ownership::Player && tile.room_id.is_none() && tile_types::can_build_room(&tile.tile_type)
+            tile.ownership == Ownership::Player && tile.room_id.is_none() && tile_types::can_build_room(&tile.tile_type, game_data)
         } else { 
             false 
         };
@@ -412,10 +474,10 @@ impl InputHandler {
         }
     }
 
-    fn handle_build_trap(state: &mut GameState, trap_type: &str, tile_pos: TilePos) {
+    fn handle_build_trap(state: &mut GameState, game_data: &GameData, trap_type: &str, tile_pos: TilePos) {
         let valid = if let Some(tile) = state.get_tile(tile_pos) {
             tile.ownership == Ownership::Player 
-                && tile_types::can_build_room(&tile.tile_type)
+                && tile_types::can_build_room(&tile.tile_type, game_data)
                 && tile.trap.is_none()
         } else {
             false
@@ -435,10 +497,10 @@ impl InputHandler {
         }
     }
 
-    fn handle_place_spawner(state: &mut GameState, tile_pos: TilePos) {
+    fn handle_place_spawner(state: &mut GameState, game_data: &GameData, tile_pos: TilePos) {
         if state.player.gold >= crate::config::SPAWNER_COST {
             if let Some(tile) = state.get_tile(tile_pos) {
-                if tile.ownership == Ownership::Player && tile_types::can_build_room(&tile.tile_type) {
+                if tile.ownership == Ownership::Player && tile_types::can_build_room(&tile.tile_type, game_data) {
                     state.player.gold -= crate::config::SPAWNER_COST;
                     if let Some(tile_mut) = state.get_tile_mut(tile_pos) {
                         tile_mut.tile_type = tt::MONSTER_SPAWNER.to_string();
@@ -465,12 +527,13 @@ impl InputHandler {
         state: &mut GameState, 
         held_entity: &mut Option<EntityId>, 
         interaction_mode: &mut InteractionMode,
-        tile_pos: TilePos
+        tile_pos: TilePos,
+        game_data: &GameData,
     ) {
         if let Some(entity_id) = *held_entity {
             if let Some(tile) = state.get_tile(tile_pos) {
                 let is_walkable = tile.ownership == Ownership::Player
-                    && tile_types::is_walkable(&tile.tile_type);
+                    && tile_types::is_walkable(&tile.tile_type, game_data);
 
                 if is_walkable {
                     if let Some(entity) = state.entities.get_mut(entity_id) {

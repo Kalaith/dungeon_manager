@@ -59,7 +59,7 @@ impl RoomManager {
                       room.quality = quality;
                            
                       // Calculate efficiency
-                      room.efficiency = room_validator::calculate_efficiency(&room, &dungeon.grid);
+                      room.efficiency = room_validator::calculate_efficiency(&room, &dungeon.grid, game_data);
                        
                       detected_rooms.push((room, room_tiles));
                   }

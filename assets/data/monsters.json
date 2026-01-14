@@ -171,7 +171,7 @@
       },
       "room_desires": {
         "training_hall": 1.1,
-        "treasury": 1.0
+        "workshop": 1.0
       },
       "discipline_response": {
         "slap": -5,

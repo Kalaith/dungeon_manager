@@ -43,13 +43,13 @@ pub struct PlayerState {
 }
 
 impl PlayerState {
-    /// Create a new player state with starting values
-    pub fn new() -> Self {
+    /// Create a new player state with starting values, auto-unlocking all defined rooms
+    pub fn new(game_data: &crate::data::GameData) -> Self {
         let mut unlocked_rooms = HashSet::new();
-        unlocked_rooms.insert("dungeon_heart".to_string());
-        unlocked_rooms.insert("lair".to_string());
-        unlocked_rooms.insert("hatchery".to_string());
-        unlocked_rooms.insert("treasury".to_string());
+        // Auto-unlock all rooms defined in data
+        for room_id in game_data.rooms.keys() {
+            unlocked_rooms.insert(room_id.clone());
+        }
 
         let mut unlocked_creatures = HashSet::new();
         unlocked_creatures.insert("imp".to_string());
@@ -60,15 +60,15 @@ impl PlayerState {
         unlocked_spells.insert("lightning_strike".to_string());
 
         Self {
-            gold: 200, // Start with limited gold - must dig for more
-            mana: 1000,
-            food: 100,
-            max_gold: 0, // Capacity determined by treasury/dungeon heart rooms
-            max_mana: 0,
+            gold: crate::config::STARTING_GOLD,
+            mana: crate::config::STARTING_MANA,
+            food: crate::config::STARTING_FOOD,
+            max_gold: crate::config::INITIAL_MAX_GOLD,
+            max_mana: crate::config::INITIAL_MAX_MANA,
 
-            max_food: 500,
-            materials: 0,
-            max_materials: 100, // Starting material storage
+            max_food: crate::config::INITIAL_MAX_FOOD,
+            materials: crate::config::STARTING_MATERIALS,
+            max_materials: crate::config::INITIAL_MAX_MATERIALS,
 
             unlocked_rooms,
             unlocked_creatures,
@@ -199,11 +199,7 @@ impl PlayerState {
     }
 }
 
-impl Default for PlayerState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+
 
 #[cfg(test)]
 mod tests {
@@ -211,24 +207,53 @@ mod tests {
 
     #[test]
     fn test_spend_resources() {
-        let mut player = PlayerState::new();
+        // manually construct player state to avoid needing GameData for simple unit tests
+        let mut player = PlayerState {
+            gold: 200, mana: 1000, food: 100, max_gold: 10000, max_mana: 5000, max_food: 1000,
+            materials: 100, max_materials: 500,
+            unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
+            research_points: 0, active_research: None, research_progress: 0.0,
+            dungeon_heart_health: 100.0, max_creatures: 20, current_creature_count: 0,
+            claimed_tile_count: 0, spell_cooldowns: HashMap::new(),
+            kills: HashMap::new(), deaths: HashMap::new(), gold_mined: 0, spells_cast: HashMap::new(), game_time: 0.0,
+        };
+        
+        // Assert initial state matches what test expects
         assert!(player.can_afford(100, 50));
         assert!(player.spend(100, 50));
-        assert_eq!(player.gold, 4900);
+        assert_eq!(player.gold, 100);
         assert_eq!(player.mana, 950);
     }
 
     #[test]
     fn test_cannot_overspend() {
-        let mut player = PlayerState::new();
+        let mut player = PlayerState {
+            gold: 200, mana: 1000, food: 100, max_gold: 10000, max_mana: 5000, max_food: 1000,
+            materials: 100, max_materials: 500,
+            unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
+            research_points: 0, active_research: None, research_progress: 0.0,
+            dungeon_heart_health: 100.0, max_creatures: 20, current_creature_count: 0,
+            claimed_tile_count: 0, spell_cooldowns: HashMap::new(),
+            kills: HashMap::new(), deaths: HashMap::new(), gold_mined: 0, spells_cast: HashMap::new(), game_time: 0.0,
+        };
+        
         assert!(!player.can_afford(10000, 0));
         assert!(!player.spend(10000, 0));
-        assert_eq!(player.gold, 5000); // Unchanged
+        assert_eq!(player.gold, 200); // Unchanged
     }
 
     #[test]
     fn test_resource_caps() {
-        let mut player = PlayerState::new();
+        let mut player = PlayerState {
+            gold: 200, mana: 1000, food: 100, max_gold: 10000, max_mana: 5000, max_food: 1000,
+            materials: 100, max_materials: 500,
+            unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
+            research_points: 0, active_research: None, research_progress: 0.0,
+            dungeon_heart_health: 100.0, max_creatures: 20, current_creature_count: 0,
+            claimed_tile_count: 0, spell_cooldowns: HashMap::new(),
+            kills: HashMap::new(), deaths: HashMap::new(), gold_mined: 0, spells_cast: HashMap::new(), game_time: 0.0,
+        };
+        
         player.add_resources(0, 20000, 1000, 1000);
         assert_eq!(player.mana, player.max_mana);
         assert_eq!(player.food, player.max_food);

@@ -226,5 +226,35 @@
         "intensity": 0.6
       }
     }
+  },
+  {
+    "id": "monster_spawner",
+    "name": "Monster Spawner",
+    "category": "special",
+    "diggable": false,
+    "claimable": true,
+    "blocks_movement": false,
+    "blocks_vision": false,
+    "supports_rooms": false,
+    "resources": null,
+    "durability": null,
+    "visual": {
+      "sprite": "tiles/monster_spawner.png"
+    }
+  },
+  {
+    "id": "hero_entrance",
+    "name": "Hero Entrance",
+    "category": "special",
+    "diggable": false,
+    "claimable": false,
+    "blocks_movement": false,
+    "blocks_vision": false,
+    "supports_rooms": false,
+    "resources": null,
+    "durability": null,
+    "visual": {
+      "sprite": "tiles/hero_entrance.png"
+    }
   }
 ]
