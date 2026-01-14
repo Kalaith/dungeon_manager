@@ -3,7 +3,9 @@
 
 use crate::state::tile_state::{TilePos, TileState, FogState};
 use crate::data::GameData;
+use crate::engine::tile_types::{self, types as tt};
 use std::collections::HashSet;
+use macroquad::camera::Camera;
 
 pub type Grid = Vec<Vec<TileState>>;
 
@@ -67,20 +69,69 @@ pub fn iso_to_world(iso_x: f32, iso_y: f32, tile_width: f32, tile_height: f32) -
 }
 
 /// Convert screen position to tile position (considering camera offset)
+/// Convert screen position to tile position using 3D raycasting
 pub fn screen_to_tile(
-    screen_x: f32,
-    screen_y: f32,
-    camera_x: f32,
-    camera_y: f32,
-    tile_width: f32,
-    tile_height: f32,
+    mouse_x: f32,
+    mouse_y: f32,
+    camera: &macroquad::camera::Camera3D,
+    _tile_width: f32,  // Unused in 3D physics
+    _tile_height: f32, // Unused in 3D physics
 ) -> TilePos {
-    let world_x = screen_x - camera_x;
-    let world_y = screen_y - camera_y;
+    // 1. Convert mouse coordinates to world space ray
+    // We can use the camera's matrices to unproject the mouse position
+    
+    // Normalized device coordinates (-1 to 1)
+    let ndc_x = (mouse_x / macroquad::window::screen_width()) * 2.0 - 1.0;
+    let ndc_y = 1.0 - (mouse_y / macroquad::window::screen_height()) * 2.0; // Flip Y for 3D
 
-    let (tile_x, tile_y) = iso_to_world(world_x, world_y, tile_width, tile_height);
+    // View-Projection Matrix Inverse
+    let proj = camera.matrix();
+    let view = macroquad::math::Mat4::look_at_rh(
+        camera.position,
+        camera.target,
+        camera.up,
+    );
+    let inv_vp = (proj * view).inverse();
 
-    TilePos::new(tile_x.round() as i32, tile_y.round() as i32)
+    // Ray start (Near plane) and end (Far plane)
+    let ray_start = inv_vp.transform_point3(macroquad::math::vec3(ndc_x, ndc_y, -1.0));
+    let ray_end = inv_vp.transform_point3(macroquad::math::vec3(ndc_x, ndc_y, 1.0));
+
+    let ray_dir = (ray_end - ray_start).normalize();
+
+    // 2. Intersect ray with ground plane (y = 0 in 3D world, but we might want our tiles to be at y=0)
+    // IMPORTANT: In our 3D setup:
+    // x = grid x
+    // z = grid y
+    // y = height (0 = floor)
+    
+    // Ray: P = P0 + t * D
+    // Plane: y = 0
+    // 0 = P0.y + t * D.y
+    // t = -P0.y / D.y
+
+    if ray_dir.y.abs() < 0.0001 {
+        // Ray is parallel to plane, return origin or something safe
+        return TilePos::new(0, 0);
+    }
+
+    let t = -ray_start.y / ray_dir.y;
+
+    if t < 0.0 {
+        // Intersection is behind camera
+        return TilePos::new(0, 0);
+    }
+
+    let intersect_point = ray_start + ray_dir * t;
+
+    // 3. Convert intersection point to integer tile coordinates
+    // Assuming 1 unit = 1 tile in our 3D world for simplicity
+    // If we used a scale factor, we'd divide by it here
+    
+    TilePos::new(
+        intersect_point.x.round() as i32,
+        intersect_point.z.round() as i32,
+    )
 }
 
 /// Get a tile from the grid at the specified position
@@ -174,11 +225,7 @@ fn has_line_of_sight(grid: &Grid, from: TilePos, to: TilePos) -> bool {
             let pos = TilePos::new(x0, y0);
             if let Some(tile) = get_tile(grid, pos) {
                 // Solid tiles block vision
-                let blocks_vision = matches!(
-                    tile.tile_type.as_str(),
-                    "earth" | "solid_rock" | "gold_vein"
-                );
-                if blocks_vision {
+                if tile_types::blocks_vision(&tile.tile_type) {
                     return false;
                 }
             }
@@ -268,11 +315,7 @@ fn has_line_of_sight_snapshot(tile_types: &[Vec<String>], from: TilePos, to: Til
                 if x0 >= 0 && (x0 as usize) < row.len() {
                     let tile_type = &row[x0 as usize];
                     // Solid tiles block vision
-                    let blocks_vision = matches!(
-                        tile_type.as_str(),
-                        "earth" | "solid_rock" | "gold_vein"
-                    );
-                    if blocks_vision {
+                    if tile_types::blocks_vision(tile_type) {
                         return false;
                     }
                 }

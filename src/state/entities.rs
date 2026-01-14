@@ -14,6 +14,12 @@ pub struct Entity {
     pub id: EntityId,
     pub entity_type: EntityType,
     pub pos: TilePos,
+    #[serde(skip, default = "default_visual_pos")]
+    pub visual_pos: (f32, f32),
+}
+
+fn default_visual_pos() -> (f32, f32) {
+    (0.0, 0.0)
 }
 
 impl Entity {
@@ -23,6 +29,7 @@ impl Entity {
             id,
             entity_type: EntityType::Creature(creature_state),
             pos,
+            visual_pos: (pos.x as f32, pos.y as f32),
         }
     }
 
@@ -32,6 +39,7 @@ impl Entity {
             id,
             entity_type: EntityType::Hero(hero_state),
             pos,
+            visual_pos: (pos.x as f32, pos.y as f32),
         }
     }
 

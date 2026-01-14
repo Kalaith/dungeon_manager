@@ -148,7 +148,7 @@ pub fn decide_task(
     // Debug: Log available rooms (Reduced)
     // eprintln!("[AI] Available rooms for {}: {:?}",
     //    creature.creature_id,
-    //    game_state.rooms.iter()
+    //    game_state.room_manager.rooms.iter()
     //        .map(|r| format!("{}(id={}, active={}, quality={:.1})", r.room_type, r.id, r.active, r.quality))
     //        .collect::<Vec<_>>()
     // );
@@ -162,7 +162,7 @@ pub fn decide_task(
     // If carrying gold, prioritize depositing
     if creature.gold_carried > 20 {
         use crate::engine::room_validator;
-        if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.rooms, "treasury", creature_pos, 0.0) {
+        if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.room_manager.rooms, "treasury", creature_pos, 0.0) {
             return Some(Task::DepositGold(room_id));
         }
     }
@@ -180,7 +180,7 @@ pub fn decide_task(
                 for room_type in &need_data.satisfied_by {
                     use crate::engine::room_validator;
                     if let Some((room_id, _)) =
-                        room_validator::find_nearest_room(&game_state.rooms, room_type, creature_pos, 0.0)
+                        room_validator::find_nearest_room(&game_state.room_manager.rooms, room_type, creature_pos, 0.0)
                     {
                         // eprintln!("[AI] Found {} room (id={})", room_type, room_id);
                         // Determine task type based on need
@@ -205,12 +205,12 @@ pub fn decide_task(
     // eprintln!("[AI] Evaluating room desires: {:?}", monster_data.ai.room_desires);
     for (room_type, desire) in &monster_data.ai.room_desires {
         use crate::engine::room_validator;
-        if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.rooms, room_type, creature_pos, 0.0) {
+        if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.room_manager.rooms, room_type, creature_pos, 0.0) {
             let task = Task::Work(room_id);
             let mut desirability = calculate_task_desirability(&task, creature, monster_data) * desire;
             
             // Adjust based on room factors
-            if let Some(room) = game_state.rooms.iter().find(|r| r.id == room_id) {
+            if let Some(room) = game_state.room_manager.rooms.iter().find(|r| r.id == room_id) {
                  if let Some(room_data) = game_data.rooms.get(room_type) {
                       let room_factor = room_validator::calculate_task_desirability(room, room_data, creature_pos, 1.0);
                       desirability *= room_factor;
@@ -227,7 +227,7 @@ pub fn decide_task(
     // Add training if available and mood is good
     if creature.mood > 50.0 && creature.level < 5 {
         use crate::engine::room_validator;
-        if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.rooms, "training_room", creature_pos, 0.0)
+        if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.room_manager.rooms, "training_room", creature_pos, 0.0)
         {
             let task = Task::Train(room_id);
             let desirability = calculate_task_desirability(&task, creature, monster_data);
@@ -238,7 +238,7 @@ pub fn decide_task(
 
     // Add research if creature can research
     use crate::engine::room_validator;
-    if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.rooms, "library", creature_pos, 0.0) {
+    if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.room_manager.rooms, "library", creature_pos, 0.0) {
         let task = Task::Research(room_id);
         let desirability = calculate_task_desirability(&task, creature, monster_data) * 0.8;
         // eprintln!("[AI] Candidate: Research - desirability={:.2}", desirability);
@@ -336,7 +336,7 @@ pub fn can_perform_task(
         | Task::DepositGold(room_id) => {
             // Check if room exists and is active
             game_state
-                .rooms
+                .room_manager.rooms
                 .iter()
                 .any(|r| r.id == *room_id && r.active)
         }

@@ -1,0 +1,64 @@
+use crate::data::GameData;
+use crate::engine::map_generator;
+use crate::engine::tile_grid::{self, Grid};
+use crate::engine::tile_types::types as tt;
+use crate::state::game_state::MapType;
+use crate::state::tile_state::{TilePos, TileState, FogState};
+
+pub struct Dungeon {
+    pub grid: Grid,
+    pub width: usize,
+    pub height: usize,
+}
+
+impl Dungeon {
+    pub fn new(width: usize, height: usize, game_data: &GameData, map_type: MapType) -> Self {
+        let grid = match map_type {
+            MapType::Standard => {
+                let config = map_generator::MapConfig::default();
+                map_generator::generate_map(&config, game_data)
+            }
+            MapType::Rich => map_generator::generate_rich_map(width, height, game_data),
+            MapType::Hazardous => map_generator::generate_hazardous_map(width, height, game_data),
+            MapType::Test => map_generator::generate_test_map(width, height, game_data),
+        };
+
+        Self {
+            grid,
+            width,
+            height,
+        }
+    }
+
+    pub fn get_tile(&self, pos: TilePos) -> Option<&TileState> {
+        tile_grid::get_tile(&self.grid, pos)
+    }
+
+    pub fn get_tile_mut(&mut self, pos: TilePos) -> Option<&mut TileState> {
+        tile_grid::get_tile_mut(&mut self.grid, pos)
+    }
+
+    /// Update fog of war using the tile_grid system
+    pub fn update_fog_of_war(
+        &mut self,
+        claimed_tiles: &std::collections::HashSet<TilePos>,
+        creature_positions: &[TilePos],
+    ) {
+        tile_grid::update_fog_of_war(
+            &mut self.grid,
+            claimed_tiles,
+            creature_positions,
+            8, // Sight radius
+        );
+    }
+    pub fn find_dungeon_heart(&self) -> Option<TilePos> {
+        for row in &self.grid {
+            for tile in row {
+                if tile.tile_type == tt::DUNGEON_HEART {
+                    return Some(tile.pos);
+                }
+            }
+        }
+        None
+    }
+}

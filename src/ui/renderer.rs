@@ -1,0 +1,493 @@
+use macroquad::prelude::*;
+use crate::state::game_state::GameState;
+use crate::state::{GamePhase, InteractionMode, Ownership, MapType};
+use crate::ui::resources::GraphicsCache;
+use crate::ui::sidebar::Sidebar;
+use crate::state::tile_state::{TilePos, FogState};
+use crate::data::GameData;
+use crate::state::entities::EntityId;
+use crate::engine::tile_types::{self, types as tt};
+
+
+pub struct GameRenderer {
+    pub graphics_cache: Option<GraphicsCache>,
+    pub sidebar: Sidebar,
+}
+
+impl GameRenderer {
+    pub fn new() -> Self {
+        Self {
+            graphics_cache: None,
+            sidebar: Sidebar::new(),
+        }
+    }
+
+    pub async fn load_resources(&mut self) {
+        match GraphicsCache::load_all().await {
+            Ok(cache) => self.graphics_cache = Some(cache),
+            Err(e) => eprintln!("Failed to load graphics: {}", e),
+        }
+    }
+
+    pub fn draw(
+        &mut self, 
+        phase: &GamePhase,
+        state: Option<&GameState>,
+        interaction_mode: &InteractionMode,
+        selected_map_type: MapType,
+        hovered_tile: Option<TilePos>,
+        held_entity: Option<EntityId>,
+        selected_entity: Option<EntityId>,
+        selected_room: Option<usize>,
+        game_data: &Option<GameData>
+    ) {
+        clear_background(crate::ui::core::colors::BACKGROUND);
+
+        match phase {
+            GamePhase::Loading => {
+                draw_text(
+                    "Loading Deep Dominion...",
+                    screen_width() / 2.0 - 150.0,
+                    screen_height() / 2.0,
+                    32.0,
+                    WHITE,
+                );
+            }
+            GamePhase::MainMenu => {
+                self.draw_main_menu(selected_map_type);
+            }
+            GamePhase::Playing(_) => {
+                if let Some(inner_state) = state {
+                    self.draw_game(inner_state, interaction_mode, hovered_tile, held_entity);
+                    self.draw_gui(inner_state, interaction_mode, held_entity, selected_entity, selected_room, game_data);
+                }
+            }
+        }
+    }
+
+    fn draw_main_menu(&self, selected_map_type: MapType) {
+        let mouse_pos = mouse_position();
+
+        // Draw title
+        draw_text(
+            "Deep Dominion",
+            screen_width() / 2.0 - 150.0,
+            screen_height() / 2.0 - 180.0,
+            48.0,
+            WHITE,
+        );
+
+        // Draw subtitle
+        draw_text(
+            "Select Map Type:",
+            screen_width() / 2.0 - 80.0,
+            screen_height() / 2.0 - 90.0,
+            20.0,
+            Color::new(0.9, 0.9, 0.9, 1.0),
+        );
+
+        // Draw map type selection buttons
+        let map_button_y = screen_height() / 2.0 - 50.0;
+        let map_button_width = 160.0;
+        let map_button_height = 40.0;
+        let map_button_spacing = 10.0;
+        let total_width = (map_button_width + map_button_spacing) * 4.0 - map_button_spacing;
+        let map_button_start_x = screen_width() / 2.0 - total_width / 2.0;
+
+        let map_types = [
+            (MapType::Standard, "Standard", "Balanced", 0),
+            (MapType::Rich, "Rich", "Lots of gold", 1),
+            (MapType::Hazardous, "Hazardous", "Many dangers", 2),
+            (MapType::Test, "Test", "Fixed seed", 3),
+        ];
+
+        for (map_type, label, desc, index) in &map_types {
+            let btn_x = map_button_start_x + (map_button_width + map_button_spacing) * (*index as f32);
+
+            let is_hovered = mouse_pos.0 >= btn_x
+                && mouse_pos.0 <= btn_x + map_button_width
+                && mouse_pos.1 >= map_button_y
+                && mouse_pos.1 <= map_button_y + map_button_height;
+
+            let is_selected = selected_map_type == *map_type;
+
+            let button_color = if is_selected {
+                Color::new(0.2, 0.7, 0.3, 1.0) // Green for selected
+            } else if is_hovered {
+                Color::new(0.4, 0.6, 0.9, 1.0) // Blue for hover
+            } else {
+                Color::new(0.3, 0.3, 0.4, 1.0) // Gray default
+            };
+
+            draw_rectangle(btn_x, map_button_y, map_button_width, map_button_height, button_color);
+            draw_rectangle_lines(btn_x, map_button_y, map_button_width, map_button_height, 2.0, WHITE);
+
+            draw_text(
+                label,
+                btn_x + 10.0,
+                map_button_y + 20.0,
+                18.0,
+                WHITE,
+            );
+
+            draw_text(
+                desc,
+                btn_x + 10.0,
+                map_button_y + 35.0,
+                12.0,
+                Color::new(0.8, 0.8, 0.8, 1.0),
+            );
+        }
+
+        // Draw start button
+        let button_x = screen_width() / 2.0 - 100.0;
+        let button_y = screen_height() / 2.0 + 60.0;
+        let button_width = 200.0;
+        let button_height = 50.0;
+
+        let is_hovered = mouse_pos.0 >= button_x
+            && mouse_pos.0 <= button_x + button_width
+            && mouse_pos.1 >= button_y
+            && mouse_pos.1 <= button_y + button_height;
+
+        let button_color = if is_hovered {
+            Color::new(0.4, 0.6, 0.9, 1.0)
+        } else {
+            Color::new(0.3, 0.5, 0.8, 1.0)
+        };
+
+        draw_rectangle(button_x, button_y, button_width, button_height, button_color);
+        draw_rectangle_lines(button_x, button_y, button_width, button_height, 3.0, WHITE);
+
+        draw_text(
+            "START GAME",
+            button_x + 35.0,
+            button_y + 32.0,
+            24.0,
+            WHITE,
+        );
+
+        // Draw hint
+        draw_text(
+            "Click to start or press SPACE",
+            screen_width() / 2.0 - 120.0,
+            screen_height() / 2.0 + 140.0,
+            16.0,
+            Color::new(0.7, 0.7, 0.7, 1.0),
+        );
+    }
+
+    fn draw_game(&self, state: &GameState, interaction_mode: &InteractionMode, hovered_tile: Option<TilePos>, held_entity: Option<EntityId>) {
+        let graphics = if let Some(ref cache) = self.graphics_cache {
+            cache
+        } else {
+            return; // Can't render without graphics
+        };
+
+        // Construct Camera3D
+        let camera = state.camera.get_camera3d();
+
+        set_camera(&camera);
+
+        // Draw grid (Tiles)
+        for row in &state.dungeon.grid {
+            for tile in row {
+                 // In 3D: x = x, y = height (0), z = y
+                 let pos_x = tile.pos.x as f32;
+                 let pos_z = tile.pos.y as f32;
+                 
+                 // Optimization: simple frustum cull check (distance from camera target)
+                 let dx = pos_x - state.camera.target.0;
+                 let dz = pos_z - state.camera.target.2;
+                 if dx*dx + dz*dz > 2500.0 { // Radius 50
+                      continue; 
+                 }
+
+                // Get texture for this tile type
+                let texture_opt = graphics.tile_textures.get(&tile.tile_type);
+                let mut color = WHITE;
+
+                 // Apply fog of war
+                 match tile.fog_state {
+                     FogState::Hidden => {
+                         color = crate::ui::core::colors::FOG_HIDDEN;
+                     },
+                     FogState::Revealed => color = crate::ui::core::colors::FOG_REVEALED,
+                     FogState::Visible => color = WHITE,
+                 }
+
+                 // Show marked tiles with yellow tint
+                 if tile.marked_for_dig {
+                     color = Color::new(1.0, 1.0, 0.3, 1.0);
+                 }
+
+                let is_wall = tile_types::is_wall(&tile.tile_type);
+
+                if let Some(texture) = texture_opt {
+                    if is_wall {
+                        draw_cube(
+                            vec3(pos_x, 0.5, pos_z),
+                            vec3(1.0, 1.0, 1.0),
+                            Some(texture),
+                            color
+                        );
+                    } else {
+                        draw_plane(
+                             vec3(pos_x, 0.0, pos_z),
+                             vec2(1.0, 1.0),
+                             Some(texture),
+                             color
+                        );
+                    }
+
+                    // Draw trap if present
+                    if let Some(trap) = &tile.trap {
+                         let trap_color = if trap.constructed { WHITE } else { Color::new(1.0, 1.0, 1.0, 0.5) };
+                         if let Some(trap_texture) = graphics.tile_textures.get(&trap.trap_type) {
+                               // Draw trap slightly above floor
+                                draw_plane(
+                                      vec3(pos_x, 0.05, pos_z), 
+                                      vec2(0.8, 0.8), 
+                                      Some(trap_texture), 
+                                      trap_color
+                                );
+                         } 
+                    }
+                } else {
+                    // Fallback to colored plane/cube if texture not found
+                    let mut tile_color = crate::ui::core::get_tile_color(&tile.tile_type);
+
+                    // Apply fog/tint to tile_color
+                    match tile.fog_state {
+                        FogState::Hidden => tile_color = crate::ui::core::colors::FOG_HIDDEN,
+                        FogState::Revealed => {
+                            tile_color.r *= 0.5;
+                            tile_color.g *= 0.5;
+                            tile_color.b *= 0.5;
+                        }
+                        FogState::Visible => {}
+                    }
+                    if tile.marked_for_dig {
+                        tile_color = Color::new(1.0, 0.8, 0.0, 1.0);
+                    }
+
+                    if is_wall {
+                        draw_cube(
+                            vec3(pos_x, 0.5, pos_z),
+                            vec3(1.0, 1.0, 1.0),
+                            None,
+                            tile_color
+                        );
+                    } else {
+                        draw_plane(
+                            vec3(pos_x, 0.0, pos_z),
+                            vec2(1.0, 1.0),
+                            None,
+                            tile_color
+                        );
+                    }
+                }
+
+                // Draw selection outline if this is the hovered tile AND it's a valid target
+                if let Some(hovered_pos) = hovered_tile {
+                    if tile.pos == hovered_pos {
+                        let mut outline_color = None;
+
+                        match interaction_mode {
+                            InteractionMode::None => {
+                                // Generic selection
+                                outline_color = Some(Color::new(1.0, 1.0, 1.0, 0.5));
+                            }
+                            InteractionMode::Dig => {
+                                // Valid dig targets: earth, gold, gems
+                                // Also allow marked tiles to be selected (to unmark)
+                                if tile_types::is_diggable(&tile.tile_type) {
+                                    outline_color = Some(crate::ui::core::colors::ACCENT);
+                                }
+                            }
+                            InteractionMode::BuildRoom(_) => {
+                                // Valid build targets: claimed floors owned by player
+                                if tile.ownership == Ownership::Player && tile_types::can_build_room(&tile.tile_type) {
+                                    outline_color = Some(crate::ui::core::colors::POSITIVE);
+                                }
+                            }
+                            InteractionMode::BuildTrap(_) => {
+                                if tile.ownership == Ownership::Player && tile_types::can_build_room(&tile.tile_type) && tile.trap.is_none() {
+                                     outline_color = Some(crate::ui::core::colors::POSITIVE);
+                                }
+                            }
+                            InteractionMode::PlaceSpawner => {
+                                // Valid spawner location: claimed floors
+                                if tile.ownership == Ownership::Player && tile_types::can_build_room(&tile.tile_type) {
+                                    outline_color = Some(crate::ui::core::colors::POSITIVE);
+                                }
+                            }
+                            InteractionMode::Pickup => {
+                                // Highlight any entity's tile
+                                outline_color = Some(Color::new(0.0, 1.0, 0.0, 0.5));
+                            }
+                            InteractionMode::Drop => {
+                                // Highlight any tile
+                                outline_color = Some(Color::new(1.0, 1.0, 0.0, 0.5));
+                            }
+                            InteractionMode::Sell => {
+                                // Highlight any markable tile or owned room
+                                if tile.marked_for_dig || (tile.ownership == Ownership::Player && tile.room_id.is_some()) {
+                                    outline_color = Some(crate::ui::core::colors::NEGATIVE);
+                                }
+                            }
+                            InteractionMode::Inspect => {
+                                outline_color = Some(Color::new(0.0, 0.5, 1.0, 0.5));
+                            }
+                        }
+
+                        if let Some(color) = outline_color {
+                             // Draw selection wireframe
+                             draw_cube_wires(
+                                  vec3(pos_x, 0.05, pos_z),
+                                  vec3(1.0, 0.0, 1.0),
+                                  color
+                             );
+                        }
+                    }
+                }
+            }
+        }
+
+        // Draw entities (heroes and creatures)
+        for entity in state.entities.all() {
+             let (x, z) = entity.visual_pos;
+              
+             let texture = match &entity.entity_type {
+                 crate::state::entities::EntityType::Creature(c) => graphics.monster_textures.get(&c.creature_id),
+                 crate::state::entities::EntityType::Hero(h) => graphics.hero_textures.get(&h.hero_id),
+             };
+             
+             if let Some(tex) = texture {
+                 crate::draw_utils::draw_billboard(
+                     vec3(x, 0.5, z),
+                     vec2(0.8, 0.8),
+                     tex,
+                     camera.position
+                 );
+             } else {
+                 // Fallback to simple colored cylinder/sphere/cube
+                 let color = match &entity.entity_type {
+                     crate::state::entities::EntityType::Hero(_) => Color::new(0.2, 0.8, 0.2, 1.0),
+                     crate::state::entities::EntityType::Creature(_) => Color::new(0.8, 0.2, 0.2, 1.0),
+                 };
+                 draw_cube_wires(vec3(x, 0.5, z), vec3(0.5, 1.0, 0.5), color);
+             }
+        }
+
+        set_default_camera(); // Go back to 2D for UI
+    }
+
+    fn draw_gui(
+        &mut self, 
+        state: &GameState, 
+        interaction_mode: &InteractionMode, 
+        held_entity: Option<EntityId>,
+        selected_entity: Option<EntityId>,
+        selected_room: Option<usize>,
+        game_data: &Option<GameData>
+    ) {
+         let graphics = if let Some(ref cache) = self.graphics_cache {
+            cache
+        } else {
+            return;
+        };
+
+        // Draw HUD
+        draw_rectangle(0.0, 0.0, screen_width(), crate::ui::core::HUD_HEIGHT, crate::ui::core::colors::PANEL);
+
+        let mode_text = match interaction_mode {
+            InteractionMode::None => "Mode: None (Select tab below)".to_string(),
+            InteractionMode::Dig => "Mode: Dig (FREE)".to_string(),
+            InteractionMode::BuildRoom(room_type) => {
+                let cost = match room_type.as_str() {
+                    "lair" => 10,
+                    "hatchery" => 15,
+                    "treasury" => 20,
+                    "training_room" => 25,
+                    "library" => 30,
+                    _ => 10,
+                };
+                format!("Mode: Build {} ({}g)", room_type, cost)
+            }
+            InteractionMode::PlaceSpawner => "Mode: Place Spawner (50g)".to_string(),
+            InteractionMode::Pickup => "Mode: Pickup Minion".to_string(),
+            InteractionMode::Drop => "Mode: Drop Minion".to_string(),
+            InteractionMode::Sell => "Mode: Sell/Cancel".to_string(),
+            InteractionMode::Inspect => "Mode: Inspect (Click unit)".to_string(),
+            InteractionMode::BuildTrap(trap_type) => format!("Mode: Build {}", trap_type),
+        };
+
+        draw_text(
+            &format!("Gold: {}/{} | Mana: {}/{} | Food: {} | Mats: {}/{} | Minions: {}/{}",
+                state.player.gold, state.player.max_gold,
+                state.player.mana, state.player.max_mana,
+                state.player.food,
+                state.player.materials, state.player.max_materials,
+                state.entities.creatures().count(), state.player.max_creatures),
+            10.0,
+            25.0,
+            18.0,
+            crate::ui::core::colors::TEXT,
+        );
+
+        draw_text(
+            &mode_text,
+            10.0,
+            45.0,
+            16.0,
+            crate::ui::core::colors::ACCENT,
+        );
+        let mouse_pos = mouse_position();
+        
+        // Draw held entity if any
+        if let Some(entity_id) = held_entity {
+             let texture_opt = if let Some(entity) = state.entities.get(entity_id) {
+                 match &entity.entity_type {
+                    crate::state::entities::EntityType::Hero(hero_state) => {
+                        graphics.hero_textures.get(&hero_state.hero_id)
+                    }
+                    crate::state::entities::EntityType::Creature(creature_state) => {
+                        graphics.monster_textures.get(&creature_state.creature_id)
+                    }
+                }
+             } else { None };
+
+             if let Some(texture) = texture_opt {
+                 draw_texture_ex(
+                    texture,
+                    mouse_pos.0 - 24.0,
+                    mouse_pos.1 - 24.0,
+                    Color::new(1.0, 1.0, 1.0, 0.8), // Slight transparency applied here
+                     DrawTextureParams {
+                        dest_size: Some(vec2(48.0, 48.0)),
+                        ..Default::default()
+                    },
+                );
+             }
+        } else {
+             if is_mouse_button_down(MouseButton::Right) && !self.sidebar.is_mouse_over() {
+                draw_circle(mouse_pos.0, mouse_pos.1, 5.0, RED);
+             }
+        }
+
+        // Draw Sidebar
+        if let Some(ref data) = game_data {
+            self.sidebar.draw(
+                interaction_mode, 
+                &state.player, 
+                &data.spells,
+                held_entity,
+                selected_entity,
+                selected_room,
+                &state.entities,
+                &state.room_manager.rooms
+            );
+        }
+    }
+}

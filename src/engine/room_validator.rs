@@ -3,6 +3,7 @@
 
 use crate::data::rooms::RoomData;
 use crate::engine::tile_grid::{get_tile, Grid};
+use crate::engine::tile_types;
 use crate::state::tile_state::{Ownership, TilePos};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashSet, VecDeque};
@@ -122,11 +123,7 @@ pub fn calculate_efficiency(room: &Room, grid: &Grid) -> f32 {
                     let tile = &grid[neighbor.y as usize][neighbor.x as usize];
                     // Walls (rock/earth marked as wall?) and Doors count as secured
                     // "wall", "reinforced_wall", "door", "rock" (unmined) are valid
-                    let is_secure = matches!(tile.tile_type.as_str(), 
-                        "wall" | "reinforced_wall" | "door" | "rock" | "gold_vein" | "gem_seam" | "earth"
-                    );
-                    
-                    if is_secure {
+                    if tile_types::is_secure(&tile.tile_type) {
                         secured_segments += 1.0;
                     }
                 } else {

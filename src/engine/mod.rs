@@ -7,6 +7,11 @@ pub mod hero_ai;
 pub mod combat;
 pub mod map_generator;
 pub mod spell_effects;
+pub mod imp_ai;
+pub mod trap_system;
+pub mod tile_types;
 
-// Will also contain:
-// - economy.rs
+pub mod spawner;
+
+pub mod input;
+

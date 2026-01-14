@@ -6,7 +6,7 @@ use std::path::Path;
 
 const TILE_SIZE: u32 = 64;
 const TILE_WIDTH: u32 = 64;
-const TILE_HEIGHT: u32 = 32;
+const TILE_HEIGHT: u32 = 64;
 const SPRITE_SIZE: u32 = 64;
 
 fn main() {
@@ -69,28 +69,31 @@ fn save_sprite(category: &str, name: &str, img: RgbaImage) {
     println!("Generated: {}", path);
 }
 
-// Create isometric diamond base
-fn create_iso_tile_base(color: Rgba<u8>) -> RgbaImage {
+// Create square base for 3D tiles
+fn create_tile_base(color: Rgba<u8>) -> RgbaImage {
     let mut img = RgbaImage::new(TILE_WIDTH, TILE_HEIGHT);
 
-    // Draw isometric diamond
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            let center_x = TILE_WIDTH / 2;
-            let fx = x as f32;
-            let fy = y as f32;
-
-            // Isometric diamond check
-            let left = (center_x as f32 - fx) + fy * 2.0;
-            let right = (fx - center_x as f32) + fy * 2.0;
-
-            if left >= 0.0 && right >= 0.0 && fy < TILE_HEIGHT as f32 {
-                img.put_pixel(x, y, color);
-            }
+            img.put_pixel(x, y, color);
         }
     }
 
     img
+}
+
+fn add_noise(img: &mut RgbaImage, amount: i32) {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    for p in img.pixels_mut() {
+        if p[3] > 0 {
+            let noise = rng.gen_range(-amount..=amount);
+            for i in 0..3 {
+                 let val = p[i] as i32 + noise;
+                 p[i] = val.clamp(0, 255) as u8;
+            }
+        }
+    }
 }
 
 fn add_outline(img: &mut RgbaImage, outline_color: Rgba<u8>) {
@@ -132,98 +135,97 @@ fn add_outline(img: &mut RgbaImage, outline_color: Rgba<u8>) {
 
 // Tile generators
 fn create_solid_rock() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([60, 60, 65, 255]));
+    let mut img = create_tile_base(Rgba([60, 60, 65, 255]));
     // Add some texture
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 && (x + y) % 7 == 0 {
+            if (x + y) % 7 == 0 {
                 img.put_pixel(x, y, Rgba([50, 50, 55, 255]));
             }
         }
     }
-    add_outline(&mut img, Rgba([40, 40, 45, 255]));
+    add_noise(&mut img, 10);
     img
 }
 
 fn create_earth() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([101, 67, 33, 255])); // Brown
+    let mut img = create_tile_base(Rgba([101, 67, 33, 255])); // Brown
     // Add dirt texture
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 && (x * 3 + y * 5) % 11 < 4 {
+            if (x * 3 + y * 5) % 11 < 4 {
                 img.put_pixel(x, y, Rgba([91, 60, 28, 255]));
             }
         }
     }
-    add_outline(&mut img, Rgba([70, 45, 20, 255]));
+    add_noise(&mut img, 15);
     img
 }
 
 fn create_claimed_floor() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([45, 45, 50, 255])); // Dark gray
+    let mut img = create_tile_base(Rgba([45, 45, 50, 255])); // Dark gray
     // Add grid pattern
-    for y in (0..TILE_HEIGHT).step_by(8) {
+    for y in (0..TILE_HEIGHT).step_by(16) {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 {
-                img.put_pixel(x, y, Rgba([35, 35, 40, 255]));
-            }
+            img.put_pixel(x, y, Rgba([35, 35, 40, 255]));
         }
     }
-    add_outline(&mut img, Rgba([30, 30, 35, 255]));
+    for x in (0..TILE_WIDTH).step_by(16) {
+        for y in 0..TILE_HEIGHT {
+            img.put_pixel(x, y, Rgba([35, 35, 40, 255]));
+        }
+    }
     img
 }
 
 fn create_reinforced_wall() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([70, 70, 75, 255]));
+    let mut img = create_tile_base(Rgba([70, 70, 75, 255]));
     // Add metal bands
     for y in (4..TILE_HEIGHT).step_by(10) {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 {
-                img.put_pixel(x, y, Rgba([120, 120, 130, 255]));
-            }
+             img.put_pixel(x, y, Rgba([120, 120, 130, 255]));
         }
     }
-    add_outline(&mut img, Rgba([50, 50, 55, 255]));
+    // Rivets
+    for y in (4..TILE_HEIGHT).step_by(10) {
+        for x in (4..TILE_WIDTH).step_by(16) {
+             img.put_pixel(x, y, Rgba([150, 150, 160, 255]));
+        }
+    }
     img
 }
 
 fn create_gold_vein() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([80, 70, 50, 255])); // Dark rock
+    let mut img = create_tile_base(Rgba([80, 70, 50, 255])); // Dark rock
     // Add gold streaks
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 {
-                if (x + y * 2) % 13 < 3 {
-                    img.put_pixel(x, y, Rgba([255, 215, 0, 255])); // Gold
-                }
-            }
+             if (x + y * 2) % 13 < 3 {
+                 img.put_pixel(x, y, Rgba([255, 215, 0, 255])); // Gold
+             }
         }
     }
-    add_outline(&mut img, Rgba([60, 50, 30, 255]));
     img
 }
 
 fn create_gem_seam() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([70, 70, 80, 255]));
+    let mut img = create_tile_base(Rgba([70, 70, 80, 255]));
     // Add colorful gems
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 {
-                let val = (x * 7 + y * 11) % 19;
-                if val < 2 {
-                    img.put_pixel(x, y, Rgba([100, 100, 255, 255])); // Blue gem
-                } else if val < 4 {
-                    img.put_pixel(x, y, Rgba([200, 100, 200, 255])); // Purple gem
-                }
-            }
+             let val = (x * 7 + y * 11) % 19;
+             if val < 2 {
+                 img.put_pixel(x, y, Rgba([100, 100, 255, 255])); // Blue gem
+             } else if val < 4 {
+                 img.put_pixel(x, y, Rgba([200, 100, 200, 255])); // Purple gem
+             }
         }
     }
-    add_outline(&mut img, Rgba([50, 50, 60, 255]));
     img
 }
 
 fn create_mana_crystal() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([40, 40, 60, 255])); // Dark blue-gray rock
+    let mut img = create_tile_base(Rgba([40, 40, 60, 255])); // Dark blue-gray rock
     // Add glowing blue crystals
     let center_x = TILE_WIDTH / 2;
     let center_y = TILE_HEIGHT / 2;
@@ -231,30 +233,28 @@ fn create_mana_crystal() -> RgbaImage {
     // Draw crystal cluster
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 {
-                // Crystal formation logic
-                let dx = (x as i32 - center_x as i32).abs();
-                let dy = (y as i32 - center_y as i32) as f32;
-                
-                // Central large crystal
-                if dx < 4 && dy < 0.0 && dy > -12.0 {
-                     img.put_pixel(x, y, Rgba([100, 200, 255, 255])); // Cyan core
-                }
-                
-                // Side crystals
-                if (dx > 4 && dx < 8) && (dy > -5.0 && dy < 2.0) {
-                    img.put_pixel(x, y, Rgba([50, 150, 255, 255])); // Blue side
-                }
-                
-                // Glow effect
-                if dx < 10 && dy.abs() < 8.0 && (x + y as u32) % 5 == 0 {
-                    let pixel = img.get_pixel(x, y);
-                    // Lighten existing color for glow
-                    if pixel[0] < 100 { // If it's rock base
-                         img.put_pixel(x, y, Rgba([60, 60, 90, 255]));
-                    }
-                }
-            }
+             // Crystal formation logic
+             let dx = (x as i32 - center_x as i32).abs();
+             let dy = (y as i32 - center_y as i32) as f32;
+             
+             // Central large crystal
+             if dx < 4 && dy < 0.0 && dy > -12.0 {
+                  img.put_pixel(x, y, Rgba([100, 200, 255, 255])); // Cyan core
+             }
+             
+             // Side crystals
+             if (dx > 4 && dx < 8) && (dy > -5.0 && dy < 2.0) {
+                 img.put_pixel(x, y, Rgba([50, 150, 255, 255])); // Blue side
+             }
+             
+             // Glow effect
+             if dx < 10 && dy.abs() < 8.0 && (x + y as u32) % 5 == 0 {
+                 let pixel = img.get_pixel(x, y);
+                 // Lighten existing color for glow
+                 if pixel[0] < 100 { // If it's rock base
+                      img.put_pixel(x, y, Rgba([60, 60, 90, 255]));
+                 }
+             }
         }
     }
     
@@ -263,258 +263,223 @@ fn create_mana_crystal() -> RgbaImage {
     img.put_pixel(center_x - 5, center_y, Rgba([200, 200, 255, 255]));
     img.put_pixel(center_x + 5, center_y, Rgba([200, 200, 255, 255]));
 
-    add_outline(&mut img, Rgba([30, 30, 50, 255]));
     img
 }
 
 fn create_lava() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([255, 69, 0, 255])); // Orange-red
+    let mut img = create_tile_base(Rgba([255, 69, 0, 255])); // Orange-red
     // Add lava bubbles
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 {
-                if (x * 5 + y * 7) % 17 < 5 {
-                    img.put_pixel(x, y, Rgba([255, 140, 0, 255])); // Brighter orange
-                }
-            }
+             if (x * 5 + y * 7) % 17 < 5 {
+                 img.put_pixel(x, y, Rgba([255, 140, 0, 255])); // Brighter orange
+             }
         }
     }
-    add_outline(&mut img, Rgba([200, 50, 0, 255]));
     img
 }
 
 fn create_water() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([30, 60, 120, 255])); // Dark blue
+    let mut img = create_tile_base(Rgba([30, 60, 120, 255])); // Dark blue
     // Add water ripples
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 {
-                if (x + y) % 9 < 2 {
-                    img.put_pixel(x, y, Rgba([50, 80, 140, 255]));
-                }
-            }
+             if (x + y) % 9 < 2 {
+                 img.put_pixel(x, y, Rgba([50, 80, 140, 255]));
+             }
         }
     }
-    add_outline(&mut img, Rgba([20, 40, 80, 255]));
     img
 }
 
 fn create_bridge() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([100, 90, 80, 255])); // Stone
+    let mut img = create_tile_base(Rgba([100, 90, 80, 255])); // Stone
     // Add planks
-    for x in (0..TILE_WIDTH).step_by(6) {
+    for x in (0..TILE_WIDTH).step_by(16) {
         for y in 0..TILE_HEIGHT {
-            if img.get_pixel(x, y)[3] > 0 {
-                img.put_pixel(x, y, Rgba([80, 70, 60, 255]));
-            }
+             img.put_pixel(x, y, Rgba([80, 70, 60, 255]));
+             if x > 0 { img.put_pixel(x-1, y, Rgba([80, 70, 60, 255])); }
         }
     }
-    add_outline(&mut img, Rgba([70, 60, 50, 255]));
+    // Nails
+    for x in (8..TILE_WIDTH).step_by(16) {
+        img.put_pixel(x, 4, Rgba([50, 45, 40, 255]));
+        img.put_pixel(x, TILE_HEIGHT-4, Rgba([50, 45, 40, 255]));
+    }
     img
 }
 
 fn create_corrupted_floor() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([60, 30, 80, 255])); // Purple-dark
+    let mut img = create_tile_base(Rgba([60, 30, 80, 255])); // Purple-dark
     // Add corruption effect
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 {
-                if (x * 3 + y * 5) % 13 < 4 {
-                    img.put_pixel(x, y, Rgba([80, 40, 100, 255]));
-                }
-            }
+             if (x * 3 + y * 5) % 13 < 4 {
+                 img.put_pixel(x, y, Rgba([80, 40, 100, 255]));
+             }
         }
     }
-    add_outline(&mut img, Rgba([40, 20, 60, 255]));
     img
 }
 
 fn create_ancient_rune_floor() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([50, 50, 60, 255]));
+    let mut img = create_tile_base(Rgba([50, 50, 60, 255]));
     // Add glowing runes
-    for y in (4..TILE_HEIGHT).step_by(8) {
-        for x in (4..TILE_WIDTH).step_by(8) {
-            if img.get_pixel(x, y)[3] > 0 {
-                img.put_pixel(x, y, Rgba([100, 150, 255, 255])); // Blue glow
-            }
+    for y in (8..TILE_HEIGHT).step_by(16) {
+        for x in (8..TILE_WIDTH).step_by(16) {
+             // Draw small rune symbol
+             draw_rect(&mut img, x, y, 6, 2, Rgba([100, 150, 255, 255]));
+             draw_rect(&mut img, x+2, y-2, 2, 6, Rgba([100, 150, 255, 255]));
         }
     }
-    add_outline(&mut img, Rgba([40, 40, 50, 255]));
     img
 }
 
 // Room tiles
 fn create_dungeon_heart() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([139, 0, 0, 255])); // Dark red
+    let mut img = create_tile_base(Rgba([139, 0, 0, 255])); // Dark red
     // Add heart pattern
     let center_x = TILE_WIDTH / 2;
     let center_y = TILE_HEIGHT / 2;
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 {
-                let dx = (x as i32 - center_x as i32).abs();
-                let dy = (y as i32 - center_y as i32).abs();
-                if dx + dy < 8 {
-                    img.put_pixel(x, y, Rgba([255, 0, 0, 255])); // Bright red center
-                }
-            }
+             let dx = (x as i32 - center_x as i32).abs();
+             let dy = (y as i32 - center_y as i32).abs();
+             if dx + dy < 16 {
+                 img.put_pixel(x, y, Rgba([255, 0, 0, 255])); // Bright red center
+             }
         }
     }
-    add_outline(&mut img, Rgba([100, 0, 0, 255]));
     img
 }
 
 fn create_lair() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([70, 50, 40, 255])); // Brown
+    let mut img = create_tile_base(Rgba([70, 50, 40, 255])); // Brown
     // Add bedding pattern
-    for y in (8..TILE_HEIGHT).step_by(4) {
-        for x in 8..TILE_WIDTH-8 {
-            if img.get_pixel(x, y)[3] > 0 {
-                img.put_pixel(x, y, Rgba([90, 70, 50, 255]));
-            }
-        }
+    // Concentric straw nests?
+    for i in 0..3 {
+        let cx = 16 + i * 20;
+        let cy = 16 + (i%2) * 20;
+        draw_circle(&mut img, cx, cy, 10, Rgba([90, 70, 50, 255]));
     }
-    add_outline(&mut img, Rgba([50, 35, 25, 255]));
+    add_noise(&mut img, 10);
     img
 }
 
 fn create_hatchery() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([85, 70, 50, 255])); // Brown-tan
+    let mut img = create_tile_base(Rgba([85, 70, 50, 255])); // Brown-tan
     // Add hay/straw texture
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 && (x * 7 + y * 3) % 11 < 3 {
-                img.put_pixel(x, y, Rgba([200, 180, 80, 255])); // Yellow straw
-            }
+             if (x * 7 + y * 3) % 11 < 3 {
+                 img.put_pixel(x, y, Rgba([200, 180, 80, 255])); // Yellow straw
+             }
         }
     }
-    add_outline(&mut img, Rgba([65, 50, 35, 255]));
     img
 }
 
 fn create_treasury() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([218, 165, 32, 255])); // Goldenrod
+    let mut img = create_tile_base(Rgba([218, 165, 32, 255])); // Goldenrod
     // Add coin pattern
-    for y in (0..TILE_HEIGHT).step_by(6) {
+    for y in (0..TILE_HEIGHT).step_by(8) {
         for x in (0..TILE_WIDTH).step_by(8) {
-            if img.get_pixel(x, y)[3] > 0 {
-                img.put_pixel(x, y, Rgba([255, 215, 0, 255])); // Bright gold
-            }
+             img.put_pixel(x, y, Rgba([255, 215, 0, 255])); // Bright gold
+             img.put_pixel(x+1, y, Rgba([255, 255, 100, 255])); // Highlight
         }
     }
-    add_outline(&mut img, Rgba([184, 134, 11, 255]));
     img
 }
 
 fn create_workshop() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([60, 60, 65, 255])); // Dark gray
+    let mut img = create_tile_base(Rgba([60, 60, 65, 255])); // Dark gray
     // Add forge glow
-    let center_y = TILE_HEIGHT / 2;
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 && y > center_y {
-                img.put_pixel(x, y, Rgba([255, 100, 0, 255])); // Orange forge glow
-            }
+             if y > TILE_HEIGHT - 20 && x > TILE_WIDTH - 20 {
+                 img.put_pixel(x, y, Rgba([255, 100, 0, 255])); // Orange forge glow
+             }
         }
     }
-    add_outline(&mut img, Rgba([40, 40, 45, 255]));
+    // Anvil
+    draw_rect(&mut img, 16, 16, 20, 10, Rgba([30, 30, 30, 255]));
     img
 }
 
 fn create_training_room() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([80, 60, 50, 255])); // Brown-gray
-    // Add weapon rack pattern
-    for x in (8..TILE_WIDTH-8).step_by(12) {
-        for y in 4..TILE_HEIGHT-4 {
-            if img.get_pixel(x, y)[3] > 0 {
-                img.put_pixel(x, y, Rgba([150, 150, 160, 255])); // Metal
-            }
-        }
-    }
-    add_outline(&mut img, Rgba([60, 45, 35, 255]));
+    let mut img = create_tile_base(Rgba([80, 60, 50, 255])); // Brown-gray
+    // Add weapon racks
+    draw_rect(&mut img, 10, 10, 4, 40, Rgba([100, 80, 70, 255]));
+    draw_rect(&mut img, 30, 10, 4, 40, Rgba([100, 80, 70, 255]));
+    draw_rect(&mut img, 50, 10, 4, 40, Rgba([100, 80, 70, 255]));
     img
 }
 
 fn create_library() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([70, 50, 80, 255])); // Purple-brown
+    let mut img = create_tile_base(Rgba([70, 50, 80, 255])); // Purple-brown
     // Add book shelf pattern
-    for y in (0..TILE_HEIGHT).step_by(8) {
-        for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 && x % 6 < 4 {
-                img.put_pixel(x, y, Rgba([139, 69, 19, 255])); // Saddle brown
-            }
-        }
+    for x in (0..TILE_WIDTH).step_by(16) {
+        draw_rect(&mut img, x+4, 4, 8, 56, Rgba([139, 69, 19, 255])); // Bookshelf top down?
+        // Actually top down view of a floor...
+        // Let's make it floor boards
     }
-    add_outline(&mut img, Rgba([50, 35, 60, 255]));
     img
 }
 
 fn create_prison() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([50, 50, 55, 255])); // Dark gray
-    // Add bars
-    for x in (8..TILE_WIDTH-8).step_by(6) {
+    let mut img = create_tile_base(Rgba([50, 50, 55, 255])); // Dark gray
+    // Add bars shadow?
+    for x in (8..TILE_WIDTH).step_by(16) {
         for y in 0..TILE_HEIGHT {
-            if img.get_pixel(x, y)[3] > 0 {
-                img.put_pixel(x, y, Rgba([100, 100, 110, 255])); // Gray bars
-            }
+             img.put_pixel(x, y, Rgba([30, 30, 35, 255])); // Bar shadow
         }
     }
-    add_outline(&mut img, Rgba([30, 30, 35, 255]));
     img
 }
 
 fn create_guard_post() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([80, 70, 60, 255])); // Stone
-    // Add watchtower elements
-    let center_x = TILE_WIDTH / 2;
-    for y in 0..TILE_HEIGHT/2 {
-        for x in center_x-4..center_x+4 {
-            if img.get_pixel(x, y)[3] > 0 {
-                img.put_pixel(x, y, Rgba([120, 110, 100, 255]));
-            }
-        }
-    }
-    add_outline(&mut img, Rgba([60, 50, 40, 255]));
+    let mut img = create_tile_base(Rgba([80, 70, 60, 255])); // Stone
+    // Add shield emblem on floor
+    let cx = TILE_WIDTH / 2;
+    let cy = TILE_HEIGHT / 2;
+    draw_rect(&mut img, cx-10, cy-10, 20, 20, Rgba([100, 90, 80, 255]));
+    draw_rect(&mut img, cx-5, cy-5, 10, 10, Rgba([150, 140, 130, 255]));
     img
 }
 
 fn create_ritual_circle() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([40, 20, 50, 255])); // Dark purple
+    let mut img = create_tile_base(Rgba([40, 20, 50, 255])); // Dark purple
     // Add pentagram/circle
     let center_x = TILE_WIDTH / 2;
     let center_y = TILE_HEIGHT / 2;
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 {
-                let dx = (x as i32 - center_x as i32).abs();
-                let dy = (y as i32 - center_y as i32).abs();
-                if dx + dy > 6 && dx + dy < 10 {
-                    img.put_pixel(x, y, Rgba([200, 50, 50, 255])); // Red circle
-                }
-            }
+             let dx = (x as i32 - center_x as i32).abs();
+             let dy = (y as i32 - center_y as i32).abs();
+             if dx*dx + dy*dy > 100 && dx*dx + dy*dy < 150 {
+                 img.put_pixel(x, y, Rgba([200, 50, 50, 255])); // Red circle ring
+             }
         }
     }
-    add_outline(&mut img, Rgba([30, 15, 40, 255]));
     img
 }
 
 fn create_monster_spawner() -> RgbaImage {
-    let mut img = create_iso_tile_base(Rgba([80, 20, 100, 255])); // Purple
+    let mut img = create_tile_base(Rgba([80, 20, 100, 255])); // Purple
     // Add portal swirl
     let center_x = TILE_WIDTH / 2;
     let center_y = TILE_HEIGHT / 2;
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            if img.get_pixel(x, y)[3] > 0 {
-                let dx = x as i32 - center_x as i32;
-                let dy = y as i32 - center_y as i32;
-                if (dx * dx + dy * dy * 2) < 100 {
-                    img.put_pixel(x, y, Rgba([150, 50, 200, 255])); // Bright purple
-                }
-            }
+             let dx = x as i32 - center_x as i32;
+             let dy = y as i32 - center_y as i32;
+             if (dx * dx + dy * dy) < 400 {
+                 if (dx*dx+dy*dy) % 20 < 10 {
+                     img.put_pixel(x, y, Rgba([150, 50, 200, 255])); // Bright purple swirl
+                 }
+             }
         }
     }
-    add_outline(&mut img, Rgba([60, 15, 80, 255]));
     img
 }
 

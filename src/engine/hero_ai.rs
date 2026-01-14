@@ -203,7 +203,7 @@ pub fn find_target_room(
 
 /// Find a room by its type
 fn find_room_by_type(game_state: &GameState, room_type: &str) -> Option<usize> {
-    for room in &game_state.rooms {
+    for room in &game_state.room_manager.rooms {
         if room.room_type == room_type {
             return Some(room.id);
         }
@@ -224,7 +224,7 @@ fn find_best_room_by_priority(
     let mut best_room = None;
     let mut best_priority = 0.0;
 
-    for room in &game_state.rooms {
+    for room in &game_state.room_manager.rooms {
         if room.room_type == room_type {
             let priority = hero_data.ai.room_priorities.get(&room.room_type).copied().unwrap_or(1.0);
             let distance_factor = calculate_room_distance_factor(hero_pos, room, game_state);
@@ -252,7 +252,7 @@ fn find_room_with_creatures(
     let mut best_room = None;
     let mut best_score = 0.0;
 
-    for room in &game_state.rooms {
+    for room in &game_state.room_manager.rooms {
         if room_types.contains(&room.room_type.as_str()) {
             // Score based on room size and distance
             let size_score = room.tiles.len() as f32;
@@ -277,7 +277,7 @@ fn find_unexplored_room(
     game_data: &GameData,
 ) -> Option<usize> {
     // Look for rooms that have fog-covered tiles
-    for room in &game_state.rooms {
+    for room in &game_state.room_manager.rooms {
         for &tile_pos in &room.tiles {
             if let Some(tile) = game_state.get_tile(tile_pos) {
                 if matches!(tile.fog_state, crate::state::tile_state::FogState::Hidden) {
@@ -288,7 +288,7 @@ fn find_unexplored_room(
     }
 
     // Fallback to any room
-    game_state.rooms.first().map(|r| r.id)
+    game_state.room_manager.rooms.first().map(|r| r.id)
 }
 
 /// Find a room near the dungeon entrance
@@ -297,7 +297,7 @@ fn find_entrance_room(game_state: &GameState) -> Option<usize> {
     let mut best_room = None;
     let mut best_distance = f32::INFINITY;
 
-    for room in &game_state.rooms {
+    for room in &game_state.room_manager.rooms {
         // Calculate distance from room center to origin
         let center_x = room.tiles.iter().map(|p| p.x as f32).sum::<f32>() / room.tiles.len() as f32;
         let center_y = room.tiles.iter().map(|p| p.y as f32).sum::<f32>() / room.tiles.len() as f32;
@@ -338,7 +338,7 @@ fn calculate_distance(a: TilePos, b: TilePos) -> f32 {
 /// Check if dungeon heart is still alive
 fn is_dungeon_heart_alive(game_state: &GameState) -> bool {
     // Check if heart room exists and has heart object
-    for room in &game_state.rooms {
+    for room in &game_state.room_manager.rooms {
         if room.room_type == "dungeon_heart" {
             // In a full implementation, check for heart entity or room health
             return true;

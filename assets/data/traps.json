@@ -1,0 +1,50 @@
+[
+    {
+        "id": "door",
+        "name": "Door",
+        "description": "A sturdy door that can be locked to block hero movement.",
+        "category": "defense",
+        "cost": 50,
+        "build_time": 5.0,
+        "effects": {
+            "blocks_movement": true,
+            "lockable": true
+        }
+    },
+    {
+        "id": "spike_trap",
+        "name": "Spike Trap",
+        "description": "Hidden spikes that damage heroes when triggered.",
+        "category": "offense",
+        "cost": 100,
+        "build_time": 10.0,
+        "effects": {
+            "damage": 25,
+            "trigger_type": "pressure"
+        }
+    },
+    {
+        "id": "boulder_trap",
+        "name": "Boulder Trap",
+        "description": "Releases a rolling boulder that crushes enemies.",
+        "category": "offense",
+        "cost": 150,
+        "build_time": 15.0,
+        "effects": {
+            "damage": 50,
+            "trigger_type": "pressure",
+            "area": true
+        }
+    },
+    {
+        "id": "alarm_trap",
+        "name": "Alarm Trap",
+        "description": "Alerts nearby creatures when heroes pass.",
+        "category": "utility",
+        "cost": 30,
+        "build_time": 3.0,
+        "effects": {
+            "alert_radius": 10
+        }
+    }
+]
