@@ -852,5 +852,193 @@
       ],
       "voice_set": "demon"
     }
+  },
+  {
+    "id": "spider",
+    "name": "Giant Spider",
+    "description": "A venomous giant spider that dwells in dark caves.",
+    "faction": "wild",
+    "role": "npc",
+    "stats": {
+      "health": 60,
+      "mana": 0,
+      "attack": 12,
+      "defense": 3,
+      "speed": 1.5,
+      "carry_capacity": 0,
+      "sight_radius": 6
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 0,
+        "satisfied_by": []
+      },
+      "food": {
+        "decay_per_minute": 0,
+        "satisfied_by": []
+      },
+      "gold": {
+        "decay_per_minute": 0,
+        "satisfied_by": [],
+        "stash_amount": 0
+      }
+    },
+    "traits": [
+      "aggressive",
+      "wild"
+    ],
+    "ai": {
+      "base_mood": 100,
+      "anger_threshold": 0,
+      "desertion_threshold": 0,
+      "task_preferences": {
+        "fight": 2.0,
+        "wander": 1.0
+      },
+      "room_desires": {},
+      "discipline_response": {}
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        8,
+        12
+      ],
+      "attack_speed": 1.0,
+      "armor_type": "none",
+      "resistances": {
+        "poison": 0.8
+      },
+      "abilities": [
+        "poison_bite"
+      ]
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        1000
+      ],
+      "stat_growth_per_level": {},
+      "max_level": 1,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 0,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [
+        0,
+        5
+      ]
+    },
+    "spawn": {
+      "source": "lair",
+      "min_dungeon_reputation": 0,
+      "preferred_rooms": [],
+      "spawn_weight": 0,
+      "max_population": 10
+    },
+    "visual": {
+      "sprite": "creatures/spider.png",
+      "scale": 0.9,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "spider"
+    }
+  },
+  {
+    "id": "lizard",
+    "name": "Cave Lizard",
+    "description": "An aggressive reptilian that guards its territory.",
+    "faction": "wild",
+    "role": "npc",
+    "stats": {
+      "health": 120,
+      "mana": 0,
+      "attack": 15,
+      "defense": 8,
+      "speed": 1.2,
+      "carry_capacity": 0,
+      "sight_radius": 7
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 0,
+        "satisfied_by": []
+      },
+      "food": {
+        "decay_per_minute": 0,
+        "satisfied_by": []
+      },
+      "gold": {
+        "decay_per_minute": 0,
+        "satisfied_by": [],
+        "stash_amount": 0
+      }
+    },
+    "traits": [
+      "aggressive",
+      "wild"
+    ],
+    "ai": {
+      "base_mood": 100,
+      "anger_threshold": 0,
+      "desertion_threshold": 0,
+      "task_preferences": {
+        "fight": 2.0,
+        "wander": 0.8
+      },
+      "room_desires": {},
+      "discipline_response": {}
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        12,
+        18
+      ],
+      "attack_speed": 0.9,
+      "armor_type": "medium",
+      "resistances": {
+        "fire": 0.5
+      },
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        1000
+      ],
+      "stat_growth_per_level": {},
+      "max_level": 1,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 0,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [
+        0,
+        15
+      ]
+    },
+    "spawn": {
+      "source": "lair",
+      "min_dungeon_reputation": 0,
+      "preferred_rooms": [],
+      "spawn_weight": 0,
+      "max_population": 10
+    },
+    "visual": {
+      "sprite": "creatures/lizard.png",
+      "scale": 1.2,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "lizard"
+    }
   }
 ]

@@ -192,13 +192,22 @@ impl Sidebar {
         let start_x = PADDING;
         let start_y = self.panel_y + PADDING;
         
-        let mut i = 0;
-        // Hardcoded sort order for now, or just iterate unlocked
-        let sorted_spells = vec!["heal", "lightning_strike", "summon_imps"]; // Speed removed
-        
-        for spell_id in sorted_spells {
-            if !player.is_spell_unlocked(spell_id) { continue; }
+        // Dynamic sorted list of unlocked spells
+        let mut sorted_spells: Vec<&String> = spells.keys()
+            .filter(|id| player.is_spell_unlocked(id))
+            .collect();
             
+        // Sort by mana cost, then name
+        sorted_spells.sort_by(|a, b| {
+            let cost_a = spells.get(*a).map(|s| s.cost.mana).unwrap_or(0);
+            let cost_b = spells.get(*b).map(|s| s.cost.mana).unwrap_or(0);
+            match cost_a.cmp(&cost_b) {
+                std::cmp::Ordering::Equal => a.cmp(b),
+                other => other,
+            }
+        });
+        
+        for (i, spell_id) in sorted_spells.iter().enumerate() {
             let btn_x = start_x + (BUTTON_SIZE + BUTTON_SPACING) * i as f32;
             let btn_y = start_y;
             
@@ -206,19 +215,14 @@ impl Sidebar {
                && mouse_pos.1 >= btn_y && mouse_pos.1 <= btn_y + BUTTON_SIZE {
                    
                    // Check cost and cooldown
-                   if let Some(data) = spells.get(spell_id) {
+                   if let Some(data) = spells.get(*spell_id) {
                        if player.gold >= data.cost.gold && player.mana >= data.cost.mana {
                            // Set selected spell
                            self.selected_spell = Some(spell_id.to_string());
-                           // We don't change interaction mode immediately, it's handled via selected_spell state access
-                           // But to be consistent with main loop, we might want a "CastMode" or similar, 
-                           // but existing spell bar just returned SelectSpell.
-                           // Let's keep using InteractionMode::None but main loop checks selected_spell.
                            return Some(InteractionMode::None);
                        }
                    }
             }
-            i += 1;
         }
         
         None
@@ -448,11 +452,22 @@ impl Sidebar {
         let start_x = PADDING;
         let start_y = self.panel_y + PADDING;
         
-        let sorted_spells = vec!["heal", "lightning_strike", "summon_imps"];
+        // Dynamic sorted list of unlocked spells
+        let mut sorted_spells: Vec<&String> = spells.keys()
+            .filter(|id| player.is_spell_unlocked(id))
+            .collect();
+            
+        // Sort by mana cost, then name
+        sorted_spells.sort_by(|a, b| {
+            let cost_a = spells.get(*a).map(|s| s.cost.mana).unwrap_or(0);
+            let cost_b = spells.get(*b).map(|s| s.cost.mana).unwrap_or(0);
+            match cost_a.cmp(&cost_b) {
+                std::cmp::Ordering::Equal => a.cmp(b),
+                other => other,
+            }
+        });
         
         for (i, spell_id) in sorted_spells.iter().enumerate() {
-            if !player.is_spell_unlocked(spell_id) { continue; }
-            
             let btn_x = start_x + (BUTTON_SIZE + BUTTON_SPACING) * i as f32;
             let btn_y = start_y;
             
@@ -468,6 +483,9 @@ impl Sidebar {
             draw_rectangle_lines(btn_x, btn_y, BUTTON_SIZE, BUTTON_SIZE, 2.0, WHITE);
             
             // Icon placeholder (first letter)
+            if let Some(_data) = spells.get(*spell_id) {
+                 // Try to load icon if texture manager was available, but simple text for now
+            }
             let abbrev = &spell_id[0..1].to_uppercase();
             draw_text(abbrev, btn_x + 15.0, btn_y + 30.0, 24.0, WHITE);
             
@@ -483,8 +501,6 @@ impl Sidebar {
                          let h = BUTTON_SIZE * ratio;
                          
                          // Red overlay growing from bottom (or shrinking to bottom)
-                         // "Goes fully red and then goes down" -> Fill decreases
-                         // Draw rect from bottom up
                          let y_pos = btn_y + (BUTTON_SIZE - h);
                          
                          draw_rectangle(btn_x, y_pos, BUTTON_SIZE, h, Color::new(1.0, 0.0, 0.0, 0.5));

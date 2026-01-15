@@ -14,6 +14,7 @@ pub mod task_system;
 pub mod action_processor;
 
 pub mod spawner;
+pub mod spawner_logic;
 pub mod movement;
 
 pub mod input;

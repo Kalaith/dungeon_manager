@@ -58,6 +58,7 @@ impl PlayerState {
         unlocked_spells.insert("heal".to_string());
         unlocked_spells.insert("summon_imps".to_string());
         unlocked_spells.insert("lightning_strike".to_string());
+        unlocked_spells.insert("make_earth".to_string());
 
         Self {
             gold: crate::config::STARTING_GOLD,

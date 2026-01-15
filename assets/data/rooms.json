@@ -377,9 +377,7 @@
       "construction_time": 0.6
     },
     "requirements": {
-      "research": [
-        "workshop_tech"
-      ],
+      "research": [],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []

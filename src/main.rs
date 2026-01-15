@@ -101,6 +101,15 @@ impl Game {
         // Process queued actions
         if let GamePhase::Playing(ref mut state) = self.phase {
             if let Some(ref game_data) = self.game_data {
+                // Update helpers (traps, etc)
+                crate::engine::trap_system::process_trap_construction(
+                    &mut state.dungeon,
+                    &mut state.player,
+                    &mut state.pending_trap_builds,
+                    game_data,
+                    dt
+                );
+
                 action_processor::process_actions(
                     &mut self.action_queue,
                     state,

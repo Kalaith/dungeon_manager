@@ -561,6 +561,8 @@ fn generate_monster_sprites() {
     save_sprite("monsters", "troll", create_troll_sprite());
     save_sprite("monsters", "skeleton", create_skeleton_sprite());
     save_sprite("monsters", "demon_spawn", create_demon_spawn_sprite());
+    save_sprite("monsters", "spider", create_spider_sprite());
+    save_sprite("monsters", "lizard", create_lizard_sprite());
 }
 
 fn generate_hero_sprites() {
@@ -1390,6 +1392,79 @@ fn create_champion_sprite() -> RgbaImage {
     // Cross on shield
     draw_cylinder_3d(&mut img, &mut depth, cx - 20.0, 28.0, 42.0, 14.0, 2.0, &gold_mat);
     
+    img
+}
+
+fn create_spider_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+
+    let body_mat = Material::matte(40, 40, 45); // Dark grey/black
+    let abdomen_mat = Material::matte(30, 30, 35); // Slightly darker
+    let eye_mat = Material::glowing(200, 20, 20); // Red glowing eyes
+
+    draw_shadow(&mut img, cx, 58.0, 15.0, 8.0);
+
+    // Abdomen (large back part)
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 36.0, 20.0, 12.0, 10.0, 15.0, &abdomen_mat);
+
+    // Cephalothorax (head/body)
+    draw_sphere_3d(&mut img, &mut depth, cx, 42.0, 12.0, 8.0, &body_mat);
+
+    // Eyes
+    draw_sphere_3d(&mut img, &mut depth, cx - 3.0, 40.0, 16.0, 2.0, &eye_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 3.0, 40.0, 16.0, 2.0, &eye_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx - 6.0, 39.0, 15.0, 1.5, &eye_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 6.0, 39.0, 15.0, 1.5, &eye_mat);
+
+    // Legs (8 legs, simplified as angled cylinders)
+    let leg_mat = Material::matte(35, 35, 40);
+    // Left legs
+    draw_cylinder_3d(&mut img, &mut depth, cx - 12.0, 45.0, 58.0, 10.0, 2.0, &leg_mat); // Front
+    draw_cylinder_3d(&mut img, &mut depth, cx - 14.0, 40.0, 56.0, 15.0, 2.0, &leg_mat);
+    draw_cylinder_3d(&mut img, &mut depth, cx - 14.0, 35.0, 56.0, 20.0, 2.0, &leg_mat);
+    draw_cylinder_3d(&mut img, &mut depth, cx - 12.0, 30.0, 58.0, 25.0, 2.0, &leg_mat); // Back
+
+    // Right legs
+    draw_cylinder_3d(&mut img, &mut depth, cx + 12.0, 45.0, 58.0, 10.0, 2.0, &leg_mat); // Front
+    draw_cylinder_3d(&mut img, &mut depth, cx + 14.0, 40.0, 56.0, 15.0, 2.0, &leg_mat);
+    draw_cylinder_3d(&mut img, &mut depth, cx + 14.0, 35.0, 56.0, 20.0, 2.0, &leg_mat);
+    draw_cylinder_3d(&mut img, &mut depth, cx + 12.0, 30.0, 58.0, 25.0, 2.0, &leg_mat); // Back
+    
+    img
+}
+
+fn create_lizard_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+
+    let scale_mat = Material::metallic(60, 140, 60); // Green scales
+    let shadow_mat = Material::matte(40, 100, 40); // Darker underside
+    let eye_mat = Material::glowing(255, 255, 0); // Yellow eyes
+
+    draw_shadow(&mut img, cx, 58.0, 18.0, 6.0);
+
+    // Tail (behind)
+    draw_cone_3d(&mut img, &mut depth, cx - 5.0, 40.0, 58.0, -10.0, 5.0, &scale_mat);
+
+    // Body (long ellipsoid)
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 45.0, 5.0, 10.0, 18.0, 8.0, &scale_mat);
+
+    // Underside/Legs
+    draw_cylinder_3d(&mut img, &mut depth, cx - 8.0, 48.0, 58.0, 5.0, 3.0, &shadow_mat);
+    draw_cylinder_3d(&mut img, &mut depth, cx + 8.0, 48.0, 58.0, 5.0, 3.0, &shadow_mat);
+    draw_cylinder_3d(&mut img, &mut depth, cx - 6.0, 52.0, 58.0, 15.0, 3.0, &shadow_mat); // Back legs
+    draw_cylinder_3d(&mut img, &mut depth, cx + 6.0, 52.0, 58.0, 15.0, 3.0, &shadow_mat);
+
+    // Head
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 30.0, 8.0, 8.0, 10.0, 6.0, &scale_mat);
+
+    // Eyes
+    draw_sphere_3d(&mut img, &mut depth, cx - 4.0, 28.0, 10.0, 1.5, &eye_mat);
+    draw_sphere_3d(&mut img, &mut depth, cx + 4.0, 28.0, 10.0, 1.5, &eye_mat);
+
     img
 }
 

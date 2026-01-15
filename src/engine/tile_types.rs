@@ -56,6 +56,13 @@ pub fn is_resource(tile_type: &str, game_data: &GameData) -> bool {
         .unwrap_or(false)
 }
 
+/// Check if a tile type is claimable by the player
+pub fn is_claimable(tile_type: &str, game_data: &GameData) -> bool {
+    game_data.tiles.get(tile_type)
+        .map(|t| t.claimable)
+        .unwrap_or(false)
+}
+
 /// Check if a tile type is walkable for creatures
 pub fn is_walkable(tile_type: &str, game_data: &GameData) -> bool {
     // If it's a room, it's walkable (unless room data says otherwise, but tiles here)

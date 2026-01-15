@@ -72,6 +72,7 @@ pub fn generate_map(config: &MapConfig, _game_data: &GameData) -> Grid {
     // Step 9: Add natural features
     if config.enable_natural_features {
         features::add_natural_features(&mut grid, config, &mut rng);
+        features::add_monster_lairs(&mut grid, start_pos, config, &mut rng);
     }
 
     // Step 10: Create starting area LAST (clears resources to make room)

@@ -36,6 +36,7 @@ pub struct GameState {
     pub next_hero_spawn_time: f32,
     pub next_creature_spawn_time: f32,
     pub pay_day_timer: f32,
+    pub spawners: Vec<crate::engine::spawner_logic::MonsterSpawner>,
     pub paused: bool,
 }
 
@@ -53,6 +54,26 @@ impl GameState {
 
         let entities = EntityManager::new();
 
+        // Detect Monster Spawners from map tiles
+        let mut spawners = Vec::new();
+        let (w, h) = tile_grid::get_grid_dimensions(&dungeon.grid);
+        for y in 0..h {
+            for x in 0..w {
+                let pos = TilePos::new(x as i32, y as i32);
+                if let Some(tile) = tile_grid::get_tile(&dungeon.grid, pos) {
+                    if tile.tile_type == "monster_spawner" {
+                        // Randomly pick Spider or Lizard
+                        let monster_id = if rand::random::<f32>() < 0.5 { "spider" } else { "lizard" };
+                        spawners.push(crate::engine::spawner_logic::MonsterSpawner::new(
+                            pos, 
+                            monster_id.to_string(), 
+                            10 // Max 10 monsters
+                        ));
+                    }
+                }
+            }
+        }
+
         let mut state = Self {
             dungeon,
             room_manager,
@@ -66,6 +87,7 @@ impl GameState {
             next_hero_spawn_time: 30.0, // Spawn first hero after 30 seconds
             next_creature_spawn_time: 10.0, // Spawn first creature after 10 seconds
             pay_day_timer: 0.0,
+            spawners,
             paused: false,
         };
 
@@ -141,6 +163,15 @@ impl GameState {
             self.spawn_random_hero(game_data);
             self.next_hero_spawn_time = 10.0 + rand::random::<f32>() * 10.0; // 10-20 seconds
         }
+
+        // NPC Spawner Update
+        crate::engine::spawner_logic::SpawnerSystem::update(
+            &mut self.spawners,
+            &self.dungeon.grid,
+            &mut self.entities,
+            game_data,
+            dt
+        );
 
         // Creature spawning
         self.next_creature_spawn_time -= dt;

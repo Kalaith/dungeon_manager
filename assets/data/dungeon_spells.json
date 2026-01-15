@@ -182,5 +182,30 @@
     "visual": {
       "icon": "icons/spells/summon.png"
     }
+  },
+  {
+    "id": "make_earth",
+    "name": "Make Earth",
+    "description": "Create solid earth from thin air.",
+    "category": "construction",
+    "cost": {
+      "mana": 40
+    },
+    "targeting": {
+      "type": "tile",
+      "range": 10,
+      "area_radius": 0
+    },
+    "effects": [
+      {
+        "type": "tile_transform",
+        "to_tile": "earth",
+        "radius": 0
+      }
+    ],
+    "cooldown": 1,
+    "visual": {
+      "icon": "icons/spells/earth.png"
+    }
   }
 ]

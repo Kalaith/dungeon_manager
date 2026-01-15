@@ -202,7 +202,7 @@ fn apply_spell_effect(
         }
         "tile_transform" => {
             if let Some(pos) = target_pos {
-                apply_tile_transform(pos, effect, game_state);
+                apply_tile_transform(pos, effect, game_state, game_data);
             }
         }
         "spawn_entity" => {
@@ -311,8 +311,8 @@ fn apply_status_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &m
 }
 
 /// Transform tile type
-fn apply_tile_transform(pos: TilePos, effect: &SpellEffect, game_state: &mut GameState) {
-    let area_radius = 2; // Default area radius
+fn apply_tile_transform(pos: TilePos, effect: &SpellEffect, game_state: &mut GameState, game_data: &GameData) {
+    let area_radius = effect.radius.unwrap_or(0); // Default to single tile if not specified
 
     for dy in -(area_radius as i32)..=(area_radius as i32) {
         for dx in -(area_radius as i32)..=(area_radius as i32) {
@@ -329,6 +329,15 @@ fn apply_tile_transform(pos: TilePos, effect: &SpellEffect, game_state: &mut Gam
                 // Transform to 'to' type
                 if let Some(to_type) = &effect.to_tile {
                     tile.tile_type = to_type.clone();
+                    
+                    // If the new tile type is not claimable (e.g. earth, rock), reset ownership
+                    // This ensures player-owned floor transformed to earth becomes neutral/diggable
+                    if !crate::engine::tile_types::is_claimable(to_type, game_data) {
+                        tile.ownership = Ownership::Unclaimed;
+                        tile.room_id = None;
+                        tile.marked_for_dig = false;
+                    }
+                    
                     eprintln!("Tile transformed at {:?} to {}", target_pos, to_type);
                 }
             }

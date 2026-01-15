@@ -52,6 +52,17 @@ pub fn add_mineral_veins(grid: &mut Grid, config: &MapConfig, start_pos: TilePos
     
     // Place bonus mana near hero portals
     place_mana_near_portals(grid, rng);
+
+    // Scattered resources (single tiles spread everywhere including near base)
+    // Scale count by map size (assuming 50x50 base)
+    let map_area = (width * height) as f32;
+    let density_scale = map_area / 2500.0;
+    
+    let scattered_gold = (180.0 * config.gold_richness * density_scale) as usize;
+    place_scattered_resources(grid, "gold_vein", scattered_gold, rng);
+    
+    let scattered_mana = (90.0 * config.mana_richness * density_scale) as usize;
+    place_scattered_resources(grid, "mana_crystal", scattered_mana, rng);
 }
 
 /// Place veins using strategic placement rules
@@ -250,6 +261,41 @@ fn place_single_gems(grid: &mut Grid, start_pos: TilePos, count: usize, rng: &mu
         // Place single gem tile
         grid[y][x].tile_type = "gem_seam".to_string();
         grid[y][x].resources_remaining = Some(rng.gen_range(200..400)); // Finite resources
+        placed += 1;
+    }
+}
+
+/// Place scattered single resource tiles across the map (no distance constraints)
+fn place_scattered_resources(grid: &mut Grid, tile_type: &str, count: usize, rng: &mut impl Rng) {
+    let height = grid.len();
+    let width = grid[0].len();
+    
+    let mut placed = 0;
+    let mut attempts = 0;
+    
+    while placed < count && attempts < count * 10 {
+        attempts += 1;
+        
+        let x = rng.gen_range(2..width - 2);
+        let y = rng.gen_range(2..height - 2);
+        
+        // Must be in diggable terrain
+        let current_type = &grid[y][x].tile_type;
+        if current_type != "solid_rock" && current_type != "earth" {
+            continue;
+        }
+        
+        // Place resource
+        grid[y][x].tile_type = tile_type.to_string();
+        
+        // Set resource amount based on type
+        let amount = match tile_type {
+            "gold_vein" => rng.gen_range(50..100), // Smaller amount for single tiles
+            "mana_crystal" => rng.gen_range(100..200),
+            _ => 100
+        };
+        
+        grid[y][x].resources_remaining = Some(amount);
         placed += 1;
     }
 }

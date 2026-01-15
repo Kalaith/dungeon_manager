@@ -371,18 +371,38 @@ impl GameRenderer {
 
                     // Draw trap if present
                     if let Some(trap) = &tile.trap {
-                        let trap_color = if trap.constructed {
-                            WHITE
+                        let is_constructing = !trap.constructed;
+                        let trap_color = if is_constructing {
+                            Color::new(1.0, 1.0, 1.0, 0.3) // Very transparent for "ghost"
                         } else {
-                            Color::new(1.0, 1.0, 1.0, 0.5)
+                            WHITE
                         };
+                        
                         if let Some(trap_texture) = graphics.tile_textures.get(&trap.trap_type) {
-                            // Draw trap slightly above floor
+                            // Draw trap slightly above floor, smaller size to fit well
                             draw_plane(
-                                vec3(pos_x, 0.02, pos_z), // Reduced offset to look grounded but avoid Z-fighting
-                                vec2(0.8, 0.8),
+                                vec3(pos_x, 0.05, pos_z), 
+                                vec2(0.6, 0.6), // Reduced from 0.8
                                 Some(trap_texture),
                                 trap_color,
+                            );
+                        } else {
+                            // Fallback if texture missing (e.g. doors)
+                            // Draw a colored box - User requested "full square" for now
+                            let (fallback_color, size) = match trap.trap_type.as_str() {
+                                "door" => (Color::new(0.4, 0.2, 0.1, if is_constructing { 0.3 } else { 1.0 }), vec3(1.0, 1.0, 1.0)), // Full block for door
+                                "spike_trap" => (Color::new(0.5, 0.5, 0.5, if is_constructing { 0.3 } else { 1.0 }), vec3(1.0, 0.1, 1.0)), // Full floor tile for spikes
+                                _ => (Color::new(0.8, 0.2, 0.2, if is_constructing { 0.3 } else { 1.0 }), vec3(1.0, 0.2, 1.0)), // Generic
+                            };
+                            
+                            draw_cube(
+                                // Adjust Y so it sits on floor (floor is at -0.25 with height 0.5, so top is at 0.0)
+                                // We want this to sit on top of 0.0.
+                                // draw_cube position is center. So y should be size.y/2.0
+                                vec3(pos_x, size.y / 2.0, pos_z),
+                                size,
+                                None,
+                                fallback_color,
                             );
                         }
                     }

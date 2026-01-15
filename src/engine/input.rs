@@ -475,24 +475,30 @@ impl InputHandler {
     }
 
     fn handle_build_trap(state: &mut GameState, game_data: &GameData, trap_type: &str, tile_pos: TilePos) {
-        let valid = if let Some(tile) = state.get_tile(tile_pos) {
-            tile.ownership == Ownership::Player 
-                && tile_types::can_build_room(&tile.tile_type, game_data)
-                && tile.trap.is_none()
-        } else {
-            false
-        };
+        // Check for Workshop requirement
+        let has_workshop = state.room_manager.rooms.iter().any(|r| r.room_type == "workshop");
+        if !has_workshop {
+            eprintln!("Cannot build trap: No functioning Workshop!");
+            return;
+        }
 
-        if valid {
-            if let Some(tile_mut) = state.get_tile_mut(tile_pos) {
-                tile_mut.trap = Some(crate::state::tile_state::TrapState {
-                    trap_type: trap_type.to_string(),
-                    constructed: false,
-                    construction_progress: 0.0,
-                    active: false,
-                    funded: false,
-                });
-                state.pending_trap_builds.insert(tile_pos);
+        // Add to pending builds
+        if let Some(tile) = state.get_tile_mut(tile_pos) {
+            if tile.ownership == Ownership::Player 
+                && tile_types::can_build_room(&tile.tile_type, game_data) 
+                && tile.trap.is_none() 
+            {
+                 // Create trap in "unconstructed" state
+                 tile.trap = Some(crate::state::tile_state::TrapState {
+                     trap_type: trap_type.to_string(), // Changed from .to_string()
+                     constructed: false,
+                     construction_progress: 0.0,
+                     active: false,
+                     funded: false,
+                 });
+                 
+                 state.pending_trap_builds.insert(tile_pos);
+                 eprintln!("Trap '{}' placement started at {:?}. Waiting for construction.", trap_type, tile_pos);
             }
         }
     }

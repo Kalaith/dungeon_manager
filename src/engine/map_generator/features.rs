@@ -123,10 +123,99 @@ fn create_collapsed_chamber(grid: &mut Grid, cx: usize, cy: usize, size: usize, 
 }
 
 // ============================================================================
-// HERO PORTAL PLACEMENT
+// MONSTER LAIR PLACEMENT
 // ============================================================================
 
-/// Place hero spawn portals strategically around the map
+/// Add underground monster lairs with spawners
+pub fn add_monster_lairs(grid: &mut Grid, start_pos: TilePos, config: &MapConfig, rng: &mut impl Rng) {
+    let height = grid.len();
+    let width = grid[0].len();
+    let target_lairs = rng.gen_range(3..6); // Aim for 3-5 lairs
+    let mut min_distance = 25.0; // Initial strict distance
+
+    let mut lairs_placed = 0;
+    let mut attempts = 0;
+
+    // First pass: Try to place target number with strict rules
+    while lairs_placed < target_lairs && attempts < 100 {
+        attempts += 1;
+        if try_place_lair(grid, width, height, start_pos, min_distance, rng) {
+            lairs_placed += 1;
+        }
+    }
+
+    // Second pass: Ensure at least 2 lairs with relaxed rules if needed
+    let mut fallback_attempts = 0;
+    while lairs_placed < 2 && fallback_attempts < 200 {
+        fallback_attempts += 1;
+        min_distance *= 0.8; // Reduce distance requirement
+        if min_distance < 10.0 { min_distance = 10.0; } // Hard limit
+
+        if try_place_lair(grid, width, height, start_pos, min_distance, rng) {
+            lairs_placed += 1;
+        }
+    }
+}
+
+fn try_place_lair(grid: &mut Grid, width: usize, height: usize, start_pos: TilePos, min_dist: f32, rng: &mut impl Rng) -> bool {
+    let cx = rng.gen_range(10..width - 10);
+    let cy = rng.gen_range(10..height - 10);
+    let pos = TilePos::new(cx as i32, cy as i32);
+
+    if distance_f32(pos, start_pos) < min_dist {
+        return false;
+    }
+
+    // Check if area is solid (we want to carve out of rock)
+    if is_open_area(grid, pos, 3) {
+        return false;
+    }
+
+    // Carve the lair
+    create_monster_lair(grid, cx, cy, rng);
+    true
+}
+
+fn create_monster_lair(grid: &mut Grid, cx: usize, cy: usize, rng: &mut impl Rng) {
+    let height = grid.len();
+    let width = grid[0].len();
+    let radius = rng.gen_range(2..4);
+
+    // Carve room
+    for dy in -(radius as i32)..=(radius as i32) {
+        for dx in -(radius as i32)..=(radius as i32) {
+            if dx * dx + dy * dy <= radius * radius {
+                let x = (cx as i32 + dx).max(1).min(width as i32 - 2) as usize;
+                let y = (cy as i32 + dy).max(1).min(height as i32 - 2) as usize;
+                
+                // Use corrupted floor for monster lairs
+                grid[y][x].tile_type = "corrupted_floor".to_string();
+                grid[y][x].ownership = Ownership::Enemy;
+                grid[y][x].resources_remaining = None;
+            }
+        }
+    }
+
+    // Place spawner in center
+    grid[cy][cx].tile_type = "monster_spawner".to_string();
+    grid[cy][cx].ownership = Ownership::Enemy;
+    
+    // Add some random gold/treasure around
+    for _ in 0..3 {
+        let dx = rng.gen_range(-(radius as i32)..=(radius as i32));
+        let dy = rng.gen_range(-(radius as i32)..=(radius as i32));
+        let x = (cx as i32 + dx).max(1).min(width as i32 - 2) as usize;
+        let y = (cy as i32 + dy).max(1).min(height as i32 - 2) as usize;
+        
+        if grid[y][x].tile_type == "corrupted_floor" && (dx != 0 || dy != 0) {
+            if rng.gen_bool(0.3) {
+                grid[y][x].tile_type = "gold_vein".to_string();
+                grid[y][x].resources_remaining = Some(rng.gen_range(100..300));
+            }
+        }
+    }
+}
+
 pub fn place_hero_portals(grid: &mut Grid, start_pos: TilePos, config: &MapConfig, rng: &mut impl Rng) {
     let height = grid.len();
     let width = grid[0].len();

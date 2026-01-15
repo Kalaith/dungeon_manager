@@ -320,7 +320,7 @@ pub fn find_combat_targets(
         }
 
         // Check if entities are hostile
-        if are_hostile(entity, other_entity) {
+        if are_hostile(entity, other_entity, game_data) {
             // Check if in range
             let attack_type = match &entity.entity_type {
                 crate::state::entities::EntityType::Creature(state) => {
@@ -345,11 +345,29 @@ pub fn find_combat_targets(
 }
 
 /// Check if two entities are hostile to each other
-fn are_hostile(entity_a: &Entity, entity_b: &Entity) -> bool {
-    match (&entity_a.entity_type, &entity_b.entity_type) {
-        (crate::state::entities::EntityType::Creature(_), crate::state::entities::EntityType::Hero(_)) => true,
-        (crate::state::entities::EntityType::Hero(_), crate::state::entities::EntityType::Creature(_)) => true,
-        _ => false, // Creatures don't fight each other, heroes don't fight each other
+fn are_hostile(entity_a: &Entity, entity_b: &Entity, game_data: &GameData) -> bool {
+    let faction_a = get_faction(entity_a, game_data);
+    let faction_b = get_faction(entity_b, game_data);
+
+    match (faction_a.as_str(), faction_b.as_str()) {
+        ("dungeon", "hero") => true,
+        ("hero", "dungeon") => true,
+        ("wild", _) => true, // Wild monsters attack everyone
+        (_, "wild") => true, // Everyone attacks wild monsters
+        ("hero", "hero") => false,
+        ("dungeon", "dungeon") => false, // Friendly fire off
+        _ => false,
+    }
+}
+
+fn get_faction(entity: &Entity, game_data: &GameData) -> String {
+    match &entity.entity_type {
+        crate::state::entities::EntityType::Creature(c) => {
+            game_data.monsters.get(&c.creature_id)
+                .map(|m| m.faction.clone())
+                .unwrap_or("dungeon".to_string())
+        },
+        crate::state::entities::EntityType::Hero(_) => "hero".to_string(),
     }
 }
 
