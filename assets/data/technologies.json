@@ -1,0 +1,73 @@
+[
+    {
+        "id": "training_tech",
+        "name": "Combat Training",
+        "description": "Unlocks the Training Room, allowing minions to gain experience.",
+        "cost": 100,
+        "prerequisites": [],
+        "unlocks": {
+            "rooms": [
+                "training_hall"
+            ],
+            "spells": [],
+            "creatures": []
+        },
+        "icon": "icons/tech/training.png"
+    },
+    {
+        "id": "prison_tech",
+        "name": "Imprisonment",
+        "description": "Unlocks the Prison and Guard Post to detain heroes.",
+        "cost": 150,
+        "prerequisites": [
+            "training_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "prison",
+                "guard_post"
+            ],
+            "spells": [],
+            "creatures": []
+        },
+        "icon": "icons/tech/prison.png"
+    },
+    {
+        "id": "ritual_tech",
+        "name": "Dark Rituals",
+        "description": "Unlocks the Ritual Circle for mana generation and Warlocks.",
+        "cost": 300,
+        "prerequisites": [
+            "prison_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "ritual_circle"
+            ],
+            "spells": [
+                "lightning_strike"
+            ],
+            "creatures": [
+                "warlock"
+            ]
+        },
+        "icon": "icons/tech/ritual.png"
+    },
+    {
+        "id": "trap_tech",
+        "name": "Advanced Engineering",
+        "description": "Unlocks the Workshop and advanced traps.",
+        "cost": 200,
+        "prerequisites": [
+            "training_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "workshop"
+            ],
+            "spells": [],
+            "creatures": []
+        },
+        "icon": "icons/tech/traps.png"
+    }
+]

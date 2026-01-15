@@ -21,6 +21,7 @@ pub struct PlayerState {
     pub unlocked_rooms: HashSet<String>,
     pub unlocked_creatures: HashSet<String>,
     pub unlocked_spells: HashSet<String>,
+    pub completed_technologies: HashSet<String>,
     pub research_points: i32,
     pub active_research: Option<String>,
     pub research_progress: f32,
@@ -46,19 +47,20 @@ impl PlayerState {
     /// Create a new player state with starting values, auto-unlocking all defined rooms
     pub fn new(game_data: &crate::data::GameData) -> Self {
         let mut unlocked_rooms = HashSet::new();
-        // Auto-unlock all rooms defined in data
-        for room_id in game_data.rooms.keys() {
-            unlocked_rooms.insert(room_id.clone());
-        }
+        // Base rooms available at start
+        unlocked_rooms.insert("lair".to_string());
+        unlocked_rooms.insert("hatchery".to_string());
+        unlocked_rooms.insert("treasury".to_string());
+        unlocked_rooms.insert("library".to_string());
+        unlocked_rooms.insert("dungeon_heart".to_string()); // Always needed
 
         let mut unlocked_creatures = HashSet::new();
         unlocked_creatures.insert("imp".to_string());
 
         let mut unlocked_spells = HashSet::new();
-        unlocked_spells.insert("heal".to_string());
         unlocked_spells.insert("summon_imps".to_string());
-        unlocked_spells.insert("lightning_strike".to_string());
-        unlocked_spells.insert("make_earth".to_string());
+        unlocked_spells.insert("create_food".to_string()); // Basic mana spender
+
 
         Self {
             gold: crate::config::STARTING_GOLD,
@@ -74,6 +76,7 @@ impl PlayerState {
             unlocked_rooms,
             unlocked_creatures,
             unlocked_spells,
+            completed_technologies: HashSet::new(),
             research_points: 0,
             active_research: None,
             research_progress: 0.0,
@@ -147,19 +150,29 @@ impl PlayerState {
         self.unlocked_spells.insert(spell_id);
     }
 
+    /// Check if a technology is unlocked (completed)
+    // For now we don't store "unlocked_techs" explicitly, but we could infer it if needed.
+    // However, it's better to store completed techs to check prerequisites.
+    // We'll add a `completed_research` set to PlayerState in a separate step or just assume unlocks handle it.
+    // Actually, let's just use the unlocks (rooms/spells) as proof of tech completion?
+    // No, tech tree UI needs to know if "Training Tech" is done.
+    // I need to add `completed_technologies` field to PlayerState struct first.
+    // But since I can't easily change struct fields without a full replace, I will use `unlocked_rooms` to infer for now?
+    // No, I should add the field. It's cleaner. But `PlayerState` is serialized.
+    // Let's modify the struct definition first.
+
     /// Start researching a technology
     pub fn start_research(&mut self, research_id: String) {
         self.active_research = Some(research_id);
         self.research_progress = 0.0;
     }
 
-    /// Update research progress, returns Some(research_id) if research completes
-    pub fn update_research(&mut self, research_rate: f32, dt: f32) -> Option<String> {
+    /// Update research progress
+    pub fn update_research(&mut self, research_rate: f32, tech_cost: f32, dt: f32) -> Option<String> {
         if let Some(ref research_id) = self.active_research {
             self.research_progress += research_rate * dt;
 
-            // Check if research complete (assuming 100.0 is completion threshold)
-            if self.research_progress >= 100.0 {
+            if self.research_progress >= tech_cost {
                 let completed = research_id.clone();
                 self.active_research = None;
                 self.research_progress = 0.0;
@@ -167,6 +180,31 @@ impl PlayerState {
             }
         }
         None
+    }
+
+    /// Check if a technology is completed
+    pub fn is_tech_completed(&self, tech_id: &str) -> bool {
+        self.completed_technologies.contains(tech_id)
+    }
+
+    /// Complete a research and unlock rewards
+    pub fn complete_research(&mut self, tech: &crate::data::TechData) {
+        self.completed_technologies.insert(tech.id.clone());
+        
+        // Unlock rooms
+        for room in &tech.unlocks.rooms {
+            self.unlock_room(room.clone());
+        }
+        
+        // Unlock spells
+        for spell in &tech.unlocks.spells {
+            self.unlock_spell(spell.clone());
+        }
+        
+        // Unlock creatures
+        for creature in &tech.unlocks.creatures {
+            self.unlock_creature(creature.clone());
+        }
     }
 
     /// Record a kill
@@ -213,6 +251,7 @@ mod tests {
             gold: 200, mana: 1000, food: 100, max_gold: 10000, max_mana: 5000, max_food: 1000,
             materials: 100, max_materials: 500,
             unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
+            completed_technologies: HashSet::new(),
             research_points: 0, active_research: None, research_progress: 0.0,
             dungeon_heart_health: 100.0, max_creatures: 20, current_creature_count: 0,
             claimed_tile_count: 0, spell_cooldowns: HashMap::new(),
@@ -232,6 +271,7 @@ mod tests {
             gold: 200, mana: 1000, food: 100, max_gold: 10000, max_mana: 5000, max_food: 1000,
             materials: 100, max_materials: 500,
             unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
+            completed_technologies: HashSet::new(),
             research_points: 0, active_research: None, research_progress: 0.0,
             dungeon_heart_health: 100.0, max_creatures: 20, current_creature_count: 0,
             claimed_tile_count: 0, spell_cooldowns: HashMap::new(),
@@ -249,6 +289,7 @@ mod tests {
             gold: 200, mana: 1000, food: 100, max_gold: 10000, max_mana: 5000, max_food: 1000,
             materials: 100, max_materials: 500,
             unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
+            completed_technologies: HashSet::new(),
             research_points: 0, active_research: None, research_progress: 0.0,
             dungeon_heart_health: 100.0, max_creatures: 20, current_creature_count: 0,
             claimed_tile_count: 0, spell_cooldowns: HashMap::new(),

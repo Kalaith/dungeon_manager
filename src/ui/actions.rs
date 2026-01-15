@@ -35,6 +35,7 @@ pub enum UiAction {
     CastSpell { spell_id: String, target: SpellTarget },
     
     // UI actions
+    StartResearch(String),
     Cancel,
     TogglePause,
 }

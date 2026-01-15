@@ -174,6 +174,10 @@ fn process_single_action(
         UiAction::TogglePause => {
             // TODO: Implement pause
         }
+
+        UiAction::StartResearch(tech_id) => {
+            game_state.player.start_research(tech_id);
+        }
     }
 
     result

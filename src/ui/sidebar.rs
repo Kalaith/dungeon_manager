@@ -21,6 +21,7 @@ pub enum SidebarTab {
     Magic,
     Minions,
     Traps,
+    Research,
 }
 
 pub struct Sidebar {
@@ -63,7 +64,8 @@ impl Sidebar {
         player: &PlayerState, 
         game_data: &crate::data::GameData,
         _current_mode: &InteractionMode,
-        held_entity: Option<EntityId>
+        held_entity: Option<EntityId>,
+        action_queue: &mut crate::ui::actions::ActionQueue,
     ) -> Option<InteractionMode> {
         let mouse_pos = mouse_position();
         
@@ -84,6 +86,9 @@ impl Sidebar {
                     self.is_expanded = true;
                 } else if mouse_pos.0 >= start_x + tab_width * 3.0 && mouse_pos.0 < start_x + tab_width * 4.0 {
                     self.current_tab = SidebarTab::Traps;
+                    self.is_expanded = true;
+                } else if mouse_pos.0 >= start_x + tab_width * 4.0 && mouse_pos.0 < start_x + tab_width * 5.0 {
+                    self.current_tab = SidebarTab::Research;
                     self.is_expanded = true;
                 } else if mouse_pos.0 >= screen_width() - 40.0 {
                     // Toggle expand/collapse
@@ -111,6 +116,10 @@ impl Sidebar {
                     }
                     SidebarTab::Traps => {
                         return self.handle_traps_tab_click(mouse_pos, player);
+                    }
+                    SidebarTab::Research => {
+                        self.handle_research_tab_click(mouse_pos, player, &game_data.technologies, action_queue);
+                        return None;
                     }
                 }
             }
@@ -304,6 +313,7 @@ impl Sidebar {
             SidebarTab::Magic => self.draw_magic_content(player, &game_data.spells),
             SidebarTab::Minions => self.draw_minions_content(current_mode, held_entity, selected_entity, selected_room, entities, rooms),
             SidebarTab::Traps => self.draw_traps_content(current_mode, player),
+            SidebarTab::Research => self.draw_research_content(player, &game_data.technologies),
         }
         
         // Draw selected spell hint if any
@@ -324,6 +334,7 @@ impl Sidebar {
             (SidebarTab::Magic, "Magic"),
             (SidebarTab::Minions, "Inspect"),
             (SidebarTab::Traps, "Traps"),
+            (SidebarTab::Research, "Tech"),
         ];
 
         let tab_width = 100.0;
@@ -634,6 +645,132 @@ impl Sidebar {
             20.0, 
             WHITE
         );
+    }
+
+    fn draw_research_content(&self, player: &PlayerState, technologies: &HashMap<String, crate::data::TechData>) {
+        let start_x = PADDING;
+        let start_y = self.panel_y + PADDING;
+
+        let mut sorted_techs: Vec<&crate::data::TechData> = technologies.values().collect();
+        // Sort by cost
+        sorted_techs.sort_by(|a, b| a.cost.partial_cmp(&b.cost).unwrap());
+
+        let mut current_x = start_x;
+        let mut current_y = start_y;
+
+        for tech in sorted_techs {
+            let is_completed = player.is_tech_completed(&tech.id);
+            let is_active = player.active_research.as_ref().map(|id| id == &tech.id).unwrap_or(false);
+            
+            // Check prerequisites
+            let prereqs_met = tech.prerequisites.iter().all(|req| player.is_tech_completed(req));
+
+            // Determine color/state
+            let (bg_color, text_color) = if is_completed {
+                (Color::new(0.2, 0.4, 0.2, 1.0), GRAY) // Dark Green
+            } else if is_active {
+                (Color::new(0.2, 0.6, 0.8, 1.0), WHITE) // Blue
+            } else if prereqs_met {
+                (Color::new(0.3, 0.3, 0.35, 1.0), WHITE) // Available
+            } else {
+                (Color::new(0.15, 0.15, 0.15, 0.5), DARKGRAY) // Locked
+            };
+
+            // Draw Button
+            draw_rectangle(current_x, current_y, BUTTON_SIZE * 3.5, BUTTON_SIZE * 1.2, bg_color);
+            draw_rectangle_lines(current_x, current_y, BUTTON_SIZE * 3.5, BUTTON_SIZE * 1.2, 2.0, Color::new(0.4, 0.4, 0.5, 1.0));
+
+            // Tech Name
+            draw_text(&tech.name, current_x + 5.0, current_y + 15.0, 16.0, text_color);
+            
+            // Cost / Progress
+             if is_completed {
+                draw_text("Completed", current_x + 5.0, current_y + 35.0, 14.0, text_color);
+            } else if is_active {
+                let progress = player.research_progress;
+                let pct = (progress / tech.cost).clamp(0.0, 1.0);
+                
+                // Draw progress bar
+                let bar_w = BUTTON_SIZE * 3.5 - 10.0;
+                draw_rectangle(current_x + 5.0, current_y + 35.0, bar_w, 10.0, BLACK);
+                draw_rectangle(current_x + 5.0, current_y + 35.0, bar_w * pct, 10.0, GREEN);
+                
+                draw_text(&format!("{:.0}/{:.0}", progress, tech.cost), current_x + 5.0, current_y + 30.0, 12.0, WHITE);
+            } else if prereqs_met {
+                draw_text(&format!("Cost: {:.0}", tech.cost), current_x + 5.0, current_y + 35.0, 14.0, GOLD);
+            } else {
+                draw_text("Locked", current_x + 5.0, current_y + 35.0, 14.0, RED);
+            }
+
+            // Move to next position
+            current_x += BUTTON_SIZE * 3.5 + BUTTON_SPACING;
+            if current_x + BUTTON_SIZE * 3.5 > screen_width() {
+                current_x = start_x;
+                current_y += BUTTON_SIZE * 1.2 + BUTTON_SPACING;
+            }
+        }
+        
+        // Show Research Points generation rate (implied from libraries)
+        // Hard to calculate here without iterating all rooms/creatures, but let's show status text
+        if let Some(active) = &player.active_research {
+            if let Some(tech) = technologies.get(active) {
+                draw_text(
+                    &format!("Researching: {} ({:.1}%)", tech.name, (player.research_progress / tech.cost) * 100.0),
+                    screen_width() - 300.0,
+                    self.panel_y + 30.0,
+                    18.0,
+                    LIGHTGRAY
+                );
+            }
+        } else {
+             draw_text(
+                "No Active Research",
+                screen_width() - 300.0,
+                self.panel_y + 30.0,
+                18.0,
+                GRAY
+            );
+        }
+    }
+
+    fn handle_research_tab_click(
+        &mut self,
+        mouse_pos: (f32, f32),
+        player: &PlayerState,
+        technologies: &HashMap<String, crate::data::TechData>,
+        action_queue: &mut crate::ui::actions::ActionQueue,
+    ) {
+        let start_x = PADDING;
+        let start_y = self.panel_y + PADDING;
+
+        let mut sorted_techs: Vec<&crate::data::TechData> = technologies.values().collect();
+        sorted_techs.sort_by(|a, b| a.cost.partial_cmp(&b.cost).unwrap());
+
+        let mut current_x = start_x;
+        let mut current_y = start_y;
+
+        for tech in sorted_techs {
+            // Hitbox
+            if mouse_pos.0 >= current_x && mouse_pos.0 <= current_x + BUTTON_SIZE * 3.5
+               && mouse_pos.1 >= current_y && mouse_pos.1 <= current_y + BUTTON_SIZE * 1.2 {
+                
+                let is_completed = player.is_tech_completed(&tech.id);
+                let is_active = player.active_research.as_ref().map(|id| id == &tech.id).unwrap_or(false);
+                let prereqs_met = tech.prerequisites.iter().all(|req| player.is_tech_completed(req));
+
+                if !is_completed && !is_active && prereqs_met {
+                    // Start research!
+                    action_queue.push(crate::ui::actions::UiAction::StartResearch(tech.id.clone()));
+                }
+            }
+
+             // Move to next position (must match draw logic)
+            current_x += BUTTON_SIZE * 3.5 + BUTTON_SPACING;
+            if current_x + BUTTON_SIZE * 3.5 > screen_width() {
+                current_x = start_x;
+                current_y += BUTTON_SIZE * 1.2 + BUTTON_SPACING;
+            }
+        }
     }
     
     fn interaction_modes_match(&self, m1: &InteractionMode, m2: &InteractionMode) -> bool {

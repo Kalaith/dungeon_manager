@@ -356,6 +356,25 @@ impl GameState {
         if result.materials_change != 0 {
             self.player.add_resources(0, 0, 0, result.materials_change);
         }
+        if result.research_change > 0.0 {
+            if let Some(active_tech_id) = &self.player.active_research {
+                // Determine cost
+                let cost = if let Some(tech) = game_data.technologies.get(active_tech_id) {
+                    tech.cost
+                } else {
+                    100.0 // Fallback
+                };
+                
+                if let Some(completed) = self.player.update_research(result.research_change, cost, dt) {
+                    // Research completed!
+                    if let Some(tech) = game_data.technologies.get(&completed) {
+                        self.player.complete_research(tech);
+                        eprintln!("Research Complete: {}", tech.name);
+                        // TODO: Add Toast/Notification
+                    }
+                }
+            }
+        }
         if let Some(tile_pos) = result.claimed_tile {
             if let Some(tile) = self.get_tile_mut(tile_pos) {
                 tile.tile_type = crate::engine::tile_types::types::CLAIMED_FLOOR.to_string();

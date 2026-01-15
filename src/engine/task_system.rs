@@ -15,6 +15,7 @@ pub struct TaskResult {
     pub gold_change: i32,
     pub food_change: i32,
     pub materials_change: i32,
+    pub research_change: f32,
     pub claimed_tile: Option<TilePos>,
     pub task_complete: bool,
 }
@@ -25,6 +26,7 @@ impl Default for TaskResult {
             gold_change: 0,
             food_change: 0,
             materials_change: 0,
+            research_change: 0.0,
             claimed_tile: None,
             task_complete: false,
         }
@@ -82,6 +84,9 @@ pub fn execute_task(
         }
         Task::Work(room_id) => {
             result.materials_change = execute_work(creature_id, *room_id, entities, room_manager, game_data, dt);
+        }
+        Task::Research(room_id) => {
+             result.research_change = execute_research(creature_id, *room_id, entities, room_manager, game_data, dt);
         }
         Task::CollectWages(room_id) => {
             result.gold_change = execute_collect_wages(creature_id, *room_id, entities, room_manager, player, game_data, dt);

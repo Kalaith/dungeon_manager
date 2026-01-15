@@ -208,7 +208,8 @@ impl InputHandler {
             &state.player, 
             game_data, 
             interaction_mode,
-            *held_entity
+            *held_entity,
+            action_queue
         ) {
             *interaction_mode = new_mode;
         }
@@ -464,6 +465,11 @@ impl InputHandler {
         } else { 
             false 
         };
+
+        if !state.player.is_room_unlocked(room_type) {
+            eprintln!("Cannot build {}: Not yet unlocked!", room_type);
+            return;
+        }
 
         if can_build && is_valid_tile {
             state.player.gold -= cost;
