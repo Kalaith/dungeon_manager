@@ -1,8 +1,5 @@
-// TODO: Remove this global warning suppression after cleaning up unused imports,
-// dead code, and other warnings identified in the codebase review
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
+// Allow some warnings that are acceptable during development
+#![allow(dead_code)]  // Some code is kept for future features
 
 use macroquad::prelude::*;
 

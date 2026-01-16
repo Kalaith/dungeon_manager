@@ -9,7 +9,6 @@ use crate::state::entities::{Entity, HeroGoal, HeroState};
 use crate::state::game_state::GameState;
 use crate::state::tile_state::TilePos;
 use crate::engine::room_validator::Room;
-use std::collections::HashMap;
 
 /// Threat level assessment for heroes
 #[derive(Debug, Clone, PartialEq)]

@@ -8,7 +8,7 @@ use crate::ui::sidebar::{Sidebar, SidebarTab};
 use crate::engine::spell_effects;
 use crate::engine::creature_ai;
 use crate::engine::tile_types::{self, types as tt};
-use crate::ui::actions::{ActionQueue, UiAction, SpellTarget};
+use crate::ui::actions::ActionQueue;
 
 pub struct InputHandler;
 
@@ -504,11 +504,13 @@ impl InputHandler {
             {
                  // Create trap in "unconstructed" state
                  tile.trap = Some(crate::state::tile_state::TrapState {
-                     trap_type: trap_type.to_string(), // Changed from .to_string()
+                     trap_type: trap_type.to_string(),
                      constructed: false,
                      construction_progress: 0.0,
                      active: false,
                      funded: false,
+                     cooldown: 0.0,
+                     triggered: false,
                  });
                  
                  state.pending_trap_builds.insert(tile_pos);

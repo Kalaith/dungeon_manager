@@ -47,6 +47,12 @@ pub struct TrapState {
     pub construction_progress: f32,
     pub active: bool,
     pub funded: bool,
+    /// Cooldown timer - trap cannot trigger while > 0
+    #[serde(default)]
+    pub cooldown: f32,
+    /// Whether the trap has been triggered (for single-use traps)
+    #[serde(default)]
+    pub triggered: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

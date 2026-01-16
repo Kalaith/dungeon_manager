@@ -3,9 +3,8 @@
 
 use crate::state::tile_state::{TilePos, TileState, FogState};
 use crate::data::GameData;
-use crate::engine::tile_types::{self, types as tt};
+use crate::engine::tile_types;
 use std::collections::HashSet;
-use macroquad::camera::Camera;
 
 pub type Grid = Vec<Vec<TileState>>;
 

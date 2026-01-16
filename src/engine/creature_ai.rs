@@ -2,18 +2,14 @@
 //! Stateless service for creature behavior
 
 use crate::data::monsters::MonsterData;
-use crate::data::rooms::RoomData;
 use crate::data::GameData;
 use crate::engine::pathfinding::{find_path, Heuristic, PathfindingGrid, Pos};
-use crate::engine::room_validator::Room;
 use crate::engine::tile_types;
 use crate::state::dungeon::Dungeon;
 use crate::state::entities::{CreatureState, EntityId, EntityManager, Task};
 use crate::state::game_state::GameState;
-use crate::state::player_state::PlayerState;
 use crate::state::room_manager::RoomManager;
 use crate::state::tile_state::TilePos;
-use std::collections::HashMap;
 
 /// Main entry point: Update all creature AI and movement
 /// This replaces the old GameState::update_creature_ai_and_movement method
@@ -168,7 +164,7 @@ fn decide_task_from_rooms(
 
     // Check most urgent need
     if let Some((need_name, need_value)) = creature.get_most_urgent_need() {
-        if need_value < 30.0 {
+        if need_value < crate::config::NEED_CRITICAL_THRESHOLD {
             if let Some(need_data) = monster_data.needs.get(&need_name) {
                 for room_type in &need_data.satisfied_by {
                     use crate::engine::room_validator;
@@ -480,8 +476,8 @@ pub fn decide_task(
     if let Some((need_name, need_value)) = creature.get_most_urgent_need() {
         // eprintln!("[AI] Most urgent need for {}: {} = {:.1}%", creature.creature_id, need_name, need_value);
 
-        // If need is critical (below 30), prioritize satisfying it
-        if need_value < 30.0 {
+        // If need is critical, prioritize satisfying it
+        if need_value < crate::config::NEED_CRITICAL_THRESHOLD {
             eprintln!("[AI] Critical need {} detected!", need_name);
             // Find room that satisfies this need
             if let Some(need_data) = monster_data.needs.get(&need_name) {
@@ -677,13 +673,13 @@ pub fn get_creatures_needing_attention(
                 result.push((entity_id, "deserting".to_string()));
             } else if creature.is_angry {
                 result.push((entity_id, "angry".to_string()));
-            } else if creature.mood < 40.0 {
+            } else if creature.mood < crate::config::MOOD_ATTENTION_THRESHOLD {
                 result.push((entity_id, "unhappy".to_string()));
             }
 
             // Check critical needs
             if let Some((need_name, need_value)) = creature.get_most_urgent_need() {
-                if need_value < 20.0 {
+                if need_value < crate::config::NEED_ATTENTION_THRESHOLD {
                     result.push((entity_id, format!("critical_{}", need_name)));
                 }
             }

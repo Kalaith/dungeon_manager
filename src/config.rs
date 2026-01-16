@@ -29,5 +29,66 @@ pub const INITIAL_MAX_FOOD: i32 = 500;
 pub const INITIAL_MAX_MATERIALS: i32 = 100;
 
 /// Whether Fog of War is enabled (visibility tracking)
-pub const FOG_OF_WAR_ENABLED: bool = false; 
+pub const FOG_OF_WAR_ENABLED: bool = true;
+
+// ============================================================================
+// GAME TIMING CONSTANTS
+// ============================================================================
+
+/// Fixed timestep for game simulation (10 ticks per second)
+pub const TICK_RATE: f32 = 0.1;
+
+/// Pay day interval in seconds (5 minutes)
+pub const PAY_DAY_INTERVAL: f32 = 300.0;
+
+/// Initial delay before first hero spawns (seconds)
+pub const INITIAL_HERO_SPAWN_DELAY: f32 = 30.0;
+
+/// Initial delay before first creature spawns (seconds)
+pub const INITIAL_CREATURE_SPAWN_DELAY: f32 = 10.0;
+
+/// Minimum time between creature spawns (seconds)
+pub const CREATURE_SPAWN_MIN_INTERVAL: f32 = 15.0;
+
+/// Maximum time between creature spawns (seconds)
+pub const CREATURE_SPAWN_MAX_INTERVAL: f32 = 30.0;
+
+/// Visual movement interpolation speed
+pub const MOVEMENT_LERP_SPEED: f32 = 10.0;
+
+// ============================================================================
+// CREATURE LIMITS
+// ============================================================================
+
+/// Maximum number of imps allowed
+pub const MAX_IMPS: usize = 10;
+
+/// Base mana cost for summoning an imp
+pub const IMP_SUMMON_BASE_COST: i32 = 10;
+
+/// Additional mana cost per existing imp
+pub const IMP_SUMMON_COST_PER_IMP: i32 = 5;
+
+// ============================================================================
+// FOG OF WAR
+// ============================================================================
+
+/// Sight radius for creatures providing vision
+pub const FOG_OF_WAR_SIGHT_RADIUS: i32 = 5;
+
+// ============================================================================
+// CREATURE AI THRESHOLDS
+// ============================================================================
+
+/// Need value below which a need is considered critical
+pub const NEED_CRITICAL_THRESHOLD: f32 = 30.0;
+
+/// Need value below which creature should desert
+pub const NEED_DESERT_THRESHOLD: f32 = 10.0;
+
+/// Mood threshold below which creatures need attention
+pub const MOOD_ATTENTION_THRESHOLD: f32 = 40.0;
+
+/// Need value below which it's considered critically low for attention
+pub const NEED_ATTENTION_THRESHOLD: f32 = 20.0;
 

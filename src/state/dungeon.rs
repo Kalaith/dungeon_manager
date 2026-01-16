@@ -3,7 +3,7 @@ use crate::engine::map_generator;
 use crate::engine::tile_grid::{self, Grid};
 use crate::engine::tile_types::types as tt;
 use crate::state::game_state::MapType;
-use crate::state::tile_state::{TilePos, TileState, FogState};
+use crate::state::tile_state::{TilePos, TileState};
 
 pub struct Dungeon {
     pub grid: Grid,

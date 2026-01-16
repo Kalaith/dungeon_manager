@@ -17,11 +17,10 @@ mod utils;
 mod hero_base_gen;
 
 // Re-export public types
-pub use config::{Biome, Difficulty, Grid, MapConfig, StartingPosition};
+pub use config::{Grid, MapConfig, StartingPosition};
 
 use crate::data::GameData;
-use crate::state::tile_state::TilePos;
-use rand::{Rng, SeedableRng};
+use rand::SeedableRng;
 
 // ============================================================================
 // MAIN GENERATION FUNCTION

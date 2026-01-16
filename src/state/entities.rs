@@ -331,6 +331,12 @@ pub struct HeroState {
     pub dig_timer: f32,
     pub max_dig_time: f32, // Time to dig one wall
     pub can_dig: bool,     // Tunneled capability
+
+    // Prison/capture state
+    /// Whether this hero is captured and being converted
+    pub is_captured: bool,
+    /// Conversion progress (0.0 to 1.0, at 1.0 hero becomes a creature)
+    pub conversion_progress: f32,
 }
 
 impl HeroState {
@@ -360,6 +366,8 @@ impl HeroState {
             dig_timer: 0.0,
             max_dig_time: 2.0, // 2 seconds per wall
             can_dig,
+            is_captured: false,
+            conversion_progress: 0.0,
         }
     }
 

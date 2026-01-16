@@ -1,6 +1,6 @@
 use crate::data::GameData;
 use crate::state::game_state::GameState;
-use crate::state::entities::{EntityId, HeroState};
+use crate::state::entities::HeroState;
 use crate::state::tile_state::TilePos;
 
 pub fn update_hero_spawning(state: &mut GameState, game_data: &GameData, dt: f32) {

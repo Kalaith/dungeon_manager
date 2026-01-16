@@ -1,4 +1,4 @@
-use crate::engine::map_generator::config::{MapConfig, Grid, StartingPosition};
+use crate::engine::map_generator::config::{MapConfig, Grid};
 use crate::state::tile_state::{TilePos, TileState, Ownership};
 use rand::Rng;
 

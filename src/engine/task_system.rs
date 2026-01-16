@@ -3,12 +3,10 @@
 
 use crate::data::GameData;
 use crate::engine::creature_ai;
-use crate::engine::tile_types::types as tt;
-use crate::engine::room_validator::Room;
-use crate::state::entities::{CreatureState, EntityId, EntityManager, Task};
+use crate::state::entities::{EntityId, EntityManager, Task};
 use crate::state::player_state::PlayerState;
 use crate::state::room_manager::RoomManager;
-use crate::state::tile_state::{Ownership, TilePos, TileState};
+use crate::state::tile_state::{TilePos, TileState};
 
 /// Result of task execution that may require state updates
 pub struct TaskResult {

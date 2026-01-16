@@ -62,6 +62,9 @@ pub struct EffectsData {
     pub spawn_rate_modifier: f32,
     #[serde(default)]
     pub mana_storage_capacity: i32,
+    /// Rate at which heroes are converted to creatures in prison (progress per second)
+    #[serde(default)]
+    pub hero_conversion_rate: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -2,7 +2,6 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
-use crate::engine::hero_ai; // Assuming we might need types later, but for now simple strings/structs
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct HeroBuildingData {

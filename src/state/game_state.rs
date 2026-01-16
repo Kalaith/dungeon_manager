@@ -2,15 +2,12 @@
 //! Holds the dungeon grid, entities, rooms, and player state
 
 use crate::data::GameData;
-use crate::engine::combat::{find_combat_targets, resolve_combat_tick, update_status_effects};
+use crate::engine::combat::{resolve_combat_tick, update_status_effects};
 use crate::engine::hero_ai::update_hero_ai;
-use crate::engine::map_generator;
-use crate::engine::room_validator::Room;
-use crate::engine::tile_grid::{self, Grid};
-use crate::engine::tile_types::{self, types as tt};
-use crate::state::entities::{EntityId, EntityManager, HeroState};
+use crate::engine::tile_grid;
+use crate::state::entities::{EntityId, EntityManager};
 use crate::state::player_state::PlayerState;
-use crate::state::tile_state::{self, Ownership, TilePos}; // kept for other usages
+use crate::state::tile_state::{Ownership, TilePos};
 use crate::state::room_manager::RoomManager;
 use std::collections::HashSet;
 
@@ -41,6 +38,9 @@ pub struct GameState {
     pub hero_base: crate::state::hero_base::HeroBase,
     pub game_over: bool,
     pub victory: bool,
+
+    /// Notification system for game events
+    pub notifications: crate::state::notifications::NotificationManager,
 }
 
 impl GameState {
@@ -87,14 +87,15 @@ impl GameState {
 
             entities,
             player: PlayerState::new(game_data),
-            next_hero_spawn_time: 30.0, // Spawn first hero after 30 seconds
-            next_creature_spawn_time: 10.0, // Spawn first creature after 10 seconds
+            next_hero_spawn_time: crate::config::INITIAL_HERO_SPAWN_DELAY,
+            next_creature_spawn_time: crate::config::INITIAL_CREATURE_SPAWN_DELAY,
             pay_day_timer: 0.0,
             spawners,
             paused: false,
             hero_base: crate::state::hero_base::HeroBase::new(),
             game_over: false,
             victory: false,
+            notifications: crate::state::notifications::NotificationManager::new(),
         };
 
         // Recalculate max gold and other room-based stats
@@ -110,17 +111,18 @@ impl GameState {
         self.time_elapsed += dt;
         self.tick_accumulator += dt;
         self.camera.update(dt); // Update smooth camera zoom
+        self.notifications.update(dt); // Update notification display timers
 
         // Smooth movement interpolation
         for entity in self.entities.all_mut() {
              let target_x = entity.pos.x as f32;
              let target_z = entity.pos.y as f32;
-             
+
              let dx = target_x - entity.visual_pos.0;
              let dz = target_z - entity.visual_pos.1;
-             
+
              // Simple lerp
-             let speed = 10.0 * dt;
+             let speed = crate::config::MOVEMENT_LERP_SPEED * dt;
              entity.visual_pos.0 += dx * speed;
              entity.visual_pos.1 += dz * speed;
              
@@ -132,10 +134,9 @@ impl GameState {
         }
 
         // Fixed timestep simulation (10 ticks per second)
-        const TICK_RATE: f32 = 0.1;
-        while self.tick_accumulator >= TICK_RATE {
-            self.tick(game_data, TICK_RATE);
-            self.tick_accumulator -= TICK_RATE;
+        while self.tick_accumulator >= crate::config::TICK_RATE {
+            self.tick(game_data, crate::config::TICK_RATE);
+            self.tick_accumulator -= crate::config::TICK_RATE;
         }
     }
 
@@ -179,12 +180,13 @@ impl GameState {
         self.next_creature_spawn_time -= dt;
         if self.next_creature_spawn_time <= 0.0 {
             self.spawn_random_creature(game_data);
-            self.next_creature_spawn_time = 15.0 + rand::random::<f32>() * 15.0; // 15-30 seconds
+            let spawn_range = crate::config::CREATURE_SPAWN_MAX_INTERVAL - crate::config::CREATURE_SPAWN_MIN_INTERVAL;
+            self.next_creature_spawn_time = crate::config::CREATURE_SPAWN_MIN_INTERVAL + rand::random::<f32>() * spawn_range;
         }
 
         // Pay Day Logic
         self.pay_day_timer += dt;
-        if self.pay_day_timer >= 300.0 { // 5 minutes
+        if self.pay_day_timer >= crate::config::PAY_DAY_INTERVAL {
             self.pay_day_timer = 0.0;
             self.trigger_pay_day();
         }
@@ -277,9 +279,24 @@ impl GameState {
         // Check for starving creatures that need to desert
         self.handle_creature_desertion(game_data);
 
-        // Remove dead entities and release their lair space
+        // Handle dead heroes - check for prison capture
+        self.handle_prison_captures(game_data);
+
+        // Progress prison conversions
+        self.progress_prison_conversions(game_data, dt);
+
+        // Remove dead entities and release their lair space (but not captured heroes)
         let dead_ids: Vec<EntityId> = self.entities.all()
-            .filter(|e| !e.is_alive())
+            .filter(|e| {
+                if !e.is_alive() {
+                    // Don't remove captured heroes
+                    if let Some(hero) = e.as_hero() {
+                        return !hero.is_captured;
+                    }
+                    return true;
+                }
+                false
+            })
             .map(|e| e.id)
             .collect();
 
@@ -291,7 +308,7 @@ impl GameState {
         // Update fog of war based on claimed tiles and creature positions
         self.update_fog_of_war_system(game_data);
         
-        // Update traps
+        // Update trap construction
         crate::engine::trap_system::process_trap_construction(
             &mut self.dungeon,
             &mut self.player,
@@ -299,6 +316,19 @@ impl GameState {
             game_data,
             dt,
         );
+
+        // Process trap triggers (when heroes step on traps)
+        let trap_results = crate::engine::trap_system::process_trap_triggers(
+            &mut self.dungeon,
+            &mut self.entities,
+            game_data,
+            dt,
+        );
+
+        // Notify about trap triggers
+        for result in trap_results {
+            self.notifications.info(format!("{} triggered! ({:.0} damage)", result.trap_type, result.damage_dealt));
+        }
 
         // Update creature count (excluding imps)
         self.player.current_creature_count = self.entities.count_creatures() - self.count_imps();
@@ -428,7 +458,7 @@ impl GameState {
                     if let Some(tech) = game_data.technologies.get(&completed) {
                         self.player.complete_research(tech);
                         eprintln!("Research Complete: {}", tech.name);
-                        // TODO: Add Toast/Notification
+                        self.notifications.success(format!("Research Complete: {}", tech.name));
                     }
                 }
             }
@@ -591,7 +621,7 @@ impl GameState {
         }
     }
 
-    /// Check for starving creatures and make them desert
+    /// Check for creatures with critical needs and make them desert
     fn handle_creature_desertion(&mut self, game_data: &GameData) {
         use crate::engine::creature_ai;
 
@@ -599,17 +629,23 @@ impl GameState {
 
         // Check all creatures for desertion
         for (creature_id, creature) in self.entities.creatures() {
-            // Check if food need is critically low
+            // Check ALL critical needs, not just food
             let food_need = creature.get_need("food");
+            let sleep_need = creature.get_need("sleep");
+            let gold_need = creature.get_need("gold");
 
-            if food_need < 10.0 {
-                // Creature is starving
+            // Creature is in critical condition if any need is below threshold
+            let is_critical = food_need < crate::config::NEED_DESERT_THRESHOLD
+                || sleep_need < crate::config::NEED_DESERT_THRESHOLD
+                || gold_need < crate::config::NEED_DESERT_THRESHOLD;
+
+            if is_critical {
                 if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
-                    // Check if they should desert using AI logic
+                    // Check if they should desert using AI logic (mood-based)
                     if creature_ai::should_desert(creature, monster_data) {
                         deserting_ids.push(creature_id);
-                        eprintln!("Creature {} is deserting! (mood: {:.1})",
-                            creature.creature_id, creature.mood);
+                        eprintln!("Creature {} is deserting! (mood: {:.1}, food: {:.1}, sleep: {:.1}, gold: {:.1})",
+                            creature.creature_id, creature.mood, food_need, sleep_need, gold_need);
                     }
                 }
             }
@@ -654,8 +690,8 @@ impl GameState {
             .count()
     }
 
-    /// Maximum number of imps allowed
-    pub const MAX_IMPS: usize = 10;
+    /// Maximum number of imps allowed (uses config constant)
+    pub const MAX_IMPS: usize = crate::config::MAX_IMPS;
 
     /// Count how many non-imp monsters are currently spawned
     pub fn count_monsters(&self) -> usize {
@@ -717,7 +753,7 @@ impl GameState {
                 creature.set_need("gold".to_string(), 0.0);
             }
         }
-        // TODO: Show on-screen notification
+        self.notifications.warning("Pay Day! Creatures demand wages.");
     }
 
 
@@ -765,6 +801,108 @@ impl GameState {
         }
     }
 
+    /// Handle capturing dead heroes in prison rooms
+    fn handle_prison_captures(&mut self, game_data: &GameData) {
+        // Find heroes that just died (health <= 0) and aren't already captured
+        let mut heroes_to_capture: Vec<(EntityId, TilePos)> = Vec::new();
+
+        for (hero_id, hero) in self.entities.heroes() {
+            if hero.health <= 0.0 && !hero.is_captured {
+                if let Some(entity) = self.entities.get(hero_id) {
+                    heroes_to_capture.push((hero_id, entity.pos));
+                }
+            }
+        }
+
+        // Check if any dead heroes are in prison rooms
+        for (hero_id, pos) in heroes_to_capture {
+            // Check if position is in a prison room
+            let is_in_prison = self.room_manager.rooms.iter()
+                .any(|room| room.room_type == "prison" && room.tiles.contains(&pos));
+
+            if is_in_prison {
+                // Capture the hero
+                if let Some(entity) = self.entities.get_mut(hero_id) {
+                    if let Some(hero) = entity.as_hero_mut() {
+                        hero.is_captured = true;
+                        hero.conversion_progress = 0.0;
+                        eprintln!("Hero {} captured in prison at {:?}!", hero.hero_id, pos);
+                        self.notifications.success(format!("Hero captured in prison!"));
+                    }
+                }
+            }
+        }
+    }
+
+    /// Progress prison conversions and convert completed heroes to creatures
+    fn progress_prison_conversions(&mut self, game_data: &GameData, dt: f32) {
+        // Get conversion rate from prison rooms
+        let conversion_rate = self.room_manager.rooms.iter()
+            .filter(|room| room.room_type == "prison")
+            .filter_map(|room| game_data.rooms.get(&room.room_type))
+            .map(|data| data.effects.hero_conversion_rate)
+            .sum::<f32>()
+            .max(0.01); // Minimum rate to prevent division issues
+
+        // Find captured heroes and progress their conversion
+        let mut conversions_to_complete: Vec<(EntityId, TilePos, String)> = Vec::new();
+
+        for (hero_id, hero) in self.entities.heroes() {
+            if hero.is_captured {
+                // Get entity position
+                if let Some(entity) = self.entities.get(hero_id) {
+                    conversions_to_complete.push((hero_id, entity.pos, hero.hero_id.clone()));
+                }
+            }
+        }
+
+        // Progress conversions
+        for (hero_id, pos, hero_type) in conversions_to_complete {
+            let mut converted = false;
+
+            if let Some(entity) = self.entities.get_mut(hero_id) {
+                if let Some(hero) = entity.as_hero_mut() {
+                    // Progress conversion (rate is per second)
+                    hero.conversion_progress += conversion_rate * dt;
+
+                    if hero.conversion_progress >= 1.0 {
+                        converted = true;
+                        eprintln!("Hero {} conversion complete!", hero_type);
+                    }
+                }
+            }
+
+            if converted {
+                // Remove the hero
+                self.entities.remove(hero_id);
+
+                // Spawn a skeleton in their place
+                if let Some(monster_data) = game_data.monsters.get("skeleton") {
+                    let creature_state = crate::state::entities::CreatureState::new(
+                        "skeleton".to_string(),
+                        1,
+                        monster_data.stats.health,
+                        monster_data.stats.mana,
+                    );
+                    self.entities.spawn_creature(pos, creature_state);
+                    self.notifications.success("Converted hero to skeleton!");
+                } else {
+                    // Fallback to goblin if no skeleton
+                    if let Some(monster_data) = game_data.monsters.get("goblin") {
+                        let creature_state = crate::state::entities::CreatureState::new(
+                            "goblin".to_string(),
+                            1,
+                            monster_data.stats.health,
+                            monster_data.stats.mana,
+                        );
+                        self.entities.spawn_creature(pos, creature_state);
+                        self.notifications.success("Converted hero to goblin!");
+                    }
+                }
+            }
+        }
+    }
+
     /// Check for victory or defeat conditions
     pub fn check_game_over_conditions(&mut self) {
         if self.game_over {
@@ -776,6 +914,7 @@ impl GameState {
             self.game_over = true;
             self.victory = true;
             eprintln!("VICTORY! Hero Base destroyed!");
+            self.notifications.success("VICTORY! The Hero Base has been destroyed!");
         }
 
         // Check Defeat: Dungeon Heart destroyed
@@ -783,6 +922,7 @@ impl GameState {
             self.game_over = true;
             self.victory = false;
             eprintln!("DEFEAT! Dungeon Heart destroyed!");
+            self.notifications.danger("DEFEAT! Your Dungeon Heart was destroyed!");
         }
     }
 }

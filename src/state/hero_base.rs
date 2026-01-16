@@ -1,5 +1,5 @@
 use crate::state::tile_state::TilePos;
-use crate::data::hero_buildings::{HeroBuildingData, SpawnTrigger};
+use crate::data::hero_buildings::HeroBuildingData;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

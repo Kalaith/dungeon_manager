@@ -240,6 +240,8 @@ fn process_place_trap(
                 construction_progress: 0.0,
                 active: false,
                 funded: true,
+                cooldown: 0.0,
+                triggered: false,
             });
         }
     }

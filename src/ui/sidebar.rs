@@ -5,7 +5,7 @@
 use macroquad::prelude::*;
 use crate::InteractionMode;
 use crate::state::player_state::PlayerState;
-use crate::state::entities::{Entity, EntityId};
+use crate::state::entities::EntityId;
 use crate::data::spells::SpellData;
 use std::collections::HashMap;
 

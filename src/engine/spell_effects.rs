@@ -61,13 +61,12 @@ pub fn can_cast_spell(
 
     // Special handling for summon_imps - check max cap and calculate dynamic cost
     if spell.id == "summon_imps" {
-        const MAX_IMPS: usize = 10;
         let current_imps = game_state.count_imps();
-        if current_imps >= MAX_IMPS {
+        if current_imps >= crate::config::MAX_IMPS {
             return CastResult::MaxCapReached;
         }
-        // Dynamic cost: 10 base + 5 per existing imp
-        let dynamic_cost = 10 + (current_imps as i32 * 5);
+        // Dynamic cost: base + per-imp cost
+        let dynamic_cost = crate::config::IMP_SUMMON_BASE_COST + (current_imps as i32 * crate::config::IMP_SUMMON_COST_PER_IMP);
         if game_state.player.mana < dynamic_cost {
             return CastResult::InsufficientMana;
         }
@@ -130,7 +129,7 @@ pub fn cast_spell(
     // Deduct costs - special handling for summon_imps
     if spell_id == "summon_imps" {
         let current_imps = game_state.count_imps();
-        let dynamic_cost = 10 + (current_imps as i32 * 5);
+        let dynamic_cost = crate::config::IMP_SUMMON_BASE_COST + (current_imps as i32 * crate::config::IMP_SUMMON_COST_PER_IMP);
         game_state.player.mana -= dynamic_cost;
         eprintln!("Cast spell: {} (dynamic mana: {}, imps: {})", spell.name, dynamic_cost, current_imps);
     } else {
@@ -385,9 +384,8 @@ fn spawn_entity_effect(
     if let Some(entity_type) = &effect.entity {
         // Try to spawn an imp
         if entity_type == "imp" {
-            const MAX_IMPS: usize = 10;
-            if game_state.count_imps() >= MAX_IMPS {
-                eprintln!("Cannot summon imp: max cap of {} reached", MAX_IMPS);
+            if game_state.count_imps() >= crate::config::MAX_IMPS {
+                eprintln!("Cannot summon imp: max cap of {} reached", crate::config::MAX_IMPS);
                 return;
             }
 
