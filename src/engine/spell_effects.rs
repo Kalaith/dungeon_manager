@@ -241,6 +241,13 @@ fn apply_damage_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &m
                     hero.hero_id, damage, hero.health, hero.max_health
                 );
             }
+            crate::state::entities::EntityType::Structure(structure) => {
+                structure.take_damage(damage);
+                eprintln!(
+                    "Spell damage: {} took {} damage (HP: {}/{})",
+                    structure.building_id, damage, structure.health, structure.max_health
+                );
+            }
         }
     }
 }
@@ -259,10 +266,16 @@ fn apply_heal_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &mut
                 );
             }
             crate::state::entities::EntityType::Hero(hero) => {
-                hero.health = (hero.health + heal_amount).min(hero.max_health);
                 eprintln!(
                     "Spell heal: {} healed {} HP (HP: {}/{})",
                     hero.hero_id, heal_amount, hero.health, hero.max_health
+                );
+            }
+            crate::state::entities::EntityType::Structure(structure) => {
+                structure.health = (structure.health + heal_amount).min(structure.max_health);
+                eprintln!(
+                    "Spell heal: {} healed {} HP (HP: {}/{})",
+                    structure.building_id, heal_amount, structure.health, structure.max_health
                 );
             }
         }
@@ -290,21 +303,38 @@ fn apply_stat_modifier(entity_id: EntityId, effect: &SpellEffect, game_state: &m
 /// Apply status effect
 fn apply_status_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &mut GameState) {
     if let Some(entity) = game_state.entities.get_mut(entity_id) {
-        if let crate::state::entities::EntityType::Creature(creature) = &mut entity.entity_type {
-            if let Some(status) = &effect.status {
-                let duration = effect.duration.unwrap_or(10.0);
+        if let Some(status) = &effect.status {
+            let duration = effect.duration.unwrap_or(10.0);
+            let strength = if effect.amount > 0.0 { effect.amount } else { 1.0 };
 
-                // Add status effect
-                creature.status_effects.push(crate::state::entities::StatusEffect {
-                    effect_type: status.clone(),
-                    duration,
-                    strength: if effect.amount > 0.0 { effect.amount } else { 1.0 },
-                });
+            match &mut entity.entity_type {
+                crate::state::entities::EntityType::Creature(creature) => {
+                    // Add status effect
+                    creature.status_effects.push(crate::state::entities::StatusEffect {
+                        effect_type: status.clone(),
+                        duration,
+                        strength,
+                    });
 
-                eprintln!(
-                    "Status applied: {} gained '{}' for {} seconds",
-                    creature.creature_id, status, duration
-                );
+                    eprintln!(
+                        "Status applied: {} gained '{}' for {} seconds",
+                        creature.creature_id, status, duration
+                    );
+                }
+                crate::state::entities::EntityType::Hero(hero) => {
+                    hero.status_effects.push(crate::state::entities::StatusEffect {
+                        effect_type: status.clone(),
+                        duration,
+                        strength,
+                    });
+                    eprintln!(
+                        "Status applied: {} gained '{}' for {} seconds",
+                        hero.hero_id, status, duration
+                    );
+                }
+                crate::state::entities::EntityType::Structure(_) => {
+                    // Structures currently don't have status effects
+                }
             }
         }
     }

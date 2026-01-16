@@ -14,6 +14,7 @@ mod resources;
 mod starting_area;
 mod terrain;
 mod utils;
+mod hero_base_gen;
 
 // Re-export public types
 pub use config::{Biome, Difficulty, Grid, MapConfig, StartingPosition};
@@ -77,6 +78,11 @@ pub fn generate_map(config: &MapConfig, _game_data: &GameData) -> Grid {
 
     // Step 10: Create starting area LAST (clears resources to make room)
     starting_area::create_starting_area(&mut grid, config, start_pos);
+
+    // Step 11: Create Hero Base
+    if config.hero_base_enabled {
+        hero_base_gen::place_hero_base(&mut grid, start_pos, config, &mut rng);
+    }
 
     grid
 }

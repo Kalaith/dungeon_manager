@@ -43,6 +43,16 @@ impl Entity {
         }
     }
 
+    /// Create a new structure entity
+    pub fn new_structure(id: EntityId, pos: TilePos, structure_state: StructureState) -> Self {
+        Self {
+            id,
+            entity_type: EntityType::Structure(structure_state),
+            pos,
+            visual_pos: (pos.x as f32, pos.y as f32),
+        }
+    }
+
     /// Get creature state if this is a creature
     pub fn as_creature(&self) -> Option<&CreatureState> {
         match &self.entity_type {
@@ -80,6 +90,7 @@ impl Entity {
         match &self.entity_type {
             EntityType::Creature(state) => state.health > 0.0,
             EntityType::Hero(state) => state.health > 0.0,
+            EntityType::Structure(state) => state.health > 0.0,
         }
     }
 }
@@ -89,6 +100,29 @@ impl Entity {
 pub enum EntityType {
     Creature(CreatureState),
     Hero(HeroState),
+    Structure(StructureState),
+}
+
+/// Runtime state for a static structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StructureState {
+    pub building_id: String, // "town_hall", "barracks"
+    pub health: f32,
+    pub max_health: f32,
+}
+
+impl StructureState {
+    pub fn new(building_id: String, max_health: f32) -> Self {
+        Self {
+            building_id,
+            health: max_health,
+            max_health,
+        }
+    }
+    
+    pub fn take_damage(&mut self, amount: f32) {
+        self.health = (self.health - amount).max(0.0);
+    }
 }
 
 /// Runtime state for a creature
@@ -288,11 +322,22 @@ pub struct HeroState {
 
     /// Time accumulator for movement
     pub move_timer: f32,
+
+    /// Spawn position (for retreating/resting)
+    pub spawn_pos: TilePos,
+
+    // Digging state
+    pub is_digging: bool,
+    pub dig_timer: f32,
+    pub max_dig_time: f32, // Time to dig one wall
+    pub can_dig: bool,     // Tunneled capability
 }
 
 impl HeroState {
     /// Create a new hero state
-    pub fn new(hero_id: String, level: u32, max_health: f32, max_mana: f32) -> Self {
+    pub fn new(hero_id: String, level: u32, max_health: f32, max_mana: f32, spawn_pos: TilePos) -> Self {
+        let can_dig = hero_id == "dwarven_tunneler"; // Hardcoded capability check for now, ideally data-driven
+
         Self {
             hero_id,
             level,
@@ -300,8 +345,8 @@ impl HeroState {
             max_health,
             mana: max_mana,
             max_mana,
-            current_goal: HeroGoal::DestroyHeart,
-            target_pos: None,
+            current_goal: HeroGoal::RestAtSpawn(spawn_pos), // Start by resting/grouping up
+            target_pos: Some(spawn_pos), // Start with target at spawn
             target_room_id: None,
             gold_stolen: 0,
             kills: 0,
@@ -310,6 +355,11 @@ impl HeroState {
             current_path: None,
             movement_speed: 1.5, // 1.5 tiles per second default
             move_timer: 0.0,
+            spawn_pos,
+            is_digging: false,
+            dig_timer: 0.0,
+            max_dig_time: 2.0, // 2 seconds per wall
+            can_dig,
         }
     }
 
@@ -421,6 +471,9 @@ pub enum HeroGoal {
     /// Explore the dungeon (reveal fog)
     Explore,
 
+    /// Rest at spawn location
+    RestAtSpawn(TilePos),
+
     /// Retreat to entrance
     Retreat,
 }
@@ -472,6 +525,16 @@ impl EntityManager {
     /// Get an entity by ID
     pub fn get(&self, id: EntityId) -> Option<&Entity> {
         self.entities.get(&id)
+    }
+
+    /// Spawn a new structure
+    pub fn spawn_structure(&mut self, pos: TilePos, structure_state: StructureState) -> EntityId {
+        let id = self.next_id;
+        self.next_id += 1;
+
+        let entity = Entity::new_structure(id, pos, structure_state);
+        self.entities.insert(id, entity);
+        id
     }
 
     /// Get a mutable entity by ID

@@ -194,6 +194,7 @@ pub fn find_target_room(
             // Find unexplored areas (rooms with fog)
             find_unexplored_room(hero_pos, hero_id, game_state, game_data)
         }
+        HeroGoal::RestAtSpawn(_) => None, // Not a room target
         HeroGoal::Retreat => {
             // Find path to entrance (simplified: any room near edge)
             find_entrance_room(game_state)
@@ -347,6 +348,8 @@ fn is_dungeon_heart_alive(game_state: &GameState) -> bool {
     false
 }
 
+// ... existing code ...
+
 /// Update hero AI state based on current goal and situation
 pub fn update_hero_ai(
     hero_entity: &Entity,
@@ -356,17 +359,142 @@ pub fn update_hero_ai(
     dt: f32,
 ) {
     // Re-evaluate goal periodically or when situation changes
-    let new_goal = decide_hero_goal(hero_state, game_state, game_data);
-
-    if new_goal != hero_state.current_goal {
-        hero_state.current_goal = new_goal;
-        hero_state.target_pos = None;
-        hero_state.target_room_id = None;
+    // Only re-evaluate if idle or goal complete
+    if matches!(hero_state.current_goal, HeroGoal::RestAtSpawn(_)) || hero_state.current_path.is_none() {
+         let new_goal = decide_hero_goal(hero_state, game_state, game_data);
+         if new_goal != hero_state.current_goal {
+            hero_state.current_goal = new_goal;
+            hero_state.target_pos = None;
+            hero_state.target_room_id = None;
+            hero_state.current_path = None;
+        }
     }
 
     // Update target if needed
-    if hero_state.target_room_id.is_none() {
-        hero_state.target_room_id = find_target_room(hero_entity.pos, &hero_state.hero_id, &hero_state.current_goal, game_state, game_data);
+    match &hero_state.current_goal {
+        HeroGoal::RestAtSpawn(spawn_pos) => {
+             // If we have no target, or we reached the target, pick a new random spot near spawn
+             let needs_new_target = hero_state.target_pos.is_none() || 
+                                   (hero_state.target_pos == Some(hero_entity.pos));
+                                   
+             if needs_new_target {
+                 // Wander radius
+                 let radius = 5;
+                 let mut attempts = 0;
+                 let mut found_target = None;
+                 
+                 while attempts < 10 {
+                     let dx = (rand::random::<i32>() % (radius * 2 + 1)) - radius;
+                     let dy = (rand::random::<i32>() % (radius * 2 + 1)) - radius;
+                     let target_x = spawn_pos.x + dx;
+                     let target_y = spawn_pos.y + dy;
+                     let target_pos = TilePos::new(target_x, target_y);
+                     
+                     // Check if valid and walkable
+                     if let Some(tile) = game_state.dungeon.get_tile(target_pos) {
+                         if let Some(tile_data) = game_data.tiles.get(&tile.tile_type) {
+                             if !tile_data.blocks_movement {
+                                 found_target = Some(target_pos);
+                                 break;
+                             }
+                         } else {
+                            // Default valid if no data (assume floor)
+                            found_target = Some(target_pos);
+                            break;
+                         }
+                     }
+                     attempts += 1;
+                 }
+                 
+                 // If we found a valid wander target, go there. Otherwise stay at spawn.
+                 if let Some(target) = found_target {
+                     hero_state.target_pos = Some(target);
+                 } else {
+                     hero_state.target_pos = Some(*spawn_pos);
+                 }
+                 
+                 // Reset path to force recalculation
+                 hero_state.current_path = None;
+             }
+        }
+        _ => {
+            if hero_state.target_room_id.is_none() {
+                hero_state.target_room_id = find_target_room(hero_entity.pos, &hero_state.hero_id, &hero_state.current_goal, game_state, game_data);
+            }
+        }
+    }
+    
+    // Resolve Room ID to Target Pos
+    if let Some(room_id) = hero_state.target_room_id {
+        if hero_state.target_pos.is_none() {
+             // Find room directly
+             if let Some(room) = game_state.room_manager.rooms.iter().find(|r| r.id == room_id) {
+                 // Pick random tile in room or center
+                 if !room.tiles.is_empty() {
+                    let idx = rand::random::<usize>() % room.tiles.len();
+                    if let Some(&pos) = room.tiles.iter().nth(idx) {
+                        hero_state.target_pos = Some(pos);
+                    }
+                 }
+             }
+        }
+    }
+
+    // Pathfinding
+    if let Some(target) = hero_state.target_pos {
+        // If we have no path or target changed (simplified: just check if no path)
+        if hero_state.current_path.is_none() && target != hero_entity.pos {
+             // Build pathfinding grid
+             // note: this is expensive to do every frame for every hero, should be cached in GameState
+             let (w, h) = crate::engine::tile_grid::get_grid_dimensions(&game_state.dungeon.grid);
+             let mut pf_grid = crate::engine::pathfinding::PathfindingGrid::new(w, h);
+             
+             for y in 0..h {
+                 for x in 0..w {
+                     let pos = TilePos::new(x as i32, y as i32);
+                     let mut walkable = false;
+                     let mut cost = 1.0;
+
+                     if let Some(tile) = game_state.dungeon.get_tile(pos) {
+                         if let Some(td) = game_data.tiles.get(&tile.tile_type) {
+                             if !td.blocks_movement {
+                                 walkable = true;
+                             } else if hero_state.can_dig && td.diggable {
+                                 // Tunneler can move through diggable walls with high cost
+                                 walkable = true;
+                                 cost = 10.0;
+                             }
+                         } else { 
+                            walkable = true; // Default floor
+                         }
+                     }
+                     
+                     let pf_pos = crate::engine::pathfinding::Pos::new(x as i32, y as i32);
+                     pf_grid.set_walkable(pf_pos, walkable);
+                     pf_grid.set_cost(pf_pos, cost);
+                 }
+             }
+
+             // Calculate path
+             let pf_start = crate::engine::pathfinding::Pos::new(hero_entity.pos.x, hero_entity.pos.y);
+             let pf_end = crate::engine::pathfinding::Pos::new(target.x, target.y);
+             
+             let path_result = crate::engine::pathfinding::find_path(
+                 pf_start,
+                 pf_end,
+                 &pf_grid,
+                 crate::engine::pathfinding::Heuristic::Manhattan,
+                 true   // Allow diagonals
+             );
+             
+             // Convert back
+             if let Some(p) = path_result {
+                 let waypoints: Vec<TilePos> = p.waypoints.iter()
+                     .map(|pos| TilePos::new(pos.x, pos.y))
+                     .collect();
+                 hero_state.current_path = Some(waypoints);
+             }
+        }
     }
 
     // Set fleeing flag based on threat

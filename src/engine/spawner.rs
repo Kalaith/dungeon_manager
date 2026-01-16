@@ -36,6 +36,7 @@ impl SpawnSystem {
                     1, // level
                     hero_data.stats.health, // max_health
                     hero_data.stats.mana, // max_mana
+                    spawn_pos,
                 );
                 entities.spawn_hero(spawn_pos, hero_state);
                 eprintln!("Spawned hero {} at hero entrance {:?}", hero_id, spawn_pos);

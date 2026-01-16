@@ -39,6 +39,10 @@ pub struct MapConfig {
 
     // Phase 4: Starting position
     pub starting_position: StartingPosition,
+    
+    // Phase 5: Hero Base
+    pub hero_base_enabled: bool,
+    pub hero_base_position: StartingPosition,
 
     // Difficulty & starting layout
     pub difficulty: Difficulty,
@@ -75,6 +79,9 @@ impl Default for MapConfig {
 
             // Phase 4 defaults
             starting_position: StartingPosition::Center,
+            
+            hero_base_enabled: true,
+            hero_base_position: StartingPosition::Corner,
 
             // Difficulty default
             difficulty: Difficulty::Normal,

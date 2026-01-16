@@ -5,6 +5,7 @@ pub mod tile_state;
 pub mod interaction;
 pub mod camera_state;
 pub mod dungeon;
+pub mod hero_base;
 
 pub mod room_manager;
 

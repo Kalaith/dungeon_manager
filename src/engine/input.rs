@@ -124,6 +124,14 @@ impl InputHandler {
         sidebar: &mut Sidebar,
         action_queue: &mut ActionQueue,
     ) -> bool {
+        // Handle Game Over Input
+        if state.game_over {
+            if is_key_pressed(KeyCode::Escape) {
+                return true; // Return to Main Menu
+            }
+            return false; // Block other input
+        }
+
         if is_key_pressed(KeyCode::Escape) {
             state.paused = !state.paused;
             // Clear selection when pausing/unpausing

@@ -38,6 +38,9 @@ pub struct GameState {
     pub pay_day_timer: f32,
     pub spawners: Vec<crate::engine::spawner_logic::MonsterSpawner>,
     pub paused: bool,
+    pub hero_base: crate::state::hero_base::HeroBase,
+    pub game_over: bool,
+    pub victory: bool,
 }
 
 impl GameState {
@@ -89,6 +92,9 @@ impl GameState {
             pay_day_timer: 0.0,
             spawners,
             paused: false,
+            hero_base: crate::state::hero_base::HeroBase::new(),
+            game_over: false,
+            victory: false,
         };
 
         // Recalculate max gold and other room-based stats
@@ -157,12 +163,8 @@ impl GameState {
             self.perform_creature_task(id, game_data, dt);
         }
 
-        // Hero spawning
-        self.next_hero_spawn_time -= dt;
-        if self.next_hero_spawn_time <= 0.0 {
-            self.spawn_random_hero(game_data);
-            self.next_hero_spawn_time = 10.0 + rand::random::<f32>() * 10.0; // 10-20 seconds
-        }
+        // Hero spawning via Hero Base
+        crate::engine::hero_spawner::update_hero_spawning(self, game_data, dt);
 
         // NPC Spawner Update
         crate::engine::spawner_logic::SpawnerSystem::update(
@@ -196,12 +198,65 @@ impl GameState {
                     update_hero_ai(entity, &mut hero_state_clone, self, game_data, dt);
                     
                     // Update the entity with the new hero state
-                    if let Some(entity_mut) = self.entities.get_mut(hero_id) {
+                if let Some(entity_mut) = self.entities.get_mut(hero_id) {
                         if let Some(hero_state_mut) = entity_mut.as_hero_mut() {
                             *hero_state_mut = hero_state_clone;
                         }
                     }
                 }
+            }
+            
+            // Handle digging logic
+            let mut carved_wall = None;
+            let mut should_move = true;
+
+            if let Some(entity) = self.entities.get_mut(hero_id) {
+                 if let Some(hero_state) = entity.as_hero_mut() {
+                     if let Some(path) = &hero_state.current_path {
+                         if let Some(&next_pos) = path.first() {
+                             // Check if wall
+                             let is_wall = if let Some(tile) = self.dungeon.get_tile(next_pos) {
+                                  // check block movement
+                                  if let Some(td) = game_data.tiles.get(&tile.tile_type) {
+                                      td.blocks_movement 
+                                  } else { false }
+                             } else { false };
+                             
+                             if is_wall {
+                                 if hero_state.can_dig {
+                                     should_move = false;
+                                     hero_state.is_digging = true;
+                                     hero_state.dig_timer += dt; 
+                                     if hero_state.dig_timer >= hero_state.max_dig_time {
+                                         hero_state.dig_timer = 0.0;
+                                         carved_wall = Some(next_pos);
+                                         hero_state.is_digging = false; // Done digging this tile
+                                     }
+                                 } else {
+                                     // Stuck? recalculate path?
+                                     hero_state.current_path = None; // Force repath
+                                 }
+                             } else {
+                                 hero_state.is_digging = false;
+                                 hero_state.dig_timer = 0.0;
+                             }
+                         }
+                     }
+                 }
+            }
+            
+            if let Some(pos) = carved_wall {
+                // Perform dig (turn to floor)
+                if let Some(tile) = self.dungeon.get_tile_mut(pos) {
+                    tile.tile_type = "earth".to_string();
+                    // Reset resources/ownership if needed
+                    tile.ownership = crate::state::tile_state::Ownership::Unclaimed;
+                }
+            }
+
+            // Process movement for hero if not digging
+            if should_move {
+                crate::engine::movement::process_entity_movement(&mut self.entities, hero_id, dt);
             }
         }
 
@@ -246,7 +301,10 @@ impl GameState {
         );
 
         // Update creature count (excluding imps)
-        self.player.current_creature_count = self.count_monsters();
+        self.player.current_creature_count = self.entities.count_creatures() - self.count_imps();
+
+        // Check for Game Over
+        self.check_game_over_conditions();
     }
 
     /// Update fog of war using the tile_grid system
@@ -409,6 +467,9 @@ impl GameState {
     pub fn detect_and_update_rooms(&mut self, game_data: &GameData) {
         self.room_manager.detect_and_update_rooms(&mut self.dungeon, game_data);
         
+        // Detect Hero Base Buildings
+        self.detect_hero_base(game_data);
+
         // Recalculate max gold and mana based on rooms
         let mut max_gold = 0; 
         let mut max_mana = 0;
@@ -426,6 +487,62 @@ impl GameState {
         
         self.player.max_gold = max_gold;
         self.player.max_mana = max_mana;
+    }
+
+    fn detect_hero_base(&mut self, game_data: &GameData) {
+        // Clear existing buildings to avoid duplicates on re-scan
+        self.hero_base.buildings.clear();
+        self.hero_base.enabled = false;
+
+        let (w, h) = tile_grid::get_grid_dimensions(&self.dungeon.grid);
+        let mut base_detected = false;
+        let mut base_center_acc = (0, 0);
+        let mut building_count = 0;
+
+        for y in 0..h {
+            for x in 0..w {
+                let pos = TilePos::new(x as i32, y as i32);
+                if let Some(tile) = tile_grid::get_tile(&self.dungeon.grid, pos) {
+                    if let Some(building_data) = game_data.hero_buildings.get(&tile.tile_type) {
+                        // Found a building tile!
+                        let mut building = crate::state::hero_base::HeroBuilding {
+                            id: format!("{}_{}_{}", tile.tile_type, pos.x, pos.y),
+                            building_type: tile.tile_type.clone(),
+                            pos,
+                            current_hp: building_data.hp,
+                            spawn_timers: building_data.spawn_triggers.iter().map(|t| crate::state::hero_base::SpawnTimer {
+                                hero_id: t.hero_id.clone(),
+                                time_until_spawn: 1.0, // Start almost immediately for feedback
+                            }).collect(),
+                            entity_id: None,
+                        };
+
+                        // Spawn Structure Entity
+                        let structure_state = crate::state::entities::StructureState::new(
+                            tile.tile_type.clone(),
+                            building_data.hp as f32
+                        );
+                        let entity_id = self.entities.spawn_structure(pos, structure_state);
+                        building.entity_id = Some(entity_id);
+
+                        self.hero_base.buildings.push(building);
+                        
+                        base_detected = true;
+                        base_center_acc.0 += x as i32;
+                        base_center_acc.1 += y as i32;
+                        building_count += 1;
+                    }
+                }
+            }
+        }
+
+        if base_detected {
+            self.hero_base.enabled = true;
+            if building_count > 0 {
+                 self.hero_base.position = TilePos::new(base_center_acc.0 / building_count, base_center_acc.1 / building_count);
+            }
+            eprintln!("Hero Base detected with {} buildings at {:?}", building_count, self.hero_base.position);
+        }
     }
 
 
@@ -611,7 +728,7 @@ impl GameState {
         for &attacker_id in &all_entities {
             if let Some(attacker) = self.entities.get(attacker_id) {
                 // Find combat targets
-                let targets = find_combat_targets(attacker, self.entities.entities(), game_data);
+                let targets = crate::engine::combat::find_combat_targets(attacker, self.entities.entities(), &self.dungeon, game_data);
                 
                 for target_id in targets {
                     if let Some(defender) = self.entities.get(target_id) {
@@ -628,7 +745,8 @@ impl GameState {
                                         .map(|d| d.combat.attack_type.clone())
                                         .unwrap_or_else(|| "melee".to_string())
                                 }
-                            }.as_str()) {
+                                crate::state::entities::EntityType::Structure(_) => "none".to_string(),
+                            }.as_str(), &self.dungeon.grid, game_data) {
                             
                             // Resolve combat tick
                             let result = resolve_combat_tick(attacker, defender, dt, game_data);
@@ -644,6 +762,27 @@ impl GameState {
                     }
                 }
             }
+        }
+    }
+
+    /// Check for victory or defeat conditions
+    pub fn check_game_over_conditions(&mut self) {
+        if self.game_over {
+            return;
+        }
+
+        // Check Victory: Hero Base Town Hall destroyed
+        if self.hero_base.enabled && self.hero_base.is_defeated() {
+            self.game_over = true;
+            self.victory = true;
+            eprintln!("VICTORY! Hero Base destroyed!");
+        }
+
+        // Check Defeat: Dungeon Heart destroyed
+        if self.player.dungeon_heart_health <= 0.0 {
+            self.game_over = true;
+            self.victory = false;
+            eprintln!("DEFEAT! Dungeon Heart destroyed!");
         }
     }
 }

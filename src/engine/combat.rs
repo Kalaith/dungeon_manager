@@ -141,6 +141,21 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
                 resistances: hero_data.combat.resistances.clone(),
                 level: hero_state.level,
             }
+
+        }
+        crate::state::entities::EntityType::Structure(structure_state) => {
+            CombatStats {
+                health: structure_state.health,
+                max_health: structure_state.max_health,
+                attack: 0.0,
+                defense: 10.0, // Base defense for buildings
+                attack_type: "none".to_string(),
+                damage_range: [0.0, 0.0],
+                attack_speed: 1.0, 
+                armor_type: "stone".to_string(),
+                resistances: HashMap::new(),
+                level: 1,
+            }
         }
     }
 }
@@ -205,6 +220,9 @@ pub fn apply_combat_result(
             crate::state::entities::EntityType::Hero(state) => {
                 state.take_damage(result.damage_dealt);
             }
+            crate::state::entities::EntityType::Structure(state) => {
+                state.take_damage(result.damage_dealt);
+            }
         }
     }
 
@@ -218,6 +236,9 @@ pub fn apply_combat_result(
                 crate::state::entities::EntityType::Hero(state) => {
                     state.status_effects.push(effect.clone());
                 }
+                crate::state::entities::EntityType::Structure(_) => {
+                    // Structures don't take status effects yet
+                }
             }
         }
     }
@@ -228,7 +249,9 @@ pub fn apply_combat_result(
         if let Some(defender) = entities.get(&defender_id) {
             match &defender.entity_type {
                 crate::state::entities::EntityType::Creature(state) => state.level,
+
                 crate::state::entities::EntityType::Hero(_) => 0, // Heroes don't give XP
+                crate::state::entities::EntityType::Structure(_) => 5, // Buildings give fixed XP (e.g. 5 levels worth)
             }
         } else {
             0
@@ -263,6 +286,7 @@ fn award_experience(attacker: &mut Entity, victim_level: u32) {
             // Heroes don't level up in combat in this simplified system
             // Could be extended to award hero XP
         }
+        crate::state::entities::EntityType::Structure(_) => {}
     }
 }
 
@@ -289,16 +313,37 @@ fn level_up_creature(state: &mut crate::state::entities::CreatureState) {
     // Could also increase attack, defense, etc.
 }
 
-/// Check if two entities are in combat range
-pub fn in_combat_range(attacker_pos: TilePos, defender_pos: TilePos, attack_type: &str) -> bool {
+// Placeholder - will act validation in next step
+
+
+/// Check if two entities are in combat range and have line of sight
+pub fn in_combat_range(
+    attacker_pos: TilePos, 
+    defender_pos: TilePos, 
+    attack_type: &str,
+    dungeon_grid: &Vec<Vec<crate::state::tile_state::TileState>>,
+    game_data: &GameData
+) -> bool {
     let distance = calculate_manhattan_distance(attacker_pos, defender_pos);
 
-    match attack_type {
+    let in_range = match attack_type {
         "melee" => distance <= 1,
         "ranged" => distance <= 5,
         "magic" => distance <= 8,
         _ => distance <= 1,
+    };
+
+    if !in_range {
+        return false;
     }
+
+    // Line of Sight Check
+    // Melee always hits if adjacent (distance <= 1)
+    if distance <= 1 {
+        return true;
+    }
+
+    check_line_of_sight(attacker_pos, defender_pos, dungeon_grid, game_data)
 }
 
 /// Calculate Manhattan distance between positions
@@ -306,10 +351,63 @@ fn calculate_manhattan_distance(a: TilePos, b: TilePos) -> i32 {
     (a.x - b.x).abs() + (a.y - b.y).abs()
 }
 
+/// Simple line of sight check using Bresenham's algorithm or sampling
+fn check_line_of_sight(
+    start: TilePos, 
+    end: TilePos, 
+    grid: &Vec<Vec<crate::state::tile_state::TileState>>,
+    game_data: &GameData
+) -> bool {
+    let x0 = start.x;
+    let y0 = start.y;
+    let x1 = end.x;
+    let y1 = end.y;
+
+    let dx = (x1 - x0).abs();
+    let dy = -(y1 - y0).abs();
+    let sx = if x0 < x1 { 1 } else { -1 };
+    let sy = if y0 < y1 { 1 } else { -1 };
+    let mut err = dx + dy;
+    let mut x = x0;
+    let mut y = y0;
+
+    loop {
+        if x == x1 && y == y1 {
+            break;
+        }
+
+        // Check if current tile blocks sight (skip start tile)
+        if !(x == x0 && y == y0) {
+            if let Some(row) = grid.get(y as usize) {
+                if let Some(tile) = row.get(x as usize) {
+                     if let Some(tile_data) = game_data.tiles.get(&tile.tile_type) {
+                        if tile_data.blocks_vision {
+                            return false; 
+                        }
+                     }
+                }
+            }
+        }
+
+        let e2 = 2 * err;
+        if e2 >= dy {
+            err += dy;
+            x += sx;
+        }
+        if e2 <= dx {
+            err += dx;
+            y += sy;
+        }
+    }
+    
+    true
+}
+
 /// Find potential combat targets for an entity
 pub fn find_combat_targets(
     entity: &Entity,
     entities: &HashMap<EntityId, Entity>,
+    dungeon: &crate::state::dungeon::Dungeon, // Pass Dungeon struct
     game_data: &GameData,
 ) -> Vec<EntityId> {
     let mut targets = Vec::new();
@@ -333,9 +431,10 @@ pub fn find_combat_targets(
                         .map(|data| data.combat.attack_type.clone())
                         .unwrap_or_else(|| "melee".to_string())
                 }
+                crate::state::entities::EntityType::Structure(_) => "none".to_string(),
             };
 
-            if in_combat_range(entity.pos, other_entity.pos, &attack_type) {
+            if in_combat_range(entity.pos, other_entity.pos, &attack_type, &dungeon.grid, game_data) {
                 targets.push(*other_id);
             }
         }
@@ -368,6 +467,7 @@ fn get_faction(entity: &Entity, game_data: &GameData) -> String {
                 .unwrap_or("dungeon".to_string())
         },
         crate::state::entities::EntityType::Hero(_) => "hero".to_string(),
+        crate::state::entities::EntityType::Structure(_) => "hero".to_string(), // Structures belong to hero faction
     }
 }
 
@@ -386,5 +486,6 @@ pub fn update_status_effects(entity: &mut Entity, dt: f32) {
                 effect.duration > 0.0
             });
         }
+        crate::state::entities::EntityType::Structure(_) => {}
     }
 }

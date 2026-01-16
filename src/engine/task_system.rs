@@ -303,3 +303,36 @@ fn execute_collect_wages(
     }
     0
 }
+
+/// Handle Research task - returns research points generated
+fn execute_research(
+    creature_id: EntityId,
+    room_id: usize,
+    entities: &mut EntityManager,
+    room_manager: &RoomManager,
+    game_data: &GameData,
+    dt: f32,
+) -> f32 {
+    if let Some(room) = room_manager.rooms.iter().find(|r| r.id == room_id) {
+        if room.room_type == "library" {
+             if let Some(creature) = entities.get_mut(creature_id)
+                .and_then(|e| e.as_creature_mut())
+            {
+                // Research efficiency
+                // Base rate from room effects?
+                // For now, assume base rate is in room data, but we can hardcode for this task
+                let efficiency = if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
+                     creature_ai::calculate_work_efficiency(creature, monster_data)
+                } else {
+                    1.0
+                };
+
+                // Let's say 2 research points per second base * efficiency
+                let points = 2.0 * dt * efficiency;
+                
+                return points;
+            }
+        }
+    }
+    0.0
+}

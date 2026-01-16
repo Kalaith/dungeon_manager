@@ -263,6 +263,9 @@ impl GameRenderer {
                     crate::state::entities::EntityType::Creature(creature_state) => {
                         graphics.monster_textures.get(&creature_state.creature_id)
                     }
+                    crate::state::entities::EntityType::Structure(state) => {
+                        graphics.tile_textures.get(&state.building_id)
+                    }
                 }
              } else { None };
 
@@ -298,8 +301,14 @@ impl GameRenderer {
             );
         }
 
+
+
         if state.paused {
             self.draw_pause_menu();
+        }
+
+        if state.game_over {
+            self.draw_game_over_screen(state.victory);
         }
     }
 
@@ -338,7 +347,15 @@ impl GameRenderer {
 
                 // Get texture for this tile type
                 let texture_opt = graphics.tile_textures.get(&tile.tile_type);
-                let mut color = match tile.fog_state {
+                
+                // Determine visible color based on Fog of War settings
+                let fog_state = if crate::config::FOG_OF_WAR_ENABLED {
+                    tile.fog_state
+                } else {
+                    FogState::Visible
+                };
+
+                let mut color = match fog_state {
                     FogState::Hidden => crate::ui::core::colors::FOG_HIDDEN,
                     FogState::Revealed => crate::ui::core::colors::FOG_REVEALED,
                     FogState::Visible => crate::ui::core::colors::FOG_VISIBLE,
@@ -411,7 +428,13 @@ impl GameRenderer {
                     let mut tile_color = crate::ui::core::get_tile_color(&tile.tile_type);
 
                     // Apply fog/tint to tile_color
-                    match tile.fog_state {
+                    let fog_state = if crate::config::FOG_OF_WAR_ENABLED {
+                        tile.fog_state
+                    } else {
+                        FogState::Visible
+                    };
+
+                    match fog_state {
                         FogState::Hidden => tile_color = crate::ui::core::colors::FOG_HIDDEN,
                         FogState::Revealed => {
                             tile_color.r *= 0.5;
@@ -529,6 +552,19 @@ impl GameRenderer {
         for entity in sorted_entities {
             let (x, z) = entity.visual_pos;
 
+            // Handle Structures separately (draw as blocks/cubes)
+            if let crate::state::entities::EntityType::Structure(state) = &entity.entity_type {
+                if let Some(tex) = graphics.tile_textures.get(&state.building_id) {
+                    draw_cube(
+                        vec3(x, 0.5, z),
+                        vec3(1.0, 1.0, 1.0),
+                        Some(tex),
+                        WHITE
+                    );
+                    continue;
+                }
+            }
+
             let texture = match &entity.entity_type {
                 crate::state::entities::EntityType::Creature(c) => {
                     graphics.monster_textures.get(&c.creature_id)
@@ -536,6 +572,7 @@ impl GameRenderer {
                 crate::state::entities::EntityType::Hero(h) => {
                     graphics.hero_textures.get(&h.hero_id)
                 }
+                crate::state::entities::EntityType::Structure(_) => None, // Should not happen due to block above
             };
 
             if let Some(tex) = texture {
@@ -552,6 +589,7 @@ impl GameRenderer {
                     crate::state::entities::EntityType::Creature(_) => {
                         Color::new(0.8, 0.2, 0.2, 1.0)
                     }
+                    crate::state::entities::EntityType::Structure(_) => Color::new(0.5, 0.5, 0.5, 1.0),
                 };
                 draw_cube_wires(vec3(x, 0.5, z), vec3(0.5, 1.0, 0.5), color);
             }
@@ -635,6 +673,55 @@ impl GameRenderer {
             WHITE
         );
     }
+
+    pub fn draw_game_over_screen(&self, victory: bool) {
+        // Semi-transparent overlay
+        draw_rectangle(
+            0.0, 0.0, 
+            screen_width(), screen_height(), 
+            Color::new(0.0, 0.0, 0.0, 0.8)
+        );
+
+        let screen_center_x = screen_width() / 2.0;
+        let screen_center_y = screen_height() / 2.0;
+
+        let title = if victory { "VICTORY" } else { "DEFEAT" };
+        let color = if victory { crate::ui::core::colors::POSITIVE } else { crate::ui::core::colors::NEGATIVE };
+        
+        // Title
+        let title_dims = measure_text(title, None, 80, 1.0);
+        draw_text(
+            title, 
+            screen_center_x - title_dims.width / 2.0, 
+            screen_center_y - 100.0, 
+            80.0, 
+            color
+        );
+
+        // Subtitle
+        let subtitle = if victory { "The Hero Base has been destroyed!" } else { "Your Dungeon Heart has fallen!" };
+        let sub_dims = measure_text(subtitle, None, 40, 1.0);
+        draw_text(
+            subtitle, 
+            screen_center_x - sub_dims.width / 2.0, 
+            screen_center_y - 20.0, 
+            40.0, 
+            WHITE
+        );
+
+        // Instructions
+        let instr = "Press ESC to Exit";
+        let instr_dims = measure_text(instr, None, 30, 1.0);
+        draw_text(
+            instr, 
+            screen_center_x - instr_dims.width / 2.0, 
+            screen_center_y + 60.0, 
+            30.0, 
+            GRAY
+        );
+    }
+
+
 }
 
 

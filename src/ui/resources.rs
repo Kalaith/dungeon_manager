@@ -29,6 +29,11 @@ impl GraphicsCache {
             "training_room", "library", "prison", "guard_post", "ritual_circle", "monster_spawner",
             "spike_trap",
         ];
+        
+        let hero_building_tiles = vec![
+            "town_hall", "barracks", "archery_range", "church", "mage_tower", 
+            "stable", "armory", "hero_wall", "hero_gate"
+        ];
 
         for tile_type in tile_types {
             let path = format!("assets/tiles/{}.png", tile_type);
@@ -42,6 +47,19 @@ impl GraphicsCache {
                 Err(e) => {
                     println!("Failed to load texture {}: {}", path, e);
                     // generate a placeholder?
+                }
+            }
+        }
+
+        for tile_type in hero_building_tiles {
+            let path = format!("assets/tiles/hero_buildings/{}.png", tile_type);
+            match load_texture(&path).await {
+                Ok(tex) => {
+                    tex.set_filter(FilterMode::Nearest);
+                    cache.tile_textures.insert(tile_type.to_string(), tex);
+                }
+                Err(e) => {
+                     println!("Failed to load hero building texture {}: {}", path, e);
                 }
             }
         }

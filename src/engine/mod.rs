@@ -5,6 +5,8 @@ pub mod room_validator;
 pub mod tile_grid;
 pub mod hero_ai;
 pub mod combat;
+pub mod hero_spawner;
+
 pub mod map_generator;
 pub mod spell_effects;
 pub mod imp_ai;

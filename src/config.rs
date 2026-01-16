@@ -26,5 +26,8 @@ pub const STARTING_MATERIALS: i32 = 100;
 pub const INITIAL_MAX_GOLD: i32 = 0; // Capacity determined by treasury/dungeon heart rooms
 pub const INITIAL_MAX_MANA: i32 = 0;
 pub const INITIAL_MAX_FOOD: i32 = 500;
-pub const INITIAL_MAX_MATERIALS: i32 = 100; 
+pub const INITIAL_MAX_MATERIALS: i32 = 100;
+
+/// Whether Fog of War is enabled (visibility tracking)
+pub const FOG_OF_WAR_ENABLED: bool = false; 
 
