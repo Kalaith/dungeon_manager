@@ -357,11 +357,14 @@ pub fn update_hero_ai(
     game_data: &GameData,
     dt: f32,
 ) {
-    // Re-evaluate goal periodically or when situation changes
-    // Only re-evaluate if idle or goal complete
-    if matches!(hero_state.current_goal, HeroGoal::RestAtSpawn(_)) || hero_state.current_path.is_none() {
-         let new_goal = decide_hero_goal(hero_state, game_state, game_data);
-         if new_goal != hero_state.current_goal {
+
+
+    // Heroes in RestAtSpawn mode should stay there and wander - don't re-evaluate goal immediately
+    // Only switch out of RestAtSpawn based on external triggers or time
+    if !matches!(hero_state.current_goal, HeroGoal::RestAtSpawn(_)) && hero_state.current_path.is_none() {
+        // Only re-evaluate for non-resting heroes that need a new direction
+        let new_goal = decide_hero_goal(hero_state, game_state, game_data);
+        if new_goal != hero_state.current_goal {
             hero_state.current_goal = new_goal;
             hero_state.target_pos = None;
             hero_state.target_room_id = None;
@@ -375,6 +378,8 @@ pub fn update_hero_ai(
              // If we have no target, or we reached the target, pick a new random spot near spawn
              let needs_new_target = hero_state.target_pos.is_none() || 
                                    (hero_state.target_pos == Some(hero_entity.pos));
+             
+
                                    
              if needs_new_target {
                  // Wander radius
@@ -383,37 +388,54 @@ pub fn update_hero_ai(
                  let mut found_target = None;
                  
                  while attempts < 10 {
-                     let dx = (rand::random::<i32>() % (radius * 2 + 1)) - radius;
-                     let dy = (rand::random::<i32>() % (radius * 2 + 1)) - radius;
+                     // Use abs() to ensure positive modulo result
+                     let dx = (rand::random::<i32>().abs() % (radius * 2 + 1)) - radius;
+                     let dy = (rand::random::<i32>().abs() % (radius * 2 + 1)) - radius;
                      let target_x = spawn_pos.x + dx;
                      let target_y = spawn_pos.y + dy;
                      let target_pos = TilePos::new(target_x, target_y);
                      
+                     // Skip if this is the current position (we need to move somewhere DIFFERENT)
+                     if target_pos == hero_entity.pos {
+                         attempts += 1;
+                         continue;
+                     }
+                     
                      // Check if valid and walkable
                      if let Some(tile) = game_state.dungeon.get_tile(target_pos) {
-                         if let Some(tile_data) = game_data.tiles.get(&tile.tile_type) {
-                             if !tile_data.blocks_movement {
-                                 found_target = Some(target_pos);
-                                 break;
-                             }
+                         // Check tile data if available, otherwise check if it's a hero building
+                         let is_walkable = if let Some(tile_data) = game_data.tiles.get(&tile.tile_type) {
+                             !tile_data.blocks_movement
+                         } else if tile.tile_type == "hero_wall" || tile.tile_type == "hero_gate" {
+                             // Walls and gates block movement
+                             false
+                         } else if game_data.hero_buildings.get(&tile.tile_type).is_some() {
+                             // Other hero building tiles (barracks, etc.) are walkable for heroes
+                             true
                          } else {
-                            // Default valid if no data (assume floor)
-                            found_target = Some(target_pos);
-                            break;
+                             // Default valid if no data (assume floor)
+                             true
+                         };
+                         
+                         if is_walkable {
+
+                             found_target = Some(target_pos);
+                             break;
                          }
+                     } else {
+
                      }
                      attempts += 1;
                  }
                  
-                 // If we found a valid wander target, go there. Otherwise stay at spawn.
+                 // Only update target if we found a valid DIFFERENT position
+                 // If we couldn't find one, leave target_pos unchanged and try again next tick
                  if let Some(target) = found_target {
                      hero_state.target_pos = Some(target);
+                     // Reset path to force recalculation
+                     hero_state.current_path = None;
                  } else {
-                     hero_state.target_pos = Some(*spawn_pos);
                  }
-                 
-                 // Reset path to force recalculation
-                 hero_state.current_path = None;
              }
         }
         _ => {
@@ -443,6 +465,8 @@ pub fn update_hero_ai(
     if let Some(target) = hero_state.target_pos {
         // If we have no path or target changed (simplified: just check if no path)
         if hero_state.current_path.is_none() && target != hero_entity.pos {
+
+             
              // Build pathfinding grid
              // note: this is expensive to do every frame for every hero, should be cached in GameState
              let (w, h) = crate::engine::tile_grid::get_grid_dimensions(&game_state.dungeon.grid);
@@ -463,8 +487,11 @@ pub fn update_hero_ai(
                                  walkable = true;
                                  cost = 10.0;
                              }
+                         } else if tile.tile_type == "hero_wall" || tile.tile_type == "hero_gate" {
+                             // Walls and gates block movement
+                             walkable = false;
                          } else { 
-                            walkable = true; // Default floor
+                            walkable = true; // Default floor (includes other hero buildings)
                          }
                      }
                      

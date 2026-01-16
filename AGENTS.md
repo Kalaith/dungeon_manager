@@ -1,0 +1,1 @@
+do not run 'cargo build 2>&1' only 'cargo build'
