@@ -234,12 +234,13 @@ impl GameRenderer {
         };
 
         draw_text(
-            &format!("Gold: {}/{} | Mana: {}/{} | Food: {} | Mats: {}/{} | Minions: {}/{}",
+            &format!("Gold: {}/{} | Mana: {}/{} | Food: {} | Mats: {}/{} | Minions: {}/{} | Heart: {:.0}",
                 state.player.gold, state.player.max_gold,
                 state.player.mana, state.player.max_mana,
                 state.player.food,
                 state.player.materials, state.player.max_materials,
-                state.player.current_creature_count, state.player.max_creatures),
+                state.player.current_creature_count, state.player.max_creatures,
+                state.dungeon_heart_health),
             10.0,
             25.0,
             18.0,

@@ -228,8 +228,8 @@ impl GameState {
                         
                         // Debug log to see why it might fail
                         if dx <= 2 && dy <= 2 {
-                             eprintln!("Hero {} at {:?} attacking heart at {:?} (dx={}, dy={})", 
-                                hero.hero_id, entity.pos, target_pos, dx, dy);
+                             /*eprintln!("Hero {} at {:?} attacking heart at {:?} (dx={}, dy={}, goal={:?})", 
+                                hero.hero_id, entity.pos, target_pos, dx, dy, hero.current_goal);*/
                         }
 
                         // If adjacent (manhattan distance <= 1 ensures N/S/E/W adjacency)
@@ -238,17 +238,33 @@ impl GameState {
                         // Also allow dx=0, dy=0 (standing on it) for robustness
                         if dx <= 1 && dy <= 1 {
                              total_damage += 20.0 * dt; // 20 DPS per hero
+                             // eprintln!("Applying damage! Heart Health: {:.1} - Damage: {:.1}", self.dungeon_heart_health, 20.0 * dt);
                         }
+                    } else {
+                        // eprintln!("Hero {} adjacent but NOT DestroyHeart. Goal: {:?}", hero.hero_id, hero.current_goal);
                     }
                 }
             }
             
             if total_damage > 0.0 {
                 self.dungeon_heart_health -= total_damage;
+                eprintln!("Heart taking damage! Health: {:.1} -> {:.1}", self.dungeon_heart_health + total_damage, self.dungeon_heart_health);
                 if self.dungeon_heart_health <= 0.0 && !self.game_over {
                     self.game_over = true;
                     self.notifications.danger("DUNGEON HEART DESTROYED! GAME OVER");
                 }
+            } else {
+                 // Check if heroes are nearby but not damaging
+                 for entity in self.entities.all() {
+                    if let Some(hero) = entity.as_hero() {
+                        let dx = (entity.pos.x - target_pos.x).abs();
+                        let dy = (entity.pos.y - target_pos.y).abs();
+                        if dx <= 5 && dy <= 5 {
+                             eprintln!("Review: Hero {} at {:?} (dist {}, {}) Goal: {:?}. Dmg: 0", 
+                                hero.hero_id, entity.pos, dx, dy, hero.current_goal);
+                        }
+                    }
+                 }
             }
         }
         for hero_id in hero_entities {
