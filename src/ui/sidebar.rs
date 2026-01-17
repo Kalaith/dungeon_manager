@@ -569,8 +569,38 @@ impl Sidebar {
                      // eprintln!("DEBUG UI: ID={} Rest={:.2} Food={:.2}", creature.creature_id, creature.get_need("sleep"), creature.get_need("food"));
                      draw_text(&format!("Job: {:?}", creature.current_task), details_x, start_y + 85.0, 16.0, LIGHTGRAY);
                 } else if let Some(hero) = entity.as_hero() {
+                     // Header
                      draw_text(&format!("Hero: {} (Lvl {})", hero.hero_id, hero.level), details_x, start_y + 20.0, 20.0, WHITE);
-                     draw_text(&format!("HP: {:.0}/{:.0}", hero.health, hero.max_health), details_x, start_y + 45.0, 16.0, WHITE);
+                     
+                     // Health Bar
+                     let hp_pct = hero.health / hero.max_health;
+                     let bar_w = 200.0;
+                     draw_rectangle(details_x, start_y + 30.0, bar_w, 10.0, RED);
+                     draw_rectangle(details_x, start_y + 30.0, bar_w * hp_pct, 10.0, GREEN);
+                     draw_text(&format!("{:.0}/{:.0} HP", hero.health, hero.max_health), details_x + 5.0, start_y + 39.0, 10.0, WHITE);
+
+                     // Role & Wave
+                     let role = if hero.is_defender { "Defender" } else { "Attacker" };
+                     let wave_info = if hero.wave_assigned > 0 { format!(" (Wave {})", hero.wave_assigned) } else { "".to_string() };
+                     draw_text(&format!("Role: {}{}", role, wave_info), details_x, start_y + 55.0, 16.0, WHITE);
+
+                     // Status / Goal
+                     let status = if hero.is_digging {
+                         "Digging"
+                     } else if hero.current_path.is_some() {
+                         "Moving"
+                     } else {
+                         "Idle"
+                     };
+                     draw_text(&format!("Status: {} | Goal: {:?}", status, hero.current_goal), details_x, start_y + 75.0, 14.0, LIGHTGRAY);
+                     
+                     // Combat Stats
+                     draw_text(&format!("Kills: {} | Gold: {}", hero.kills, hero.gold_stolen), details_x, start_y + 95.0, 14.0, GOLD);
+
+                     // Debug info
+                     if hero.is_fleeing {
+                         draw_text("FLEEING!", details_x + 150.0, start_y + 55.0, 16.0, RED);
+                     }
                 }
             }
 

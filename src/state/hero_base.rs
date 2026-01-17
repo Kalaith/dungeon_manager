@@ -23,6 +23,16 @@ pub struct HeroBase {
     pub buildings: Vec<HeroBuilding>,
     pub position: TilePos, // General location (e.g., center of base)
     pub enabled: bool,
+    
+    // Wave attack state
+    /// Time until the next attack wave launches
+    pub time_until_next_wave: f32,
+    /// Current wave number (increments after each wave is defeated)
+    pub current_wave_number: u32,
+    /// Whether the current wave is actively attacking
+    pub wave_in_progress: bool,
+    /// Count of attackers in current wave that are still alive
+    pub active_attackers: u32,
 }
 
 impl HeroBase {
@@ -31,6 +41,10 @@ impl HeroBase {
             buildings: Vec::new(),
             position: TilePos { x: 0, y: 0 },
             enabled: false,
+            time_until_next_wave: crate::config::HERO_WAVE_INITIAL_DELAY,
+            current_wave_number: 0,
+            wave_in_progress: false,
+            active_attackers: 0,
         }
     }
 

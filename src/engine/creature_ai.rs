@@ -68,12 +68,19 @@ fn update_single_creature(
         (entity.pos, needs_new_task, needs_path, task_target, creature.creature_id.clone())
     };
 
-    // Update needs and mood
-    if let Some(monster_data) = game_data.monsters.get(&creature_type) {
-        if let Some(entity) = entities.get_mut(creature_id) {
-            if let Some(creature) = entity.as_creature_mut() {
-                update_needs(creature, dt, monster_data);
-                update_mood(creature, monster_data);
+    // Check if this is a wild/neutral creature
+    let is_wild = game_data.monsters.get(&creature_type)
+        .map(|m| m.faction != "dungeon")
+        .unwrap_or(false);
+
+    // Update needs and mood (only for dungeon creatures, not wild ones)
+    if !is_wild {
+        if let Some(monster_data) = game_data.monsters.get(&creature_type) {
+            if let Some(entity) = entities.get_mut(creature_id) {
+                if let Some(creature) = entity.as_creature_mut() {
+                    update_needs(creature, dt, monster_data);
+                    update_mood(creature, monster_data);
+                }
             }
         }
     }
@@ -83,7 +90,16 @@ fn update_single_creature(
 
     // Decide new task if needed
     if needs_new_task {
-        decide_and_assign_task(creature_id, current_pos, entities, room_manager, game_data);
+        if is_wild {
+            // Wild creatures just wander randomly - they don't use dungeon rooms
+            if let Some(entity) = entities.get_mut(creature_id) {
+                if let Some(creature) = entity.as_creature_mut() {
+                    creature.current_task = Some(Task::Idle); // Idle triggers wander
+                }
+            }
+        } else {
+            decide_and_assign_task(creature_id, current_pos, entities, room_manager, game_data);
+        }
     }
 
     // Pathfind to task if needed
@@ -98,6 +114,7 @@ fn update_single_creature(
         );
     }
 }
+
 
 
 // process_creature_movement removed in favor of shared movement::process_entity_movement

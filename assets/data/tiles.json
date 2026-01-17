@@ -256,5 +256,50 @@
     "visual": {
       "sprite": "tiles/hero_entrance.png"
     }
+  },
+  {
+    "id": "hero_wall",
+    "name": "Hero Wall",
+    "category": "wall",
+    "diggable": true,
+    "claimable": false,
+    "blocks_movement": true,
+    "blocks_vision": true,
+    "supports_rooms": false,
+    "resources": null,
+    "durability": 500,
+    "visual": {
+      "sprite": "tiles/reinforced_wall.png"
+    }
+  },
+  {
+    "id": "hero_gate",
+    "name": "Hero Gate",
+    "category": "structure",
+    "diggable": true,
+    "claimable": false,
+    "blocks_movement": false,
+    "blocks_vision": false,
+    "supports_rooms": false,
+    "resources": null,
+    "durability": 300,
+    "visual": {
+      "sprite": "tiles/reinforced_wall.png"
+    }
+  },
+  {
+    "id": "dungeon_heart",
+    "name": "Dungeon Heart",
+    "category": "structure",
+    "diggable": false,
+    "claimable": false,
+    "blocks_movement": true,
+    "blocks_vision": false,
+    "supports_rooms": false,
+    "resources": null,
+    "durability": 1000,
+    "visual": {
+      "sprite": "tiles/dungeon_heart.png"
+    }
   }
 ]

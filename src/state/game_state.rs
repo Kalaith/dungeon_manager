@@ -41,6 +41,9 @@ pub struct GameState {
 
     /// Notification system for game events
     pub notifications: crate::state::notifications::NotificationManager,
+
+    /// Dungeon Heart Health
+    pub dungeon_heart_health: f32,
 }
 
 impl GameState {
@@ -96,6 +99,7 @@ impl GameState {
             game_over: false,
             victory: false,
             notifications: crate::state::notifications::NotificationManager::new(),
+            dungeon_heart_health: crate::config::DUNGEON_HEART_MAX_HEALTH,
         };
 
         // Recalculate max gold and other room-based stats
@@ -193,22 +197,65 @@ impl GameState {
 
         // Update hero AI
         let hero_entities: Vec<EntityId> = self.entities.heroes().map(|(id, _)| id).collect();
+
+        if self.hero_base.enabled {
+             crate::engine::hero_spawner::update_hero_spawning(self, game_data, dt);
+        }
+
+        // Dungeon Heart Attack Logic
+        let heart_pos = self.find_dungeon_heart_position();
+        if let Some(target_pos) = heart_pos {
+             let mut total_damage = 0.0;
+             // Check for adjacent heroes with DestroyHeart goal
+             for entity in self.entities.all() {
+                if let Some(hero) = entity.as_hero() {
+                    if matches!(hero.current_goal, crate::state::entities::HeroGoal::DestroyHeart) {
+                        let dx = (entity.pos.x - target_pos.x).abs();
+                        let dy = (entity.pos.y - target_pos.y).abs();
+                        
+                        // Debug log to see why it might fail
+                        if dx <= 2 && dy <= 2 {
+                             eprintln!("Hero {} at {:?} attacking heart at {:?} (dx={}, dy={})", 
+                                hero.hero_id, entity.pos, target_pos, dx, dy);
+                        }
+
+                        // If adjacent (manhattan distance <= 1 ensures N/S/E/W adjacency)
+                        // Diagonal adjacency would be dx <= 1 && dy <= 1 && (dx+dy) > 0
+                        // Let's allow diagonals for attacking too since they can pathfind diagonally
+                        // Also allow dx=0, dy=0 (standing on it) for robustness
+                        if dx <= 1 && dy <= 1 {
+                             total_damage += 20.0 * dt; // 20 DPS per hero
+                        }
+                    }
+                }
+            }
+            
+            if total_damage > 0.0 {
+                self.dungeon_heart_health -= total_damage;
+                if self.dungeon_heart_health <= 0.0 && !self.game_over {
+                    self.game_over = true;
+                    self.notifications.danger("DUNGEON HEART DESTROYED! GAME OVER");
+                }
+            }
+        }
         for hero_id in hero_entities {
+            // Update AI first
             if let Some(entity) = self.entities.get(hero_id) {
                 if let Some(hero_state) = entity.as_hero() {
                     let mut hero_state_clone = hero_state.clone();
-                    update_hero_ai(entity, &mut hero_state_clone, self, game_data, dt);
-                    
-                    // Update the entity with the new hero state
-                if let Some(entity_mut) = self.entities.get_mut(hero_id) {
+                    crate::engine::hero_ai::update_hero_ai(entity, &mut hero_state_clone, self, game_data, dt);
+                     // Update the entity with the new hero state
+                    if let Some(entity_mut) = self.entities.get_mut(hero_id) {
                         if let Some(hero_state_mut) = entity_mut.as_hero_mut() {
                             *hero_state_mut = hero_state_clone;
                         }
                     }
                 }
             }
-            
+
+            // Then Digging logic
             // Handle digging logic
+
             let mut carved_wall = None;
             let mut should_move = true;
 
@@ -216,16 +263,24 @@ impl GameState {
                  if let Some(hero_state) = entity.as_hero_mut() {
                      if let Some(path) = &hero_state.current_path {
                          if let Some(&next_pos) = path.first() {
-                             // Check if wall
-                             let is_wall = if let Some(tile) = self.dungeon.get_tile(next_pos) {
-                                  // check block movement
-                                  if let Some(td) = game_data.tiles.get(&tile.tile_type) {
-                                      td.blocks_movement 
-                                  } else { false }
-                             } else { false };
+                               // Check if wall
+                              let is_wall = if let Some(tile) = self.dungeon.get_tile(next_pos) {
+                                   // check block movement
+                                   if let Some(td) = game_data.tiles.get(&tile.tile_type) {
+                                       td.blocks_movement 
+                                   } else { false }
+                              } else { false };
                              
                              if is_wall {
                                  if hero_state.can_dig {
+                                     // Don't dig own walls!
+                                     if let Some(tile) = self.dungeon.get_tile(next_pos) {
+                                         if tile.tile_type == "hero_wall" {
+                                             hero_state.current_path = None; // Can't go this way
+                                             continue;
+                                         }
+                                     }
+                                     
                                      should_move = false;
                                      hero_state.is_digging = true;
                                      hero_state.dig_timer += dt; 
@@ -250,7 +305,7 @@ impl GameState {
             if let Some(pos) = carved_wall {
                 // Perform dig (turn to floor)
                 if let Some(tile) = self.dungeon.get_tile_mut(pos) {
-                    tile.tile_type = "earth".to_string();
+                    tile.tile_type = "claimed_floor".to_string(); // Was "earth", which blocks movement!
                     // Reset resources/ownership if needed
                     tile.ownership = crate::state::tile_state::Ownership::Unclaimed;
                 }
@@ -330,8 +385,8 @@ impl GameState {
             self.notifications.info(format!("{} triggered! ({:.0} damage)", result.trap_type, result.damage_dealt));
         }
 
-        // Update creature count (excluding imps)
-        self.player.current_creature_count = self.entities.count_creatures() - self.count_imps();
+        // Update creature count (only player creatures, excluding imps and wild monsters)
+        self.player.current_creature_count = self.count_player_creatures(game_data) - self.count_imps();
 
         // Check for Game Over
         self.check_game_over_conditions();
@@ -357,10 +412,20 @@ impl GameState {
             }
         }
         
-        // Collect creature positions (player's creatures provide vision, except imps)
+        // Collect creature positions (only player's creatures provide vision, except imps)
+        // Wild/neutral creatures should not reveal fog for the player
         let creature_positions: Vec<TilePos> = self.entities
             .creatures()
-            .filter(|(_, creature)| creature.creature_id != "imp") // Imps don't provide vision
+            .filter(|(_, creature)| {
+                // Exclude imps (workers don't provide vision)
+                if creature.creature_id == "imp" { return false; }
+                // Only dungeon faction creatures provide vision
+                if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
+                    monster_data.faction == "dungeon"
+                } else {
+                    false
+                }
+            })
             .map(|(id, _)| self.entities.get(id))
             .flatten()
             .map(|e| e.pos)
@@ -699,6 +764,29 @@ impl GameState {
             .creatures()
             .filter(|(_, creature)| creature.creature_id != "imp")
             .count()
+    }
+
+    /// Count only player-owned creatures (dungeon faction, excluding imps)
+    pub fn count_player_creatures(&self, game_data: &GameData) -> usize {
+        self.entities
+            .creatures()
+            .filter(|(_, creature)| {
+                if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
+                    monster_data.faction == "dungeon"
+                } else {
+                    false
+                }
+            })
+            .count()
+    }
+
+    /// Check if a creature belongs to the player (dungeon faction)
+    pub fn is_player_creature(&self, creature_id: &str, game_data: &GameData) -> bool {
+        if let Some(monster_data) = game_data.monsters.get(creature_id) {
+            monster_data.faction == "dungeon"
+        } else {
+            false
+        }
     }
 
     /// Spawn starting imps at game initialization

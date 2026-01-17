@@ -92,3 +92,22 @@ pub const MOOD_ATTENTION_THRESHOLD: f32 = 40.0;
 /// Need value below which it's considered critically low for attention
 pub const NEED_ATTENTION_THRESHOLD: f32 = 20.0;
 
+// ============================================================================
+// HERO WAVE ATTACK CONSTANTS
+// ============================================================================
+
+/// Initial delay before first hero wave attacks (5 minutes)
+pub const HERO_WAVE_INITIAL_DELAY: f32 = 20.0;
+
+/// Time between hero attack waves (3 minutes)
+pub const HERO_WAVE_INTERVAL: f32 = 180.0;
+
+/// Fraction of heroes that stay as defenders at base (0.5 = 50%)
+pub const HERO_DEFENDER_RATIO: f32 = 0.5;
+
+/// Time in seconds for a hero to dig through one wall tile
+pub const HERO_DIG_TIME: f32 = 0.5; // Made faster (was 2.0) to help them break through
+
+/// Max health for the dungeon heart
+pub const DUNGEON_HEART_MAX_HEALTH: f32 = 1000.0;
+

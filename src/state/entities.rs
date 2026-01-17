@@ -337,12 +337,18 @@ pub struct HeroState {
     pub is_captured: bool,
     /// Conversion progress (0.0 to 1.0, at 1.0 hero becomes a creature)
     pub conversion_progress: f32,
+
+    // Wave attack state
+    /// Whether this hero stays at base as a defender (true) or joins attack waves (false)
+    pub is_defender: bool,
+    /// Which wave number this hero is assigned to (0 = not yet assigned)
+    pub wave_assigned: u32,
 }
 
 impl HeroState {
     /// Create a new hero state
     pub fn new(hero_id: String, level: u32, max_health: f32, max_mana: f32, spawn_pos: TilePos) -> Self {
-        let can_dig = hero_id == "dwarven_tunneler"; // Hardcoded capability check for now, ideally data-driven
+        let can_dig = true; // Allow all heroes to try and breach walls if path is blocked
 
         Self {
             hero_id,
@@ -364,10 +370,12 @@ impl HeroState {
             spawn_pos,
             is_digging: false,
             dig_timer: 0.0,
-            max_dig_time: 2.0, // 2 seconds per wall
+            max_dig_time: crate::config::HERO_DIG_TIME, // Use configured dig speed
             can_dig,
             is_captured: false,
             conversion_progress: 0.0,
+            is_defender: false, // Assigned later by spawner
+            wave_assigned: 0,   // Assigned when wave launches
         }
     }
 

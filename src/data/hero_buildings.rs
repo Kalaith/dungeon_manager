@@ -1,7 +1,6 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
-use std::fs;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct HeroBuildingData {
@@ -49,10 +48,11 @@ struct HeroBuildingsWrapper {
 }
 
 pub fn load_hero_buildings() -> Result<HashMap<String, HeroBuildingData>, Box<dyn Error>> {
-    let file_content = fs::read_to_string("assets/data/hero_buildings.json")?;
+    // Use include_str! for WebGL compatibility (compile-time embedding)
+    let json_content = include_str!("../../assets/data/hero_buildings.json");
     
     // The JSON is an array of objects
-    let buildings_list: Vec<HeroBuildingData> = serde_json::from_str(&file_content)?;
+    let buildings_list: Vec<HeroBuildingData> = serde_json::from_str(json_content)?;
     
     let mut buildings_map = HashMap::new();
     for building in buildings_list {

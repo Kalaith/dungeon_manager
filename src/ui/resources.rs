@@ -66,7 +66,8 @@ impl GraphicsCache {
 
         // Load unit textures (creatures)
         let creatures = vec![
-            "imp", "goblin", "orc", "warlock", "troll", "skeleton", "demon_spawn"
+            "imp", "goblin", "orc", "warlock", "troll", "skeleton", "demon_spawn",
+            "spider", "lizard"  // Wild/neutral monsters
         ];
         for creature in creatures {
             let path = format!("assets/sprites/monsters/{}.png", creature);
