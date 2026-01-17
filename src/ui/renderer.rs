@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 use crate::state::game_state::GameState;
-use crate::state::{GamePhase, InteractionMode, Ownership, MapType};
+use crate::state::{GamePhase, InteractionMode, Ownership, MapType, DragSelection};
 use crate::ui::resources::GraphicsCache;
 use crate::ui::sidebar::Sidebar;
 use crate::state::tile_state::{TilePos, FogState};
@@ -39,7 +39,8 @@ impl GameRenderer {
         held_entity: Option<EntityId>,
         selected_entity: Option<EntityId>,
         selected_room: Option<usize>,
-        game_data: &Option<GameData>
+        game_data: &Option<GameData>,
+        drag_selection: &DragSelection,
     ) {
         clear_background(crate::ui::core::colors::BACKGROUND);
 
@@ -59,7 +60,7 @@ impl GameRenderer {
             GamePhase::Playing(_) => {
                 if let Some(inner_state) = state {
                     if let Some(ref data) = game_data {
-                        self.draw_game(inner_state, interaction_mode, hovered_tile, held_entity, data);
+                        self.draw_game(inner_state, interaction_mode, hovered_tile, held_entity, data, drag_selection);
                     }
                     self.draw_gui(inner_state, interaction_mode, held_entity, selected_entity, selected_room, game_data);
                 }
@@ -179,7 +180,7 @@ impl GameRenderer {
         );
     }
 
-    fn draw_game(&self, state: &GameState, interaction_mode: &InteractionMode, hovered_tile: Option<TilePos>, held_entity: Option<EntityId>, game_data: &GameData) {
+    fn draw_game(&self, state: &GameState, interaction_mode: &InteractionMode, hovered_tile: Option<TilePos>, held_entity: Option<EntityId>, game_data: &GameData, drag_selection: &DragSelection) {
         let graphics = if let Some(ref cache) = self.graphics_cache {
             cache
         } else {
@@ -191,11 +192,12 @@ impl GameRenderer {
 
         set_camera(&camera);
 
-        self.draw_tiles(graphics, state, interaction_mode, hovered_tile, game_data);
+        self.draw_tiles(graphics, state, interaction_mode, hovered_tile, game_data, drag_selection);
         self.draw_entities(graphics, state, &camera);
 
         set_default_camera(); // Go back to 2D for UI
     }
+
 
     fn draw_gui(
         &mut self, 
@@ -382,6 +384,7 @@ impl GameRenderer {
         interaction_mode: &InteractionMode,
         hovered_tile: Option<TilePos>,
         game_data: &GameData,
+        drag_selection: &DragSelection,
     ) {
         // Draw grid (Tiles)
         for row in &state.dungeon.grid {
@@ -519,7 +522,7 @@ impl GameRenderer {
 
                 // Draw selection outline if this is the hovered tile AND it's a valid target
                 if let Some(hovered_pos) = hovered_tile {
-                    if tile.pos == hovered_pos {
+                    if tile.pos == hovered_pos && !drag_selection.active {
                         let mut outline_color = None;
 
                         match interaction_mode {
@@ -588,7 +591,28 @@ impl GameRenderer {
                 }
             }
         }
+
+        // Draw drag selection preview - single rectangle around entire selection
+        if drag_selection.active {
+            if let Some((min, max)) = drag_selection.get_selection_rect() {
+                // Calculate center and size of the selection rectangle
+                let center_x = (min.x as f32 + max.x as f32) / 2.0;
+                let center_z = (min.y as f32 + max.y as f32) / 2.0;
+                let width = (max.x - min.x + 1) as f32;  // +1 because inclusive
+                let depth = (max.y - min.y + 1) as f32;  // +1 because inclusive
+                
+                // Draw a single wireframe rectangle around the entire selection
+                // Match wall/dirt tile dimensions: y=0.5 center with height 1.0
+                draw_cube_wires(
+                    vec3(center_x, 0.5, center_z),
+                    vec3(width, 1.0, depth),
+                    Color::new(0.0, 1.0, 0.0, 1.0), // Bright green
+                );
+            }
+        }
     }
+
+
 
 
     fn draw_entities(&self, graphics: &GraphicsCache, state: &GameState, camera: &Camera3D) {
@@ -774,8 +798,33 @@ impl GameRenderer {
         );
     }
 
+    /// Check if a tile is valid for the current interaction mode (used for drag selection visualization)
+    fn is_valid_tile_for_mode(tile: &crate::state::tile_state::TileState, mode: &InteractionMode, game_data: &GameData) -> bool {
+        match mode {
+            InteractionMode::Dig => {
+                tile_types::is_diggable(&tile.tile_type, game_data) 
+                    && tile.ownership == Ownership::Unclaimed
+            }
+            InteractionMode::BuildRoom(_) => {
+                tile.ownership == Ownership::Player
+                    && tile.room_id.is_none()
+                    && tile_types::can_build_room(&tile.tile_type, game_data)
+            }
+            InteractionMode::BuildTrap(_) => {
+                tile.ownership == Ownership::Player
+                    && tile_types::can_build_room(&tile.tile_type, game_data)
+                    && tile.trap.is_none()
+            }
+            InteractionMode::PlaceSpawner => {
+                tile.ownership == Ownership::Player
+                    && tile_types::can_build_room(&tile.tile_type, game_data)
+            }
+            _ => false,
+        }
+    }
 
 }
+
 
 
 

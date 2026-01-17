@@ -12,7 +12,7 @@ mod draw_utils;
 
 use data::GameData;
 use state::MapType;
-use state::{GamePhase, InteractionMode};
+use state::{GamePhase, InteractionMode, DragSelection};
 use ui::renderer::GameRenderer;
 use ui::actions::ActionQueue;
 use engine::input::InputHandler;
@@ -35,6 +35,7 @@ pub struct Game {
     spell_shop_open: bool,
     action_queue: ActionQueue,
     selected_spell: Option<String>,
+    drag_selection: DragSelection,
 }
 
 impl Game {
@@ -52,6 +53,7 @@ impl Game {
             spell_shop_open: false,
             action_queue: ActionQueue::new(),
             selected_spell: None,
+            drag_selection: DragSelection::new(),
         }
     }
 
@@ -93,6 +95,7 @@ impl Game {
             &mut self.selected_room,
             &mut self.renderer.sidebar,
             &mut self.action_queue,
+            &mut self.drag_selection,
         );
 
         // Process queued actions
@@ -137,7 +140,8 @@ impl Game {
             self.held_entity,
             self.selected_entity,
             self.selected_room,
-            &self.game_data
+            &self.game_data,
+            &self.drag_selection,
         );
     }
 }

@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 use crate::state::game_state::GameState;
-use crate::state::{GamePhase, InteractionMode, TilePos, MapType, Ownership};
+use crate::state::{GamePhase, InteractionMode, TilePos, MapType, Ownership, DragSelection};
 use crate::data::GameData;
 use crate::state::entities::EntityId;
 use crate::ui::sidebar::{Sidebar, SidebarTab};
@@ -25,6 +25,7 @@ impl InputHandler {
         selected_room: &mut Option<usize>,
         sidebar: &mut Sidebar,
         action_queue: &mut ActionQueue,
+        drag_selection: &mut DragSelection,
     ) {
         match phase {
             GamePhase::Loading => {
@@ -42,7 +43,7 @@ impl InputHandler {
                     if Self::handle_playing(
                         dt, state, data, interaction_mode, hovered_tile, 
                         held_entity, selected_entity, selected_room, sidebar,
-                        action_queue
+                        action_queue, drag_selection
                     ) {
                         *phase = GamePhase::MainMenu;
                     }
@@ -123,6 +124,7 @@ impl InputHandler {
         selected_room: &mut Option<usize>,
         sidebar: &mut Sidebar,
         action_queue: &mut ActionQueue,
+        drag_selection: &mut DragSelection,
     ) -> bool {
         // Handle Game Over Input
         if state.game_over {
@@ -137,6 +139,7 @@ impl InputHandler {
             // Clear selection when pausing/unpausing
             *interaction_mode = InteractionMode::None;
             sidebar.clear_selection();
+            drag_selection.cancel();
         }
 
         if state.paused {
@@ -194,7 +197,7 @@ impl InputHandler {
         let camera = state.camera.get_camera3d();
 
         // Mode switching via keyboard
-        Self::handle_mode_switching(interaction_mode, sidebar);
+        Self::handle_mode_switching(interaction_mode, sidebar, drag_selection);
 
         // Update sidebar layout
         sidebar.update_layout();
@@ -220,6 +223,7 @@ impl InputHandler {
             action_queue
         ) {
             *interaction_mode = new_mode;
+            drag_selection.cancel(); // Cancel any active drag when mode changes
         }
 
         // Check if mouse is over UI
@@ -231,19 +235,43 @@ impl InputHandler {
         // Handle right-click actions
         Self::handle_right_click(
             state, game_data, interaction_mode, selected_entity, 
-            sidebar, tile_pos, mouse_over_ui
+            sidebar, tile_pos, mouse_over_ui, drag_selection
         );
 
-        // Handle left-click tile interactions
-        if is_mouse_button_pressed(MouseButton::Left) && !mouse_over_ui {
-            Self::handle_tile_interaction(
-                state, game_data, interaction_mode, held_entity, 
-                selected_entity, selected_room, tile_pos, sidebar
-            );
+        // Handle drag selection for applicable modes
+        if Self::is_drag_mode(interaction_mode) {
+            // Start drag on mouse press
+            if is_mouse_button_pressed(MouseButton::Left) && !mouse_over_ui {
+                drag_selection.start(tile_pos);
+            }
+
+            // Update drag while held
+            if is_mouse_button_down(MouseButton::Left) && drag_selection.active {
+                drag_selection.update(tile_pos);
+            }
+
+            // Finalize drag on release
+            if is_mouse_button_released(MouseButton::Left) && drag_selection.active {
+                // If mouse is over UI on release, cancel the drag
+                if mouse_over_ui {
+                    drag_selection.cancel();
+                } else if let Some((min, max)) = drag_selection.finish() {
+                    Self::apply_drag_action(state, game_data, interaction_mode, min, max);
+                }
+            }
+        } else {
+            // Single-click modes (Pickup, Drop, Inspect, None)
+            if is_mouse_button_pressed(MouseButton::Left) && !mouse_over_ui {
+                Self::handle_tile_interaction(
+                    state, game_data, interaction_mode, held_entity, 
+                    selected_entity, selected_room, tile_pos, sidebar
+                );
+            }
         }
         
         false
     }
+
 
     /// Handle WASD camera movement, Q/E rotation, and scroll zoom
     fn handle_camera_controls(dt: f32, state: &mut GameState) {
@@ -289,7 +317,8 @@ impl InputHandler {
     }
 
     /// Handle keyboard shortcuts for switching interaction modes
-    fn handle_mode_switching(interaction_mode: &mut InteractionMode, sidebar: &mut Sidebar) {
+    fn handle_mode_switching(interaction_mode: &mut InteractionMode, sidebar: &mut Sidebar, drag_selection: &mut DragSelection) {
+        let old_mode = interaction_mode.clone();
         if is_key_pressed(KeyCode::Key1) { *interaction_mode = InteractionMode::Dig; }
         if is_key_pressed(KeyCode::Key2) { *interaction_mode = InteractionMode::BuildRoom("lair".to_string()); }
         if is_key_pressed(KeyCode::Key3) { *interaction_mode = InteractionMode::BuildRoom("hatchery".to_string()); }
@@ -300,6 +329,11 @@ impl InputHandler {
         if is_key_pressed(KeyCode::Escape) {
             *interaction_mode = InteractionMode::None;
             sidebar.clear_selection();
+            drag_selection.cancel();
+        }
+        // Cancel drag if mode changed
+        if *interaction_mode != old_mode {
+            drag_selection.cancel();
         }
     }
 
@@ -356,10 +390,14 @@ impl InputHandler {
         sidebar: &mut Sidebar,
         tile_pos: TilePos,
         mouse_over_ui: bool,
+        drag_selection: &mut DragSelection,
     ) {
         if !is_mouse_button_pressed(MouseButton::Right) || mouse_over_ui {
             return;
         }
+
+        // Cancel any active drag on right-click
+        drag_selection.cancel();
 
         match interaction_mode {
             InteractionMode::Dig => {
@@ -626,6 +664,169 @@ impl InputHandler {
                 } else {
                     *selected_room = None;
                     *selected_entity = None;
+                }
+            }
+        }
+    }
+
+    /// Check if the current interaction mode supports drag selection
+    fn is_drag_mode(mode: &InteractionMode) -> bool {
+        matches!(
+            mode,
+            InteractionMode::Dig
+                | InteractionMode::BuildRoom(_)
+                | InteractionMode::BuildTrap(_)
+                | InteractionMode::PlaceSpawner
+        )
+    }
+
+    /// Apply the drag action to all tiles in the selection
+    fn apply_drag_action(
+        state: &mut GameState,
+        game_data: &GameData,
+        mode: &InteractionMode,
+        min: TilePos,
+        max: TilePos,
+    ) {
+        let tiles: Vec<TilePos> = (min.y..=max.y)
+            .flat_map(|y| (min.x..=max.x).map(move |x| TilePos::new(x, y)))
+            .collect();
+
+        match mode {
+            InteractionMode::Dig => Self::handle_dig_multi(state, game_data, &tiles),
+            InteractionMode::BuildRoom(room_type) => {
+                Self::handle_build_room_multi(state, game_data, room_type, &tiles);
+            }
+            InteractionMode::BuildTrap(trap_type) => {
+                Self::handle_build_trap_multi(state, game_data, trap_type, &tiles);
+            }
+            InteractionMode::PlaceSpawner => {
+                Self::handle_place_spawner_multi(state, game_data, &tiles);
+            }
+            _ => {}
+        }
+    }
+
+    /// Mark/unmark multiple tiles for digging
+    fn handle_dig_multi(state: &mut GameState, game_data: &GameData, tiles: &[TilePos]) {
+        for &tile_pos in tiles {
+            if let Some(tile) = state.get_tile_mut(tile_pos) {
+                if tile_types::is_diggable(&tile.tile_type, game_data) && tile.ownership == Ownership::Unclaimed {
+                    tile.marked_for_dig = true; // Always mark when dragging (not toggle)
+                }
+            }
+        }
+    }
+
+    /// Build rooms on multiple tiles
+    fn handle_build_room_multi(state: &mut GameState, game_data: &GameData, room_type: &str, tiles: &[TilePos]) {
+        let cost_per_tile = game_data.rooms
+            .get(room_type)
+            .map(|data| data.build.cost_per_tile)
+            .unwrap_or_else(|| panic!("Room type '{}' missing in rooms.json", room_type));
+
+        if !state.player.is_room_unlocked(room_type) {
+            eprintln!("Cannot build {}: Not yet unlocked!", room_type);
+            return;
+        }
+
+        // Count valid tiles first
+        let valid_tiles: Vec<TilePos> = tiles
+            .iter()
+            .filter(|&&pos| {
+                if let Some(tile) = state.get_tile(pos) {
+                    tile.ownership == Ownership::Player
+                        && tile.room_id.is_none()
+                        && tile_types::can_build_room(&tile.tile_type, game_data)
+                } else {
+                    false
+                }
+            })
+            .copied()
+            .collect();
+
+        // Calculate total cost and check if we can afford it
+        let total_cost = cost_per_tile * valid_tiles.len() as i32;
+        if state.player.gold < total_cost {
+            eprintln!("Cannot build {}: Not enough gold! Need {}, have {}", room_type, total_cost, state.player.gold);
+            return;
+        }
+
+        // Apply the build to all valid tiles
+        if !valid_tiles.is_empty() {
+            state.player.gold -= total_cost;
+            for tile_pos in valid_tiles {
+                if let Some(tile) = state.get_tile_mut(tile_pos) {
+                    tile.tile_type = room_type.to_string();
+                }
+            }
+            state.detect_and_update_rooms(game_data);
+        }
+    }
+
+    /// Place traps on multiple tiles
+    fn handle_build_trap_multi(state: &mut GameState, game_data: &GameData, trap_type: &str, tiles: &[TilePos]) {
+        // Check for Workshop requirement
+        let has_workshop = state.room_manager.rooms.iter().any(|r| r.room_type == "workshop");
+        if !has_workshop {
+            eprintln!("Cannot build trap: No functioning Workshop!");
+            return;
+        }
+
+        for &tile_pos in tiles {
+            if let Some(tile) = state.get_tile_mut(tile_pos) {
+                if tile.ownership == Ownership::Player
+                    && tile_types::can_build_room(&tile.tile_type, game_data)
+                    && tile.trap.is_none()
+                {
+                    // Create trap in "unconstructed" state
+                    tile.trap = Some(crate::state::tile_state::TrapState {
+                        trap_type: trap_type.to_string(),
+                        constructed: false,
+                        construction_progress: 0.0,
+                        active: false,
+                        funded: false,
+                        cooldown: 0.0,
+                        triggered: false,
+                    });
+
+                    state.pending_trap_builds.insert(tile_pos);
+                }
+            }
+        }
+    }
+
+    /// Place spawners on multiple tiles
+    fn handle_place_spawner_multi(state: &mut GameState, game_data: &GameData, tiles: &[TilePos]) {
+        let cost = crate::config::SPAWNER_COST;
+
+        // Count valid tiles
+        let valid_tiles: Vec<TilePos> = tiles
+            .iter()
+            .filter(|&&pos| {
+                if let Some(tile) = state.get_tile(pos) {
+                    tile.ownership == Ownership::Player
+                        && tile_types::can_build_room(&tile.tile_type, game_data)
+                } else {
+                    false
+                }
+            })
+            .copied()
+            .collect();
+
+        // Calculate total cost
+        let total_cost = cost * valid_tiles.len() as i32;
+        if state.player.gold < total_cost {
+            eprintln!("Cannot place spawners: Not enough gold! Need {}, have {}", total_cost, state.player.gold);
+            return;
+        }
+
+        // Apply
+        if !valid_tiles.is_empty() {
+            state.player.gold -= total_cost;
+            for tile_pos in valid_tiles {
+                if let Some(tile) = state.get_tile_mut(tile_pos) {
+                    tile.tile_type = tt::MONSTER_SPAWNER.to_string();
                 }
             }
         }
