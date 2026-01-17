@@ -61,20 +61,25 @@ This document tracks what's currently being worked on and planned future feature
 - [x] Procedural sprite generation (3D-shaded)
 - [x] Fog of war
 
+### Research & Progression
+- [x] Tech tree system (technologies.json)
+- [x] Library room logic
+- [x] Research tasks and UI
+
 ---
 
 ## 🔨 In Progress
 
 ### Balance & Tuning
 - [ ] Creature wage/need decay rates
-- [ ] Hero wave scaling
-- [ ] Room cost balancing
-- [ ] Spell cooldown/power tuning
+- [x] Hero wave scaling
+- [x] Room cost balancing
+- [x] Spell cooldown/power tuning
 
 ### UI Polish
-- [ ] Tooltips for all UI elements
-- [ ] Better feedback for failed actions
-- [ ] Minimap
+- [x] Tooltips for all UI elements
+- [x] Better feedback for failed actions (Notifications)
+- [x] Minimap
 - [ ] Hotkey display overlay
 
 ### Content

@@ -14,6 +14,7 @@ const TAB_HEIGHT: f32 = 30.0;
 const BUTTON_SIZE: f32 = 48.0;
 const BUTTON_SPACING: f32 = 10.0;
 const PADDING: f32 = 10.0;
+const RIGHT_MARGIN: f32 = 170.0;
 
 /// Get color based on efficiency value
 fn efficiency_color(efficiency: f32) -> Color {
@@ -95,7 +96,7 @@ impl Sidebar {
                 } else if mouse_pos.0 >= start_x + tab_width * 4.0 && mouse_pos.0 < start_x + tab_width * 5.0 {
                     self.current_tab = SidebarTab::Research;
                     self.is_expanded = true;
-                } else if mouse_pos.0 >= screen_width() - 40.0 {
+                } else if mouse_pos.0 >= screen_width() - RIGHT_MARGIN - 40.0 && mouse_pos.0 <= screen_width() - RIGHT_MARGIN {
                     // Toggle expand/collapse
                     self.is_expanded = !self.is_expanded;
                 }
@@ -107,7 +108,7 @@ impl Sidebar {
         }
 
         // Handle Content Clicks
-        if mouse_pos.1 >= self.panel_y {
+        if mouse_pos.1 >= self.panel_y && mouse_pos.0 < screen_width() - RIGHT_MARGIN {
             if is_mouse_button_pressed(MouseButton::Left) {
                 match self.current_tab {
                     SidebarTab::Build => {
@@ -177,7 +178,14 @@ impl Sidebar {
         for (label, mode, cost, _hotkey) in layout {
             // Suppress unused label warning
             let _ = label;
-            if mouse_pos.0 >= current_x && mouse_pos.0 <= current_x + BUTTON_SIZE * 2.5
+            
+            let width = BUTTON_SIZE * 2.5;
+            if current_x + width > screen_width() - RIGHT_MARGIN {
+                current_x = start_x;
+                current_y += BUTTON_SIZE + BUTTON_SPACING;
+            }
+            
+            if mouse_pos.0 >= current_x && mouse_pos.0 <= current_x + width
                && mouse_pos.1 >= current_y && mouse_pos.1 <= current_y + BUTTON_SIZE {
                 
                 if player.gold >= cost {
@@ -186,11 +194,7 @@ impl Sidebar {
                 }
             }
             
-            current_x += BUTTON_SIZE * 2.5 + BUTTON_SPACING;
-            if current_x + BUTTON_SIZE * 2.5 > screen_width() {
-                current_x = start_x;
-                current_y += BUTTON_SIZE + BUTTON_SPACING;
-            }
+            current_x += width + BUTTON_SPACING;
         }
 
         None
@@ -221,12 +225,19 @@ impl Sidebar {
             }
         });
         
-        for (i, spell_id) in sorted_spells.iter().enumerate() {
-            let btn_x = start_x + (BUTTON_SIZE + BUTTON_SPACING) * i as f32;
-            let btn_y = start_y;
+        let mut current_x = start_x;
+        let mut current_y = start_y;
+
+        for (_i, spell_id) in sorted_spells.iter().enumerate() {
+            let width = BUTTON_SIZE;
             
-            if mouse_pos.0 >= btn_x && mouse_pos.0 <= btn_x + BUTTON_SIZE 
-               && mouse_pos.1 >= btn_y && mouse_pos.1 <= btn_y + BUTTON_SIZE {
+            if current_x + width > screen_width() - RIGHT_MARGIN {
+                current_x = start_x;
+                current_y += BUTTON_SIZE + BUTTON_SPACING;
+            }
+            
+            if mouse_pos.0 >= current_x && mouse_pos.0 <= current_x + width 
+               && mouse_pos.1 >= current_y && mouse_pos.1 <= current_y + BUTTON_SIZE {
                    
                    // Check cost and cooldown
                    if let Some(data) = spells.get(*spell_id) {
@@ -237,6 +248,8 @@ impl Sidebar {
                        }
                    }
             }
+            
+            current_x += width + BUTTON_SPACING;
         }
         
         None
@@ -263,6 +276,22 @@ impl Sidebar {
                return Some(InteractionMode::Inspect);
         }
 
+        // Marker Buttons (New Line)
+        let marker_y = start_y + BUTTON_SIZE + BUTTON_SPACING;
+        
+        // Attack Marker
+        if mouse_pos.0 >= start_x && mouse_pos.0 <= start_x + BUTTON_SIZE * 2.5
+           && mouse_pos.1 >= marker_y && mouse_pos.1 <= marker_y + BUTTON_SIZE {
+               return Some(InteractionMode::SetAttackMarker);
+        }
+
+        // Defend Marker
+        let defend_x = start_x + BUTTON_SIZE * 2.5 + BUTTON_SPACING;
+        if mouse_pos.0 >= defend_x && mouse_pos.0 <= defend_x + BUTTON_SIZE * 2.5
+           && mouse_pos.1 >= marker_y && mouse_pos.1 <= marker_y + BUTTON_SIZE {
+               return Some(InteractionMode::SetDefendMarker);
+        }
+
         None
     }
 
@@ -280,7 +309,13 @@ impl Sidebar {
         let mut current_y = start_y;
 
         for (_label, mode, cost, _hotkey) in buttons {
-            if mouse_pos.0 >= current_x && mouse_pos.0 <= current_x + BUTTON_SIZE * 2.5
+            let width = BUTTON_SIZE * 2.5;
+            if current_x + width > screen_width() - RIGHT_MARGIN {
+                current_x = start_x;
+                current_y += BUTTON_SIZE + BUTTON_SPACING;
+            }
+
+            if mouse_pos.0 >= current_x && mouse_pos.0 <= current_x + width
                && mouse_pos.1 >= current_y && mouse_pos.1 <= current_y + BUTTON_SIZE {
                 
                 if player.materials >= cost {
@@ -289,11 +324,7 @@ impl Sidebar {
                 }
             }
             
-            current_x += BUTTON_SIZE * 2.5 + BUTTON_SPACING;
-            if current_x + BUTTON_SIZE * 2.5 > screen_width() {
-                current_x = start_x;
-                current_y += BUTTON_SIZE + BUTTON_SPACING;
-            }
+            current_x += width + BUTTON_SPACING;
         }
 
         None
@@ -307,8 +338,8 @@ impl Sidebar {
         }
 
         // Draw Panel Background
-        draw_rectangle(0.0, self.panel_y, screen_width(), PANEL_HEIGHT, Color::new(0.1, 0.1, 0.12, 0.95));
-        draw_line(0.0, self.panel_y, screen_width(), self.panel_y, 2.0, Color::new(0.3, 0.3, 0.35, 1.0));
+        draw_rectangle(0.0, self.panel_y, screen_width() - RIGHT_MARGIN, PANEL_HEIGHT, Color::new(0.1, 0.1, 0.12, 0.95));
+        draw_line(0.0, self.panel_y, screen_width() - RIGHT_MARGIN, self.panel_y, 2.0, Color::new(0.3, 0.3, 0.35, 1.0));
 
         self.draw_tabs();
 
@@ -374,7 +405,7 @@ impl Sidebar {
         }
         
         // Draw toggle button
-        let toggle_x = screen_width() - 40.0;
+        let toggle_x = screen_width() - RIGHT_MARGIN - 40.0;
         let toggle_y = self.panel_y - TAB_HEIGHT;
         draw_rectangle(toggle_x, toggle_y, 40.0, TAB_HEIGHT, Color::new(0.2, 0.2, 0.2, 0.9));
         draw_text(
@@ -434,6 +465,12 @@ impl Sidebar {
         let mut current_y = start_y;
 
         for (label, mode, cost, hotkey) in layout {
+            let width = BUTTON_SIZE * 2.5;
+            if current_x + width > screen_width() - RIGHT_MARGIN {
+                current_x = start_x;
+                current_y += BUTTON_SIZE + BUTTON_SPACING;
+            }
+
             let is_selected = self.interaction_modes_match(current_mode, &mode);
             let can_afford = player.gold >= cost;
 
@@ -445,22 +482,18 @@ impl Sidebar {
                 Color::new(0.25, 0.25, 0.3, 1.0)
             };
 
-            draw_rectangle(current_x, current_y, BUTTON_SIZE * 2.5, BUTTON_SIZE, color);
-            draw_rectangle_lines(current_x, current_y, BUTTON_SIZE * 2.5, BUTTON_SIZE, 2.0, Color::new(0.4, 0.4, 0.5, 1.0));
+            draw_rectangle(current_x, current_y, width, BUTTON_SIZE, color);
+            draw_rectangle_lines(current_x, current_y, width, BUTTON_SIZE, 2.0, Color::new(0.4, 0.4, 0.5, 1.0));
 
             draw_text(&label, current_x + 5.0, current_y + 18.0, 16.0, WHITE);
             if cost > 0 {
                 draw_text(&format!("{}g", cost), current_x + 5.0, current_y + 40.0, 14.0, GOLD);
             }
             if !hotkey.is_empty() {
-                draw_text(&hotkey, current_x + BUTTON_SIZE * 2.5 - 15.0, current_y + 15.0, 12.0, GRAY);
+                draw_text(&hotkey, current_x + width - 15.0, current_y + 15.0, 12.0, GRAY);
             }
 
-            current_x += BUTTON_SIZE * 2.5 + BUTTON_SPACING;
-            if current_x + BUTTON_SIZE * 2.5 > screen_width() {
-                current_x = start_x;
-                current_y += BUTTON_SIZE + BUTTON_SPACING;
-            }
+            current_x += width + BUTTON_SPACING;
         }
     }
     
@@ -483,9 +516,19 @@ impl Sidebar {
             }
         });
         
-        for (i, spell_id) in sorted_spells.iter().enumerate() {
-            let btn_x = start_x + (BUTTON_SIZE + BUTTON_SPACING) * i as f32;
-            let btn_y = start_y;
+        let mut current_x = start_x;
+        let mut current_y = start_y;
+
+        for (_i, spell_id) in sorted_spells.iter().enumerate() {
+            let width = BUTTON_SIZE;
+            
+            if current_x + width > screen_width() - RIGHT_MARGIN {
+                current_x = start_x;
+                current_y += BUTTON_SIZE + BUTTON_SPACING;
+            }
+            
+            let btn_x = current_x;
+            let btn_y = current_y;
             
             let is_selected = self.selected_spell.as_ref().map(|s| s == *spell_id).unwrap_or(false);
             
@@ -523,6 +566,8 @@ impl Sidebar {
                      }
                  }
             }
+            
+            current_x += width + BUTTON_SPACING;
         }
     }
 
@@ -560,8 +605,33 @@ impl Sidebar {
         draw_rectangle_lines(inspect_x, start_y, BUTTON_SIZE * 2.5, BUTTON_SIZE, 2.0, WHITE);
         draw_text("Inspect", inspect_x + 10.0, start_y + 30.0, 16.0, WHITE);
 
+        // Marker Buttons (New Line)
+        let marker_y = start_y + BUTTON_SIZE + BUTTON_SPACING;
+
+        // Attack Marker
+        let attack_color = if self.interaction_modes_match(current_mode, &InteractionMode::SetAttackMarker) {
+            Color::new(0.7, 0.2, 0.2, 1.0)
+        } else {
+             Color::new(0.4, 0.2, 0.2, 1.0)
+        };
+        draw_rectangle(start_x, marker_y, BUTTON_SIZE * 2.5, BUTTON_SIZE, attack_color);
+        draw_rectangle_lines(start_x, marker_y, BUTTON_SIZE * 2.5, BUTTON_SIZE, 2.0, WHITE);
+        draw_text("Set Attack", start_x + 10.0, marker_y + 30.0, 16.0, WHITE);
+
+        // Defend Marker
+        let defend_x = start_x + BUTTON_SIZE * 2.5 + BUTTON_SPACING;
+        let defend_color = if self.interaction_modes_match(current_mode, &InteractionMode::SetDefendMarker) {
+            Color::new(0.2, 0.2, 0.7, 1.0)
+        } else {
+             Color::new(0.2, 0.2, 0.4, 1.0)
+        };
+        draw_rectangle(defend_x, marker_y, BUTTON_SIZE * 2.5, BUTTON_SIZE, defend_color);
+        draw_rectangle_lines(defend_x, marker_y, BUTTON_SIZE * 2.5, BUTTON_SIZE, 2.0, WHITE);
+        draw_text("Set Defend", defend_x + 10.0, marker_y + 30.0, 16.0, WHITE);
+
         // Minion Count info
-        draw_text("Selection Controls", start_x, start_y + BUTTON_SIZE + 30.0, 18.0, LIGHTGRAY);
+        // Minion Count info
+        draw_text("Selection Controls", start_x, start_y + (BUTTON_SIZE * 2.0) + 40.0, 18.0, LIGHTGRAY);
         
         // Selected Minion Details
         let details_x = inspect_x + BUTTON_SIZE * 2.5 + BUTTON_SPACING * 2.0;
@@ -641,6 +711,12 @@ impl Sidebar {
         let mut current_y = start_y;
 
         for (label, mode, cost, hotkey) in layout {
+            let width = BUTTON_SIZE * 2.5;
+            if current_x + width > screen_width() - RIGHT_MARGIN {
+                current_x = start_x;
+                current_y += BUTTON_SIZE + BUTTON_SPACING;
+            }
+
             let is_selected = self.interaction_modes_match(current_mode, &mode);
             let can_afford = player.materials >= cost;
 
@@ -652,27 +728,23 @@ impl Sidebar {
                 Color::new(0.25, 0.25, 0.3, 1.0)
             };
 
-            draw_rectangle(current_x, current_y, BUTTON_SIZE * 2.5, BUTTON_SIZE, color);
-            draw_rectangle_lines(current_x, current_y, BUTTON_SIZE * 2.5, BUTTON_SIZE, 2.0, Color::new(0.4, 0.4, 0.5, 1.0));
+            draw_rectangle(current_x, current_y, width, BUTTON_SIZE, color);
+            draw_rectangle_lines(current_x, current_y, width, BUTTON_SIZE, 2.0, Color::new(0.4, 0.4, 0.5, 1.0));
 
             draw_text(label, current_x + 5.0, current_y + 18.0, 16.0, WHITE);
             if cost > 0 {
                 // Use M for materials
                 draw_text(&format!("{} Mats", cost), current_x + 5.0, current_y + 40.0, 14.0, WHITE);
             }
-            draw_text(hotkey, current_x + BUTTON_SIZE * 2.5 - 15.0, current_y + 15.0, 12.0, GRAY);
+            draw_text(hotkey, current_x + width - 15.0, current_y + 15.0, 12.0, GRAY);
 
-            current_x += BUTTON_SIZE * 2.5 + BUTTON_SPACING;
-            if current_x + BUTTON_SIZE * 2.5 > screen_width() {
-                current_x = start_x;
-                current_y += BUTTON_SIZE + BUTTON_SPACING;
-            }
+            current_x += width + BUTTON_SPACING;
         }
         
         // Show material count
         draw_text(
             &format!("Materials: {} / {}", player.materials, player.max_materials), 
-            screen_width() - 250.0, 
+            screen_width() - RIGHT_MARGIN - 250.0, 
             self.panel_y + 30.0, 
             20.0, 
             WHITE
@@ -691,6 +763,13 @@ impl Sidebar {
         let mut current_y = start_y;
 
         for tech in sorted_techs {
+            let width = BUTTON_SIZE * 3.5;
+            
+            if current_x + width > screen_width() - RIGHT_MARGIN {
+                current_x = start_x;
+                current_y += BUTTON_SIZE * 1.2 + BUTTON_SPACING;
+            }
+
             let is_completed = player.is_tech_completed(&tech.id);
             let is_active = player.active_research.as_ref().map(|id| id == &tech.id).unwrap_or(false);
             
@@ -709,8 +788,8 @@ impl Sidebar {
             };
 
             // Draw Button
-            draw_rectangle(current_x, current_y, BUTTON_SIZE * 3.5, BUTTON_SIZE * 1.2, bg_color);
-            draw_rectangle_lines(current_x, current_y, BUTTON_SIZE * 3.5, BUTTON_SIZE * 1.2, 2.0, Color::new(0.4, 0.4, 0.5, 1.0));
+            draw_rectangle(current_x, current_y, width, BUTTON_SIZE * 1.2, bg_color);
+            draw_rectangle_lines(current_x, current_y, width, BUTTON_SIZE * 1.2, 2.0, Color::new(0.4, 0.4, 0.5, 1.0));
 
             // Tech Name
             draw_text(&tech.name, current_x + 5.0, current_y + 15.0, 16.0, text_color);
@@ -723,7 +802,7 @@ impl Sidebar {
                 let pct = (progress / tech.cost).clamp(0.0, 1.0);
                 
                 // Draw progress bar
-                let bar_w = BUTTON_SIZE * 3.5 - 10.0;
+                let bar_w = width - 10.0;
                 draw_rectangle(current_x + 5.0, current_y + 35.0, bar_w, 10.0, BLACK);
                 draw_rectangle(current_x + 5.0, current_y + 35.0, bar_w * pct, 10.0, GREEN);
                 
@@ -735,11 +814,7 @@ impl Sidebar {
             }
 
             // Move to next position
-            current_x += BUTTON_SIZE * 3.5 + BUTTON_SPACING;
-            if current_x + BUTTON_SIZE * 3.5 > screen_width() {
-                current_x = start_x;
-                current_y += BUTTON_SIZE * 1.2 + BUTTON_SPACING;
-            }
+            current_x += width + BUTTON_SPACING;
         }
         
         // Show Research Points generation rate (implied from libraries)
@@ -748,7 +823,7 @@ impl Sidebar {
             if let Some(tech) = technologies.get(active) {
                 draw_text(
                     &format!("Researching: {} ({:.1}%)", tech.name, (player.research_progress / tech.cost) * 100.0),
-                    screen_width() - 300.0,
+                    screen_width() - RIGHT_MARGIN - 300.0,
                     self.panel_y + 30.0,
                     18.0,
                     LIGHTGRAY
@@ -757,7 +832,7 @@ impl Sidebar {
         } else {
              draw_text(
                 "No Active Research",
-                screen_width() - 300.0,
+                screen_width() - RIGHT_MARGIN - 300.0,
                 self.panel_y + 30.0,
                 18.0,
                 GRAY
@@ -782,8 +857,14 @@ impl Sidebar {
         let mut current_y = start_y;
 
         for tech in sorted_techs {
+            let width = BUTTON_SIZE * 3.5;
+            if current_x + width > screen_width() - RIGHT_MARGIN {
+                current_x = start_x;
+                current_y += BUTTON_SIZE * 1.2 + BUTTON_SPACING;
+            }
+
             // Hitbox
-            if mouse_pos.0 >= current_x && mouse_pos.0 <= current_x + BUTTON_SIZE * 3.5
+            if mouse_pos.0 >= current_x && mouse_pos.0 <= current_x + width
                && mouse_pos.1 >= current_y && mouse_pos.1 <= current_y + BUTTON_SIZE * 1.2 {
                 
                 let is_completed = player.is_tech_completed(&tech.id);
@@ -797,11 +878,7 @@ impl Sidebar {
             }
 
              // Move to next position (must match draw logic)
-            current_x += BUTTON_SIZE * 3.5 + BUTTON_SPACING;
-            if current_x + BUTTON_SIZE * 3.5 > screen_width() {
-                current_x = start_x;
-                current_y += BUTTON_SIZE * 1.2 + BUTTON_SPACING;
-            }
+            current_x += width + BUTTON_SPACING;
         }
     }
     

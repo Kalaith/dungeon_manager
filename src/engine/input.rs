@@ -479,6 +479,29 @@ impl InputHandler {
                     sidebar.switch_to_tab(SidebarTab::Minions);
                 }
             }
+            InteractionMode::SetAttackMarker => {
+                Self::handle_set_marker(state, "attack", tile_pos);
+            }
+            InteractionMode::SetDefendMarker => {
+                Self::handle_set_marker(state, "defend", tile_pos);
+            }
+        }
+    }
+
+    fn handle_set_marker(state: &mut GameState, marker_type: &str, tile_pos: TilePos) {
+        let (width, height) = crate::engine::tile_grid::get_grid_dimensions(&state.dungeon.grid);
+        // Allow placing markers on any walkable tile or known tile?
+        // For now, allow anywhere inside map bounds
+        if tile_pos.x >= 0 && tile_pos.y >= 0 && tile_pos.x < width as i32 && tile_pos.y < height as i32 {
+            if marker_type == "attack" {
+                state.attack_marker = Some(tile_pos);
+                eprintln!("Attack marker set at {:?}", tile_pos);
+                state.notifications.info("Attack flag updated");
+            } else if marker_type == "defend" {
+                 state.defend_marker = Some(tile_pos);
+                 eprintln!("Defend marker set at {:?}", tile_pos);
+                 state.notifications.info("Defend flag updated");
+            }
         }
     }
 
@@ -597,9 +620,24 @@ impl InputHandler {
         interaction_mode: &mut InteractionMode,
         tile_pos: TilePos
     ) {
+        // Find pickable entity
+        let mut pickable_id = None;
+        
         if let Some(entity) = state.entities.at_position(tile_pos).next() {
-            *held_entity = Some(entity.id);
-            eprintln!("Picked up entity: {}", entity.id);
+            let can_pickup = match &entity.entity_type {
+                crate::state::entities::EntityType::Creature(_) => true,
+                crate::state::entities::EntityType::Hero(h) => h.is_captured,
+                crate::state::entities::EntityType::Structure(_) => false,
+            };
+            
+            if can_pickup {
+                pickable_id = Some(entity.id);
+            }
+        }
+
+        if let Some(id) = pickable_id {
+            *held_entity = Some(id);
+            eprintln!("Picked up entity: {}", id);
             *interaction_mode = InteractionMode::Drop;
         }
     }

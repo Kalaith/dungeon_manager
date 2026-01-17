@@ -57,6 +57,10 @@ pub struct GameState {
 
     /// Dungeon Heart Health
     pub dungeon_heart_health: f32,
+
+    // Markers
+    pub attack_marker: Option<TilePos>,
+    pub defend_marker: Option<TilePos>,
 }
 
 impl GameState {
@@ -103,16 +107,18 @@ impl GameState {
 
             entities,
             player: PlayerState::new(game_data),
-            next_hero_spawn_time: crate::config::INITIAL_HERO_SPAWN_DELAY,
-            next_creature_spawn_time: crate::config::INITIAL_CREATURE_SPAWN_DELAY,
-            pay_day_timer: 0.0,
+            next_hero_spawn_time: 0.0,
+            next_creature_spawn_time: 0.0,
+            pay_day_timer: 0.0, 
             spawners,
             paused: false,
             hero_base: crate::state::hero_base::HeroBase::new(),
             game_over: false,
             victory: false,
             notifications: crate::state::notifications::NotificationManager::new(),
-            dungeon_heart_health: crate::config::DUNGEON_HEART_MAX_HEALTH,
+            dungeon_heart_health: 1000.0,
+            attack_marker: None,
+            defend_marker: None,
         };
 
         // Recalculate max gold and other room-based stats
@@ -271,6 +277,11 @@ impl GameState {
             // Update AI first
             if let Some(entity) = self.entities.get(hero_id) {
                 if let Some(hero_state) = entity.as_hero() {
+                    // Skip AI for captured heroes
+                    if hero_state.is_captured {
+                        continue;
+                    }
+
                     let mut hero_state_clone = hero_state.clone();
                     crate::engine::hero_ai::update_hero_ai(entity, &mut hero_state_clone, self, game_data, dt);
                      // Update the entity with the new hero state
@@ -439,6 +450,8 @@ impl GameState {
             &self.room_manager,
             game_data,
             dt,
+            self.attack_marker,
+            self.defend_marker,
             |task, room_manager| GameState::get_task_target_position_static(task, room_manager),
         );
     }
@@ -856,105 +869,150 @@ impl GameState {
         }
     }
 
-    /// Handle capturing dead heroes in prison rooms
+    /// Handle capturing dead heroes - teleport to available prison
     fn handle_prison_captures(&mut self, game_data: &GameData) {
         // Find heroes that just died (health <= 0) and aren't already captured
-        let mut heroes_to_capture: Vec<(EntityId, TilePos)> = Vec::new();
+        let mut heroes_to_capture: Vec<EntityId> = Vec::new();
 
         for (hero_id, hero) in self.entities.heroes() {
-            if hero.health <= 0.0 && !hero.is_captured {
-                if let Some(entity) = self.entities.get(hero_id) {
-                    heroes_to_capture.push((hero_id, entity.pos));
-                }
+            if hero.health <= 0.0 && !hero.is_captured && !hero.is_converted {
+                heroes_to_capture.push(hero_id);
             }
         }
 
-        // Check if any dead heroes are in prison rooms
-        for (hero_id, pos) in heroes_to_capture {
-            // Check if position is in a prison room
-            let is_in_prison = self.room_manager.rooms.iter()
-                .any(|room| room.room_type == "prison" && room.tiles.contains(&pos));
+        if heroes_to_capture.is_empty() {
+             return;
+        }
 
-            if is_in_prison {
-                // Capture the hero
-                if let Some(entity) = self.entities.get_mut(hero_id) {
-                    if let Some(hero) = entity.as_hero_mut() {
-                        hero.is_captured = true;
-                        hero.conversion_progress = 0.0;
-                        eprintln!("Hero {} captured in prison at {:?}!", hero.hero_id, pos);
-                        self.notifications.success(format!("Hero captured in prison!"));
-                    }
-                }
-            }
+        // Find available prison tiles
+        // We'll just look for ANY prison tile for now, ideally one that is empty
+        let mut available_prison_tiles = Vec::new();
+        for room in &self.room_manager.rooms {
+             if room.room_type == "prison" {
+                 for &tile_pos in &room.tiles {
+                      available_prison_tiles.push(tile_pos);
+                 }
+             }
+        }
+
+        if available_prison_tiles.is_empty() {
+             return; // No prison, they just die
+        }
+
+        // Shuffle tiles to avoid stacking all in one spot (if possible)
+        // For deterministic behavior in this tool we might skip shuffle or use a simple index
+        
+        for hero_id in heroes_to_capture {
+             // Just pick a random one for now
+             let random_idx = macroquad::rand::gen_range(0, available_prison_tiles.len());
+             let target_pos = available_prison_tiles[random_idx];
+
+             // Capture the hero
+             if let Some(entity) = self.entities.get_mut(hero_id) {
+                 // Move entity first to avoid borrow issues
+                 entity.pos = target_pos;
+                 entity.visual_pos = (target_pos.x as f32, target_pos.y as f32);
+                 
+                 if let Some(hero) = entity.as_hero_mut() {
+                     hero.is_captured = true;
+                     hero.conversion_progress = 0.0;
+                     // Revive slightly so they don't get cleaned up as "dead" immediately
+                     hero.health = 10.0; 
+                     
+                     eprintln!("Hero {} captured and teleported to prison at {:?}!", hero.hero_id, target_pos);
+                     self.notifications.success(format!("Hero captured!"));
+                 }
+             }
         }
     }
 
-    /// Progress prison conversions and convert completed heroes to creatures
+    /// Progress prison (Skeleton) and torture (Conversion) logic
     fn progress_prison_conversions(&mut self, game_data: &GameData, dt: f32) {
-        // Get conversion rate from prison rooms
-        let conversion_rate = self.room_manager.rooms.iter()
-            .filter(|room| room.room_type == "prison")
-            .filter_map(|room| game_data.rooms.get(&room.room_type))
-            .map(|data| data.effects.hero_conversion_rate)
-            .sum::<f32>()
-            .max(0.01); // Minimum rate to prevent division issues
+        // Identify active Torture Chambers with working Succubi
+        let mut active_torture_rooms = std::collections::HashSet::new();
+        for (_, creature) in self.entities.creatures() {
+             if creature.creature_id == "succubus" {
+                 if let Some(crate::state::entities::Task::Work(room_id)) = creature.current_task {
+                      active_torture_rooms.insert(room_id);
+                 }
+             }
+        }
 
-        // Find captured heroes and progress their conversion
-        let mut conversions_to_complete: Vec<(EntityId, TilePos, String)> = Vec::new();
+        // Get conversion rates
+        // Prison Rate (for Skeletons)
+        let skeleton_rate = 0.05; // Fixed slow rate for now, or fetch from room data
+
+        // Torture Rate (for Conversion)
+        let torture_base_rate = 0.1; // Base rate
+        
+        let mut conversions_to_process: Vec<(EntityId, String, bool)> = Vec::new(); // (Id, Type, IsTorture)
 
         for (hero_id, hero) in self.entities.heroes() {
-            if hero.is_captured {
-                // Get entity position
+            if hero.is_captured && !hero.is_converted {
                 if let Some(entity) = self.entities.get(hero_id) {
-                    conversions_to_complete.push((hero_id, entity.pos, hero.hero_id.clone()));
+                    // Check which room they are in
+                    if let Some(room) = self.room_manager.get_room_at(entity.pos) {
+                        if room.room_type == "prison" {
+                             conversions_to_process.push((hero_id, "skeleton".to_string(), false));
+                        } else if room.room_type == "torture_chamber" {
+                             if active_torture_rooms.contains(&room.id) {
+                                  conversions_to_process.push((hero_id, "conversion".to_string(), true));
+                             }
+                        }
+                    }
                 }
             }
         }
 
-        // Progress conversions
-        for (hero_id, pos, hero_type) in conversions_to_complete {
-            let mut converted = false;
+        // Apply progress
+        for (hero_id, action_type, is_torture) in conversions_to_process {
+             let mut completed = false;
+             let mut hero_name = "".to_string();
+             
+             if let Some(entity) = self.entities.get_mut(hero_id) {
+                 if let Some(hero) = entity.as_hero_mut() {
+                     hero_name = hero.hero_id.clone();
+                     let rate = if is_torture { torture_base_rate } else { skeleton_rate };
+                     hero.conversion_progress += rate * dt;
+                     
+                     if hero.conversion_progress >= 1.0 {
+                         completed = true;
+                     }
+                 }
+             }
 
-            if let Some(entity) = self.entities.get_mut(hero_id) {
-                if let Some(hero) = entity.as_hero_mut() {
-                    // Progress conversion (rate is per second)
-                    hero.conversion_progress += conversion_rate * dt;
-
-                    if hero.conversion_progress >= 1.0 {
-                        converted = true;
-                        eprintln!("Hero {} conversion complete!", hero_type);
-                    }
-                }
-            }
-
-            if converted {
-                // Remove the hero
-                self.entities.remove(hero_id);
-
-                // Spawn a skeleton in their place
-                if let Some(monster_data) = game_data.monsters.get("skeleton") {
-                    let creature_state = crate::state::entities::CreatureState::new(
-                        "skeleton".to_string(),
-                        1,
-                        monster_data.stats.health,
-                        monster_data.stats.mana,
-                    );
-                    self.entities.spawn_creature(pos, creature_state);
-                    self.notifications.success("Converted hero to skeleton!");
-                } else {
-                    // Fallback to goblin if no skeleton
-                    if let Some(monster_data) = game_data.monsters.get("goblin") {
-                        let creature_state = crate::state::entities::CreatureState::new(
-                            "goblin".to_string(),
-                            1,
-                            monster_data.stats.health,
-                            monster_data.stats.mana,
-                        );
-                        self.entities.spawn_creature(pos, creature_state);
-                        self.notifications.success("Converted hero to goblin!");
-                    }
-                }
-            }
+             if completed {
+                 if is_torture {
+                      // Retrieve Hero and convert
+                      if let Some(entity) = self.entities.get_mut(hero_id) {
+                          let pos = entity.pos;
+                          if let Some(hero) = entity.as_hero_mut() {
+                               hero.is_converted = true;
+                               hero.is_captured = false;
+                               hero.health = hero.max_health; // Heal them up
+                               // Reset goal to something safe
+                               hero.current_goal = crate::state::entities::HeroGoal::RestAtSpawn(pos);
+                               self.notifications.success(format!("{} converted to your side!", hero_name));
+                          }
+                      }
+                 } else {
+                      // Skeleton time
+                      // Remove hero, spawn skeleton
+                      let pos = if let Some(e) = self.entities.get(hero_id) { e.pos } else { TilePos::new(0,0) }; // Should be valid
+                      self.entities.remove(hero_id);
+                      
+                      if let Some(monster_data) = game_data.monsters.get("skeleton") {
+                            let creature_state = crate::state::entities::CreatureState::new(
+                                "skeleton".to_string(),
+                                1,
+                                monster_data.stats.health,
+                                monster_data.stats.mana,
+                            );
+                            self.entities.spawn_creature(pos, creature_state);
+                            self.notifications.success("Captured hero rotted into a Skeleton!");
+                      }
+                 }
+             }
         }
     }
 
@@ -1046,12 +1104,12 @@ impl GameState {
             return;
         }
 
-        // Check Victory: Hero Base Town Hall destroyed
+        // Check Victory: Hero Base destroyed (All buildings)
         if self.hero_base.enabled && self.hero_base.is_defeated() {
             self.game_over = true;
             self.victory = true;
-            eprintln!("VICTORY! Hero Base destroyed!");
-            self.notifications.success("VICTORY! The Hero Base has been destroyed!");
+            eprintln!("VICTORY! All Hero Buildings destroyed!");
+            self.notifications.success("VICTORY! All hero buildings have been destroyed!");
         }
 
         // Check Defeat: Dungeon Heart destroyed

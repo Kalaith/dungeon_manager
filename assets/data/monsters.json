@@ -1040,5 +1040,128 @@
       ],
       "voice_set": "lizard"
     }
+  },
+  {
+    "id": "succubus",
+    "name": "Succubus",
+    "description": "A seductive demon who specializes in torture and conversion.",
+    "faction": "dungeon",
+    "role": "torturer",
+    "stats": {
+      "health": 150,
+      "mana": 100,
+      "attack": 10,
+      "defense": 5,
+      "speed": 1.1,
+      "carry_capacity": 20,
+      "sight_radius": 7
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 0.7,
+        "satisfied_by": [
+          "lair"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 1.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 1.5,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 100
+      },
+      "training": {
+        "decay_per_minute": 0.0,
+        "satisfied_by": []
+      }
+    },
+    "traits": [
+      "sadistic",
+      "intelligent"
+    ],
+    "ai": {
+      "base_mood": 60,
+      "anger_threshold": 20,
+      "desertion_threshold": 10,
+      "task_preferences": {
+        "work": 2.0,
+        "fight": 0.8,
+        "wander": 0.5
+      },
+      "room_desires": {
+        "torture_chamber": 2.0,
+        "prison": 1.5
+      },
+      "discipline_response": {
+        "slap": 5,
+        "torture": 10,
+        "reward": 5
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        10,
+        15
+      ],
+      "attack_speed": 1.4,
+      "armor_type": "light",
+      "resistances": {
+        "fire": 0.5
+      },
+      "abilities": [
+        "charm"
+      ]
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        250,
+        600,
+        1200,
+        2000
+      ],
+      "stat_growth_per_level": {
+        "health": 15,
+        "attack": 2,
+        "mana": 20
+      },
+      "max_level": 8,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 6,
+      "steals_if_unpaid": true,
+      "drops_gold_on_death": [
+        30,
+        80
+      ]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 120,
+      "preferred_rooms": [
+        "torture_chamber"
+      ],
+      "spawn_weight": 0.4,
+      "max_population": 4
+    },
+    "visual": {
+      "sprite": "creatures/succubus.png",
+      "scale": 1.1,
+      "animations": [
+        "idle",
+        "walk",
+        "work",
+        "attack"
+      ],
+      "voice_set": "succubus"
+    }
   }
 ]

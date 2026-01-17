@@ -153,4 +153,13 @@ impl RoomManager {
             }
         }
     }
+
+    pub fn get_room_at(&self, pos: TilePos) -> Option<&Room> {
+        for room in &self.rooms {
+            if room.tiles.contains(&pos) {
+                return Some(room);
+            }
+        }
+        None
+    }
 }

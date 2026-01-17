@@ -198,7 +198,7 @@ fn execute_train(creature_id: EntityId, room_id: usize, entities: &mut EntityMan
 
 /// Handle Work task - returns materials produced
 fn execute_work(creature_id: EntityId, room_id: usize, entities: &mut EntityManager, room_manager: &RoomManager, game_data: &GameData, dt: f32) -> i32 {
-    let room = match room_manager.rooms.iter().find(|r| r.id == room_id && r.room_type == "workshop") {
+    let room = match room_manager.rooms.iter().find(|r| r.id == room_id && (r.room_type == "workshop" || r.room_type == "torture_chamber")) {
         Some(r) => r,
         None => return 0,
     };

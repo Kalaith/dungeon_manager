@@ -458,7 +458,14 @@ fn get_faction(entity: &Entity, game_data: &GameData) -> String {
                 .map(|m| m.faction.clone())
                 .unwrap_or("dungeon".to_string())
         },
-        crate::state::entities::EntityType::Hero(_) => "hero".to_string(),
+
+        crate::state::entities::EntityType::Hero(h) => {
+            if h.is_converted {
+                "dungeon".to_string()
+            } else {
+                "hero".to_string()
+            }
+        },
         crate::state::entities::EntityType::Structure(_) => "hero".to_string(), // Structures belong to hero faction
     }
 }

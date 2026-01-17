@@ -19,6 +19,8 @@ pub fn update_creatures(
     room_manager: &RoomManager,
     game_data: &GameData,
     dt: f32,
+    attack_marker: Option<TilePos>,
+    defend_marker: Option<TilePos>,
     get_task_target: impl Fn(&Task, &RoomManager) -> Option<TilePos>,
 ) {
     let creature_ids: Vec<EntityId> = entities.creatures()
@@ -34,6 +36,8 @@ pub fn update_creatures(
             room_manager,
             game_data,
             dt,
+            attack_marker,
+            defend_marker,
             &get_task_target,
         );
     }
@@ -47,6 +51,8 @@ fn update_single_creature(
     room_manager: &RoomManager,
     game_data: &GameData,
     dt: f32,
+    attack_marker: Option<TilePos>,
+    defend_marker: Option<TilePos>,
     get_task_target: &impl Fn(&Task, &RoomManager) -> Option<TilePos>,
 ) {
     // Get current position and state
@@ -98,7 +104,7 @@ fn update_single_creature(
                 }
             }
         } else {
-            decide_and_assign_task(creature_id, current_pos, entities, room_manager, game_data);
+            decide_and_assign_task(creature_id, current_pos, entities, room_manager, game_data, attack_marker, defend_marker);
         }
     }
 
@@ -126,6 +132,8 @@ fn decide_and_assign_task(
     entities: &mut EntityManager,
     room_manager: &RoomManager,
     game_data: &GameData,
+    attack_marker: Option<TilePos>,
+    defend_marker: Option<TilePos>,
 ) {
     // Get creature data for decision
     let new_task = {
@@ -140,7 +148,7 @@ fn decide_and_assign_task(
 
         // Create a temporary GameState-like access for decide_task
         // For now, we'll pass room_manager directly since that's what decide_task needs
-        decide_task_from_rooms(creature, current_pos, room_manager, game_data)
+        decide_task_from_rooms(creature, current_pos, room_manager, game_data, attack_marker, defend_marker)
     };
 
     // Apply the new task
@@ -160,11 +168,37 @@ fn decide_task_from_rooms(
     creature_pos: TilePos,
     room_manager: &RoomManager,
     game_data: &GameData,
+    attack_marker: Option<TilePos>,
+    defend_marker: Option<TilePos>,
 ) -> Option<Task> {
     let monster_data = match game_data.monsters.get(&creature.creature_id) {
         Some(data) => data,
         None => return Some(Task::Idle),
     };
+
+    // Priority 1: Check Global Markers (Override needs unless critical)
+    // Attack Marker
+    if let Some(marker) = attack_marker {
+        // Calculate distance via Manhattan for quick check
+        let dist = (creature_pos.x - marker.x).abs() + (creature_pos.y - marker.y).abs();
+        
+        // If not at marker, move there
+        if dist > 3 {
+             return Some(Task::MoveTo(marker));
+        }
+        // If at marker, we stay/patrol/attack automatically via combat system + idle wander
+        // But to ensure they don't leave, we can keep returning MoveTo if they wander too far?
+        // Or just let them Idle (wander) nearby.
+        // For now: MoveTo ensures they gather.
+    }
+
+    // Defend Marker
+    if let Some(marker) = defend_marker {
+        let dist = (creature_pos.x - marker.x).abs() + (creature_pos.y - marker.y).abs();
+        if dist > 3 {
+             return Some(Task::MoveTo(marker));
+        }
+    }
 
     // If fleeing or deserting, flee
     if creature.is_deserting {

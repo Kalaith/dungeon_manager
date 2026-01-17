@@ -110,9 +110,14 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
             timer.time_until_spawn -= dt;
 
             if timer.time_until_spawn <= 0.0 {
-                // Check if we're at max capacity for this hero type
+                // Get current count for this hero type
                 let current_count = hero_counts.get(&timer.hero_id).copied().unwrap_or(0);
-                let max_active = if let Some(bd) = game_data.hero_buildings.get(&building.building_type) {
+
+                // Calculate scaling factors based on wave number
+                let wave = state.hero_base.current_wave_number.max(0) as f32;
+                
+                // Scale max_active linearly with waves: +1 slot per 2 waves, plus a small base multiplier
+                let max_active_base = if let Some(bd) = game_data.hero_buildings.get(&building.building_type) {
                     bd.spawn_triggers.iter()
                         .find(|t| t.hero_id == timer.hero_id)
                         .map(|t| t.max_active)
@@ -120,9 +125,12 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
                 } else {
                     10
                 };
+                
+                // Formula: Base + Wave * 1.5. Example: Wave 5 with base 10 -> 10 + 7.5 = 17 heroes
+                let scaled_max_active = (max_active_base as f32 + (wave * 1.5)) as usize;
 
-                // Determine spawn rate
-                let base_rate = if let Some(bd) = game_data.hero_buildings.get(&building.building_type) {
+                // Scale spawn rate: reduce by 10% per wave, capped at minimum 5s
+                let spawn_rate_base = if let Some(bd) = game_data.hero_buildings.get(&building.building_type) {
                     bd.spawn_triggers.iter()
                         .find(|t| t.hero_id == timer.hero_id)
                         .map(|t| t.spawn_rate_seconds)
@@ -130,11 +138,15 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
                 } else {
                     60.0
                 };
+                
+                // Formula: Rate * 0.9^Wave. Example: Wave 5 with 60s -> 60 * 0.59 = 35s
+                let scaling_factor = 0.9f32.powf(wave);
+                let scaled_spawn_rate = (spawn_rate_base * scaling_factor).max(5.0);
 
-                timer.time_until_spawn = base_rate;
+                timer.time_until_spawn = scaled_spawn_rate;
 
                 // Only spawn if under max capacity
-                if current_count < max_active {
+                if current_count < scaled_max_active {
                     heroes_to_spawn.push((timer.hero_id.clone(), building.pos));
                     // Update count for subsequent checks in this frame
                     *hero_counts.entry(timer.hero_id.clone()).or_insert(0) += 1;

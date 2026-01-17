@@ -62,7 +62,7 @@ impl GameRenderer {
                     if let Some(ref data) = game_data {
                         self.draw_game(inner_state, interaction_mode, hovered_tile, held_entity, data, drag_selection);
                     }
-                    self.draw_gui(inner_state, interaction_mode, held_entity, selected_entity, selected_room, game_data);
+                    self.draw_gui(inner_state, interaction_mode, hovered_tile, held_entity, selected_entity, selected_room, game_data);
                 }
             }
         }
@@ -194,6 +194,7 @@ impl GameRenderer {
 
         self.draw_tiles(graphics, state, interaction_mode, hovered_tile, game_data, drag_selection);
         self.draw_entities(graphics, state, &camera);
+        self.draw_markers(state);
 
         set_default_camera(); // Go back to 2D for UI
     }
@@ -203,6 +204,7 @@ impl GameRenderer {
         &mut self, 
         state: &GameState, 
         interaction_mode: &InteractionMode, 
+        hovered_tile: Option<TilePos>,
         held_entity: Option<EntityId>,
         selected_entity: Option<EntityId>,
         selected_room: Option<usize>,
@@ -231,6 +233,8 @@ impl GameRenderer {
             InteractionMode::Sell => "Mode: Sell/Cancel".to_string(),
             InteractionMode::Inspect => "Mode: Inspect (Click unit)".to_string(),
             InteractionMode::BuildTrap(trap_type) => format!("Mode: Build {}", trap_type),
+            InteractionMode::SetAttackMarker => "Mode: Set Attack Marker".to_string(),
+            InteractionMode::SetDefendMarker => "Mode: Set Defend Marker".to_string(),
         };
 
         draw_text(
@@ -308,6 +312,9 @@ impl GameRenderer {
 
         // Draw notifications
         self.draw_notifications(state);
+        
+        // Draw minimap
+        self.draw_minimap(state, game_data);
 
         if state.paused {
             self.draw_pause_menu();
@@ -315,6 +322,254 @@ impl GameRenderer {
 
         if state.game_over {
             self.draw_game_over_screen(state.victory);
+        }
+
+        // Draw tooltips last so they are on top of everything
+        self.draw_tooltips(state, hovered_tile, game_data);
+    }
+
+    fn draw_minimap(&self, state: &GameState, game_data: &Option<GameData>) {
+        if game_data.is_none() { return; }
+        
+        let map_width = 150.0;
+        let map_height = 150.0;
+        let padding = 10.0;
+        let start_x = screen_width() - map_width - padding;
+        let start_y = screen_height() - map_height - padding;
+        
+        // Background
+        draw_rectangle(start_x, start_y, map_width, map_height, Color::new(0.0, 0.0, 0.0, 0.8));
+        draw_rectangle_lines(start_x, start_y, map_width, map_height, 2.0, WHITE);
+        
+        // Get grid dims
+        let (grid_w, grid_h) = crate::engine::tile_grid::get_grid_dimensions(&state.dungeon.grid);
+        if grid_w == 0 || grid_h == 0 { return; }
+        
+        let tile_w = map_width / grid_w as f32;
+        let tile_h = map_height / grid_h as f32;
+        
+        // Draw tiles (simplified)
+        for y in 0..grid_h {
+            for x in 0..grid_w {
+                let pos = TilePos::new(x as i32, y as i32);
+                if let Some(tile) = state.get_tile(pos) {
+                     // Check Fog of War
+                    let fog_state = if crate::config::FOG_OF_WAR_ENABLED {
+                        tile.fog_state
+                    } else {
+                        FogState::Visible
+                    };
+                    
+                    if fog_state == FogState::Hidden {
+                        continue; // Draw nothing (black background)
+                    }
+
+                    let mut color = if tile.tile_type == "water" {
+                        BLUE
+                    } else if tile.tile_type == "lava" {
+                        RED
+                    } else if tile.tile_type == "earth" {
+                        DARKGRAY
+                    } else if tile.tile_type == "gold_vein" {
+                        GOLD
+                    } else if tile.tile_type == "claimed_floor" {
+                        if tile.ownership == Ownership::Player {
+                            GREEN
+                        } else if tile.ownership == Ownership::Enemy {
+                             // Hero base floor
+                             Color::new(0.8, 0.2, 0.2, 1.0)
+                        } else {
+                            GRAY
+                        }
+                    } else if crate::engine::tile_types::is_wall(&tile.tile_type, game_data.as_ref().unwrap()) {
+                         Color::new(0.2, 0.2, 0.2, 1.0)
+                    } else {
+                        LIGHTGRAY
+                    };
+                    
+                    // Specific room colors
+                    if tile.room_id.is_some() && tile.ownership == Ownership::Player {
+                        color = Color::new(0.0, 0.8, 0.0, 1.0); // Bright green for rooms
+                    }
+                    
+                    if tile.tile_type == "dungeon_heart" {
+                         color = PURPLE;
+                    }
+                    
+                    if fog_state == FogState::Revealed {
+                         // Dim visited but currently unseen areas
+                         color.r *= 0.5;
+                         color.g *= 0.5;
+                         color.b *= 0.5;
+                    }
+                    
+                    draw_rectangle(
+                        start_x + x as f32 * tile_w, 
+                        start_y + y as f32 * tile_h, 
+                        tile_w, 
+                        tile_h, 
+                        color
+                    );
+                }
+            }
+        }
+        
+        // Draw Camera Viewport Rect
+        let cam_x = state.camera.target.0; // In world units (roughly tile coords)
+        let cam_z = state.camera.target.2;
+        
+        // Approximate visible area (zoom dependant, but let's assume specific fixed size for now or just a dot)
+        // Camera sees roughly 20x20 tiles depending on zoom
+        let view_w = 20.0 * tile_w;
+        let view_h = 20.0 * tile_h;
+        
+        let cam_map_x = start_x + (cam_x / grid_w as f32) * map_width;
+        let cam_map_y = start_y + (cam_z / grid_h as f32) * map_height;
+
+        draw_rectangle_lines(
+            cam_map_x - view_w / 2.0, 
+            cam_map_y - view_h / 2.0, 
+            view_w, 
+            view_h, 
+            1.0, 
+            WHITE
+        );
+        
+        // Draw Hero Base (approximate if known)
+        if state.hero_base.enabled {
+             let base_pos = state.hero_base.position;
+             let bx = start_x + (base_pos.x as f32 / grid_w as f32) * map_width;
+             let by = start_y + (base_pos.y as f32 / grid_h as f32) * map_height;
+             draw_circle(bx, by, 3.0, RED);
+        }
+    }
+
+    fn draw_tooltips(
+        &self, 
+        state: &GameState, 
+        hovered_tile: Option<TilePos>, 
+        game_data: &Option<GameData>
+    ) {
+        if let Some(pos) = hovered_tile {
+            // Check if mouse is over sidebar, if so, don't show tile tooltip
+            if self.sidebar.is_mouse_over() {
+                return;
+            }
+
+            if let Some(tile) = state.get_tile(pos) {
+                let mut lines = Vec::new();
+                
+                // Tile Name
+                let tile_name = if let Some(data) = game_data {
+                     data.tiles.get(&tile.tile_type).map(|t| t.name.clone()).unwrap_or(tile.tile_type.clone())
+                } else {
+                    tile.tile_type.clone()
+                };
+                lines.push(tile_name);
+
+                // Room info
+                if let Some(room_id) = tile.room_id {
+                     if let Some(room) = state.room_manager.rooms.iter().find(|r| r.id == room_id) {
+                         lines.push(format!("Room: {}", room.room_type));
+                     }
+                }
+
+                // Ownership
+                match tile.ownership {
+                    Ownership::Player => lines.push("Owned (You)".to_string()),
+                    Ownership::Enemy => lines.push("Owned (Enemy)".to_string()),
+                    _ => {}
+                }
+
+                // Trap/Object
+                if let Some(trap) = &tile.trap {
+                     let status = if trap.constructed { "Active" } else { "Building..." };
+                     if let Some(data) = game_data {
+                         let trap_name = data.traps.get(&trap.trap_type).map(|t| t.name.clone()).unwrap_or(trap.trap_type.clone());
+                         lines.push(format!("{} ({})", trap_name, status));
+                     } else {
+                         lines.push(format!("{} ({})", trap.trap_type, status));
+                     }
+                }
+
+                // Entities on tile
+                let entities: Vec<_> = state.entities.at_position(pos).collect();
+                for entity in entities {
+                    match &entity.entity_type {
+                        crate::state::entities::EntityType::Creature(c) => {
+                             let name = if let Some(data) = game_data {
+                                 data.monsters.get(&c.creature_id).map(|m| m.name.clone()).unwrap_or(c.creature_id.clone())
+                             } else {
+                                 c.creature_id.clone()
+                             };
+                             lines.push(format!("{} (HP: {:.0})", name, c.health));
+                        }
+                        crate::state::entities::EntityType::Hero(h) => {
+                             let name = if let Some(data) = game_data {
+                                 data.heroes.get(&h.hero_id).map(|m| m.name.clone()).unwrap_or(h.hero_id.clone())
+                             } else {
+                                 h.hero_id.clone()
+                             };
+                             
+                             if h.is_converted {
+                                 lines.push(format!("Minion: {} (Lvl {})", name, h.level));
+                             } else if h.is_captured {
+                                 lines.push(format!("CAPTURED: {} ({:.0}%)", name, h.conversion_progress * 100.0));
+                             } else {
+                                 lines.push(format!("Hero: {} (Lvl {})", name, h.level));
+                             }
+                        }
+                        crate::state::entities::EntityType::Structure(s) => {
+                             lines.push(format!("Structure: {:.0} HP", s.health));
+                        }
+                    }
+                }
+
+                // Draw the tooltip box
+                let mouse_pos = mouse_position();
+                let tooltip_x = mouse_pos.0 + 15.0;
+                let tooltip_y = mouse_pos.1 + 15.0;
+                
+                let font_size = 18.0;
+                let padding = 8.0;
+                let mut max_width = 0.0f32;
+                
+                for line in &lines {
+                    let dims = measure_text(line, None, font_size as u16, 1.0);
+                    if dims.width > max_width {
+                        max_width = dims.width;
+                    }
+                }
+                
+                let box_width = max_width + padding * 2.0;
+                let box_height = (font_size + 4.0) * lines.len() as f32 + padding * 2.0;
+
+                // Adjust if going off screen
+                let draw_x = if tooltip_x + box_width > screen_width() {
+                    tooltip_x - box_width - 30.0
+                } else {
+                    tooltip_x
+                };
+                
+                let draw_y = if tooltip_y + box_height > screen_height() {
+                     tooltip_y - box_height - 30.0
+                } else {
+                    tooltip_y
+                };
+
+                draw_rectangle(draw_x, draw_y, box_width, box_height, Color::new(0.1, 0.1, 0.1, 0.9));
+                draw_rectangle_lines(draw_x, draw_y, box_width, box_height, 1.0, WHITE);
+
+                for (i, line) in lines.iter().enumerate() {
+                    draw_text(
+                        line,
+                        draw_x + padding,
+                        draw_y + padding + (i as f32 * (font_size + 4.0)) + font_size - 4.0,
+                        font_size,
+                        WHITE
+                    );
+                }
+            }
         }
     }
 
@@ -582,6 +837,12 @@ impl GameRenderer {
                             InteractionMode::Inspect => {
                                 outline_color = Some(Color::new(0.0, 0.5, 1.0, 0.5));
                             }
+                            InteractionMode::SetAttackMarker => {
+                                outline_color = Some(Color::new(0.8, 0.2, 0.2, 0.5));
+                            }
+                            InteractionMode::SetDefendMarker => {
+                                outline_color = Some(Color::new(0.2, 0.2, 0.8, 0.5));
+                            }
                         }
 
                         if let Some(color) = outline_color {
@@ -824,6 +1085,25 @@ impl GameRenderer {
         }
     }
 
+    fn draw_markers(&self, state: &GameState) {
+        let draw_flag = |pos: TilePos, color: Color| {
+            let x = pos.x as f32;
+            let z = pos.y as f32;
+            
+            // Pole (center of tile)
+            draw_cylinder(vec3(x, 0.0, z), 0.05, 0.05, 2.0, None, BROWN);
+            
+            // Flag Banner
+            draw_cube(vec3(x + 0.3, 1.5, z), vec3(0.6, 0.5, 0.05), None, color);
+        };
+
+        if let Some(pos) = state.attack_marker {
+            draw_flag(pos, RED);
+        }
+        if let Some(pos) = state.defend_marker {
+            draw_flag(pos, BLUE);
+        }
+    }
 }
 
 

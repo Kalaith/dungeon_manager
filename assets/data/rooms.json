@@ -739,5 +739,82 @@
         "flicker": true
       }
     }
+  },
+  {
+    "id": "torture_chamber",
+    "name": "Torture Chamber",
+    "description": "A dark room where captured heroes are converted to your cause.",
+    "category": "special",
+    "icon": "icons/rooms/torture_chamber.png",
+    "build": {
+      "cost_per_tile": 250,
+      "mana_cost": 0,
+      "min_tiles": 9,
+      "max_tiles": 36,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
+      "construction_time": 0.8
+    },
+    "requirements": {
+      "research": [
+        "torture_tech"
+      ],
+      "global_rooms_required": [
+        "prison"
+      ],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "torture_power": 1.0,
+      "happiness_modifier": -10
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        {
+          "tiles": 9,
+          "multiplier": 1.0
+        }
+      ],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "work",
+      "desirability": 1.0,
+      "max_creatures": 2,
+      "preferred_creatures": [
+        "succubus"
+      ],
+      "forbidden_creatures": [],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/torture_floor.png",
+      "wall_sprite": "tiles/torture_wall.png",
+      "object_spawn": [
+        {
+          "object": "rack",
+          "density": 0.2
+        },
+        {
+          "object": "iron_maiden",
+          "density": 0.1
+        }
+      ],
+      "light": {
+        "color": [
+          100,
+          0,
+          0
+        ],
+        "intensity": 0.6,
+        "flicker": true
+      }
+    }
   }
 ]

@@ -343,6 +343,9 @@ pub struct HeroState {
     pub is_defender: bool,
     /// Which wave number this hero is assigned to (0 = not yet assigned)
     pub wave_assigned: u32,
+    
+    /// Whether this hero has been converted to the dungeon faction
+    pub is_converted: bool,
 }
 
 impl HeroState {
@@ -376,6 +379,7 @@ impl HeroState {
             conversion_progress: 0.0,
             is_defender: false, // Assigned later by spawner
             wave_assigned: 0,   // Assigned when wave launches
+            is_converted: false,
         }
     }
 

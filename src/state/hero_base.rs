@@ -72,15 +72,13 @@ impl HeroBase {
     }
 
     pub fn is_defeated(&self) -> bool {
-        // If Town Hall is destroyed (not present or HP <= 0), base is defeated
-        // Ideally we check if it exists in the list; if it's destroyed intended behavior is to remove it or mark dead
-        // For now, let's assume if it's gone or 0 HP, we win.
-        if let Some(hall) = self.get_town_hall() {
-            hall.current_hp <= 0
-        } else {
-            // No town hall found - implies it hasn't generated yet OR was destroyed and removed.
-            // If enabled is true, and no town hall, then it's defeated.
-             self.enabled 
+        // Victory condition: All buildings destroyed
+        if !self.enabled { return false; }
+        
+        if self.buildings.is_empty() {
+            return true;
         }
+
+        self.buildings.iter().all(|b| b.current_hp <= 0)
     }
 }

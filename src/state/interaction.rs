@@ -17,4 +17,6 @@ pub enum InteractionMode {
     Drop,
     Sell, // Sell room or cancel task
     Inspect, // Inspect minion details
+    SetAttackMarker,
+    SetDefendMarker,
 }
