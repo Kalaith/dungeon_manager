@@ -22,7 +22,7 @@ pub fn create_grid(width: usize, height: usize, game_data: &GameData) -> Grid {
                 "solid_rock".to_string()
             } else {
                 // 10% chance of gold vein
-                if rand::random::<f32>() < 0.10 {
+                if macroquad::rand::gen_range(0.0f32, 1.0) < 0.10 {
                     "gold_vein".to_string()
                 } else {
                     "earth".to_string()

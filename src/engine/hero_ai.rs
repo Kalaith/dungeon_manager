@@ -389,8 +389,8 @@ pub fn update_hero_ai(
                  
                  while attempts < 10 {
                      // Use abs() to ensure positive modulo result
-                     let dx = (rand::random::<i32>().abs() % (radius * 2 + 1)) - radius;
-                     let dy = (rand::random::<i32>().abs() % (radius * 2 + 1)) - radius;
+                     let dx = macroquad::rand::gen_range(-radius, radius + 1);
+                     let dy = macroquad::rand::gen_range(-radius, radius + 1);
                      let target_x = spawn_pos.x + dx;
                      let target_y = spawn_pos.y + dy;
                      let target_pos = TilePos::new(target_x, target_y);
@@ -452,7 +452,7 @@ pub fn update_hero_ai(
              if let Some(room) = game_state.room_manager.rooms.iter().find(|r| r.id == room_id) {
                  // Pick random tile in room or center
                  if !room.tiles.is_empty() {
-                    let idx = rand::random::<usize>() % room.tiles.len();
+                    let idx = macroquad::rand::gen_range(0, room.tiles.len());
                     if let Some(&pos) = room.tiles.iter().nth(idx) {
                         hero_state.target_pos = Some(pos);
                     }

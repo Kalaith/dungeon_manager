@@ -1,7 +1,7 @@
 //! Biome system - Voronoi-based biome regions
 
 use crate::state::tile_state::Ownership;
-use rand::Rng;
+use macroquad::rand;
 
 use super::config::{Biome, Grid};
 
@@ -10,7 +10,7 @@ use super::config::{Biome, Grid};
 // ============================================================================
 
 /// Generate a biome map using Voronoi-style regions
-pub fn generate_biome_map(width: usize, height: usize, num_regions: usize, rng: &mut impl Rng) -> Vec<Vec<Biome>> {
+pub fn generate_biome_map(width: usize, height: usize, num_regions: usize) -> Vec<Vec<Biome>> {
     let center_x = width / 2;
     let center_y = height / 2;
     
@@ -18,14 +18,14 @@ pub fn generate_biome_map(width: usize, height: usize, num_regions: usize, rng: 
     biome_centers.push((center_x, center_y, Biome::Standard));
     
     for _ in 0..num_regions {
-        let x = rng.gen_range(5..width - 5);
-        let y = rng.gen_range(5..height - 5);
+        let x = rand::gen_range(5, width - 5);
+        let y = rand::gen_range(5, height - 5);
         
         let dx = (x as i32 - center_x as i32).abs();
         let dy = (y as i32 - center_y as i32).abs();
         if dx < 15 && dy < 15 { continue; }
         
-        biome_centers.push((x, y, random_biome(rng)));
+        biome_centers.push((x, y, random_biome()));
     }
     
     let mut biome_map = vec![vec![Biome::Standard; width]; height];
@@ -50,8 +50,8 @@ pub fn generate_biome_map(width: usize, height: usize, num_regions: usize, rng: 
     biome_map
 }
 
-fn random_biome(rng: &mut impl Rng) -> Biome {
-    match rng.gen_range(0..5) {
+fn random_biome() -> Biome {
+    match rand::gen_range(0u32, 5) {
         0 => Biome::Volcanic,
         1 => Biome::Crystalline,
         2 => Biome::Flooded,
@@ -61,7 +61,7 @@ fn random_biome(rng: &mut impl Rng) -> Biome {
 }
 
 /// Apply biome-specific features to the terrain
-pub fn apply_biome_features(grid: &mut Grid, biome_map: &[Vec<Biome>], rng: &mut impl Rng) {
+pub fn apply_biome_features(grid: &mut Grid, biome_map: &[Vec<Biome>]) {
     let height = grid.len();
     let width = grid[0].len();
     
@@ -75,29 +75,29 @@ pub fn apply_biome_features(grid: &mut Grid, biome_map: &[Vec<Biome>], rng: &mut
             match biome {
                 Biome::Standard => {}
                 Biome::Volcanic => {
-                    if tile.tile_type == "earth" && rng.gen::<f32>() < 0.15 {
+                    if tile.tile_type == "earth" && rand::gen_range(0.0f32, 1.0) < 0.15 {
                         tile.tile_type = "lava".to_string();
                     }
                 }
                 Biome::Crystalline => {
-                    if tile.tile_type == "solid_rock" && rng.gen::<f32>() < 0.12 {
+                    if tile.tile_type == "solid_rock" && rand::gen_range(0.0f32, 1.0) < 0.12 {
                         tile.tile_type = "mana_crystal".to_string();
-                        tile.resources_remaining = Some(rng.gen_range(200..400));
+                        tile.resources_remaining = Some(rand::gen_range(200u32, 400));
                     }
                 }
                 Biome::Flooded => {
-                    if tile.tile_type == "earth" && rng.gen::<f32>() < 0.20 {
+                    if tile.tile_type == "earth" && rand::gen_range(0.0f32, 1.0) < 0.20 {
                         tile.tile_type = "water".to_string();
                     }
                 }
                 Biome::Ancient => {
-                    if tile.tile_type == "earth" && rng.gen::<f32>() < 0.10 {
+                    if tile.tile_type == "earth" && rand::gen_range(0.0f32, 1.0) < 0.10 {
                         tile.tile_type = "gem_seam".to_string();
-                        tile.resources_remaining = Some(rng.gen_range(150..300));
+                        tile.resources_remaining = Some(rand::gen_range(150u32, 300));
                     }
                 }
                 Biome::Corrupted => {
-                    if tile.tile_type == "gold_vein" && rng.gen::<f32>() < 0.3 {
+                    if tile.tile_type == "gold_vein" && rand::gen_range(0.0f32, 1.0) < 0.3 {
                         if let Some(res) = tile.resources_remaining.as_mut() {
                             *res = (*res / 2).max(20);
                         }

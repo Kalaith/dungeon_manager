@@ -66,7 +66,7 @@ impl GameState {
                 if let Some(tile) = tile_grid::get_tile(&dungeon.grid, pos) {
                     if tile.tile_type == "monster_spawner" {
                         // Randomly pick Spider or Lizard
-                        let monster_id = if rand::random::<f32>() < 0.5 { "spider" } else { "lizard" };
+                        let monster_id = if macroquad::rand::gen_range(0.0f32, 1.0) < 0.5 { "spider" } else { "lizard" };
                         spawners.push(crate::engine::spawner_logic::MonsterSpawner::new(
                             pos, 
                             monster_id.to_string(), 
@@ -181,7 +181,7 @@ impl GameState {
         if self.next_creature_spawn_time <= 0.0 {
             self.spawn_random_creature(game_data);
             let spawn_range = crate::config::CREATURE_SPAWN_MAX_INTERVAL - crate::config::CREATURE_SPAWN_MIN_INTERVAL;
-            self.next_creature_spawn_time = crate::config::CREATURE_SPAWN_MIN_INTERVAL + rand::random::<f32>() * spawn_range;
+            self.next_creature_spawn_time = crate::config::CREATURE_SPAWN_MIN_INTERVAL + macroquad::rand::gen_range(0.0f32, 1.0) * spawn_range;
         }
 
         // Pay Day Logic
@@ -729,7 +729,7 @@ impl GameState {
         }
 
         // Pick a random spawn position
-        let pos = spawn_positions[rand::random::<usize>() % spawn_positions.len()];
+        let pos = spawn_positions[macroquad::rand::gen_range(0, spawn_positions.len())];
 
         // Spawn the imp
         if let Some(monster_data) = game_data.monsters.get("imp") {

@@ -19,7 +19,7 @@ impl Dungeon {
             map_generator::StartingPosition::Corner,
             map_generator::StartingPosition::Edge,
         ];
-        let random_idx = rand::random::<usize>() % starting_positions.len();
+        let random_idx = macroquad::rand::gen_range(0, starting_positions.len());
         let random_start = starting_positions[random_idx];
         
         let grid = match map_type {

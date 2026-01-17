@@ -20,7 +20,7 @@ mod hero_base_gen;
 pub use config::{Grid, MapConfig, StartingPosition};
 
 use crate::data::GameData;
-use rand::SeedableRng;
+use macroquad::rand;
 
 // ============================================================================
 // MAIN GENERATION FUNCTION
@@ -28,15 +28,17 @@ use rand::SeedableRng;
 
 /// Main map generation function
 pub fn generate_map(config: &MapConfig, _game_data: &GameData) -> Grid {
-    let mut rng = if let Some(seed) = config.seed {
-        rand::rngs::StdRng::seed_from_u64(seed)
+    // Seed the RNG if a seed is provided
+    if let Some(seed) = config.seed {
+        rand::srand(seed);
     } else {
-        rand::rngs::StdRng::from_entropy()
-    };
+        // Use current time as seed for variety
+        rand::srand(macroquad::miniquad::date::now() as u64);
+    }
 
     // Step 1: Create base terrain
     let mut grid = if config.use_noise_terrain {
-        terrain::create_noise_terrain(config, &mut rng)
+        terrain::create_noise_terrain(config)
     } else {
         terrain::create_base_terrain(config.width, config.height)
     };
@@ -47,32 +49,32 @@ pub fn generate_map(config: &MapConfig, _game_data: &GameData) -> Grid {
     }
 
     // Step 3: Ensure connectivity
-    connectivity::ensure_connectivity(&mut grid, &mut rng);
+    connectivity::ensure_connectivity(&mut grid);
 
     // Step 4: Calculate starting position early (needed for strategic placement)
-    let start_pos = starting_area::calculate_starting_position(config, &mut rng);
+    let start_pos = starting_area::calculate_starting_position(config);
 
     // Step 5: Add hazard regions FIRST (needed for risk/reward resource placement)
-    resources::add_enhanced_hazards(&mut grid, config, &mut rng);
+    resources::add_enhanced_hazards(&mut grid, config);
 
     // Step 6: Place hero portals early (mana crystals placed near them)
     if config.num_hero_portals > 0 {
-        features::place_hero_portals(&mut grid, start_pos, config, &mut rng);
+        features::place_hero_portals(&mut grid, start_pos, config);
     }
 
     // Step 7: Add strategic mineral veins (risk/reward placement)
-    resources::add_mineral_veins(&mut grid, config, start_pos, &mut rng);
+    resources::add_mineral_veins(&mut grid, config, start_pos);
 
     // Step 8: Apply biome features
     if config.enable_biomes {
-        let biome_map = biomes::generate_biome_map(config.width, config.height, config.num_biome_regions, &mut rng);
-        biomes::apply_biome_features(&mut grid, &biome_map, &mut rng);
+        let biome_map = biomes::generate_biome_map(config.width, config.height, config.num_biome_regions);
+        biomes::apply_biome_features(&mut grid, &biome_map);
     }
 
     // Step 9: Add natural features
     if config.enable_natural_features {
-        features::add_natural_features(&mut grid, config, &mut rng);
-        features::add_monster_lairs(&mut grid, start_pos, config, &mut rng);
+        features::add_natural_features(&mut grid, config);
+        features::add_monster_lairs(&mut grid, start_pos, config);
     }
 
     // Step 10: Create starting area LAST (clears resources to make room)
@@ -80,7 +82,7 @@ pub fn generate_map(config: &MapConfig, _game_data: &GameData) -> Grid {
 
     // Step 11: Create Hero Base
     if config.hero_base_enabled {
-        hero_base_gen::place_hero_base(&mut grid, start_pos, config, &mut rng);
+        hero_base_gen::place_hero_base(&mut grid, start_pos, config);
     }
 
     grid

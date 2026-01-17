@@ -2,7 +2,7 @@
 //! Ensures all open regions are connected via flood fill and tunnel carving
 
 use crate::state::tile_state::TilePos;
-use rand::Rng;
+use macroquad::rand;
 use std::collections::VecDeque;
 
 use super::config::Grid;
@@ -14,7 +14,7 @@ use super::utils::distance_f32;
 // ============================================================================
 
 /// Ensure all open regions are connected via tunnels
-pub fn ensure_connectivity(grid: &mut Grid, rng: &mut impl Rng) {
+pub fn ensure_connectivity(grid: &mut Grid) {
     let regions = find_disconnected_regions(grid);
 
     if regions.is_empty() || regions.len() == 1 {
@@ -24,7 +24,7 @@ pub fn ensure_connectivity(grid: &mut Grid, rng: &mut impl Rng) {
     // Connect all regions to the largest one
     let largest_region = &regions[0];
     for i in 1..regions.len() {
-        connect_regions(grid, largest_region, &regions[i], rng);
+        connect_regions(grid, largest_region, &regions[i]);
     }
 }
 
@@ -83,9 +83,9 @@ fn flood_fill_region(grid: &Grid, start_x: usize, start_y: usize, visited: &mut 
 }
 
 /// Connect two regions by carving a tunnel
-fn connect_regions(grid: &mut Grid, region_a: &[TilePos], region_b: &[TilePos], rng: &mut impl Rng) {
+fn connect_regions(grid: &mut Grid, region_a: &[TilePos], region_b: &[TilePos]) {
     let (start, end) = find_closest_points(region_a, region_b);
-    carve_tunnel(grid, start, end, rng);
+    carve_tunnel(grid, start, end);
 }
 
 /// Find the two closest points between two regions
@@ -108,9 +108,9 @@ fn find_closest_points(region_a: &[TilePos], region_b: &[TilePos]) -> (TilePos, 
 }
 
 /// Carve an L-shaped tunnel between two points
-fn carve_tunnel(grid: &mut Grid, start: TilePos, end: TilePos, rng: &mut impl Rng) {
+fn carve_tunnel(grid: &mut Grid, start: TilePos, end: TilePos) {
     let width = 1;
-    let horizontal_first = rng.gen_bool(0.5);
+    let horizontal_first = rand::gen_range(0u32, 2) == 0;
 
     if horizontal_first {
         carve_horizontal_line(grid, start.x, end.x, start.y, width);

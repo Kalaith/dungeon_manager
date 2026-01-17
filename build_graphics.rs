@@ -112,11 +112,12 @@ fn create_tile_base(color: Rgba<u8>) -> RgbaImage {
 }
 
 fn add_noise(img: &mut RgbaImage, amount: i32) {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
-    for p in img.pixels_mut() {
+    // Simple pseudo-random noise using pixel position as seed
+    for (x, y, p) in img.enumerate_pixels_mut() {
         if p[3] > 0 {
-            let noise = rng.gen_range(-amount..=amount);
+            // Simple hash-based pseudo-random
+            let hash = ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            let noise = (hash % (amount * 2 + 1)) - amount;
             for i in 0..3 {
                  let val = p[i] as i32 + noise;
                  p[i] = val.clamp(0, 255) as u8;

@@ -1,12 +1,12 @@
+//! Hero base generation for the hero faction
+
 use crate::engine::map_generator::config::{MapConfig, Grid};
-use crate::state::tile_state::{TilePos, TileState, Ownership};
-use rand::Rng;
+use crate::state::tile_state::{TilePos, Ownership};
 
 pub fn place_hero_base(
     grid: &mut Grid, 
     start_pos: TilePos, 
     config: &MapConfig, 
-    rng: &mut impl Rng
 ) {
     if !config.hero_base_enabled {
         return;
@@ -153,7 +153,7 @@ fn place_building_tile(grid: &mut Grid, x: i32, y: i32, id: &str, width: usize, 
     }
 }
 
-fn get_tile_mut(grid: &mut Grid, x: usize, y: usize) -> Option<&mut TileState> {
+fn get_tile_mut(grid: &mut Grid, x: usize, y: usize) -> Option<&mut crate::state::tile_state::TileState> {
     if y < grid.len() && x < grid[y].len() {
         Some(&mut grid[y][x])
     } else {

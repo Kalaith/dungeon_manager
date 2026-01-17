@@ -2,7 +2,7 @@
 //! Implements risk/reward strategic resource placement
 
 use crate::state::tile_state::TilePos;
-use rand::Rng;
+use macroquad::rand;
 use std::collections::VecDeque;
 
 use super::config::{Grid, MapConfig};
@@ -21,7 +21,7 @@ struct ResourcePlacementStrategy {
 }
 
 /// Add mineral veins strategically based on risk/reward placement
-pub fn add_mineral_veins(grid: &mut Grid, config: &MapConfig, start_pos: TilePos, rng: &mut impl Rng) {
+pub fn add_mineral_veins(grid: &mut Grid, config: &MapConfig, start_pos: TilePos) {
     let height = grid.len();
     let width = grid[0].len();
     
@@ -33,12 +33,12 @@ pub fn add_mineral_veins(grid: &mut Grid, config: &MapConfig, start_pos: TilePos
         hazard_bonus_radius: 0.0,
     };
     let num_gold_veins = (config.gold_richness * 10.0) as usize + 2;
-    place_strategic_veins(grid, start_pos, "gold_vein", num_gold_veins, 12..25, 2, &gold_strategy, rng);
+    place_strategic_veins(grid, start_pos, "gold_vein", num_gold_veins, 12..25, 2, &gold_strategy);
     
     // Gem seams - RARE, single tiles only (4-6 on entire map)
     // Far from start, dangerous areas - these are finite high-value finds
     let num_gems = 4 + (config.gem_richness * 3.0) as usize; // 4-6 gems
-    place_single_gems(grid, start_pos, num_gems, rng);
+    place_single_gems(grid, start_pos, num_gems);
     
     // Mana crystals - scattered but bonus if near hero portals
     let mana_strategy = ResourcePlacementStrategy {
@@ -48,10 +48,10 @@ pub fn add_mineral_veins(grid: &mut Grid, config: &MapConfig, start_pos: TilePos
         hazard_bonus_radius: 0.0,
     };
     let num_mana_veins = (config.mana_richness * 10.0) as usize + 2;
-    place_strategic_veins(grid, start_pos, "mana_crystal", num_mana_veins, 8..15, 1, &mana_strategy, rng);
+    place_strategic_veins(grid, start_pos, "mana_crystal", num_mana_veins, 8..15, 1, &mana_strategy);
     
     // Place bonus mana near hero portals
-    place_mana_near_portals(grid, rng);
+    place_mana_near_portals(grid);
 
     // Scattered resources (single tiles spread everywhere including near base)
     // Scale count by map size (assuming 50x50 base)
@@ -59,10 +59,10 @@ pub fn add_mineral_veins(grid: &mut Grid, config: &MapConfig, start_pos: TilePos
     let density_scale = map_area / 2500.0;
     
     let scattered_gold = (180.0 * config.gold_richness * density_scale) as usize;
-    place_scattered_resources(grid, "gold_vein", scattered_gold, rng);
+    place_scattered_resources(grid, "gold_vein", scattered_gold);
     
     let scattered_mana = (90.0 * config.mana_richness * density_scale) as usize;
-    place_scattered_resources(grid, "mana_crystal", scattered_mana, rng);
+    place_scattered_resources(grid, "mana_crystal", scattered_mana);
 }
 
 /// Place veins using strategic placement rules
@@ -74,31 +74,30 @@ fn place_strategic_veins(
     length_range: std::ops::Range<usize>,
     thickness: usize,
     strategy: &ResourcePlacementStrategy,
-    rng: &mut impl Rng,
 ) {
     let height = grid.len();
     let width = grid[0].len();
     
     // Find candidate positions scored by strategy
-    let candidates = find_strategic_positions(grid, start_pos, strategy, rng);
+    let candidates = find_strategic_positions(grid, start_pos, strategy);
     
     let placed = candidates.len().min(count);
     for i in 0..placed {
         let pos = candidates[i];
-        let length = rng.gen_range(length_range.clone());
-        generate_mineral_vein(grid, pos, tile_type, length, thickness, rng);
+        let length = rand::gen_range(length_range.start, length_range.end);
+        generate_mineral_vein(grid, pos, tile_type, length, thickness);
     }
     
     // Fill remaining with random positions if not enough strategic ones
     for _ in placed..count {
-        let start_x = rng.gen_range(5..width - 5);
-        let start_y = rng.gen_range(5..height - 5);
+        let start_x = rand::gen_range(5, width - 5);
+        let start_y = rand::gen_range(5, height - 5);
         let pos = TilePos::new(start_x as i32, start_y as i32);
         
         let dist = distance_f32(pos, start_pos);
         if dist >= strategy.min_distance_from_start {
-            let length = rng.gen_range(length_range.clone());
-            generate_mineral_vein(grid, pos, tile_type, length, thickness, rng);
+            let length = rand::gen_range(length_range.start, length_range.end);
+            generate_mineral_vein(grid, pos, tile_type, length, thickness);
         }
     }
 }
@@ -108,7 +107,6 @@ fn find_strategic_positions(
     grid: &Grid,
     start_pos: TilePos,
     strategy: &ResourcePlacementStrategy,
-    rng: &mut impl Rng,
 ) -> Vec<TilePos> {
     let height = grid.len();
     let width = grid[0].len();
@@ -143,7 +141,7 @@ fn find_strategic_positions(
             }
             
             // Add some randomness
-            score += rng.gen::<f32>() * 3.0;
+            score += rand::gen_range(0.0f32, 3.0);
             
             scored_positions.push((pos, score));
         }
@@ -190,7 +188,7 @@ fn calculate_tile_danger(grid: &Grid, pos: TilePos, radius: f32) -> f32 {
 }
 
 /// Place mana crystals near hero portals (high risk/reward)
-fn place_mana_near_portals(grid: &mut Grid, rng: &mut impl Rng) {
+fn place_mana_near_portals(grid: &mut Grid) {
     let height = grid.len();
     let width = grid[0].len();
     
@@ -205,8 +203,8 @@ fn place_mana_near_portals(grid: &mut Grid, rng: &mut impl Rng) {
     for portal_pos in portal_positions {
         // Find a nearby solid rock position
         for _ in 0..5 {
-            let dx = rng.gen_range(-6..=6);
-            let dy = rng.gen_range(-6..=6);
+            let dx = rand::gen_range(-6i32, 7);
+            let dy = rand::gen_range(-6i32, 7);
             let nx = (portal_pos.x + dx).max(2).min(width as i32 - 3) as usize;
             let ny = (portal_pos.y + dy).max(2).min(height as i32 - 3) as usize;
             
@@ -215,9 +213,8 @@ fn place_mana_near_portals(grid: &mut Grid, rng: &mut impl Rng) {
                     grid,
                     TilePos::new(nx as i32, ny as i32),
                     "mana_crystal",
-                    rng.gen_range(5..10),
+                    rand::gen_range(5, 10),
                     1,
-                    rng,
                 );
                 break;
             }
@@ -226,7 +223,7 @@ fn place_mana_near_portals(grid: &mut Grid, rng: &mut impl Rng) {
 }
 
 /// Place individual gem seam tiles (not veins) - rare, valuable finds
-fn place_single_gems(grid: &mut Grid, start_pos: TilePos, count: usize, rng: &mut impl Rng) {
+fn place_single_gems(grid: &mut Grid, start_pos: TilePos, count: usize) {
     let height = grid.len();
     let width = grid[0].len();
     let min_distance = 18.0; // Far from start
@@ -237,8 +234,8 @@ fn place_single_gems(grid: &mut Grid, start_pos: TilePos, count: usize, rng: &mu
     while placed < count && attempts < 200 {
         attempts += 1;
         
-        let x = rng.gen_range(5..width - 5);
-        let y = rng.gen_range(5..height - 5);
+        let x = rand::gen_range(5, width - 5);
+        let y = rand::gen_range(5, height - 5);
         let pos = TilePos::new(x as i32, y as i32);
         
         // Must be far from start
@@ -254,19 +251,19 @@ fn place_single_gems(grid: &mut Grid, start_pos: TilePos, count: usize, rng: &mu
         
         // Prefer positions near hazards (lava = bonus)
         let danger = calculate_tile_danger(grid, pos, 6.0);
-        if danger < 0.5 && rng.gen::<f32>() > 0.3 {
+        if danger < 0.5 && rand::gen_range(0.0f32, 1.0) > 0.3 {
             continue; // Skip low-danger spots 70% of the time
         }
         
         // Place single gem tile
         grid[y][x].tile_type = "gem_seam".to_string();
-        grid[y][x].resources_remaining = Some(rng.gen_range(200..400)); // Finite resources
+        grid[y][x].resources_remaining = Some(rand::gen_range(200u32, 400)); // Finite resources
         placed += 1;
     }
 }
 
 /// Place scattered single resource tiles across the map (no distance constraints)
-fn place_scattered_resources(grid: &mut Grid, tile_type: &str, count: usize, rng: &mut impl Rng) {
+fn place_scattered_resources(grid: &mut Grid, tile_type: &str, count: usize) {
     let height = grid.len();
     let width = grid[0].len();
     
@@ -276,8 +273,8 @@ fn place_scattered_resources(grid: &mut Grid, tile_type: &str, count: usize, rng
     while placed < count && attempts < count * 10 {
         attempts += 1;
         
-        let x = rng.gen_range(2..width - 2);
-        let y = rng.gen_range(2..height - 2);
+        let x = rand::gen_range(2, width - 2);
+        let y = rand::gen_range(2, height - 2);
         
         // Must be in diggable terrain
         let current_type = &grid[y][x].tile_type;
@@ -290,8 +287,8 @@ fn place_scattered_resources(grid: &mut Grid, tile_type: &str, count: usize, rng
         
         // Set resource amount based on type
         let amount = match tile_type {
-            "gold_vein" => rng.gen_range(50..100), // Smaller amount for single tiles
-            "mana_crystal" => rng.gen_range(100..200),
+            "gold_vein" => rand::gen_range(50u32, 100), // Smaller amount for single tiles
+            "mana_crystal" => rand::gen_range(100u32, 200),
             _ => 100
         };
         
@@ -305,22 +302,22 @@ fn place_scattered_resources(grid: &mut Grid, tile_type: &str, count: usize, rng
 // ============================================================================
 
 /// Generate a single mineral vein using drunk walk algorithm
-fn generate_mineral_vein(grid: &mut Grid, start: TilePos, tile_type: &str, length: usize, thickness: usize, rng: &mut impl Rng) {
+fn generate_mineral_vein(grid: &mut Grid, start: TilePos, tile_type: &str, length: usize, thickness: usize) {
     let height = grid.len() as i32;
     let width = grid[0].len() as i32;
 
     let mut current = start;
-    let mut direction = (rng.gen_range(-1..=1), rng.gen_range(-1..=1));
+    let mut direction = (rand::gen_range(-1i32, 2), rand::gen_range(-1i32, 2));
     if direction == (0, 0) { direction = (1, 0); }
 
     for _ in 0..length {
-        place_vein_segment(grid, current, tile_type, thickness, rng);
+        place_vein_segment(grid, current, tile_type, thickness);
 
-        if rng.gen::<f32>() < 0.7 {
+        if rand::gen_range(0.0f32, 1.0) < 0.7 {
             current.x += direction.0;
             current.y += direction.1;
         } else {
-            direction = (rng.gen_range(-1..=1), rng.gen_range(-1..=1));
+            direction = (rand::gen_range(-1i32, 2), rand::gen_range(-1i32, 2));
             if direction == (0, 0) { direction = (1, 0); }
             current.x += direction.0;
             current.y += direction.1;
@@ -332,7 +329,7 @@ fn generate_mineral_vein(grid: &mut Grid, start: TilePos, tile_type: &str, lengt
 }
 
 /// Place a circular segment of mineral vein
-fn place_vein_segment(grid: &mut Grid, center: TilePos, tile_type: &str, thickness: usize, rng: &mut impl Rng) {
+fn place_vein_segment(grid: &mut Grid, center: TilePos, tile_type: &str, thickness: usize) {
     let t = thickness as i32;
     for dy in -t..=t {
         for dx in -t..=t {
@@ -345,9 +342,9 @@ fn place_vein_segment(grid: &mut Grid, center: TilePos, tile_type: &str, thickne
                 if current_type == "solid_rock" || current_type == "earth" {
                     grid[y][x].tile_type = tile_type.to_string();
                     let resources = match tile_type {
-                        "gold_vein" => rng.gen_range(80..150),
-                        "gem_seam" => rng.gen_range(150..300),
-                        "mana_crystal" => rng.gen_range(200..350),
+                        "gold_vein" => rand::gen_range(80u32, 150),
+                        "gem_seam" => rand::gen_range(150u32, 300),
+                        "mana_crystal" => rand::gen_range(200u32, 350),
                         _ => 100,
                     };
                     grid[y][x].resources_remaining = Some(resources);
@@ -362,33 +359,33 @@ fn place_vein_segment(grid: &mut Grid, center: TilePos, tile_type: &str, thickne
 // ============================================================================
 
 /// Add hazard regions with organic shapes
-pub fn add_enhanced_hazards(grid: &mut Grid, config: &MapConfig, rng: &mut impl Rng) {
+pub fn add_enhanced_hazards(grid: &mut Grid, config: &MapConfig) {
     let height = grid.len();
     let width = grid[0].len();
 
-    if rng.gen::<f32>() < config.water_frequency {
-        let num_water = rng.gen_range(1..3);
+    if rand::gen_range(0.0f32, 1.0) < config.water_frequency {
+        let num_water = rand::gen_range(1u32, 3);
         for _ in 0..num_water {
-            let cx = rng.gen_range(10..width - 10);
-            let cy = rng.gen_range(10..height - 10);
-            let size = rng.gen_range(5..12);
-            create_organic_hazard_pool(grid, cx, cy, size, "water", rng);
+            let cx = rand::gen_range(10, width - 10);
+            let cy = rand::gen_range(10, height - 10);
+            let size = rand::gen_range(5, 12);
+            create_organic_hazard_pool(grid, cx, cy, size, "water");
         }
     }
 
-    if rng.gen::<f32>() < config.lava_frequency {
-        let num_lava = rng.gen_range(1..3);
+    if rand::gen_range(0.0f32, 1.0) < config.lava_frequency {
+        let num_lava = rand::gen_range(1u32, 3);
         for _ in 0..num_lava {
-            let cx = rng.gen_range(10..width - 10);
-            let cy = rng.gen_range(10..height - 10);
-            let size = rng.gen_range(4..9);
-            create_organic_hazard_pool(grid, cx, cy, size, "lava", rng);
+            let cx = rand::gen_range(10, width - 10);
+            let cy = rand::gen_range(10, height - 10);
+            let size = rand::gen_range(4, 9);
+            create_organic_hazard_pool(grid, cx, cy, size, "lava");
         }
     }
 }
 
 /// Create hazard pool with organic shape using flood fill
-fn create_organic_hazard_pool(grid: &mut Grid, cx: usize, cy: usize, target_size: usize, tile_type: &str, rng: &mut impl Rng) {
+fn create_organic_hazard_pool(grid: &mut Grid, cx: usize, cy: usize, target_size: usize, tile_type: &str) {
     let height = grid.len();
     let width = grid[0].len();
 
@@ -414,7 +411,7 @@ fn create_organic_hazard_pool(grid: &mut Grid, cx: usize, cy: usize, target_size
             let ny = (y as i32 + dy) as usize;
 
             if nx > 5 && nx < width - 5 && ny > 5 && ny < height - 5 {
-                if !visited[ny][nx] && rng.gen::<f32>() < 0.65 {
+                if !visited[ny][nx] && rand::gen_range(0.0f32, 1.0) < 0.65 {
                     visited[ny][nx] = true;
                     queue.push_back((nx, ny));
                 }

@@ -21,7 +21,7 @@ impl SpawnSystem {
             if tiles.is_empty() {
                 return; // No tiles to spawn from
             }
-            *tiles[rand::random::<usize>() % tiles.len()]
+            *tiles[macroquad::rand::gen_range(0, tiles.len())]
         } else {
             eprintln!("Warning: No hero entrance found, cannot spawn heroes");
             return;
@@ -29,7 +29,7 @@ impl SpawnSystem {
 
         // Pick a random hero type
         let hero_ids: Vec<&String> = game_data.heroes.keys().collect();
-        if let Some(&hero_id) = hero_ids.get(rand::random::<usize>() % hero_ids.len()) {
+        if let Some(&hero_id) = hero_ids.get(macroquad::rand::gen_range(0, hero_ids.len())) {
             if let Some(hero_data) = game_data.heroes.get(hero_id) {
                 let hero_state = HeroState::new(
                     hero_id.clone(),
@@ -111,7 +111,7 @@ impl SpawnSystem {
         }
 
         // Pick a random connected spawner
-        let spawn_pos = connected_spawners[rand::random::<usize>() % connected_spawners.len()];
+        let spawn_pos = connected_spawners[macroquad::rand::gen_range(0, connected_spawners.len())];
 
         // Determine potential creatures based on existing rooms
         let mut potential_creatures = Vec::new();
@@ -142,7 +142,7 @@ impl SpawnSystem {
             return;
         }
 
-        if let Some(&creature_id) = valid_creatures.get(rand::random::<usize>() % valid_creatures.len()) {
+        if let Some(&creature_id) = valid_creatures.get(macroquad::rand::gen_range(0, valid_creatures.len())) {
             if let Some(monster_data) = game_data.monsters.get(creature_id) {
                 // Create creature with food need initialized
                 let mut creature_state = CreatureState::new(

@@ -2,7 +2,7 @@
 //! Supports procedural layouts based on difficulty
 
 use crate::state::tile_state::{Ownership, TilePos};
-use rand::Rng;
+use macroquad::rand;
 
 use super::config::{Difficulty, Grid, MapConfig, StartingLayout, StartingPosition};
 
@@ -21,7 +21,7 @@ fn rotate_offset(x: i32, y: i32, rotation: u8) -> (i32, i32) {
 // ============================================================================
 
 /// Calculate starting position based on strategy
-pub fn calculate_starting_position(config: &MapConfig, rng: &mut impl Rng) -> TilePos {
+pub fn calculate_starting_position(config: &MapConfig) -> TilePos {
     match config.starting_position {
         StartingPosition::Center => {
             TilePos::new((config.width / 2) as i32, (config.height / 2) as i32)
@@ -33,21 +33,21 @@ pub fn calculate_starting_position(config: &MapConfig, rng: &mut impl Rng) -> Ti
                 TilePos::new(12, (config.height - 12) as i32),
                 TilePos::new((config.width - 12) as i32, (config.height - 12) as i32),
             ];
-            corners[rng.gen_range(0..4)]
+            corners[rand::gen_range(0, 4)]
         }
         StartingPosition::Edge => {
-            let edge = rng.gen_range(0..4);
+            let edge = rand::gen_range(0u32, 4);
             match edge {
-                0 => TilePos::new(rng.gen_range(12..config.width as i32 - 12), 12),
-                1 => TilePos::new((config.width - 12) as i32, rng.gen_range(12..config.height as i32 - 12)),
-                2 => TilePos::new(rng.gen_range(12..config.width as i32 - 12), (config.height - 12) as i32),
-                _ => TilePos::new(12, rng.gen_range(12..config.height as i32 - 12)),
+                0 => TilePos::new(rand::gen_range(12, config.width as i32 - 12), 12),
+                1 => TilePos::new((config.width - 12) as i32, rand::gen_range(12, config.height as i32 - 12)),
+                2 => TilePos::new(rand::gen_range(12, config.width as i32 - 12), (config.height - 12) as i32),
+                _ => TilePos::new(12, rand::gen_range(12, config.height as i32 - 12)),
             }
         }
         StartingPosition::Random => {
             TilePos::new(
-                rng.gen_range(15..config.width as i32 - 15),
-                rng.gen_range(15..config.height as i32 - 15),
+                rand::gen_range(15, config.width as i32 - 15),
+                rand::gen_range(15, config.height as i32 - 15),
             )
         }
     }
@@ -68,7 +68,7 @@ pub fn create_starting_area(grid: &mut Grid, config: &MapConfig, start_pos: Tile
     let layout = StartingLayout::from_difficulty(config.difficulty);
     
     // Random rotation for variety (0, 90, 180, or 270 degrees)
-    let rotation = rand::random::<u8>() % 4;
+    let rotation = rand::gen_range(0u8, 4);
 
     // Clear area around center
     let size = layout.cleared_area_size;

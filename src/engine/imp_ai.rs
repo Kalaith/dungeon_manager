@@ -381,8 +381,8 @@ fn wander_randomly(
     let mut wander_pos = None;
 
     while attempts < 10 && wander_pos.is_none() {
-        let dx = rand::random::<i32>() % (wander_radius * 2 + 1) - wander_radius;
-        let dy = rand::random::<i32>() % (wander_radius * 2 + 1) - wander_radius;
+        let dx = macroquad::rand::gen_range(-wander_radius, wander_radius + 1);
+        let dy = macroquad::rand::gen_range(-wander_radius, wander_radius + 1);
         let candidate = TilePos::new(imp_pos.x + dx, imp_pos.y + dy);
 
         if let Some(tile) = dungeon.get_tile(candidate) {

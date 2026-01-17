@@ -1,7 +1,7 @@
 //! Natural features and hero portals
 
 use crate::state::tile_state::{Ownership, TilePos};
-use rand::Rng;
+use macroquad::rand;
 use std::collections::VecDeque;
 
 use super::config::{Grid, MapConfig};
@@ -13,19 +13,19 @@ use super::utils::distance_f32;
 // ============================================================================
 
 /// Add natural geological features to the map
-pub fn add_natural_features(grid: &mut Grid, config: &MapConfig, rng: &mut impl Rng) {
-    add_stone_pillars(grid, config.num_stone_pillars, rng);
-    add_collapsed_chambers(grid, config.num_collapsed_chambers, rng);
+pub fn add_natural_features(grid: &mut Grid, config: &MapConfig) {
+    add_stone_pillars(grid, config.num_stone_pillars);
+    add_collapsed_chambers(grid, config.num_collapsed_chambers);
 }
 
-fn add_stone_pillars(grid: &mut Grid, count: usize, rng: &mut impl Rng) {
+fn add_stone_pillars(grid: &mut Grid, count: usize) {
     let height = grid.len();
     let width = grid[0].len();
 
     for _ in 0..count {
-        let x = rng.gen_range(8..width - 8);
-        let y = rng.gen_range(8..height - 8);
-        let radius = rng.gen_range(1..3);
+        let x = rand::gen_range(8, width - 8);
+        let y = rand::gen_range(8, height - 8);
+        let radius = rand::gen_range(1, 3);
 
         if is_open_area(grid, TilePos::new(x as i32, y as i32), radius * 2 + 1) {
             create_pillar(grid, x, y, radius);
@@ -76,19 +76,19 @@ fn create_pillar(grid: &mut Grid, cx: usize, cy: usize, radius: usize) {
     }
 }
 
-fn add_collapsed_chambers(grid: &mut Grid, count: usize, rng: &mut impl Rng) {
+fn add_collapsed_chambers(grid: &mut Grid, count: usize) {
     let height = grid.len();
     let width = grid[0].len();
 
     for _ in 0..count {
-        let cx = rng.gen_range(12..width - 12);
-        let cy = rng.gen_range(12..height - 12);
-        let size = rng.gen_range(5..10);
-        create_collapsed_chamber(grid, cx, cy, size, rng);
+        let cx = rand::gen_range(12, width - 12);
+        let cy = rand::gen_range(12, height - 12);
+        let size = rand::gen_range(5, 10);
+        create_collapsed_chamber(grid, cx, cy, size);
     }
 }
 
-fn create_collapsed_chamber(grid: &mut Grid, cx: usize, cy: usize, size: usize, rng: &mut impl Rng) {
+fn create_collapsed_chamber(grid: &mut Grid, cx: usize, cy: usize, size: usize) {
     let height = grid.len();
     let width = grid[0].len();
 
@@ -113,7 +113,7 @@ fn create_collapsed_chamber(grid: &mut Grid, cx: usize, cy: usize, size: usize, 
             let ny = (y as i32 + dy) as usize;
 
             if nx > 5 && nx < width - 5 && ny > 5 && ny < height - 5 {
-                if !visited[ny][nx] && rng.gen::<f32>() < 0.75 {
+                if !visited[ny][nx] && rand::gen_range(0.0f32, 1.0) < 0.75 {
                     visited[ny][nx] = true;
                     queue.push_back((nx, ny));
                 }
@@ -127,10 +127,10 @@ fn create_collapsed_chamber(grid: &mut Grid, cx: usize, cy: usize, size: usize, 
 // ============================================================================
 
 /// Add underground monster lairs with spawners
-pub fn add_monster_lairs(grid: &mut Grid, start_pos: TilePos, config: &MapConfig, rng: &mut impl Rng) {
+pub fn add_monster_lairs(grid: &mut Grid, start_pos: TilePos, _config: &MapConfig) {
     let height = grid.len();
     let width = grid[0].len();
-    let target_lairs = rng.gen_range(3..6); // Aim for 3-5 lairs
+    let target_lairs = rand::gen_range(3u32, 6); // Aim for 3-5 lairs
     let mut min_distance = 25.0; // Initial strict distance
 
     let mut lairs_placed = 0;
@@ -139,7 +139,7 @@ pub fn add_monster_lairs(grid: &mut Grid, start_pos: TilePos, config: &MapConfig
     // First pass: Try to place target number with strict rules
     while lairs_placed < target_lairs && attempts < 100 {
         attempts += 1;
-        if try_place_lair(grid, width, height, start_pos, min_distance, rng) {
+        if try_place_lair(grid, width, height, start_pos, min_distance) {
             lairs_placed += 1;
         }
     }
@@ -151,15 +151,15 @@ pub fn add_monster_lairs(grid: &mut Grid, start_pos: TilePos, config: &MapConfig
         min_distance *= 0.8; // Reduce distance requirement
         if min_distance < 10.0 { min_distance = 10.0; } // Hard limit
 
-        if try_place_lair(grid, width, height, start_pos, min_distance, rng) {
+        if try_place_lair(grid, width, height, start_pos, min_distance) {
             lairs_placed += 1;
         }
     }
 }
 
-fn try_place_lair(grid: &mut Grid, width: usize, height: usize, start_pos: TilePos, min_dist: f32, rng: &mut impl Rng) -> bool {
-    let cx = rng.gen_range(10..width - 10);
-    let cy = rng.gen_range(10..height - 10);
+fn try_place_lair(grid: &mut Grid, width: usize, height: usize, start_pos: TilePos, min_dist: f32) -> bool {
+    let cx = rand::gen_range(10, width - 10);
+    let cy = rand::gen_range(10, height - 10);
     let pos = TilePos::new(cx as i32, cy as i32);
 
     if distance_f32(pos, start_pos) < min_dist {
@@ -172,18 +172,18 @@ fn try_place_lair(grid: &mut Grid, width: usize, height: usize, start_pos: TileP
     }
 
     // Carve the lair
-    create_monster_lair(grid, cx, cy, rng);
+    create_monster_lair(grid, cx, cy);
     true
 }
 
-fn create_monster_lair(grid: &mut Grid, cx: usize, cy: usize, rng: &mut impl Rng) {
+fn create_monster_lair(grid: &mut Grid, cx: usize, cy: usize) {
     let height = grid.len();
     let width = grid[0].len();
-    let radius = rng.gen_range(2..4);
+    let radius = rand::gen_range(2i32, 4);
 
     // Carve room
-    for dy in -(radius as i32)..=(radius as i32) {
-        for dx in -(radius as i32)..=(radius as i32) {
+    for dy in -radius..=radius {
+        for dx in -radius..=radius {
             if dx * dx + dy * dy <= radius * radius {
                 let x = (cx as i32 + dx).max(1).min(width as i32 - 2) as usize;
                 let y = (cy as i32 + dy).max(1).min(height as i32 - 2) as usize;
@@ -202,21 +202,21 @@ fn create_monster_lair(grid: &mut Grid, cx: usize, cy: usize, rng: &mut impl Rng
     
     // Add some random gold/treasure around
     for _ in 0..3 {
-        let dx = rng.gen_range(-(radius as i32)..=(radius as i32));
-        let dy = rng.gen_range(-(radius as i32)..=(radius as i32));
+        let dx = rand::gen_range(-radius, radius + 1);
+        let dy = rand::gen_range(-radius, radius + 1);
         let x = (cx as i32 + dx).max(1).min(width as i32 - 2) as usize;
         let y = (cy as i32 + dy).max(1).min(height as i32 - 2) as usize;
         
         if grid[y][x].tile_type == "corrupted_floor" && (dx != 0 || dy != 0) {
-            if rng.gen_bool(0.3) {
+            if rand::gen_range(0.0f32, 1.0) < 0.3 {
                 grid[y][x].tile_type = "gold_vein".to_string();
-                grid[y][x].resources_remaining = Some(rng.gen_range(100..300));
+                grid[y][x].resources_remaining = Some(rand::gen_range(100u32, 300));
             }
         }
     }
 }
 
-pub fn place_hero_portals(grid: &mut Grid, start_pos: TilePos, config: &MapConfig, rng: &mut impl Rng) {
+pub fn place_hero_portals(grid: &mut Grid, start_pos: TilePos, config: &MapConfig) {
     let height = grid.len();
     let width = grid[0].len();
     let mut portal_positions: Vec<TilePos> = Vec::new();
@@ -225,7 +225,7 @@ pub fn place_hero_portals(grid: &mut Grid, start_pos: TilePos, config: &MapConfi
     if candidates.is_empty() { return; }
 
     for _ in 0..config.num_hero_portals {
-        if let Some(pos) = select_best_portal_location(&candidates, &portal_positions, rng) {
+        if let Some(pos) = select_best_portal_location(&candidates, &portal_positions) {
             let px = pos.x as usize;
             let py = pos.y as usize;
             if px > 0 && px < width - 1 && py > 0 && py < height - 1 {
@@ -254,10 +254,10 @@ fn find_portal_candidates(grid: &Grid, start_pos: TilePos, min_distance: f32) ->
     candidates
 }
 
-fn select_best_portal_location(candidates: &[TilePos], existing_portals: &[TilePos], rng: &mut impl Rng) -> Option<TilePos> {
+fn select_best_portal_location(candidates: &[TilePos], existing_portals: &[TilePos]) -> Option<TilePos> {
     if candidates.is_empty() { return None; }
     if existing_portals.is_empty() {
-        return Some(candidates[rng.gen_range(0..candidates.len())]);
+        return Some(candidates[rand::gen_range(0, candidates.len())]);
     }
 
     let min_portal_spacing = 15.0;
@@ -275,8 +275,8 @@ fn select_best_portal_location(candidates: &[TilePos], existing_portals: &[TileP
     }
 
     if best_candidates.is_empty() {
-        Some(candidates[rng.gen_range(0..candidates.len())])
+        Some(candidates[rand::gen_range(0, candidates.len())])
     } else {
-        Some(best_candidates[rng.gen_range(0..best_candidates.len())])
+        Some(best_candidates[rand::gen_range(0, best_candidates.len())])
     }
 }

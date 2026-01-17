@@ -1,1 +1,1 @@
-do not run 'cargo build 2>&1' only 'cargo build'
+do not add 2>&1 to the command
