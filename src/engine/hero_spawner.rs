@@ -198,38 +198,49 @@ fn count_defender_attacker_ratio(state: &GameState) -> (usize, usize) {
 }
 
 fn find_spawn_pos(state: &GameState, center: TilePos, game_data: &GameData) -> TilePos {
-    // Try to find a walkable tile near the center
     let (w, h) = crate::engine::tile_grid::get_grid_dimensions(&state.dungeon.grid);
-    
-    // Check increasing radius
+
     for r in 1..=4 {
         for dy in -r..=r {
             for dx in -r..=r {
-                if dx*dx + dy*dy <= r*r { 
-                    let x = center.x + dx;
-                    let y = center.y + dy;
-                    if x >= 0 && y >= 0 && x < w as i32 && y < h as i32 {
-                        let pos = TilePos::new(x, y);
-                        // Check if walkable
-                        if let Some(tile) = state.dungeon.get_tile(pos) {
-                            let blocks = if let Some(td) = game_data.tiles.get(&tile.tile_type) {
-                                td.blocks_movement
-                            } else {
-                                false
-                            };
-
-                            if !blocks {
-                                if state.entities.at_position(pos).count() == 0 {
-                                    return pos;
-                                }
-                            }
-                        }
-                    }
+                if let Some(pos) = try_spawn_position(state, game_data, center, dx, dy, r, w, h) {
+                    return pos;
                 }
             }
         }
     }
-    
-    // Fallback
+
     center
+}
+
+fn try_spawn_position(state: &GameState, game_data: &GameData, center: TilePos, dx: i32, dy: i32, r: i32, w: usize, h: usize) -> Option<TilePos> {
+    if dx * dx + dy * dy > r * r {
+        return None;
+    }
+
+    let x = center.x + dx;
+    let y = center.y + dy;
+
+    if x < 0 || y < 0 || x >= w as i32 || y >= h as i32 {
+        return None;
+    }
+
+    let pos = TilePos::new(x, y);
+
+    if is_valid_spawn_tile(state, game_data, pos) {
+        Some(pos)
+    } else {
+        None
+    }
+}
+
+fn is_valid_spawn_tile(state: &GameState, game_data: &GameData, pos: TilePos) -> bool {
+    let tile = match state.dungeon.get_tile(pos) {
+        Some(t) => t,
+        None => return false,
+    };
+
+    let blocks = game_data.tiles.get(&tile.tile_type).map(|td| td.blocks_movement).unwrap_or(false);
+
+    !blocks && state.entities.at_position(pos).count() == 0
 }

@@ -5,11 +5,24 @@ use crate::data::GameData;
 use crate::engine::combat::{resolve_combat_tick, update_status_effects};
 use crate::engine::hero_ai::update_hero_ai;
 use crate::engine::tile_grid;
-use crate::state::entities::{EntityId, EntityManager};
+use crate::state::entities::{EntityId, EntityManager, EntityType};
 use crate::state::player_state::PlayerState;
 use crate::state::tile_state::{Ownership, TilePos};
 use crate::state::room_manager::RoomManager;
 use std::collections::HashSet;
+
+/// Extract attack type from an entity type for combat calculations
+fn get_entity_attack_type(entity_type: &EntityType, game_data: &GameData) -> String {
+    match entity_type {
+        EntityType::Creature(state) => game_data.monsters.get(&state.creature_id)
+            .map(|d| d.combat.attack_type.clone())
+            .unwrap_or_else(|| "melee".to_string()),
+        EntityType::Hero(state) => game_data.heroes.get(&state.hero_id)
+            .map(|d| d.combat.attack_type.clone())
+            .unwrap_or_else(|| "melee".to_string()),
+        EntityType::Structure(_) => "none".to_string(),
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MapType {
@@ -253,60 +266,12 @@ impl GameState {
                 }
             }
 
-            // Then Digging logic
-            // Handle digging logic
+            // Handle hero digging logic
+            let (carved_wall, should_move) = self.process_hero_digging(hero_id, game_data, dt);
 
-            let mut carved_wall = None;
-            let mut should_move = true;
-
-            if let Some(entity) = self.entities.get_mut(hero_id) {
-                 if let Some(hero_state) = entity.as_hero_mut() {
-                     if let Some(path) = &hero_state.current_path {
-                         if let Some(&next_pos) = path.first() {
-                               // Check if wall
-                              let is_wall = if let Some(tile) = self.dungeon.get_tile(next_pos) {
-                                   // check block movement
-                                   if let Some(td) = game_data.tiles.get(&tile.tile_type) {
-                                       td.blocks_movement 
-                                   } else { false }
-                              } else { false };
-                             
-                             if is_wall {
-                                 if hero_state.can_dig {
-                                     // Don't dig own walls!
-                                     if let Some(tile) = self.dungeon.get_tile(next_pos) {
-                                         if tile.tile_type == "hero_wall" {
-                                             hero_state.current_path = None; // Can't go this way
-                                             continue;
-                                         }
-                                     }
-                                     
-                                     should_move = false;
-                                     hero_state.is_digging = true;
-                                     hero_state.dig_timer += dt; 
-                                     if hero_state.dig_timer >= hero_state.max_dig_time {
-                                         hero_state.dig_timer = 0.0;
-                                         carved_wall = Some(next_pos);
-                                         hero_state.is_digging = false; // Done digging this tile
-                                     }
-                                 } else {
-                                     // Stuck? recalculate path?
-                                     hero_state.current_path = None; // Force repath
-                                 }
-                             } else {
-                                 hero_state.is_digging = false;
-                                 hero_state.dig_timer = 0.0;
-                             }
-                         }
-                     }
-                 }
-            }
-            
             if let Some(pos) = carved_wall {
-                // Perform dig (turn to floor)
                 if let Some(tile) = self.dungeon.get_tile_mut(pos) {
-                    tile.tile_type = "claimed_floor".to_string(); // Was "earth", which blocks movement!
-                    // Reset resources/ownership if needed
+                    tile.tile_type = "claimed_floor".to_string();
                     tile.ownership = crate::state::tile_state::Ownership::Unclaimed;
                 }
             }
@@ -848,43 +813,29 @@ impl GameState {
 
     fn resolve_combat(&mut self, game_data: &GameData, dt: f32) {
         let all_entities: Vec<EntityId> = self.entities.all().map(|e| e.id).collect();
-        
+
         for &attacker_id in &all_entities {
-            if let Some(attacker) = self.entities.get(attacker_id) {
-                // Find combat targets
-                let targets = crate::engine::combat::find_combat_targets(attacker, self.entities.entities(), &self.dungeon, game_data);
-                
-                for target_id in targets {
-                    if let Some(defender) = self.entities.get(target_id) {
-                        // Check if in combat range
-                        if crate::engine::combat::in_combat_range(attacker.pos, defender.pos, 
-                            match &attacker.entity_type {
-                                crate::state::entities::EntityType::Creature(state) => {
-                                    game_data.monsters.get(&state.creature_id)
-                                        .map(|d| d.combat.attack_type.clone())
-                                        .unwrap_or_else(|| "melee".to_string())
-                                }
-                                crate::state::entities::EntityType::Hero(state) => {
-                                    game_data.heroes.get(&state.hero_id)
-                                        .map(|d| d.combat.attack_type.clone())
-                                        .unwrap_or_else(|| "melee".to_string())
-                                }
-                                crate::state::entities::EntityType::Structure(_) => "none".to_string(),
-                            }.as_str(), &self.dungeon.grid, game_data) {
-                            
-                            // Resolve combat tick
-                            let result = resolve_combat_tick(attacker, defender, dt, game_data);
-                            
-                            // Apply damage and effects
-                            crate::engine::combat::apply_combat_result(
-                                &result, attacker_id, target_id, self.entities.entities_mut()
-                            );
-                            
-                            // Only process one combat per attacker per tick
-                            break;
-                        }
-                    }
+            let attacker = match self.entities.get(attacker_id) {
+                Some(a) => a,
+                None => continue,
+            };
+
+            let attack_type = get_entity_attack_type(&attacker.entity_type, game_data);
+            let targets = crate::engine::combat::find_combat_targets(attacker, self.entities.entities(), &self.dungeon, game_data);
+
+            for target_id in targets {
+                let defender = match self.entities.get(target_id) {
+                    Some(d) => d,
+                    None => continue,
+                };
+
+                if !crate::engine::combat::in_combat_range(attacker.pos, defender.pos, &attack_type, &self.dungeon.grid, game_data) {
+                    continue;
                 }
+
+                let result = resolve_combat_tick(attacker, defender, dt, game_data);
+                crate::engine::combat::apply_combat_result(&result, attacker_id, target_id, self.entities.entities_mut());
+                break;
             }
         }
     }
@@ -989,6 +940,88 @@ impl GameState {
                 }
             }
         }
+    }
+
+    /// Process hero digging logic with flattened control flow
+    /// Returns (carved_wall_pos, should_move)
+    fn process_hero_digging(&mut self, hero_id: EntityId, game_data: &GameData, dt: f32) -> (Option<TilePos>, bool) {
+        // First, gather the info we need without holding mutable borrows
+        let (next_pos, can_dig) = {
+            let entity = match self.entities.get(hero_id) {
+                Some(e) => e,
+                None => return (None, true),
+            };
+            let hero_state = match entity.as_hero() {
+                Some(h) => h,
+                None => return (None, true),
+            };
+            let path = match &hero_state.current_path {
+                Some(p) => p,
+                None => return (None, true),
+            };
+            let next_pos = match path.first() {
+                Some(&p) => p,
+                None => return (None, true),
+            };
+            (next_pos, hero_state.can_dig)
+        };
+
+        // Check tile properties without holding entity borrow
+        let is_wall = self.tile_blocks_movement(next_pos, game_data);
+        let is_hero_wall = self.dungeon.get_tile(next_pos).map(|t| t.tile_type == "hero_wall").unwrap_or(false);
+        
+        let is_diggable = self.dungeon.get_tile(next_pos)
+            .and_then(|t| game_data.tiles.get(&t.tile_type))
+            .map(|td| td.diggable)
+            .unwrap_or(false);
+
+        // Now apply changes with mutable borrow
+        let entity = match self.entities.get_mut(hero_id) {
+            Some(e) => e,
+            None => return (None, true),
+        };
+        let hero_state = match entity.as_hero_mut() {
+            Some(h) => h,
+            None => return (None, true),
+        };
+
+        if !is_wall {
+            hero_state.is_digging = false;
+            hero_state.dig_timer = 0.0;
+            return (None, true);
+        }
+
+        if !can_dig {
+            hero_state.current_path = None;
+            return (None, true);
+        }
+
+        // PREVENT DIGGING IF TILE IS NOT DIGGABLE (e.g. Dungeon Heart, Bedrock)
+        if !is_diggable || is_hero_wall {
+            hero_state.current_path = None;
+            hero_state.is_digging = false;
+            return (None, true);
+        }
+
+        hero_state.is_digging = true;
+        hero_state.dig_timer += dt;
+
+        if hero_state.dig_timer >= hero_state.max_dig_time {
+            hero_state.dig_timer = 0.0;
+            hero_state.is_digging = false;
+            return (Some(next_pos), false);
+        }
+
+        (None, false)
+    }
+
+    /// Check if a tile blocks movement
+    fn tile_blocks_movement(&self, pos: TilePos, game_data: &GameData) -> bool {
+        let tile = match self.dungeon.get_tile(pos) {
+            Some(t) => t,
+            None => return false,
+        };
+        game_data.tiles.get(&tile.tile_type).map(|td| td.blocks_movement).unwrap_or(false)
     }
 
     /// Check for victory or defeat conditions

@@ -99,8 +99,7 @@ pub fn detect_rooms(grid: &Grid, room_type: &str) -> Vec<HashSet<TilePos>> {
 pub fn calculate_efficiency(room: &Room, grid: &Grid, game_data: &GameData) -> f32 {
     let mut total_perimeter_segments = 0.0f32;
     let mut secured_segments = 0.0f32;
-    
-    // Check neighbors for each tile in the room
+
     for tile_pos in &room.tiles {
         let neighbors = [
             TilePos::new(tile_pos.x + 1, tile_pos.y),
@@ -110,35 +109,32 @@ pub fn calculate_efficiency(room: &Room, grid: &Grid, game_data: &GameData) -> f
         ];
 
         for neighbor in neighbors {
-            // If neighbor is NOT in the room, it's a perimeter segment
-            if !room.tiles.contains(&neighbor) {
-                total_perimeter_segments += 1.0;
-                
-                // Check if this perimeter segment is secured (Wall or Door)
-                // We need to check bounds first
-                if neighbor.x >= 0 && neighbor.y >= 0 && 
-                   (neighbor.y as usize) < grid.len() && 
-                   (neighbor.x as usize) < grid[0].len() {
-                    let tile = &grid[neighbor.y as usize][neighbor.x as usize];
-                    // Walls (rock/earth marked as wall?) and Doors count as secured
-                    // "wall", "reinforced_wall", "door", "rock" (unmined) are valid
-                    if tile_types::is_secure(&tile.tile_type, game_data) {
-                        secured_segments += 1.0;
-                    }
-                } else {
-                    // Map edge counts as secured (indestructible bedrock usually)
-                    secured_segments += 1.0;
-                }
+            if room.tiles.contains(&neighbor) {
+                continue;
+            }
+
+            total_perimeter_segments += 1.0;
+            if is_perimeter_secured(neighbor, grid, game_data) {
+                secured_segments += 1.0;
             }
         }
     }
 
     if total_perimeter_segments == 0.0 {
-        return 1.0; // Should not happen for valid rooms
+        return 1.0;
     }
 
-    // Calculate ratio
     (secured_segments / total_perimeter_segments).max(0.25)
+}
+
+/// Check if a perimeter position is secured (by wall, door, or map edge)
+fn is_perimeter_secured(pos: TilePos, grid: &Grid, game_data: &GameData) -> bool {
+    if pos.x < 0 || pos.y < 0 || (pos.y as usize) >= grid.len() || (pos.x as usize) >= grid[0].len() {
+        return true; // Map edge counts as secured
+    }
+
+    let tile = &grid[pos.y as usize][pos.x as usize];
+    tile_types::is_secure(&tile.tile_type, game_data)
 }
 
 /// Flood fill algorithm to find all contiguous tiles from a starting position

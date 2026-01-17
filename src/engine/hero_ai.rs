@@ -337,14 +337,48 @@ fn calculate_distance(a: TilePos, b: TilePos) -> f32 {
 
 /// Check if dungeon heart is still alive
 fn is_dungeon_heart_alive(game_state: &GameState) -> bool {
-    // Check if heart room exists and has heart object
-    for room in &game_state.room_manager.rooms {
-        if room.room_type == "dungeon_heart" {
-            // In a full implementation, check for heart entity or room health
-            return true;
+    game_state.room_manager.rooms.iter().any(|room| room.room_type == "dungeon_heart")
+}
+
+/// Find a valid wander target position for a hero
+fn find_wander_target(spawn_pos: TilePos, current_pos: TilePos, game_state: &GameState, game_data: &GameData) -> Option<TilePos> {
+    let radius = 5;
+    for _ in 0..10 {
+        let dx = macroquad::rand::gen_range(-radius, radius + 1);
+        let dy = macroquad::rand::gen_range(-radius, radius + 1);
+        let target_pos = TilePos::new(spawn_pos.x + dx, spawn_pos.y + dy);
+
+        if target_pos == current_pos {
+            continue;
+        }
+
+        if is_tile_walkable_for_hero(target_pos, game_state, game_data) {
+            return Some(target_pos);
         }
     }
-    false
+    None
+}
+
+/// Check if a tile is walkable for heroes
+fn is_tile_walkable_for_hero(pos: TilePos, game_state: &GameState, game_data: &GameData) -> bool {
+    let tile = match game_state.dungeon.get_tile(pos) {
+        Some(t) => t,
+        None => return false,
+    };
+
+    if let Some(tile_data) = game_data.tiles.get(&tile.tile_type) {
+        return !tile_data.blocks_movement;
+    }
+
+    if tile.tile_type == "hero_wall" || tile.tile_type == "hero_gate" {
+        return false;
+    }
+
+    if game_data.hero_buildings.get(&tile.tile_type).is_some() {
+        return true;
+    }
+
+    true
 }
 
 // ... existing code ...
@@ -389,68 +423,13 @@ pub fn update_hero_ai(
     // Update target if needed
     match &hero_state.current_goal {
         HeroGoal::RestAtSpawn(spawn_pos) => {
-             // If we have no target, or we reached the target, pick a new random spot near spawn
-             let needs_new_target = hero_state.target_pos.is_none() || 
-                                   (hero_state.target_pos == Some(hero_entity.pos));
-             
-
-                                   
-             if needs_new_target {
-                 // Wander radius
-                 let radius = 5;
-                 let mut attempts = 0;
-                 let mut found_target = None;
-                 
-                 while attempts < 10 {
-                     // Use abs() to ensure positive modulo result
-                     let dx = macroquad::rand::gen_range(-radius, radius + 1);
-                     let dy = macroquad::rand::gen_range(-radius, radius + 1);
-                     let target_x = spawn_pos.x + dx;
-                     let target_y = spawn_pos.y + dy;
-                     let target_pos = TilePos::new(target_x, target_y);
-                     
-                     // Skip if this is the current position (we need to move somewhere DIFFERENT)
-                     if target_pos == hero_entity.pos {
-                         attempts += 1;
-                         continue;
-                     }
-                     
-                     // Check if valid and walkable
-                     if let Some(tile) = game_state.dungeon.get_tile(target_pos) {
-                         // Check tile data if available, otherwise check if it's a hero building
-                         let is_walkable = if let Some(tile_data) = game_data.tiles.get(&tile.tile_type) {
-                             !tile_data.blocks_movement
-                         } else if tile.tile_type == "hero_wall" || tile.tile_type == "hero_gate" {
-                             // Walls and gates block movement
-                             false
-                         } else if game_data.hero_buildings.get(&tile.tile_type).is_some() {
-                             // Other hero building tiles (barracks, etc.) are walkable for heroes
-                             true
-                         } else {
-                             // Default valid if no data (assume floor)
-                             true
-                         };
-                         
-                         if is_walkable {
-
-                             found_target = Some(target_pos);
-                             break;
-                         }
-                     } else {
-
-                     }
-                     attempts += 1;
-                 }
-                 
-                 // Only update target if we found a valid DIFFERENT position
-                 // If we couldn't find one, leave target_pos unchanged and try again next tick
-                 if let Some(target) = found_target {
-                     hero_state.target_pos = Some(target);
-                     // Reset path to force recalculation
-                     hero_state.current_path = None;
-                 } else {
-                 }
-             }
+            let needs_new_target = hero_state.target_pos.is_none() || hero_state.target_pos == Some(hero_entity.pos);
+            if needs_new_target {
+                if let Some(target) = find_wander_target(*spawn_pos, hero_entity.pos, game_state, game_data) {
+                    hero_state.target_pos = Some(target);
+                    hero_state.current_path = None;
+                }
+            }
         }
         _ => {
             // For goals that target rooms, try to find a target room
@@ -499,121 +478,107 @@ pub fn update_hero_ai(
     }
 
     // Pathfinding
-    if let Some(target) = hero_state.target_pos {
-        // If we have no path or target changed (simplified: just check if no path)
-        if hero_state.current_path.is_none() && target != hero_entity.pos {
-              if matches!(hero_state.current_goal, HeroGoal::DestroyHeart) {
-                  eprintln!("[DEBUG] Hero {} calculating path from {:?} to {:?} (Goal: DestroyHeart)", hero_state.hero_id, hero_entity.pos, target);
-              }
+    let target = match hero_state.target_pos {
+        Some(t) if hero_state.current_path.is_none() && t != hero_entity.pos => t,
+        _ => {
+            let threat_level = evaluate_threat(hero_entity.pos, game_state);
+            hero_state.is_fleeing = matches!(threat_level, ThreatLevel::Overwhelming)
+                || (matches!(threat_level, ThreatLevel::High) && hero_state.should_retreat(0.6));
+            return;
+        }
+    };
 
-             
-             // Build pathfinding grid
-             // note: this is expensive to do every frame for every hero, should be cached in GameState
-             let (w, h) = crate::engine::tile_grid::get_grid_dimensions(&game_state.dungeon.grid);
-             let mut pf_grid = crate::engine::pathfinding::PathfindingGrid::new(w, h);
-             
-             for y in 0..h {
-                 for x in 0..w {
-                     let pos = TilePos::new(x as i32, y as i32);
-                     let mut walkable = false;
-                     let mut cost = 1.0;
+    if matches!(hero_state.current_goal, HeroGoal::DestroyHeart) {
+        eprintln!("[DEBUG] Hero {} calculating path from {:?} to {:?} (Goal: DestroyHeart)", hero_state.hero_id, hero_entity.pos, target);
+    }
 
-                     if let Some(tile) = game_state.dungeon.get_tile(pos) {
-                         // Special overrides for structural tiles that need to be walkable for pathfinding
-                         if tile.tile_type == "dungeon_heart" || tile.tile_type == "hero_gate" {
-                             walkable = true;
-                         } else if let Some(td) = game_data.tiles.get(&tile.tile_type) {
-                             if !td.blocks_movement {
-                                 walkable = true;
-                             } else if hero_state.can_dig && td.diggable {
-                                 // Heroes can dig, but NOT their own walls
-                                 if tile.tile_type == "hero_wall" {
-                                     walkable = false;
-                                 } else {
-                                     // Tunneler can move through diggable walls with high cost
-                                     walkable = true;
-                                     cost = 10.0;
-                                 }
-                             }
-                         } else if tile.tile_type == "hero_wall" {
-                             // Walls block movement (fallback)
-                             walkable = false;
-                        } else { 
-                            walkable = true; // Default floor
-                         }
-                     }
-                     
-                     let pf_pos = crate::engine::pathfinding::Pos::new(x as i32, y as i32);
-                     pf_grid.set_walkable(pf_pos, walkable);
-                     pf_grid.set_cost(pf_pos, cost);
-                 }
-             }
+    let pf_grid = build_hero_pathfinding_grid(game_state, game_data, hero_state.can_dig);
+    let pf_start = crate::engine::pathfinding::Pos::new(hero_entity.pos.x, hero_entity.pos.y);
+    let pf_end = crate::engine::pathfinding::Pos::new(target.x, target.y);
 
-             // Calculate path
-             let pf_start = crate::engine::pathfinding::Pos::new(hero_entity.pos.x, hero_entity.pos.y);
-             let pf_end = crate::engine::pathfinding::Pos::new(target.x, target.y);
-             
+    let path_result = crate::engine::pathfinding::find_path(pf_start, pf_end, &pf_grid, crate::engine::pathfinding::Heuristic::Manhattan, false);
 
-
-             let path_result = crate::engine::pathfinding::find_path(
-                 pf_start,
-                 pf_end,
-                 &pf_grid,
-                 crate::engine::pathfinding::Heuristic::Manhattan,
-                 false   // Allow diagonals
-             );
-             
-            // Convert back
-             if let Some(p) = path_result {
-                 let waypoints: Vec<TilePos> = p.waypoints.iter()
-                     .map(|pos| TilePos::new(pos.x, pos.y))
-                     .collect();
-                 hero_state.current_path = Some(waypoints);
-            } else if hero_state.can_dig && matches!(hero_state.current_goal, HeroGoal::DestroyHeart) {
-                 // Fallback: If pathfinding fails (stuck?), pick a random nearby valid tile to wander to.
-                 // This breaks the "stuck in corner" loop by changing the immediate goal.
-                 
-                 eprintln!("[DEBUG] Hero {} pathfinding to Heart failed! Switching to temporary Wander.", hero_state.hero_id);
-                 
-                 let radius = 3;
-                 let mut attempts = 0;
-                 let mut wander_target = None;
-                 
-                 while attempts < 10 {
-                     let dx = macroquad::rand::gen_range(-radius, radius + 1);
-                     let dy = macroquad::rand::gen_range(-radius, radius + 1);
-                     let nx = hero_entity.pos.x + dx;
-                     let ny = hero_entity.pos.y + dy;
-                     let n_pos = TilePos::new(nx, ny);
-                     
-                     if n_pos != hero_entity.pos {
-                         // Check validity
-                         if let Some(tile) = game_state.dungeon.get_tile(n_pos) {
-                             let is_walkable = tile.tile_type != "hero_wall"; // Simple check
-                             if is_walkable {
-                                 wander_target = Some(n_pos);
-                                 break;
-                             }
-                         }
-                     }
-                     attempts += 1;
-                 }
-                 
-                 if let Some(wt) = wander_target {
-                     // Set new temporary target. 
-                     // Next frame, pathfinding will run for this new target (which is likely reachable).
-                     hero_state.target_pos = Some(wt);
-                     hero_state.current_path = None; // clear path to force calc
-                 } else {
-                     eprintln!("[DEBUG] Hero {} stuck and could not find wander target!", hero_state.hero_id);
-                     // Just wait?
-                 }
-             }
+    if let Some(p) = path_result {
+        let waypoints: Vec<TilePos> = p.waypoints.iter().map(|pos| TilePos::new(pos.x, pos.y)).collect();
+        hero_state.current_path = Some(waypoints);
+    } else if hero_state.can_dig && matches!(hero_state.current_goal, HeroGoal::DestroyHeart) {
+        eprintln!("[DEBUG] Hero {} pathfinding to Heart failed! Switching to temporary Wander.", hero_state.hero_id);
+        if let Some(wt) = find_emergency_wander_target(hero_entity.pos, game_state) {
+            hero_state.target_pos = Some(wt);
+            hero_state.current_path = None;
+        } else {
+            eprintln!("[DEBUG] Hero {} stuck and could not find wander target!", hero_state.hero_id);
         }
     }
 
-    // Set fleeing flag based on threat
     let threat_level = evaluate_threat(hero_entity.pos, game_state);
-    hero_state.is_fleeing = matches!(threat_level, ThreatLevel::Overwhelming) ||
-                           (matches!(threat_level, ThreatLevel::High) && hero_state.should_retreat(0.6));
+    hero_state.is_fleeing = matches!(threat_level, ThreatLevel::Overwhelming)
+        || (matches!(threat_level, ThreatLevel::High) && hero_state.should_retreat(0.6));
+}
+
+/// Build a pathfinding grid for hero navigation
+fn build_hero_pathfinding_grid(game_state: &GameState, game_data: &GameData, can_dig: bool) -> crate::engine::pathfinding::PathfindingGrid {
+    let (w, h) = crate::engine::tile_grid::get_grid_dimensions(&game_state.dungeon.grid);
+    let mut pf_grid = crate::engine::pathfinding::PathfindingGrid::new(w, h);
+
+    for y in 0..h {
+        for x in 0..w {
+            let pos = TilePos::new(x as i32, y as i32);
+            let (walkable, cost) = get_tile_pathfinding_info(pos, game_state, game_data, can_dig);
+            let pf_pos = crate::engine::pathfinding::Pos::new(x as i32, y as i32);
+            pf_grid.set_walkable(pf_pos, walkable);
+            pf_grid.set_cost(pf_pos, cost);
+        }
+    }
+
+    pf_grid
+}
+
+/// Get pathfinding walkability and cost for a tile
+fn get_tile_pathfinding_info(pos: TilePos, game_state: &GameState, game_data: &GameData, can_dig: bool) -> (bool, f32) {
+    let tile = match game_state.dungeon.get_tile(pos) {
+        Some(t) => t,
+        None => return (false, 1.0),
+    };
+
+    if tile.tile_type == "dungeon_heart" || tile.tile_type == "hero_gate" {
+        return (true, 1.0);
+    }
+
+    if let Some(td) = game_data.tiles.get(&tile.tile_type) {
+        if !td.blocks_movement {
+            return (true, 1.0);
+        }
+        if can_dig && td.diggable && tile.tile_type != "hero_wall" {
+            return (true, 10.0);
+        }
+        return (false, 1.0);
+    }
+
+    if tile.tile_type == "hero_wall" {
+        return (false, 1.0);
+    }
+
+    (true, 1.0)
+}
+
+/// Find an emergency wander target when pathfinding fails
+fn find_emergency_wander_target(current_pos: TilePos, game_state: &GameState) -> Option<TilePos> {
+    let radius = 3;
+    for _ in 0..10 {
+        let dx = macroquad::rand::gen_range(-radius, radius + 1);
+        let dy = macroquad::rand::gen_range(-radius, radius + 1);
+        let n_pos = TilePos::new(current_pos.x + dx, current_pos.y + dy);
+
+        if n_pos == current_pos {
+            continue;
+        }
+
+        if let Some(tile) = game_state.dungeon.get_tile(n_pos) {
+            if tile.tile_type != "hero_wall" {
+                return Some(n_pos);
+            }
+        }
+    }
+    None
 }

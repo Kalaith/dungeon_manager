@@ -88,25 +88,34 @@ pub fn update_imp_digging(
 fn collect_targeted_tiles(entities: &EntityManager, imp_ids: &[EntityId]) -> HashSet<TilePos> {
     let mut targeted_tiles = HashSet::new();
     for &other_id in imp_ids {
-        if let Some(entity) = entities.get(other_id) {
-            if let Some(creature) = entity.as_creature() {
-                // Check current task for Dig targets
-                if let Some(crate::state::entities::Task::Dig(pos)) = creature.current_task {
-                    targeted_tiles.insert(pos);
-                }
-
-                if let Some(path) = &creature.current_path {
-                    if let Some(last_pos) = path.last() {
-                        targeted_tiles.insert(*last_pos);
-                    }
-                }
-                if creature.current_path.is_none() && creature.current_task.is_none() {
-                    targeted_tiles.insert(entity.pos);
-                }
-            }
-        }
+        add_imp_targets(entities, other_id, &mut targeted_tiles);
     }
     targeted_tiles
+}
+
+fn add_imp_targets(entities: &EntityManager, imp_id: EntityId, targeted_tiles: &mut HashSet<TilePos>) {
+    let entity = match entities.get(imp_id) {
+        Some(e) => e,
+        None => return,
+    };
+    let creature = match entity.as_creature() {
+        Some(c) => c,
+        None => return,
+    };
+
+    if let Some(crate::state::entities::Task::Dig(pos)) = creature.current_task {
+        targeted_tiles.insert(pos);
+    }
+
+    if let Some(path) = &creature.current_path {
+        if let Some(last_pos) = path.last() {
+            targeted_tiles.insert(*last_pos);
+        }
+    }
+
+    if creature.current_path.is_none() && creature.current_task.is_none() {
+        targeted_tiles.insert(entity.pos);
+    }
 }
 
 /// Update the targeted tiles set for next iterations
@@ -201,31 +210,38 @@ fn find_nearest_marked_tile(
     for y in 0..dungeon.height {
         for x in 0..dungeon.width {
             let pos = TilePos::new(x as i32, y as i32);
-            if pos != imp_pos && targeted_tiles.contains(&pos) {
-                continue;
-            }
-            if let Some(tile) = dungeon.get_tile(pos) {
-                if tile.marked_for_dig {
-                    let dist_sq = Pos::new(pos.x, pos.y).euclidean_distance_squared(&Pos::new(imp_pos.x, imp_pos.y));
-                    let mut dist = dist_sq;
-
-                    // Penalize gem seams (infinite gold) so they are lower priority
-                    if tile.tile_type == tt::GEM_SEAM {
-                        if player.gold >= player.max_gold {
-                            continue; // Don't mine infinite gold if full
-                        }
-                        dist += 10000.0;
-                    }
-
-                    if dist < min_dist {
-                        min_dist = dist;
-                        nearest_marked = Some(pos);
-                    }
+            if let Some(dist) = evaluate_dig_target(dungeon, pos, imp_pos, targeted_tiles, player) {
+                if dist < min_dist {
+                    min_dist = dist;
+                    nearest_marked = Some(pos);
                 }
             }
         }
     }
     nearest_marked
+}
+
+/// Evaluate a potential dig target, returns distance score if valid
+fn evaluate_dig_target(dungeon: &Dungeon, pos: TilePos, imp_pos: TilePos, targeted_tiles: &HashSet<TilePos>, player: &PlayerState) -> Option<f32> {
+    if pos != imp_pos && targeted_tiles.contains(&pos) {
+        return None;
+    }
+
+    let tile = dungeon.get_tile(pos)?;
+    if !tile.marked_for_dig {
+        return None;
+    }
+
+    let dist_sq = Pos::new(pos.x, pos.y).euclidean_distance_squared(&Pos::new(imp_pos.x, imp_pos.y));
+
+    if tile.tile_type == tt::GEM_SEAM {
+        if player.gold >= player.max_gold {
+            return None;
+        }
+        return Some(dist_sq + 10000.0);
+    }
+
+    Some(dist_sq)
 }
 
 /// Process digging at a marked tile

@@ -36,55 +36,72 @@ pub fn process_trap_construction(
     game_data: &GameData,
     dt: f32,
 ) -> Vec<TilePos> {
-    let mut completed_traps = Vec::new();
-
-    // 1. Check pending traps to fund
     let pending: Vec<TilePos> = pending_trap_builds.iter().cloned().collect();
+
     for pos in &pending {
-        if let Some(tile) = dungeon.get_tile_mut(*pos) {
-            if let Some(ref mut trap) = tile.trap {
-                if !trap.funded && !trap.constructed {
-                    let cost = get_trap_cost(&trap.trap_type, game_data);
-
-                    if player.materials >= cost {
-                        player.materials -= cost;
-                        trap.funded = true;
-                        eprintln!("Funded trap at {:?}", pos);
-                    }
-                }
-            }
-        }
+        try_fund_trap(dungeon, player, *pos, game_data);
     }
 
-    // 2. Progress funded traps
-    for pos in pending {
-        let mut finished = false;
-        if let Some(tile) = dungeon.get_tile_mut(pos) {
-            if let Some(ref mut trap) = tile.trap {
-                if trap.funded && !trap.constructed {
-                    let build_time = get_trap_build_time(&trap.trap_type, game_data);
-
-                    trap.construction_progress += dt;
-                    if trap.construction_progress >= build_time {
-                        trap.constructed = true;
-                        trap.active = true;
-                        finished = true;
-                        eprintln!("Trap construction complete at {:?}", pos);
-                    }
-                }
-            }
-        }
-
-        if finished {
-            completed_traps.push(pos);
-        }
-    }
+    let completed_traps: Vec<TilePos> = pending.into_iter()
+        .filter(|pos| progress_trap_construction(dungeon, *pos, game_data, dt))
+        .collect();
 
     for pos in &completed_traps {
         pending_trap_builds.remove(pos);
     }
 
     completed_traps
+}
+
+/// Try to fund a trap at the given position
+fn try_fund_trap(dungeon: &mut Dungeon, player: &mut PlayerState, pos: TilePos, game_data: &GameData) {
+    let tile = match dungeon.get_tile_mut(pos) {
+        Some(t) => t,
+        None => return,
+    };
+    let trap = match tile.trap.as_mut() {
+        Some(t) => t,
+        None => return,
+    };
+
+    if trap.funded || trap.constructed {
+        return;
+    }
+
+    let cost = get_trap_cost(&trap.trap_type, game_data);
+    if player.materials >= cost {
+        player.materials -= cost;
+        trap.funded = true;
+        eprintln!("Funded trap at {:?}", pos);
+    }
+}
+
+/// Progress trap construction, returns true if completed
+fn progress_trap_construction(dungeon: &mut Dungeon, pos: TilePos, game_data: &GameData, dt: f32) -> bool {
+    let tile = match dungeon.get_tile_mut(pos) {
+        Some(t) => t,
+        None => return false,
+    };
+    let trap = match tile.trap.as_mut() {
+        Some(t) => t,
+        None => return false,
+    };
+
+    if !trap.funded || trap.constructed {
+        return false;
+    }
+
+    let build_time = get_trap_build_time(&trap.trap_type, game_data);
+    trap.construction_progress += dt;
+
+    if trap.construction_progress >= build_time {
+        trap.constructed = true;
+        trap.active = true;
+        eprintln!("Trap construction complete at {:?}", pos);
+        return true;
+    }
+
+    false
 }
 
 /// Result of a trap trigger
@@ -104,67 +121,48 @@ pub fn process_trap_triggers(
     game_data: &GameData,
     dt: f32,
 ) -> Vec<TrapTriggerResult> {
-    let mut results = Vec::new();
+    update_trap_cooldowns(dungeon, dt);
 
-    // First, update all trap cooldowns
+    let hero_positions: Vec<(EntityId, TilePos)> = entities.heroes()
+        .filter_map(|(id, _)| entities.get(id).map(|e| (id, e.pos)))
+        .collect();
+
+    let traps_to_trigger: Vec<(TilePos, String, EntityId)> = hero_positions.into_iter()
+        .filter_map(|(hero_id, hero_pos)| get_triggerable_trap(dungeon, hero_pos, hero_id))
+        .collect();
+
+    traps_to_trigger.into_iter()
+        .filter_map(|(pos, trap_type, hero_id)| {
+            let trap_data = game_data.traps.get(&trap_type)?;
+            trigger_trap(pos, &trap_type, trap_data, hero_id, entities, dungeon)
+        })
+        .collect()
+}
+
+/// Update cooldowns for all traps
+fn update_trap_cooldowns(dungeon: &mut Dungeon, dt: f32) {
     for y in 0..dungeon.height {
         for x in 0..dungeon.width {
             let pos = TilePos::new(x as i32, y as i32);
             if let Some(tile) = dungeon.get_tile_mut(pos) {
-                if let Some(ref mut trap) = tile.trap {
-                    if trap.cooldown > 0.0 {
-                        trap.cooldown -= dt;
-                        if trap.cooldown < 0.0 {
-                            trap.cooldown = 0.0;
-                        }
-                    }
+                if let Some(trap) = tile.trap.as_mut() {
+                    trap.cooldown = (trap.cooldown - dt).max(0.0);
                 }
             }
         }
     }
+}
 
-    // Collect hero positions (only heroes trigger traps)
-    let hero_positions: Vec<(EntityId, TilePos)> = entities
-        .heroes()
-        .map(|(id, _)| {
-            let entity = entities.get(id).unwrap();
-            (id, entity.pos)
-        })
-        .collect();
+/// Check if a trap at the given position is triggerable and return its info
+fn get_triggerable_trap(dungeon: &Dungeon, pos: TilePos, hero_id: EntityId) -> Option<(TilePos, String, EntityId)> {
+    let tile = dungeon.get_tile(pos)?;
+    let trap = tile.trap.as_ref()?;
 
-    // Collect traps to trigger (must collect first to avoid borrow issues)
-    let mut traps_to_trigger: Vec<(TilePos, String, EntityId)> = Vec::new();
-
-    for (hero_id, hero_pos) in hero_positions {
-        if let Some(tile) = dungeon.get_tile(hero_pos) {
-            if let Some(ref trap) = tile.trap {
-                // Only trigger if trap is active, not on cooldown, and not already triggered (for single-use)
-                if trap.active && trap.constructed && trap.cooldown <= 0.0 && !trap.triggered {
-                    traps_to_trigger.push((hero_pos, trap.trap_type.clone(), hero_id));
-                }
-            }
-        }
+    if trap.active && trap.constructed && trap.cooldown <= 0.0 && !trap.triggered {
+        Some((pos, trap.trap_type.clone(), hero_id))
+    } else {
+        None
     }
-
-    // Now trigger collected traps
-    for (hero_pos, trap_type, hero_id) in traps_to_trigger {
-        if let Some(trap_data) = game_data.traps.get(&trap_type) {
-            let result = trigger_trap(
-                hero_pos,
-                &trap_type,
-                trap_data,
-                hero_id,
-                entities,
-                dungeon,
-            );
-
-            if let Some(res) = result {
-                results.push(res);
-            }
-        }
-    }
-
-    results
 }
 
 /// Trigger a specific trap at a position
@@ -176,111 +174,81 @@ fn trigger_trap(
     entities: &mut EntityManager,
     dungeon: &mut Dungeon,
 ) -> Option<TrapTriggerResult> {
-    let mut affected_entities = Vec::new();
-    let mut total_damage = 0.0;
-
     match trap_type {
-        "door" => {
-            // Doors don't deal damage, they just block movement
-            // Door interaction would be handled elsewhere
-            return None;
-        }
-        "spike_trap" => {
-            // Spike trap damages the entity that steps on it
-            let damage = trap_data.effects.damage;
-            if let Some(entity) = entities.get_mut(triggering_entity) {
-                apply_trap_damage(entity, damage);
-                affected_entities.push(triggering_entity);
-                total_damage = damage;
-                eprintln!("Spike trap triggered at {:?}! Dealt {} damage.", pos, damage);
-            }
-
-            // Set cooldown
-            if let Some(tile) = dungeon.get_tile_mut(pos) {
-                if let Some(ref mut trap) = tile.trap {
-                    trap.cooldown = TRAP_COOLDOWN;
-                }
-            }
-        }
-        "boulder_trap" => {
-            // Boulder trap deals AoE damage
-            let damage = trap_data.effects.damage;
-            let radius = if trap_data.effects.area { 1 } else { 0 };
-
-            // Find all heroes in range
-            for (entity_id, _) in entities.heroes() {
-                if let Some(entity) = entities.get(entity_id) {
-                    let dist = pos.distance_to(&entity.pos);
-                    if dist <= radius as f32 + 0.5 {
-                        affected_entities.push(entity_id);
-                    }
-                }
-            }
-
-            // Apply damage to all affected
-            for entity_id in &affected_entities {
-                if let Some(entity) = entities.get_mut(*entity_id) {
-                    apply_trap_damage(entity, damage);
-                    total_damage += damage;
-                }
-            }
-
-            eprintln!("Boulder trap triggered at {:?}! Dealt {} damage to {} entities.",
-                pos, damage, affected_entities.len());
-
-            // Boulder trap is single-use
-            if let Some(tile) = dungeon.get_tile_mut(pos) {
-                if let Some(ref mut trap) = tile.trap {
-                    trap.triggered = true;
-                    trap.active = false;
-                }
-            }
-        }
-        "alarm_trap" => {
-            // Alarm trap alerts nearby creatures
-            let alert_radius = trap_data.effects.alert_radius;
-
-            // Find all player creatures within range
-            let mut alerted_count = 0;
-            for (creature_id, _) in entities.creatures() {
-                if let Some(entity) = entities.get(creature_id) {
-                    let dist = pos.distance_to(&entity.pos);
-                    if dist <= alert_radius {
-                        // Could set creature to "alerted" state or give them a target
-                        // For now, just count them
-                        alerted_count += 1;
-                    }
-                }
-            }
-
-            eprintln!("Alarm trap triggered at {:?}! Alerted {} creatures.", pos, alerted_count);
-
-            // Set cooldown
-            if let Some(tile) = dungeon.get_tile_mut(pos) {
-                if let Some(ref mut trap) = tile.trap {
-                    trap.cooldown = TRAP_COOLDOWN * 2.0; // Longer cooldown for alarms
-                }
-            }
-
-            // Alarm doesn't deal damage
-            return None;
-        }
-        _ => {
-            eprintln!("Unknown trap type: {}", trap_type);
-            return None;
-        }
+        "door" => None,
+        "spike_trap" => trigger_spike_trap(pos, trap_data, triggering_entity, entities, dungeon),
+        "boulder_trap" => trigger_boulder_trap(pos, trap_data, entities, dungeon),
+        "alarm_trap" => { trigger_alarm_trap(pos, trap_data, entities, dungeon); None }
+        _ => { eprintln!("Unknown trap type: {}", trap_type); None }
     }
+}
+
+fn trigger_spike_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, triggering_entity: EntityId, entities: &mut EntityManager, dungeon: &mut Dungeon) -> Option<TrapTriggerResult> {
+    let damage = trap_data.effects.damage;
+    let entity = entities.get_mut(triggering_entity)?;
+
+    apply_trap_damage(entity, damage);
+    eprintln!("Spike trap triggered at {:?}! Dealt {} damage.", pos, damage);
+    set_trap_cooldown(dungeon, pos, TRAP_COOLDOWN);
+
+    Some(TrapTriggerResult { trap_pos: pos, trap_type: "spike_trap".to_string(), damage_dealt: damage, affected_entities: vec![triggering_entity] })
+}
+
+fn trigger_boulder_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, entities: &mut EntityManager, dungeon: &mut Dungeon) -> Option<TrapTriggerResult> {
+    let damage = trap_data.effects.damage;
+    let radius = if trap_data.effects.area { 1.5 } else { 0.5 };
+
+    let affected_entities: Vec<EntityId> = entities.heroes()
+        .filter_map(|(id, _)| entities.get(id).map(|e| (id, e.pos)))
+        .filter(|(_, e_pos)| pos.distance_to(e_pos) <= radius)
+        .map(|(id, _)| id)
+        .collect();
 
     if affected_entities.is_empty() {
         return None;
     }
 
-    Some(TrapTriggerResult {
-        trap_pos: pos,
-        trap_type: trap_type.to_string(),
-        damage_dealt: total_damage,
-        affected_entities,
-    })
+    let mut total_damage = 0.0;
+    for entity_id in &affected_entities {
+        if let Some(entity) = entities.get_mut(*entity_id) {
+            apply_trap_damage(entity, damage);
+            total_damage += damage;
+        }
+    }
+
+    eprintln!("Boulder trap triggered at {:?}! Dealt {} damage to {} entities.", pos, damage, affected_entities.len());
+    set_trap_disabled(dungeon, pos);
+
+    Some(TrapTriggerResult { trap_pos: pos, trap_type: "boulder_trap".to_string(), damage_dealt: total_damage, affected_entities })
+}
+
+fn trigger_alarm_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, entities: &EntityManager, dungeon: &mut Dungeon) {
+    let alert_radius = trap_data.effects.alert_radius;
+
+    let alerted_count = entities.creatures()
+        .filter_map(|(id, _)| entities.get(id).map(|e| e.pos))
+        .filter(|e_pos| pos.distance_to(e_pos) <= alert_radius)
+        .count();
+
+    eprintln!("Alarm trap triggered at {:?}! Alerted {} creatures.", pos, alerted_count);
+    set_trap_cooldown(dungeon, pos, TRAP_COOLDOWN * 2.0);
+}
+
+fn set_trap_cooldown(dungeon: &mut Dungeon, pos: TilePos, cooldown: f32) {
+    if let Some(tile) = dungeon.get_tile_mut(pos) {
+        if let Some(trap) = tile.trap.as_mut() {
+            trap.cooldown = cooldown;
+        }
+    }
+}
+
+fn set_trap_disabled(dungeon: &mut Dungeon, pos: TilePos) {
+    if let Some(tile) = dungeon.get_tile_mut(pos) {
+        if let Some(trap) = tile.trap.as_mut() {
+            trap.triggered = true;
+            trap.active = false;
+        }
+    }
 }
 
 /// Apply trap damage to an entity

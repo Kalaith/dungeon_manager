@@ -351,42 +351,23 @@ fn calculate_manhattan_distance(a: TilePos, b: TilePos) -> i32 {
     (a.x - b.x).abs() + (a.y - b.y).abs()
 }
 
-/// Simple line of sight check using Bresenham's algorithm or sampling
-fn check_line_of_sight(
-    start: TilePos, 
-    end: TilePos, 
-    grid: &Vec<Vec<crate::state::tile_state::TileState>>,
-    game_data: &GameData
-) -> bool {
-    let x0 = start.x;
-    let y0 = start.y;
-    let x1 = end.x;
-    let y1 = end.y;
-
+/// Simple line of sight check using Bresenham's algorithm
+fn check_line_of_sight(start: TilePos, end: TilePos, grid: &Vec<Vec<crate::state::tile_state::TileState>>, game_data: &GameData) -> bool {
+    let (x0, y0, x1, y1) = (start.x, start.y, end.x, end.y);
     let dx = (x1 - x0).abs();
     let dy = -(y1 - y0).abs();
     let sx = if x0 < x1 { 1 } else { -1 };
     let sy = if y0 < y1 { 1 } else { -1 };
     let mut err = dx + dy;
-    let mut x = x0;
-    let mut y = y0;
+    let (mut x, mut y) = (x0, y0);
 
     loop {
         if x == x1 && y == y1 {
-            break;
+            return true;
         }
 
-        // Check if current tile blocks sight (skip start tile)
-        if !(x == x0 && y == y0) {
-            if let Some(row) = grid.get(y as usize) {
-                if let Some(tile) = row.get(x as usize) {
-                     if let Some(tile_data) = game_data.tiles.get(&tile.tile_type) {
-                        if tile_data.blocks_vision {
-                            return false; 
-                        }
-                     }
-                }
-            }
+        if !(x == x0 && y == y0) && tile_blocks_vision(x, y, grid, game_data) {
+            return false;
         }
 
         let e2 = 2 * err;
@@ -399,8 +380,19 @@ fn check_line_of_sight(
             y += sy;
         }
     }
-    
-    true
+}
+
+/// Check if a tile at the given coordinates blocks vision
+fn tile_blocks_vision(x: i32, y: i32, grid: &Vec<Vec<crate::state::tile_state::TileState>>, game_data: &GameData) -> bool {
+    let row = match grid.get(y as usize) {
+        Some(r) => r,
+        None => return false,
+    };
+    let tile = match row.get(x as usize) {
+        Some(t) => t,
+        None => return false,
+    };
+    game_data.tiles.get(&tile.tile_type).map(|td| td.blocks_vision).unwrap_or(false)
 }
 
 /// Find potential combat targets for an entity

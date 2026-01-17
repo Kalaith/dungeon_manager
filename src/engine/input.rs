@@ -396,7 +396,6 @@ impl InputHandler {
             return;
         }
 
-        // Cancel any active drag on right-click
         drag_selection.cancel();
 
         match interaction_mode {
@@ -406,24 +405,36 @@ impl InputHandler {
                 }
             }
             InteractionMode::None => {
-                // Try to slap a creature, otherwise deselect
-                if let Some(entity) = state.entities.at_position_mut(tile_pos).next() {
-                    if let Some(creature) = entity.as_creature_mut() {
-                        if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
-                            creature_ai::apply_slap(creature, monster_data, state.time_elapsed);
-                            eprintln!("Slapped creature {}!", creature.creature_id);
-                            return;
-                        }
-                    }
+                if !Self::try_slap_creature(state, game_data, tile_pos) {
+                    *selected_entity = None;
+                    sidebar.clear_selection();
                 }
-                *selected_entity = None;
-                sidebar.clear_selection();
             }
             _ => {
                 *interaction_mode = InteractionMode::None;
                 sidebar.clear_selection();
             }
         }
+    }
+
+    /// Try to slap a creature at the given position, returns true if successful
+    fn try_slap_creature(state: &mut GameState, game_data: &GameData, tile_pos: TilePos) -> bool {
+        let entity = match state.entities.at_position_mut(tile_pos).next() {
+            Some(e) => e,
+            None => return false,
+        };
+        let creature = match entity.as_creature_mut() {
+            Some(c) => c,
+            None => return false,
+        };
+        let monster_data = match game_data.monsters.get(&creature.creature_id) {
+            Some(d) => d,
+            None => return false,
+        };
+
+        creature_ai::apply_slap(creature, monster_data, state.time_elapsed);
+        eprintln!("Slapped creature {}!", creature.creature_id);
+        true
     }
 
     /// Handle left-click tile interactions based on current mode
@@ -463,32 +474,35 @@ impl InputHandler {
                 Self::handle_inspect(state, selected_entity, selected_room, tile_pos);
             }
             InteractionMode::None => {
-                // Select entity or room on click
-                let mut found_something = false;
-
-                // Try entity first
-                if let Some(entity) = state.entities.at_position(tile_pos).next() {
-                    *selected_entity = Some(entity.id);
-                    *selected_room = None;
-                    found_something = true;
-                } else {
-                    *selected_entity = None;
-                    // Try room
-                    if let Some(tile) = state.get_tile(tile_pos) {
-                        if let Some(room_id) = tile.room_id {
-                            *selected_room = Some(room_id);
-                            found_something = true;
-                        } else {
-                            *selected_room = None;
-                        }
-                    }
-                }
-
-                if found_something {
+                let found = Self::select_entity_or_room(state, selected_entity, selected_room, tile_pos);
+                if found {
                     sidebar.switch_to_tab(SidebarTab::Minions);
                 }
             }
         }
+    }
+
+    /// Select an entity or room at the given position, returns true if something was selected
+    fn select_entity_or_room(state: &GameState, selected_entity: &mut Option<EntityId>, selected_room: &mut Option<usize>, tile_pos: TilePos) -> bool {
+        if let Some(entity) = state.entities.at_position(tile_pos).next() {
+            *selected_entity = Some(entity.id);
+            *selected_room = None;
+            return true;
+        }
+
+        *selected_entity = None;
+        let tile = match state.get_tile(tile_pos) {
+            Some(t) => t,
+            None => { *selected_room = None; return false; }
+        };
+
+        if let Some(room_id) = tile.room_id {
+            *selected_room = Some(room_id);
+            return true;
+        }
+
+        *selected_room = None;
+        false
     }
 
     fn handle_dig(state: &mut GameState, game_data: &GameData, tile_pos: TilePos) {
@@ -558,15 +572,22 @@ impl InputHandler {
     }
 
     fn handle_place_spawner(state: &mut GameState, game_data: &GameData, tile_pos: TilePos) {
-        if state.player.gold >= crate::config::SPAWNER_COST {
-            if let Some(tile) = state.get_tile(tile_pos) {
-                if tile.ownership == Ownership::Player && tile_types::can_build_room(&tile.tile_type, game_data) {
-                    state.player.gold -= crate::config::SPAWNER_COST;
-                    if let Some(tile_mut) = state.get_tile_mut(tile_pos) {
-                        tile_mut.tile_type = tt::MONSTER_SPAWNER.to_string();
-                    }
-                }
-            }
+        if state.player.gold < crate::config::SPAWNER_COST {
+            return;
+        }
+
+        let tile = match state.get_tile(tile_pos) {
+            Some(t) => t,
+            None => return,
+        };
+
+        if tile.ownership != Ownership::Player || !tile_types::can_build_room(&tile.tile_type, game_data) {
+            return;
+        }
+
+        state.player.gold -= crate::config::SPAWNER_COST;
+        if let Some(tile_mut) = state.get_tile_mut(tile_pos) {
+            tile_mut.tile_type = tt::MONSTER_SPAWNER.to_string();
         }
     }
 
@@ -584,35 +605,43 @@ impl InputHandler {
     }
 
     fn handle_drop(
-        state: &mut GameState, 
-        held_entity: &mut Option<EntityId>, 
+        state: &mut GameState,
+        held_entity: &mut Option<EntityId>,
         interaction_mode: &mut InteractionMode,
         tile_pos: TilePos,
         game_data: &GameData,
     ) {
-        if let Some(entity_id) = *held_entity {
-            if let Some(tile) = state.get_tile(tile_pos) {
-                let is_walkable = tile.ownership == Ownership::Player
-                    && tile_types::is_walkable(&tile.tile_type, game_data);
+        let entity_id = match *held_entity {
+            Some(id) => id,
+            None => return,
+        };
 
-                if is_walkable {
-                    if let Some(entity) = state.entities.get_mut(entity_id) {
-                        entity.pos = tile_pos;
-                        // Reset creature state
-                        if let Some(creature) = entity.as_creature_mut() {
-                            creature.current_path = None;
-                            creature.current_task = None;
-                            creature.task_time = 0.0;
-                            creature.move_timer = 0.0;
-                        }
+        let tile = match state.get_tile(tile_pos) {
+            Some(t) => t,
+            None => return,
+        };
 
-                        eprintln!("Dropped entity {} at {:?}", entity_id, tile_pos);
-                        *held_entity = None;
-                        *interaction_mode = InteractionMode::Pickup;
-                    }
-                }
-            }
+        let is_walkable = tile.ownership == Ownership::Player && tile_types::is_walkable(&tile.tile_type, game_data);
+        if !is_walkable {
+            return;
         }
+
+        let entity = match state.entities.get_mut(entity_id) {
+            Some(e) => e,
+            None => return,
+        };
+
+        entity.pos = tile_pos;
+        if let Some(creature) = entity.as_creature_mut() {
+            creature.current_path = None;
+            creature.current_task = None;
+            creature.task_time = 0.0;
+            creature.move_timer = 0.0;
+        }
+
+        eprintln!("Dropped entity {} at {:?}", entity_id, tile_pos);
+        *held_entity = None;
+        *interaction_mode = InteractionMode::Pickup;
     }
 
     fn handle_sell(state: &mut GameState, game_data: &GameData, tile_pos: TilePos) {
@@ -644,29 +673,13 @@ impl InputHandler {
     }
 
     fn handle_inspect(
-        state: &GameState, 
-        selected_entity: &mut Option<EntityId>, 
+        state: &GameState,
+        selected_entity: &mut Option<EntityId>,
         selected_room: &mut Option<usize>,
         tile_pos: TilePos
     ) {
-        let mut found_entity = false;
-        if let Some(entity) = state.entities.at_position(tile_pos).next() {
-            *selected_entity = Some(entity.id);
-            *selected_room = None;
-            found_entity = true;
-        }
-
-        if !found_entity {
-            if let Some(tile) = state.get_tile(tile_pos) {
-                if let Some(room_id) = tile.room_id {
-                    *selected_room = Some(room_id);
-                    *selected_entity = None;
-                } else {
-                    *selected_room = None;
-                    *selected_entity = None;
-                }
-            }
-        }
+        // Reuse the same selection logic
+        Self::select_entity_or_room(state, selected_entity, selected_room, tile_pos);
     }
 
     /// Check if the current interaction mode supports drag selection

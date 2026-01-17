@@ -180,22 +180,8 @@ fn decide_task_from_rooms(
     }
 
     // Check most urgent need
-    if let Some((need_name, need_value)) = creature.get_most_urgent_need() {
-        if need_value < crate::config::NEED_CRITICAL_THRESHOLD {
-            if let Some(need_data) = monster_data.needs.get(&need_name) {
-                for room_type in &need_data.satisfied_by {
-                    use crate::engine::room_validator;
-                    if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, room_type, creature_pos, 0.0) {
-                        match need_name.as_str() {
-                            "sleep" => return Some(Task::Sleep(room_id)),
-                            "food" => return Some(Task::Eat(room_id)),
-                            "gold" => return Some(Task::CollectWages(room_id)),
-                            _ => {}
-                        }
-                    }
-                }
-            }
-        }
+    if let Some(task) = try_satisfy_critical_need(creature, creature_pos, room_manager, monster_data) {
+        return Some(task);
     }
 
     // Evaluate all possible tasks
@@ -306,6 +292,31 @@ fn pathfind_to_target(
             }
         }
     }
+}
+
+/// Try to satisfy a critical need by finding an appropriate room
+fn try_satisfy_critical_need(creature: &CreatureState, creature_pos: TilePos, room_manager: &RoomManager, monster_data: &MonsterData) -> Option<Task> {
+    let (need_name, need_value) = creature.get_most_urgent_need()?;
+
+    if need_value >= crate::config::NEED_CRITICAL_THRESHOLD {
+        return None;
+    }
+
+    let need_data = monster_data.needs.get(&need_name)?;
+
+    for room_type in &need_data.satisfied_by {
+        use crate::engine::room_validator;
+        let (room_id, _) = room_validator::find_nearest_room(&room_manager.rooms, room_type, creature_pos, 0.0)?;
+
+        return match need_name.as_str() {
+            "sleep" => Some(Task::Sleep(room_id)),
+            "food" => Some(Task::Eat(room_id)),
+            "gold" => Some(Task::CollectWages(room_id)),
+            _ => None,
+        };
+    }
+
+    None
 }
 
 /// Pick a random walkable tile for wandering

@@ -15,6 +15,11 @@ const BUTTON_SIZE: f32 = 48.0;
 const BUTTON_SPACING: f32 = 10.0;
 const PADDING: f32 = 10.0;
 
+/// Get color based on efficiency value
+fn efficiency_color(efficiency: f32) -> Color {
+    if efficiency >= 0.9 { GREEN } else if efficiency >= 0.5 { YELLOW } else { RED }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum SidebarTab {
     Build,
@@ -560,71 +565,68 @@ impl Sidebar {
         
         // Selected Minion Details
         let details_x = inspect_x + BUTTON_SIZE * 2.5 + BUTTON_SPACING * 2.0;
+        self.draw_selection_details(details_x, start_y, selected_entity, selected_room, entities, rooms);
+    }
+
+    fn draw_selection_details(&self, details_x: f32, start_y: f32, selected_entity: Option<EntityId>, selected_room: Option<usize>, entities: &crate::state::entities::EntityManager, rooms: &[crate::engine::room_validator::Room]) {
         if let Some(id) = selected_entity {
-            if let Some(entity) = entities.get(id) {
-                if let Some(creature) = entity.as_creature() {
-                     draw_text(&format!("Selected: {} (Lvl {})", creature.creature_id, creature.level), details_x, start_y + 20.0, 20.0, WHITE);
-                     draw_text(&format!("HP: {:.0}/{:.0} | Mood: {:.0}%", creature.health, creature.max_health, creature.mood), details_x, start_y + 45.0, 16.0, WHITE);
-                     draw_text(&format!("Rest: {:.0}% | Food: {:.0}%", creature.get_need("sleep"), creature.get_need("food")), details_x, start_y + 65.0, 16.0, WHITE);
-                     // eprintln!("DEBUG UI: ID={} Rest={:.2} Food={:.2}", creature.creature_id, creature.get_need("sleep"), creature.get_need("food"));
-                     draw_text(&format!("Job: {:?}", creature.current_task), details_x, start_y + 85.0, 16.0, LIGHTGRAY);
-                } else if let Some(hero) = entity.as_hero() {
-                     // Header
-                     draw_text(&format!("Hero: {} (Lvl {})", hero.hero_id, hero.level), details_x, start_y + 20.0, 20.0, WHITE);
-                     
-                     // Health Bar
-                     let hp_pct = hero.health / hero.max_health;
-                     let bar_w = 200.0;
-                     draw_rectangle(details_x, start_y + 30.0, bar_w, 10.0, RED);
-                     draw_rectangle(details_x, start_y + 30.0, bar_w * hp_pct, 10.0, GREEN);
-                     draw_text(&format!("{:.0}/{:.0} HP", hero.health, hero.max_health), details_x + 5.0, start_y + 39.0, 10.0, WHITE);
-
-                     // Role & Wave
-                     let role = if hero.is_defender { "Defender" } else { "Attacker" };
-                     let wave_info = if hero.wave_assigned > 0 { format!(" (Wave {})", hero.wave_assigned) } else { "".to_string() };
-                     draw_text(&format!("Role: {}{}", role, wave_info), details_x, start_y + 55.0, 16.0, WHITE);
-
-                     // Status / Goal
-                     let status = if hero.is_digging {
-                         "Digging"
-                     } else if hero.current_path.is_some() {
-                         "Moving"
-                     } else {
-                         "Idle"
-                     };
-                     draw_text(&format!("Status: {} | Goal: {:?}", status, hero.current_goal), details_x, start_y + 75.0, 14.0, LIGHTGRAY);
-                     
-                     // Combat Stats
-                     draw_text(&format!("Kills: {} | Gold: {}", hero.kills, hero.gold_stolen), details_x, start_y + 95.0, 14.0, GOLD);
-
-                     // Debug info
-                     if hero.is_fleeing {
-                         draw_text("FLEEING!", details_x + 150.0, start_y + 55.0, 16.0, RED);
-                     }
-                }
-            }
-
+            self.draw_entity_details(details_x, start_y, id, entities);
         } else if let Some(room_id) = selected_room {
-             if let Some(room) = rooms.iter().find(|r| r.id == room_id) {
-                  // Room details
-                  draw_text(&format!("Room: {} (ID: {})", room.room_type, room.id), details_x, start_y + 20.0, 20.0, WHITE);
-                  draw_text(&format!("Size: {} tiles", room.tiles.len()), details_x, start_y + 45.0, 16.0, WHITE);
-                  
-                  // Efficiency color
-                  let eff_color = if room.efficiency >= 0.9 {
-                      GREEN
-                  } else if room.efficiency >= 0.5 {
-                      YELLOW
-                  } else {
-                      RED
-                  };
-                  
-                  draw_text(&format!("Efficiency: {:.0}%", room.efficiency * 100.0), details_x, start_y + 65.0, 16.0, eff_color);
-                  draw_text("Walls/doors needed for 100%", details_x, start_y + 85.0, 12.0, GRAY);
-             }
+            self.draw_room_details(details_x, start_y, room_id, rooms);
         } else {
             draw_text("Select a unit or room to view details", details_x, start_y + 30.0, 18.0, GRAY);
         }
+    }
+
+    fn draw_entity_details(&self, details_x: f32, start_y: f32, id: EntityId, entities: &crate::state::entities::EntityManager) {
+        let entity = match entities.get(id) {
+            Some(e) => e,
+            None => return,
+        };
+
+        if let Some(creature) = entity.as_creature() {
+            draw_text(&format!("Selected: {} (Lvl {})", creature.creature_id, creature.level), details_x, start_y + 20.0, 20.0, WHITE);
+            draw_text(&format!("HP: {:.0}/{:.0} | Mood: {:.0}%", creature.health, creature.max_health, creature.mood), details_x, start_y + 45.0, 16.0, WHITE);
+            draw_text(&format!("Rest: {:.0}% | Food: {:.0}%", creature.get_need("sleep"), creature.get_need("food")), details_x, start_y + 65.0, 16.0, WHITE);
+            draw_text(&format!("Job: {:?}", creature.current_task), details_x, start_y + 85.0, 16.0, LIGHTGRAY);
+            return;
+        }
+
+        if let Some(hero) = entity.as_hero() {
+            draw_text(&format!("Hero: {} (Lvl {})", hero.hero_id, hero.level), details_x, start_y + 20.0, 20.0, WHITE);
+
+            let hp_pct = hero.health / hero.max_health;
+            let bar_w = 200.0;
+            draw_rectangle(details_x, start_y + 30.0, bar_w, 10.0, RED);
+            draw_rectangle(details_x, start_y + 30.0, bar_w * hp_pct, 10.0, GREEN);
+            draw_text(&format!("{:.0}/{:.0} HP", hero.health, hero.max_health), details_x + 5.0, start_y + 39.0, 10.0, WHITE);
+
+            let role = if hero.is_defender { "Defender" } else { "Attacker" };
+            let wave_info = if hero.wave_assigned > 0 { format!(" (Wave {})", hero.wave_assigned) } else { String::new() };
+            draw_text(&format!("Role: {}{}", role, wave_info), details_x, start_y + 55.0, 16.0, WHITE);
+
+            let status = if hero.is_digging { "Digging" } else if hero.current_path.is_some() { "Moving" } else { "Idle" };
+            draw_text(&format!("Status: {} | Goal: {:?}", status, hero.current_goal), details_x, start_y + 75.0, 14.0, LIGHTGRAY);
+            draw_text(&format!("Kills: {} | Gold: {}", hero.kills, hero.gold_stolen), details_x, start_y + 95.0, 14.0, GOLD);
+
+            if hero.is_fleeing {
+                draw_text("FLEEING!", details_x + 150.0, start_y + 55.0, 16.0, RED);
+            }
+        }
+    }
+
+    fn draw_room_details(&self, details_x: f32, start_y: f32, room_id: usize, rooms: &[crate::engine::room_validator::Room]) {
+        let room = match rooms.iter().find(|r| r.id == room_id) {
+            Some(r) => r,
+            None => return,
+        };
+
+        draw_text(&format!("Room: {} (ID: {})", room.room_type, room.id), details_x, start_y + 20.0, 20.0, WHITE);
+        draw_text(&format!("Size: {} tiles", room.tiles.len()), details_x, start_y + 45.0, 16.0, WHITE);
+
+        let eff_color = efficiency_color(room.efficiency);
+        draw_text(&format!("Efficiency: {:.0}%", room.efficiency * 100.0), details_x, start_y + 65.0, 16.0, eff_color);
+        draw_text("Walls/doors needed for 100%", details_x, start_y + 85.0, 12.0, GRAY);
     }
 
     fn draw_traps_content(&self, current_mode: &InteractionMode, player: &PlayerState) {
