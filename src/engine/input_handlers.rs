@@ -175,7 +175,8 @@ pub fn handle_build_trap_multi(state: &mut GameState, game_data: &GameData, trap
 }
 
 pub fn handle_place_spawner(state: &mut GameState, game_data: &GameData, tile_pos: TilePos) {
-    if state.player.gold < crate::config::SPAWNER_COST {
+    let spawner_cost = game_data.tiles.get("monster_spawner").and_then(|t| t.cost).unwrap_or(50);
+    if state.player.gold < spawner_cost {
         return;
     }
 
@@ -188,14 +189,14 @@ pub fn handle_place_spawner(state: &mut GameState, game_data: &GameData, tile_po
         return;
     }
 
-    state.player.gold -= crate::config::SPAWNER_COST;
+    state.player.gold -= spawner_cost;
     if let Some(tile_mut) = state.get_tile_mut(tile_pos) {
         tile_mut.tile_type = tt::MONSTER_SPAWNER.to_string();
     }
 }
 
 pub fn handle_place_spawner_multi(state: &mut GameState, game_data: &GameData, tiles: &[TilePos]) {
-    let cost = crate::config::SPAWNER_COST;
+    let cost = game_data.tiles.get("monster_spawner").and_then(|t| t.cost).unwrap_or(50);
 
     // Count valid tiles
     let valid_tiles: Vec<TilePos> = tiles

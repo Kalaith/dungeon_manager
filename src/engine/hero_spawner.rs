@@ -32,7 +32,7 @@ fn update_wave_system(state: &mut GameState, game_data: &GameData, dt: f32) {
     // If wave was in progress but all attackers died, mark wave as complete
     if state.hero_base.wave_in_progress && alive_attackers == 0 {
         state.hero_base.wave_in_progress = false;
-        state.hero_base.time_until_next_wave = crate::config::HERO_WAVE_INTERVAL;
+        state.hero_base.time_until_next_wave = game_data.config.hero_waves.wave_interval;
         eprintln!("Wave {} defeated! Next wave in {:.0} seconds.", 
             state.hero_base.current_wave_number, 
             state.hero_base.time_until_next_wave);
@@ -126,8 +126,9 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
                     10
                 };
                 
-                // Formula: Base + Wave * 1.5. Example: Wave 5 with base 10 -> 10 + 7.5 = 17 heroes
-                let scaled_max_active = (max_active_base as f32 + (wave * 1.5)) as usize;
+                // Formula: Base + Wave * scaling. Example: Wave 5 with base 10 -> 10 + 7.5 = 17 heroes
+                let wave_scaling = game_data.config.hero_waves.wave_scaling_multiplier;
+                let scaled_max_active = (max_active_base as f32 + (wave * wave_scaling)) as usize;
 
                 // Scale spawn rate: reduce by 10% per wave, capped at minimum 5s
                 let spawn_rate_base = if let Some(bd) = game_data.hero_buildings.get(&building.building_type) {
@@ -139,9 +140,11 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
                     60.0
                 };
                 
-                // Formula: Rate * 0.9^Wave. Example: Wave 5 with 60s -> 60 * 0.59 = 35s
-                let scaling_factor = 0.9f32.powf(wave);
-                let scaled_spawn_rate = (spawn_rate_base * scaling_factor).max(5.0);
+                // Formula: Rate * decay^Wave. Example: Wave 5 with 60s -> 60 * 0.59 = 35s
+                let decay = game_data.config.hero_waves.spawn_rate_decay;
+                let min_rate = game_data.config.hero_waves.min_spawn_rate;
+                let scaling_factor = decay.powf(wave);
+                let scaled_spawn_rate = (spawn_rate_base * scaling_factor).max(min_rate);
 
                 timer.time_until_spawn = scaled_spawn_rate;
 
@@ -171,6 +174,7 @@ fn spawn_hero_at(state: &mut GameState, hero_id: &str, building_pos: TilePos, ga
             hero_data.stats.health,
             hero_data.stats.mana,
             spawn_pos,
+            game_data.config.hero_waves.dig_time,
         );
         
         // Determine if this hero should be a defender based on current ratio
@@ -183,7 +187,7 @@ fn spawn_hero_at(state: &mut GameState, hero_id: &str, building_pos: TilePos, ga
             hero_state.is_defender = true;
         } else {
             let current_defender_ratio = defender_count as f32 / total_heroes as f32;
-            hero_state.is_defender = current_defender_ratio < crate::config::HERO_DEFENDER_RATIO;
+            hero_state.is_defender = current_defender_ratio < game_data.config.hero_waves.defender_ratio;
         }
         
         state.entities.spawn_hero(spawn_pos, hero_state.clone());
@@ -211,8 +215,9 @@ fn count_defender_attacker_ratio(state: &GameState) -> (usize, usize) {
 
 fn find_spawn_pos(state: &GameState, center: TilePos, game_data: &GameData) -> TilePos {
     let (w, h) = crate::engine::tile_grid::get_grid_dimensions(&state.dungeon.grid);
+    let search_radius = game_data.config.hero_waves.spawn_search_radius;
 
-    for r in 1..=4 {
+    for r in 1..=search_radius {
         for dy in -r..=r {
             for dx in -r..=r {
                 if let Some(pos) = try_spawn_position(state, game_data, center, dx, dy, r, w, h) {

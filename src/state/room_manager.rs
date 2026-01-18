@@ -2,7 +2,9 @@ use crate::data::GameData;
 use crate::engine::room_validator::{self, Room};
 use crate::state::dungeon::Dungeon;
 use crate::state::tile_state::{TilePos, Ownership};
+use serde::{Serialize, Deserialize};
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoomManager {
     pub rooms: Vec<Room>,
     pub next_room_id: usize,

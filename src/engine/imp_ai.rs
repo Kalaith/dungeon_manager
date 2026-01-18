@@ -149,7 +149,7 @@ fn process_idle_imp(
     dt: f32,
 ) {
     // Find nearest marked tile NOT targeted by others
-    let nearest_marked = find_nearest_marked_tile(dungeon, imp_pos, targeted_tiles, player);
+    let nearest_marked = find_nearest_marked_tile(dungeon, imp_pos, targeted_tiles, player, game_data);
 
     if let Some(marked_pos) = nearest_marked {
         // Claim the task immediately so other imps don't target it
@@ -162,7 +162,7 @@ fn process_idle_imp(
         // Check if we are adjacent (or on top) of the marked tile
         if imp_pos.manhattan_distance(&marked_pos) <= 1 {
             // Imp is in position - dig it
-            process_digging(dungeon, entities, player, imp_id, marked_pos, dt);
+            process_digging(dungeon, entities, player, imp_id, marked_pos, dt, game_data);
         } else {
             // Reset task time when moving
             if let Some(entity) = entities.get_mut(imp_id) {
@@ -214,6 +214,7 @@ fn find_nearest_marked_tile(
     imp_pos: TilePos,
     targeted_tiles: &HashSet<TilePos>,
     player: &PlayerState,
+    game_data: &GameData,
 ) -> Option<TilePos> {
     let mut nearest_marked = None;
     let mut min_dist = f32::MAX;
@@ -221,7 +222,7 @@ fn find_nearest_marked_tile(
     for y in 0..dungeon.height {
         for x in 0..dungeon.width {
             let pos = TilePos::new(x as i32, y as i32);
-            if let Some(dist) = evaluate_dig_target(dungeon, pos, imp_pos, targeted_tiles, player) {
+            if let Some(dist) = evaluate_dig_target(dungeon, pos, imp_pos, targeted_tiles, player, game_data) {
                 if dist < min_dist {
                     min_dist = dist;
                     nearest_marked = Some(pos);
@@ -233,7 +234,7 @@ fn find_nearest_marked_tile(
 }
 
 /// Evaluate a potential dig target, returns distance score if valid
-fn evaluate_dig_target(dungeon: &Dungeon, pos: TilePos, imp_pos: TilePos, targeted_tiles: &HashSet<TilePos>, player: &PlayerState) -> Option<f32> {
+fn evaluate_dig_target(dungeon: &Dungeon, pos: TilePos, imp_pos: TilePos, targeted_tiles: &HashSet<TilePos>, player: &PlayerState, game_data: &GameData) -> Option<f32> {
     if pos != imp_pos && targeted_tiles.contains(&pos) {
         return None;
     }
@@ -249,7 +250,10 @@ fn evaluate_dig_target(dungeon: &Dungeon, pos: TilePos, imp_pos: TilePos, target
         if player.gold >= player.max_gold {
             return None;
         }
-        return Some(dist_sq + 10000.0);
+        // Prioritize gem seams by adding a large bonus to distance (making them less preferred for immediate selection)
+        // Actually this is inverted - we want lower score for closer/better tiles
+        // The original code adds 10000 to deprioritize gem seams unless nothing else is available
+        return Some(dist_sq + game_data.config.imp_behavior.gem_priority_bonus);
     }
 
     Some(dist_sq)
@@ -263,18 +267,20 @@ fn process_digging(
     imp_id: EntityId,
     marked_pos: TilePos,
     dt: f32,
+    game_data: &GameData,
 ) {
     // Check if dig delay is complete
     let mut task_complete = false;
+    let dig_delay = game_data.config.imp_behavior.dig_completion_delay;
     if let Some(entity) = entities.get_mut(imp_id) {
         if let Some(creature) = entity.as_creature_mut() {
             // Set task if not set (ensures we "claim" the tile)
             if creature.current_task.is_none() {
                 creature.current_task = Some(crate::state::entities::Task::Dig(marked_pos));
             }
-            
+
             creature.task_time += dt;
-            if creature.task_time >= 2.0 {
+            if creature.task_time >= dig_delay {
                 creature.task_time = 0.0;
                 creature.current_task = None; // Task done
                 task_complete = true;
@@ -283,26 +289,30 @@ fn process_digging(
     }
 
     if task_complete {
-        complete_dig(dungeon, player, marked_pos);
+        complete_dig(dungeon, player, marked_pos, game_data);
     }
 }
 
 /// Complete digging a tile and award resources
-fn complete_dig(dungeon: &mut Dungeon, player: &mut PlayerState, marked_pos: TilePos) {
+fn complete_dig(dungeon: &mut Dungeon, player: &mut PlayerState, marked_pos: TilePos, game_data: &GameData) {
     if let Some(tile) = dungeon.get_tile_mut(marked_pos) {
         if !tile.marked_for_dig {
             return;
         }
 
+        let gold_vein_reward = game_data.config.imp_behavior.gold_vein_reward;
+        let gem_seam_reward = game_data.config.imp_behavior.gem_seam_reward;
+        let mana_crystal_reward = game_data.config.imp_behavior.mana_crystal_reward;
+
         // Check if tile has resources
         let (gold_gained, mana_gained, is_gem_seam) = match tile.tile_type.as_str() {
             x if x == tt::GOLD_VEIN => {
-                let gold = tile.resources_remaining.map_or(50, |r| 50.min(r as i32));
+                let gold = tile.resources_remaining.map_or(gold_vein_reward, |r| gold_vein_reward.min(r as i32));
                 (gold, 0, false)
             }
-            x if x == tt::GEM_SEAM => (25, 0, true),
+            x if x == tt::GEM_SEAM => (gem_seam_reward, 0, true),
             x if x == tt::MANA_CRYSTAL => {
-                let mana = tile.resources_remaining.map_or(20, |r| 20.min(r as i32));
+                let mana = tile.resources_remaining.map_or(mana_crystal_reward, |r| mana_crystal_reward.min(r as i32));
                 (0, mana, false)
             }
             _ => (0, 0, false),
@@ -403,11 +413,12 @@ fn wander_randomly(
     imp_pos: TilePos,
     game_data: &GameData,
 ) {
-    let wander_radius = 5;
+    let wander_radius = game_data.config.creature_ai.wander_radius;
+    let wander_attempts = game_data.config.creature_ai.wander_attempts;
     let mut attempts = 0;
     let mut wander_pos = None;
 
-    while attempts < 10 && wander_pos.is_none() {
+    while attempts < wander_attempts && wander_pos.is_none() {
         let dx = macroquad::rand::gen_range(-wander_radius, wander_radius + 1);
         let dy = macroquad::rand::gen_range(-wander_radius, wander_radius + 1);
         let candidate = TilePos::new(imp_pos.x + dx, imp_pos.y + dy);

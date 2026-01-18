@@ -57,7 +57,7 @@ pub fn resolve_combat_tick(
     }
 
     // Calculate damage
-    let base_damage = calculate_damage(&attacker_stats, &defender_stats);
+    let base_damage = calculate_damage(&attacker_stats, &defender_stats, game_data);
 
     // Apply damage
     let actual_damage = base_damage.max(0.0);
@@ -71,7 +71,9 @@ pub fn resolve_combat_tick(
     } else {
         // Small chance of counterattack death based on level difference
         let level_diff = defender_stats.level as i32 - attacker_stats.level as i32;
-        level_diff > 3 && macroquad::rand::gen_range(0.0f32, 1.0) < 0.05
+        let level_threshold = game_data.config.combat.counterattack_level_threshold;
+        let death_chance = game_data.config.combat.counterattack_death_chance;
+        level_diff > level_threshold && macroquad::rand::gen_range(0.0f32, 1.0) < death_chance
     };
 
     // Generate status effects (simplified)
@@ -105,8 +107,8 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
                 .expect("Creature data not found");
 
             // Calculate level bonuses
-            let level_multiplier = 1.0 + (creature_state.level - 1) as f32 * 0.1;
-            let health_bonus = (creature_state.level - 1) as f32 * creature_data.progression.stat_growth_per_level.get("health").copied().unwrap_or(10.0);
+            let level_multiplier = 1.0 + (creature_state.level - 1) as f32 * game_data.config.combat.creature_level_multiplier;
+            let health_bonus = (creature_state.level - 1) as f32 * creature_data.progression.stat_growth_per_level.get("health").copied().unwrap_or(game_data.config.combat.creature_health_per_level);
 
             CombatStats {
                 health: creature_state.health,
@@ -126,8 +128,8 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
                 .expect("Hero data not found");
 
             // Calculate level bonuses
-            let level_multiplier = 1.0 + (hero_state.level - 1) as f32 * 0.15;
-            let health_bonus = (hero_state.level - 1) as f32 * hero_data.progression.stat_growth_per_level.get("health").copied().unwrap_or(15.0);
+            let level_multiplier = 1.0 + (hero_state.level - 1) as f32 * game_data.config.combat.hero_level_multiplier;
+            let health_bonus = (hero_state.level - 1) as f32 * hero_data.progression.stat_growth_per_level.get("health").copied().unwrap_or(game_data.config.combat.hero_health_per_level);
 
             CombatStats {
                 health: hero_state.health,
@@ -148,10 +150,10 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
                 health: structure_state.health,
                 max_health: structure_state.max_health,
                 attack: 0.0,
-                defense: 10.0, // Base defense for buildings
+                defense: game_data.config.combat.building_base_defense,
                 attack_type: "none".to_string(),
                 damage_range: [0.0, 0.0],
-                attack_speed: 1.0, 
+                attack_speed: game_data.config.combat.building_attack_speed,
                 armor_type: "stone".to_string(),
                 resistances: HashMap::new(),
                 level: 1,
@@ -161,7 +163,7 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
 }
 
 /// Calculate damage from attacker to defender
-pub fn calculate_damage(attacker: &CombatStats, defender: &CombatStats) -> f32 {
+pub fn calculate_damage(attacker: &CombatStats, defender: &CombatStats, game_data: &GameData) -> f32 {
     // Base damage from attacker's range
     let base_damage = if attacker.damage_range[1] > attacker.damage_range[0] {
         let range = attacker.damage_range[1] - attacker.damage_range[0];
@@ -171,10 +173,10 @@ pub fn calculate_damage(attacker: &CombatStats, defender: &CombatStats) -> f32 {
     };
 
     // Add attack stat bonus
-    let attack_damage = base_damage + attacker.attack * 0.5;
+    let attack_damage = base_damage + attacker.attack * game_data.config.combat.attack_stat_bonus;
 
     // Apply defense reduction
-    let defense_reduction = defender.defense * 0.3;
+    let defense_reduction = defender.defense * game_data.config.combat.defense_reduction;
     let pre_resist_damage = (attack_damage - defense_reduction).max(0.0);
 
     // Apply elemental resistances
@@ -210,6 +212,7 @@ pub fn apply_combat_result(
     attacker_id: EntityId,
     defender_id: EntityId,
     entities: &mut HashMap<EntityId, Entity>,
+    game_data: &GameData,
 ) {
     // Apply damage to defender
     if let Some(defender) = entities.get_mut(&defender_id) {
@@ -249,9 +252,8 @@ pub fn apply_combat_result(
         if let Some(defender) = entities.get(&defender_id) {
             match &defender.entity_type {
                 crate::state::entities::EntityType::Creature(state) => state.level,
-
                 crate::state::entities::EntityType::Hero(_) => 0, // Heroes don't give XP
-                crate::state::entities::EntityType::Structure(_) => 5, // Buildings give fixed XP (e.g. 5 levels worth)
+                crate::state::entities::EntityType::Structure(_) => game_data.config.combat.building_xp_reward as u32,
             }
         } else {
             0
@@ -263,14 +265,14 @@ pub fn apply_combat_result(
     // Award experience to attacker if defender died
     if defender_died && victim_level > 0 {
         if let Some(attacker) = entities.get_mut(&attacker_id) {
-            award_experience(attacker, victim_level);
+            award_experience(attacker, victim_level, game_data);
         }
     }
 }
 
 /// Award experience to attacker for killing a creature
-fn award_experience(attacker: &mut Entity, victim_level: u32) {
-    let exp_gain = victim_level as u32 * 10;
+fn award_experience(attacker: &mut Entity, victim_level: u32, game_data: &GameData) {
+    let exp_gain = victim_level as u32 * game_data.config.combat.xp_per_victim_level as u32;
 
     match &mut attacker.entity_type {
         crate::state::entities::EntityType::Creature(state) => {
@@ -279,10 +281,10 @@ fn award_experience(attacker: &mut Entity, victim_level: u32) {
             // Check for level up
             // Use same max_experience field from CreatureState
             if state.experience >= state.max_experience {
-                level_up_creature(state);
+                level_up_creature(state, game_data);
             }
         }
-        crate::state::entities::EntityType::Hero(state) => {
+        crate::state::entities::EntityType::Hero(_state) => {
             // Heroes don't level up in combat in this simplified system
             // Could be extended to award hero XP
         }
@@ -291,23 +293,25 @@ fn award_experience(attacker: &mut Entity, victim_level: u32) {
 }
 
 /// Calculate experience needed for next level
-fn calculate_exp_needed(current_level: u32) -> u32 {
+fn calculate_exp_needed(current_level: u32, game_data: &GameData) -> u32 {
     // Simple exponential growth
-    100 * (2u32.pow(current_level - 1))
+    let base = game_data.config.combat.xp_requirement_base;
+    let multiplier = game_data.config.combat.xp_requirement_multiplier;
+    (base as f32 * multiplier.powi(current_level as i32 - 1)) as u32
 }
 
 /// Level up a creature
-fn level_up_creature(state: &mut crate::state::entities::CreatureState) {
-    if state.level >= 5 {
+fn level_up_creature(state: &mut crate::state::entities::CreatureState, game_data: &GameData) {
+    if state.level >= game_data.config.combat.max_creature_level {
         return; // Max level cap
     }
 
     state.level += 1;
     state.experience = 0.0; // Reset for next level
-    state.max_experience *= 1.5; // Scaling XP requirement
+    state.max_experience *= game_data.config.combat.xp_requirement_multiplier; // Scaling XP requirement
 
     // Increase stats (simplified - in full game would use progression data)
-    state.max_health += 10.0;
+    state.max_health += game_data.config.combat.level_up_health_bonus;
     state.health = state.max_health; // Full heal on level up
 
     // Could also increase attack, defense, etc.

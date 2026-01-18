@@ -59,11 +59,12 @@ impl InputHandler {
         let mouse_pos = mouse_position();
 
         // Map type selection buttons (coords matched from original)
+        // Map type selection buttons (coords matched from original)
         let map_button_y = screen_height() / 2.0 - 50.0;
         let map_button_width = 160.0;
         let map_button_height = 40.0;
         let map_button_spacing = 10.0;
-        let total_width = (map_button_width + map_button_spacing) * 4.0 - map_button_spacing;
+        let total_width = (map_button_width + map_button_spacing) * 5.0 - map_button_spacing; // 5 buttons now
         let map_button_start_x = screen_width() / 2.0 - total_width / 2.0;
 
         let map_types = [
@@ -71,6 +72,7 @@ impl InputHandler {
             (MapType::Rich, 1),
             (MapType::Hazardous, 2),
             (MapType::Test, 3),
+            (MapType::File("assets/maps/level_1.json".to_string()), 4),
         ];
 
         if is_mouse_button_pressed(MouseButton::Left) {
@@ -81,7 +83,7 @@ impl InputHandler {
                     && mouse_pos.1 >= map_button_y
                     && mouse_pos.1 <= map_button_y + map_button_height
                 {
-                    *selected_map_type = *map_type;
+                    *selected_map_type = map_type.clone();
                 }
             }
         }
@@ -105,9 +107,32 @@ impl InputHandler {
                     50,
                     50,
                     data,
-                    *selected_map_type,
+                    selected_map_type.clone(),
                 );
                 *phase = GamePhase::Playing(game_state);
+            }
+        }
+        
+        // Handle Load Game
+         let load_y = button_y + button_height + 20.0; // Spacing logic matched with renderer
+         let should_load = is_mouse_button_pressed(MouseButton::Left)
+            && mouse_pos.0 >= button_x
+            && mouse_pos.0 <= button_x + button_width
+            && mouse_pos.1 >= load_y
+            && mouse_pos.1 <= load_y + button_height;
+
+        if should_load {
+             // Check if save exists first
+            if crate::state::save_system::save_exists("slot_1") {
+                match crate::state::save_system::load_game("slot_1") {
+                    Ok(loaded_state) => {
+                        println!("Game loaded successfully!");
+                        *phase = GamePhase::Playing(loaded_state);
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to load game: {}", e);
+                    }
+                }
             }
         }
     }
@@ -148,7 +173,7 @@ impl InputHandler {
             let button_width = 200.0;
             let button_height = 50.0;
             let spacing = 20.0;
-            let start_y = screen_center_y - 50.0;
+            let start_y = screen_center_y - 100.0; // Matches renderer
 
             let mouse_pos = mouse_position();
             let is_click = is_mouse_button_pressed(MouseButton::Left);
@@ -164,8 +189,51 @@ impl InputHandler {
                 state.paused = false;
             }
 
+            // Save Game Button
+            let save_y = start_y + button_height + spacing;
+            if is_click && 
+               mouse_pos.0 >= screen_center_x - button_width / 2.0 && 
+               mouse_pos.0 <= screen_center_x + button_width / 2.0 &&
+               mouse_pos.1 >= save_y && 
+               mouse_pos.1 <= save_y + button_height 
+            {
+                match crate::state::save_system::save_game(state, "slot_1") {
+                    Ok(_) => {
+                        state.notifications.success("Game saved successfully!");
+                        eprintln!("Game saved to slot_1");
+                    }
+                    Err(e) => {
+                        state.notifications.danger(format!("Save failed: {}", e));
+                        eprintln!("Failed to save game: {}", e);
+                    }
+                }
+            }
+
+            // Load Game Button
+            let load_y = start_y + (button_height + spacing) * 2.0;
+            if is_click && 
+               mouse_pos.0 >= screen_center_x - button_width / 2.0 && 
+               mouse_pos.0 <= screen_center_x + button_width / 2.0 &&
+               mouse_pos.1 >= load_y && 
+               mouse_pos.1 <= load_y + button_height 
+            {
+                if crate::state::save_system::save_exists("slot_1") {
+                    match crate::state::save_system::load_game("slot_1") {
+                        Ok(loaded_state) => {
+                            *state = loaded_state;
+                            state.notifications.success("Game loaded!");
+                            eprintln!("Game loaded from slot_1");
+                        }
+                        Err(e) => {
+                            state.notifications.danger(format!("Load failed: {}", e));
+                            eprintln!("Failed to load game: {}", e);
+                        }
+                    }
+                }
+            }
+
             // Main Menu Button
-            let menu_y = start_y + button_height + spacing;
+            let menu_y = start_y + (button_height + spacing) * 3.0;
             if is_click && 
                mouse_pos.0 >= screen_center_x - button_width / 2.0 && 
                mouse_pos.0 <= screen_center_x + button_width / 2.0 &&
@@ -176,7 +244,7 @@ impl InputHandler {
             }
 
             // Exit Button
-            let exit_y = start_y + (button_height + spacing) * 2.0;
+            let exit_y = start_y + (button_height + spacing) * 4.0;
             if is_click && 
                mouse_pos.0 >= screen_center_x - button_width / 2.0 && 
                mouse_pos.0 <= screen_center_x + button_width / 2.0 &&
@@ -483,6 +551,9 @@ impl InputHandler {
             }
             InteractionMode::SetDefendMarker => {
                 Self::handle_set_marker(state, "defend", tile_pos);
+            }
+            InteractionMode::SaveGame => {
+                // No tile interaction for SaveGame
             }
         }
     }

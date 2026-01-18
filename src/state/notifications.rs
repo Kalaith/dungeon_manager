@@ -1,8 +1,10 @@
 //! Notification system for game events
 //! Displays toast-style messages to the player
 
+use serde::{Deserialize, Serialize};
+
 /// Type of notification for styling purposes
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NotificationType {
     /// Positive event (research complete, victory)
     Success,
@@ -15,7 +17,7 @@ pub enum NotificationType {
 }
 
 /// A single notification message
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Notification {
     pub message: String,
     pub notification_type: NotificationType,
@@ -52,7 +54,7 @@ const DEFAULT_DURATION: f32 = 4.0;
 const MAX_NOTIFICATIONS: usize = 5;
 
 /// Manages the notification queue
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct NotificationManager {
     notifications: Vec<Notification>,
 }

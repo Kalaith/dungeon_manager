@@ -28,6 +28,7 @@ pub enum SidebarTab {
     Minions,
     Traps,
     Research,
+    Utils, // Save/Load, Settings, etc.
 }
 
 pub struct Sidebar {
@@ -121,10 +122,14 @@ impl Sidebar {
                         return self.handle_minions_tab_click(mouse_pos, held_entity);
                     }
                     SidebarTab::Traps => {
-                        return self.handle_traps_tab_click(mouse_pos, player);
+                        return self.handle_traps_tab_click(mouse_pos, player, game_data);
                     }
                     SidebarTab::Research => {
                         self.handle_research_tab_click(mouse_pos, player, &game_data.technologies, action_queue);
+                        return None;
+                    }
+                    SidebarTab::Utils => {
+                        self.handle_utils_tab_click(mouse_pos, action_queue);
                         return None;
                     }
                 }
@@ -174,7 +179,8 @@ impl Sidebar {
         }
 
         // Add utility items
-        layout.push(("Spawner".to_string(), InteractionMode::PlaceSpawner, crate::config::SPAWNER_COST, "5".to_string()));
+        let spawner_cost = game_data.tiles.get("monster_spawner").and_then(|t| t.cost).unwrap_or(50);
+        layout.push(("Spawner".to_string(), InteractionMode::PlaceSpawner, spawner_cost, "5".to_string()));
         layout.push(("Sell/Cancel".to_string(), InteractionMode::Sell, 0, "X".to_string()));
 
         let mut current_x = start_x;
@@ -307,14 +313,16 @@ impl Sidebar {
         None
     }
 
-    fn handle_traps_tab_click(&mut self, mouse_pos: (f32, f32), player: &PlayerState) -> Option<InteractionMode> {
+    fn handle_traps_tab_click(&mut self, mouse_pos: (f32, f32), player: &PlayerState, game_data: &crate::data::GameData) -> Option<InteractionMode> {
         let start_x = PADDING;
         let start_y = self.panel_y + PADDING;
-        
+
         // Trap items: Label, Mode, Material Cost, Hotkey (optional)
+        let door_cost = game_data.traps.get("door").map(|t| t.cost).unwrap_or(50);
+        let spike_cost = game_data.traps.get("spike_trap").map(|t| t.cost).unwrap_or(100);
         let buttons = vec![
-            ("Door", InteractionMode::BuildTrap("door".to_string()), crate::config::DOOR_COST, "D"),
-            ("Spike Trap", InteractionMode::BuildTrap("spike_trap".to_string()), crate::config::SPIKE_TRAP_COST, "S"),
+            ("Door", InteractionMode::BuildTrap("door".to_string()), door_cost, "D"),
+            ("Spike Trap", InteractionMode::BuildTrap("spike_trap".to_string()), spike_cost, "S"),
         ];
 
         let mut current_x = start_x;
@@ -396,6 +404,26 @@ impl Sidebar {
              // Move to next position (must match draw logic)
             current_x += width + BUTTON_SPACING;
         }
+    }
+
+    pub fn handle_utils_tab_click(
+        &mut self,
+        mouse_pos: (f32, f32),
+        action_queue: &mut crate::ui::actions::ActionQueue,
+    ) {
+         let start_x = PADDING;
+         let start_y = self.panel_y + PADDING;
+
+         // Save Game Button
+         let save_btn_width = 150.0;
+         let save_btn_height = BUTTON_SIZE;
+         let save_x = start_x;
+         let save_y = start_y;
+         
+         if mouse_pos.0 >= save_x && mouse_pos.0 <= save_x + save_btn_width
+            && mouse_pos.1 >= save_y && mouse_pos.1 <= save_y + save_btn_height {
+                action_queue.push(crate::ui::actions::UiAction::SaveGame);
+         }
     }
     
     fn interaction_modes_match(&self, m1: &InteractionMode, m2: &InteractionMode) -> bool {

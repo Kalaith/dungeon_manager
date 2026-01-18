@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CameraState {
     pub target: (f32, f32, f32),
     pub distance: f32,

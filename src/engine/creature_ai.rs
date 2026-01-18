@@ -85,7 +85,7 @@ fn update_single_creature(
             if let Some(entity) = entities.get_mut(creature_id) {
                 if let Some(creature) = entity.as_creature_mut() {
                     update_needs(creature, dt, monster_data);
-                    update_mood(creature, monster_data);
+                    update_mood(creature, monster_data, game_data);
                 }
             }
         }
@@ -178,12 +178,13 @@ fn decide_task_from_rooms(
 
     // Priority 1: Check Global Markers (Override needs unless critical)
     // Attack Marker
+    let marker_dist_threshold = game_data.config.creature_ai.marker_distance_threshold;
     if let Some(marker) = attack_marker {
         // Calculate distance via Manhattan for quick check
         let dist = (creature_pos.x - marker.x).abs() + (creature_pos.y - marker.y).abs();
-        
+
         // If not at marker, move there
-        if dist > 3 {
+        if dist > marker_dist_threshold {
              return Some(Task::MoveTo(marker));
         }
         // If at marker, we stay/patrol/attack automatically via combat system + idle wander
@@ -195,7 +196,7 @@ fn decide_task_from_rooms(
     // Defend Marker
     if let Some(marker) = defend_marker {
         let dist = (creature_pos.x - marker.x).abs() + (creature_pos.y - marker.y).abs();
-        if dist > 3 {
+        if dist > marker_dist_threshold {
              return Some(Task::MoveTo(marker));
         }
     }
@@ -206,7 +207,7 @@ fn decide_task_from_rooms(
     }
 
     // If carrying gold, prioritize depositing
-    if creature.gold_carried > 20 {
+    if creature.gold_carried > game_data.config.creature_ai.gold_carrying_threshold {
         use crate::engine::room_validator;
         if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, "treasury", creature_pos, 0.0) {
             return Some(Task::DepositGold(room_id));
@@ -214,7 +215,7 @@ fn decide_task_from_rooms(
     }
 
     // Check most urgent need
-    if let Some(task) = try_satisfy_critical_need(creature, creature_pos, room_manager, monster_data) {
+    if let Some(task) = try_satisfy_critical_need(creature, creature_pos, room_manager, monster_data, game_data) {
         return Some(task);
     }
 
@@ -225,17 +226,17 @@ fn decide_task_from_rooms(
         use crate::engine::room_validator;
         if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, room_type, creature_pos, 0.0) {
             let task = Task::Work(room_id);
-            let desirability = calculate_task_desirability(&task, creature, monster_data) * desire;
+            let desirability = calculate_task_desirability(&task, creature, monster_data, game_data) * desire;
             candidate_tasks.push((task, desirability));
         }
     }
 
     // Add training if available
-    if creature.mood > 50.0 && creature.level < 5 {
+    if creature.mood > game_data.config.creature_ai.training_mood_threshold && creature.level < game_data.config.combat.max_creature_level {
         use crate::engine::room_validator;
         if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, "training_room", creature_pos, 0.0) {
             let task = Task::Train(room_id);
-            let desirability = calculate_task_desirability(&task, creature, monster_data);
+            let desirability = calculate_task_desirability(&task, creature, monster_data, game_data);
             candidate_tasks.push((task, desirability));
         }
     }
@@ -244,7 +245,7 @@ fn decide_task_from_rooms(
     use crate::engine::room_validator;
     if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, "library", creature_pos, 0.0) {
         let task = Task::Research(room_id);
-        let desirability = calculate_task_desirability(&task, creature, monster_data) * 0.8;
+        let desirability = calculate_task_desirability(&task, creature, monster_data, game_data) * game_data.config.creature_ai.research_desirability;
         candidate_tasks.push((task, desirability));
     }
 
@@ -329,10 +330,10 @@ fn pathfind_to_target(
 }
 
 /// Try to satisfy a critical need by finding an appropriate room
-fn try_satisfy_critical_need(creature: &CreatureState, creature_pos: TilePos, room_manager: &RoomManager, monster_data: &MonsterData) -> Option<Task> {
+fn try_satisfy_critical_need(creature: &CreatureState, creature_pos: TilePos, room_manager: &RoomManager, monster_data: &MonsterData, game_data: &GameData) -> Option<Task> {
     let (need_name, need_value) = creature.get_most_urgent_need()?;
 
-    if need_value >= crate::config::NEED_CRITICAL_THRESHOLD {
+    if need_value >= game_data.config.creature_ai.need_critical_threshold {
         return None;
     }
 
@@ -355,10 +356,11 @@ fn try_satisfy_critical_need(creature: &CreatureState, creature_pos: TilePos, ro
 
 /// Pick a random walkable tile for wandering
 fn pick_wander_position(dungeon: &Dungeon, current_pos: TilePos, game_data: &GameData) -> Option<TilePos> {
-    let wander_radius = 5;
+    let wander_radius = game_data.config.creature_ai.wander_radius;
+    let wander_attempts = game_data.config.creature_ai.wander_attempts;
     let mut attempts = 0;
 
-    while attempts < 10 {
+    while attempts < wander_attempts {
         let dx = macroquad::rand::gen_range(-wander_radius, wander_radius + 1);
         let dy = macroquad::rand::gen_range(-wander_radius, wander_radius + 1);
         let candidate = TilePos::new(current_pos.x + dx, current_pos.y + dy);
@@ -386,8 +388,9 @@ pub fn update_needs(creature: &mut CreatureState, dt: f32, monster_data: &Monste
 }
 
 /// Calculate creature mood based on needs satisfaction
-pub fn calculate_mood(creature: &CreatureState, monster_data: &MonsterData) -> f32 {
+pub fn calculate_mood(creature: &CreatureState, monster_data: &MonsterData, game_data: &GameData) -> f32 {
     let base_mood = monster_data.ai.base_mood as f32;
+    let mood_penalties = &game_data.config.creature_ai.mood_penalties;
 
     // Start from base mood
     let mut mood = base_mood;
@@ -400,19 +403,19 @@ pub fn calculate_mood(creature: &CreatureState, monster_data: &MonsterData) -> f
 
         // Needs contribute ±30 points to mood
         // 100% satisfied = +30, 0% satisfied = -30
-        let need_modifier = (average_satisfaction - 50.0) * 0.6;
+        let need_modifier = (average_satisfaction - 50.0) * game_data.config.creature_ai.task_desirability.need_modifier;
         mood += need_modifier;
     }
 
     // Health affects mood
     let health_percent = (creature.health / creature.max_health) * 100.0;
-    if health_percent < 30.0 {
-        mood -= 20.0; // Low health makes creatures unhappy
+    if health_percent < mood_penalties.low_health_threshold {
+        mood -= mood_penalties.low_health_penalty;
     }
 
     // Being angry reduces mood
     if creature.is_angry {
-        mood -= 15.0;
+        mood -= mood_penalties.angry_penalty;
     }
 
     // Clamp to 0-100
@@ -420,8 +423,8 @@ pub fn calculate_mood(creature: &CreatureState, monster_data: &MonsterData) -> f
 }
 
 /// Update creature mood
-pub fn update_mood(creature: &mut CreatureState, monster_data: &MonsterData) {
-    creature.mood = calculate_mood(creature, monster_data);
+pub fn update_mood(creature: &mut CreatureState, monster_data: &MonsterData, game_data: &GameData) {
+    creature.mood = calculate_mood(creature, monster_data, game_data);
 
     // Update angry state
     let anger_threshold = monster_data.ai.anger_threshold as f32;
@@ -446,9 +449,11 @@ pub fn calculate_task_desirability(
     task: &Task,
     creature: &CreatureState,
     monster_data: &MonsterData,
+    game_data: &GameData,
 ) -> f32 {
     let task_type = task.task_type();
-    let mut desirability = 1.0;
+    let task_config = &game_data.config.creature_ai.task_desirability;
+    let mut desirability = task_config.base;
 
     // Apply task preference from monster data
     if let Some(&preference) = monster_data.ai.task_preferences.get(task_type) {
@@ -468,9 +473,9 @@ pub fn calculate_task_desirability(
         Task::DepositGold(_) => {
             if creature.gold_carried > 0 {
                 let gold_need = 100.0 - creature.get_need("gold");
-                desirability *= 1.5 + (gold_need / 100.0);
+                desirability *= task_config.gold_deposit + (gold_need / 100.0);
             } else {
-                desirability *= 0.1; // Don't deposit if no gold
+                desirability *= task_config.skip_deposit; // Don't deposit if no gold
             }
         }
         Task::Train(_) => {
@@ -480,15 +485,15 @@ pub fn calculate_task_desirability(
             } else {
                 50.0
             };
-            if avg_satisfaction > 60.0 {
-                desirability *= 1.5;
+            if avg_satisfaction > task_config.satisfaction_threshold {
+                desirability *= task_config.training_high_satisfaction;
             } else {
-                desirability *= 0.5;
+                desirability *= task_config.training_low_satisfaction;
             }
         }
         Task::CollectWages(_) => {
             let gold_need = 100.0 - creature.get_need("gold");
-            desirability *= 2.0 + (gold_need / 100.0);
+            desirability *= task_config.wage_collection + (gold_need / 100.0);
         }
         _ => {}
     }
@@ -527,7 +532,7 @@ pub fn decide_task(
     }
 
     // If carrying gold, prioritize depositing
-    if creature.gold_carried > 20 {
+    if creature.gold_carried > game_data.config.creature_ai.gold_carrying_threshold {
         use crate::engine::room_validator;
         if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.room_manager.rooms, "treasury", creature_pos, 0.0) {
             return Some(Task::DepositGold(room_id));
@@ -539,7 +544,7 @@ pub fn decide_task(
         // eprintln!("[AI] Most urgent need for {}: {} = {:.1}%", creature.creature_id, need_name, need_value);
 
         // If need is critical, prioritize satisfying it
-        if need_value < crate::config::NEED_CRITICAL_THRESHOLD {
+        if need_value < game_data.config.creature_ai.need_critical_threshold {
             eprintln!("[AI] Critical need {} detected!", need_name);
             // Find room that satisfies this need
             if let Some(need_data) = monster_data.needs.get(&need_name) {
@@ -574,8 +579,8 @@ pub fn decide_task(
         use crate::engine::room_validator;
         if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.room_manager.rooms, room_type, creature_pos, 0.0) {
             let task = Task::Work(room_id);
-            let mut desirability = calculate_task_desirability(&task, creature, monster_data) * desire;
-            
+            let mut desirability = calculate_task_desirability(&task, creature, monster_data, game_data) * desire;
+
             // Adjust based on room factors
             if let Some(room) = game_state.room_manager.rooms.iter().find(|r| r.id == room_id) {
                  if let Some(room_data) = game_data.rooms.get(room_type) {
@@ -592,12 +597,12 @@ pub fn decide_task(
     }
 
     // Add training if available and mood is good
-    if creature.mood > 50.0 && creature.level < 5 {
+    if creature.mood > game_data.config.creature_ai.training_mood_threshold && creature.level < game_data.config.combat.max_creature_level {
         use crate::engine::room_validator;
         if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.room_manager.rooms, "training_room", creature_pos, 0.0)
         {
             let task = Task::Train(room_id);
-            let desirability = calculate_task_desirability(&task, creature, monster_data);
+            let desirability = calculate_task_desirability(&task, creature, monster_data, game_data);
             // eprintln!("[AI] Candidate: Train - desirability={:.2}", desirability);
             candidate_tasks.push((task, desirability));
         }
@@ -607,7 +612,7 @@ pub fn decide_task(
     use crate::engine::room_validator;
     if let Some((room_id, _)) = room_validator::find_nearest_room(&game_state.room_manager.rooms, "library", creature_pos, 0.0) {
         let task = Task::Research(room_id);
-        let desirability = calculate_task_desirability(&task, creature, monster_data) * 0.8;
+        let desirability = calculate_task_desirability(&task, creature, monster_data, game_data) * game_data.config.creature_ai.research_desirability;
         // eprintln!("[AI] Candidate: Research - desirability={:.2}", desirability);
         candidate_tasks.push((task, desirability));
     }
@@ -735,13 +740,13 @@ pub fn get_creatures_needing_attention(
                 result.push((entity_id, "deserting".to_string()));
             } else if creature.is_angry {
                 result.push((entity_id, "angry".to_string()));
-            } else if creature.mood < crate::config::MOOD_ATTENTION_THRESHOLD {
+            } else if creature.mood < game_data.config.creature_ai.mood_attention_threshold {
                 result.push((entity_id, "unhappy".to_string()));
             }
 
             // Check critical needs
             if let Some((need_name, need_value)) = creature.get_most_urgent_need() {
-                if need_value < crate::config::NEED_ATTENTION_THRESHOLD {
+                if need_value < game_data.config.creature_ai.need_attention_threshold {
                     result.push((entity_id, format!("critical_{}", need_name)));
                 }
             }

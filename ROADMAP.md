@@ -83,9 +83,9 @@ This document tracks what's currently being worked on and planned future feature
 - [ ] Hotkey display overlay
 
 ### Content
-- [ ] More creature types (Spider, Vampire, Dark Elf)
-- [ ] More trap types (Gas, Lightning, Pit)
-- [ ] More spells (Earthquake, Speed Boost, Invisibility)
+- [x] More creature types (Spider, Vampire, Dark Elf)
+- [x] More trap types (Gas, Lightning, Pit)
+- [x] More spells (Earthquake, Speed Boost, Invisibility)
 
 ---
 

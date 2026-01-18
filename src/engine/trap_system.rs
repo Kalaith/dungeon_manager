@@ -8,9 +8,6 @@ use crate::state::player_state::PlayerState;
 use crate::state::tile_state::TilePos;
 use std::collections::HashSet;
 
-/// Cooldown time after a trap triggers before it can trigger again (seconds)
-const TRAP_COOLDOWN: f32 = 5.0;
-
 /// Get the material cost for a trap type from game data
 pub fn get_trap_cost(trap_type: &str, game_data: &GameData) -> i32 {
     game_data.traps
@@ -134,7 +131,7 @@ pub fn process_trap_triggers(
     traps_to_trigger.into_iter()
         .filter_map(|(pos, trap_type, hero_id)| {
             let trap_data = game_data.traps.get(&trap_type)?;
-            trigger_trap(pos, &trap_type, trap_data, hero_id, entities, dungeon)
+            trigger_trap(pos, &trap_type, trap_data, hero_id, entities, dungeon, game_data)
         })
         .collect()
 }
@@ -173,30 +170,33 @@ fn trigger_trap(
     triggering_entity: EntityId,
     entities: &mut EntityManager,
     dungeon: &mut Dungeon,
+    game_data: &GameData,
 ) -> Option<TrapTriggerResult> {
     match trap_type {
         "door" => None,
-        "spike_trap" => trigger_spike_trap(pos, trap_data, triggering_entity, entities, dungeon),
-        "boulder_trap" => trigger_boulder_trap(pos, trap_data, entities, dungeon),
-        "alarm_trap" => { trigger_alarm_trap(pos, trap_data, entities, dungeon); None }
+        "spike_trap" => trigger_spike_trap(pos, trap_data, triggering_entity, entities, dungeon, game_data),
+        "boulder_trap" => trigger_boulder_trap(pos, trap_data, entities, dungeon, game_data),
+        "alarm_trap" => { trigger_alarm_trap(pos, trap_data, entities, dungeon, game_data); None }
         _ => { eprintln!("Unknown trap type: {}", trap_type); None }
     }
 }
 
-fn trigger_spike_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, triggering_entity: EntityId, entities: &mut EntityManager, dungeon: &mut Dungeon) -> Option<TrapTriggerResult> {
+fn trigger_spike_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, triggering_entity: EntityId, entities: &mut EntityManager, dungeon: &mut Dungeon, game_data: &GameData) -> Option<TrapTriggerResult> {
     let damage = trap_data.effects.damage;
     let entity = entities.get_mut(triggering_entity)?;
+    let cooldown = game_data.config.traps.default_cooldown;
 
     apply_trap_damage(entity, damage);
     eprintln!("Spike trap triggered at {:?}! Dealt {} damage.", pos, damage);
-    set_trap_cooldown(dungeon, pos, TRAP_COOLDOWN);
+    set_trap_cooldown(dungeon, pos, cooldown);
 
     Some(TrapTriggerResult { trap_pos: pos, trap_type: "spike_trap".to_string(), damage_dealt: damage, affected_entities: vec![triggering_entity] })
 }
 
-fn trigger_boulder_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, entities: &mut EntityManager, dungeon: &mut Dungeon) -> Option<TrapTriggerResult> {
+fn trigger_boulder_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, entities: &mut EntityManager, dungeon: &mut Dungeon, game_data: &GameData) -> Option<TrapTriggerResult> {
     let damage = trap_data.effects.damage;
-    let radius = if trap_data.effects.area { 1.5 } else { 0.5 };
+    let trap_config = &game_data.config.traps;
+    let radius = if trap_data.effects.area { trap_config.boulder_area_radius } else { trap_config.boulder_single_radius };
 
     let affected_entities: Vec<EntityId> = entities.heroes()
         .filter_map(|(id, _)| entities.get(id).map(|e| (id, e.pos)))
@@ -222,7 +222,7 @@ fn trigger_boulder_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, 
     Some(TrapTriggerResult { trap_pos: pos, trap_type: "boulder_trap".to_string(), damage_dealt: total_damage, affected_entities })
 }
 
-fn trigger_alarm_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, entities: &EntityManager, dungeon: &mut Dungeon) {
+fn trigger_alarm_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, entities: &EntityManager, dungeon: &mut Dungeon, game_data: &GameData) {
     let alert_radius = trap_data.effects.alert_radius;
 
     let alerted_count = entities.creatures()
@@ -231,7 +231,8 @@ fn trigger_alarm_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, en
         .count();
 
     eprintln!("Alarm trap triggered at {:?}! Alerted {} creatures.", pos, alerted_count);
-    set_trap_cooldown(dungeon, pos, TRAP_COOLDOWN * 2.0);
+    let cooldown = game_data.config.traps.default_cooldown;
+    set_trap_cooldown(dungeon, pos, cooldown * 2.0);
 }
 
 fn set_trap_cooldown(dungeon: &mut Dungeon, pos: TilePos, cooldown: f32) {

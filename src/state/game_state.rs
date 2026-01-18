@@ -10,6 +10,7 @@ use crate::state::player_state::PlayerState;
 use crate::state::tile_state::{Ownership, TilePos};
 use crate::state::room_manager::RoomManager;
 use std::collections::HashSet;
+use serde::{Deserialize, Serialize};
 
 /// Extract attack type from an entity type for combat calculations
 fn get_entity_attack_type(entity_type: &EntityType, game_data: &GameData) -> String {
@@ -24,14 +25,16 @@ fn get_entity_attack_type(entity_type: &EntityType, game_data: &GameData) -> Str
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MapType {
     Standard,   // Balanced resources and hazards
     Rich,       // Lots of gold and gems, few hazards
     Hazardous,  // Many water/lava pools, less resources
     Test,       // Fixed seed for testing
+    File(String), // Load from specific JSON file
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct GameState {
     pub dungeon: crate::state::dungeon::Dungeon,
     pub room_manager: RoomManager,
@@ -69,13 +72,27 @@ impl GameState {
     }
 
     pub fn new_with_map_type(width: usize, height: usize, game_data: &GameData, map_type: MapType) -> Self {
-        let mut dungeon = crate::state::dungeon::Dungeon::new(width, height, game_data, map_type);
+        let mut entities = EntityManager::new();
+        let mut dungeon;
+        
+        match &map_type {
+            MapType::File(path) => {
+                println!("Loading map from: {}", path);
+                dungeon = crate::state::map_loader::load_map(path, game_data, &mut entities)
+                    .unwrap_or_else(|e| {
+                        eprintln!("Failed to load map: {}. Falling back to standard generation.", e);
+                         crate::state::dungeon::Dungeon::new(width, height, game_data, MapType::Standard)
+                    });
+            },
+            _ => {
+                dungeon = crate::state::dungeon::Dungeon::new(width, height, game_data, map_type.clone());
+            }
+        }
+
         let mut room_manager = RoomManager::new();
         
-        // Detect and register starting rooms created by map generator
+        // Detect and register starting rooms (either generated or loaded)
         room_manager.detect_and_update_rooms(&mut dungeon, game_data);
-
-        let entities = EntityManager::new();
 
         // Detect Monster Spawners from map tiles
         let mut spawners = Vec::new();
@@ -112,7 +129,7 @@ impl GameState {
             pay_day_timer: 0.0, 
             spawners,
             paused: false,
-            hero_base: crate::state::hero_base::HeroBase::new(),
+            hero_base: crate::state::hero_base::HeroBase::new(game_data),
             game_over: false,
             victory: false,
             notifications: crate::state::notifications::NotificationManager::new(),
@@ -124,8 +141,15 @@ impl GameState {
         // Recalculate max gold and other room-based stats
         state.detect_and_update_rooms(game_data);
 
-        // Spawn 3 starting imps
-        state.spawn_starting_imps(game_data, 3);
+        // Spawn starting imps only if none exist (loaded map might have them)
+        let imp_count = state.entities.all()
+            .filter_map(|e| e.as_creature())
+            .filter(|c| c.creature_id == "imp")
+            .count();
+            
+        if imp_count == 0 {
+            state.spawn_starting_imps(game_data, 3);
+        }
 
         state
     }
@@ -203,13 +227,13 @@ impl GameState {
         self.next_creature_spawn_time -= dt;
         if self.next_creature_spawn_time <= 0.0 {
             self.spawn_random_creature(game_data);
-            let spawn_range = crate::config::CREATURE_SPAWN_MAX_INTERVAL - crate::config::CREATURE_SPAWN_MIN_INTERVAL;
-            self.next_creature_spawn_time = crate::config::CREATURE_SPAWN_MIN_INTERVAL + macroquad::rand::gen_range(0.0f32, 1.0) * spawn_range;
+            let spawn_range = game_data.config.timing.creature_spawn_max_interval - game_data.config.timing.creature_spawn_min_interval;
+            self.next_creature_spawn_time = game_data.config.timing.creature_spawn_min_interval + macroquad::rand::gen_range(0.0f32, 1.0) * spawn_range;
         }
 
         // Pay Day Logic
         self.pay_day_timer += dt;
-        if self.pay_day_timer >= crate::config::PAY_DAY_INTERVAL {
+        if self.pay_day_timer >= game_data.config.timing.pay_day_interval {
             self.pay_day_timer = 0.0;
             self.trigger_pay_day();
         }
@@ -470,7 +494,7 @@ impl GameState {
             | Task::CollectWages(room_id) => {
                 room_manager.rooms.iter()
                     .find(|r| r.id == *room_id)
-                    .map(|room| room.get_center())
+                    .map(|room: &crate::engine::room_validator::Room| room.get_center())
             }
             Task::Dig(pos) => Some(*pos),
             Task::MoveTo(pos) => Some(*pos),
@@ -702,9 +726,10 @@ impl GameState {
             let gold_need = creature.get_need("gold");
 
             // Creature is in critical condition if any need is below threshold
-            let is_critical = food_need < crate::config::NEED_DESERT_THRESHOLD
-                || sleep_need < crate::config::NEED_DESERT_THRESHOLD
-                || gold_need < crate::config::NEED_DESERT_THRESHOLD;
+            let desert_threshold = game_data.config.creature_ai.need_desert_threshold;
+            let is_critical = food_need < desert_threshold
+                || sleep_need < desert_threshold
+                || gold_need < desert_threshold;
 
             if is_critical {
                 if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
@@ -757,8 +782,12 @@ impl GameState {
             .count()
     }
 
-    /// Maximum number of imps allowed (uses config constant)
-    pub const MAX_IMPS: usize = crate::config::MAX_IMPS;
+    /// Maximum number of imps allowed (reads from monster data)
+    pub fn max_imps(game_data: &GameData) -> usize {
+        game_data.monsters.get("imp")
+            .map(|m| m.spawn.max_population as usize)
+            .unwrap_or(10)
+    }
 
     /// Count how many non-imp monsters are currently spawned
     pub fn count_monsters(&self) -> usize {
@@ -871,7 +900,7 @@ impl GameState {
                 }
 
                 let result = resolve_combat_tick(attacker, defender, dt, game_data);
-                crate::engine::combat::apply_combat_result(&result, attacker_id, target_id, self.entities.entities_mut());
+                crate::engine::combat::apply_combat_result(&result, attacker_id, target_id, self.entities.entities_mut(), game_data);
                 break;
             }
         }

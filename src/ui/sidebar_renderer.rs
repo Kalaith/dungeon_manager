@@ -34,8 +34,9 @@ pub fn draw_sidebar(
         SidebarTab::Build => draw_build_content(sidebar, current_mode, player, game_data),
         SidebarTab::Magic => draw_magic_content(sidebar, player, &game_data.spells),
         SidebarTab::Minions => draw_minions_content(sidebar, current_mode, held_entity, selected_entity, selected_room, entities, rooms),
-        SidebarTab::Traps => draw_traps_content(sidebar, current_mode, player),
+        SidebarTab::Traps => draw_traps_content(sidebar, current_mode, player, game_data),
         SidebarTab::Research => draw_research_content(sidebar, player, &game_data.technologies),
+        SidebarTab::Utils => draw_utils_content(sidebar, current_mode),
     }
     
     // Draw selected spell hint if any
@@ -57,6 +58,7 @@ fn draw_tabs(sidebar: &Sidebar) {
         (SidebarTab::Minions, "Inspect"),
         (SidebarTab::Traps, "Traps"),
         (SidebarTab::Research, "Tech"),
+        (SidebarTab::Utils, "Utils"),
     ];
 
     let tab_width = 100.0;
@@ -103,6 +105,32 @@ fn draw_tabs(sidebar: &Sidebar) {
     );
 }
 
+fn draw_utils_content(sidebar: &Sidebar, current_mode: &InteractionMode) {
+     let start_x = PADDING;
+     let start_y = sidebar.panel_y + PADDING;
+
+     // Save Game Button
+     let save_btn_width = 150.0;
+     let save_btn_height = BUTTON_SIZE;
+     let save_x = start_x;
+     let save_y = start_y;
+     
+     let is_save_selected = interaction_modes_match(current_mode, &InteractionMode::SaveGame);
+     
+     let save_color = if is_save_selected {
+         Color::new(0.2, 0.6, 0.3, 1.0)
+     } else {
+         Color::new(0.25, 0.25, 0.3, 1.0)
+     };
+
+     draw_rectangle(save_x, save_y, save_btn_width, save_btn_height, save_color);
+     draw_rectangle_lines(save_x, save_y, save_btn_width, save_btn_height, 2.0, WHITE);
+     draw_text("Save Game", save_x + 30.0, save_y + 30.0, 16.0, WHITE);
+}
+
+fn interaction_modes_match(m1: &InteractionMode, m2: &InteractionMode) -> bool {
+    m1 == m2
+}
 fn draw_build_content(sidebar: &Sidebar, current_mode: &InteractionMode, player: &PlayerState, game_data: &crate::data::GameData) {
     // Start with Dig
     let mut layout = vec![
@@ -147,13 +175,15 @@ fn draw_build_content(sidebar: &Sidebar, current_mode: &InteractionMode, player:
     }
 
     // Add utility items
-    layout.push(("Spawner".to_string(), InteractionMode::PlaceSpawner, crate::config::SPAWNER_COST, "5".to_string()));
+    let spawner_cost = game_data.tiles.get("monster_spawner").and_then(|t| t.cost).unwrap_or(50);
+    layout.push(("Spawner".to_string(), InteractionMode::PlaceSpawner, spawner_cost, "5".to_string()));
     layout.push(("Sell/Cancel".to_string(), InteractionMode::Sell, 0, "X".to_string()));
 
     let start_x = PADDING;
     let start_y = sidebar.panel_y + PADDING;
     let mut current_x = start_x;
     let mut current_y = start_y;
+    let mut tooltip_to_draw: Option<((f32, f32), Vec<String>)> = None;
 
     for (label, mode, cost, hotkey) in layout {
         let width = BUTTON_SIZE * 2.5;
@@ -225,11 +255,15 @@ fn draw_build_content(sidebar: &Sidebar, current_mode: &InteractionMode, player:
                      }
                  }
                  
-                 draw_tooltip(mouse, lines);
+                 tooltip_to_draw = Some((mouse, lines));
              }
         }
 
         current_x += width + BUTTON_SPACING;
+    }
+
+    if let Some((pos, lines)) = tooltip_to_draw {
+        draw_tooltip(pos, lines);
     }
 }
 
@@ -251,8 +285,16 @@ fn draw_tooltip(pos: (f32, f32), lines: Vec<String>) {
     let box_height = (font_size + 4.0) * lines.len() as f32 + padding * 2.0;
     
     // Offset slightly
-    let draw_x = pos.0 + 15.0;
-    let draw_y = pos.1 + 15.0;
+    let mut draw_x = pos.0 + 15.0;
+    let mut draw_y = pos.1 + 15.0;
+
+    // Prevent going off screen
+    if draw_x + box_width > screen_width() {
+        draw_x = pos.0 - box_width - 5.0;
+    }
+    if draw_y + box_height > screen_height() {
+        draw_y = pos.1 - box_height - 5.0;
+    }
     
     // Draw background
     draw_rectangle(draw_x, draw_y, box_width, box_height, Color::new(0.1, 0.1, 0.1, 0.95));
@@ -468,10 +510,12 @@ fn draw_room_details(details_x: f32, start_y: f32, room_id: usize, rooms: &[crat
     draw_text("Walls/doors needed for 100%", details_x, start_y + 85.0, 12.0, GRAY);
 }
 
-fn draw_traps_content(sidebar: &Sidebar, current_mode: &InteractionMode, player: &PlayerState) {
+fn draw_traps_content(sidebar: &Sidebar, current_mode: &InteractionMode, player: &PlayerState, game_data: &crate::data::GameData) {
+    let door_cost = game_data.traps.get("door").map(|t| t.cost).unwrap_or(50);
+    let spike_cost = game_data.traps.get("spike_trap").map(|t| t.cost).unwrap_or(100);
     let layout = vec![
-        ("Door", InteractionMode::BuildTrap("door".to_string()), crate::config::DOOR_COST, "D"),
-        ("Spike Trap", InteractionMode::BuildTrap("spike_trap".to_string()), crate::config::SPIKE_TRAP_COST, "S"),
+        ("Door", InteractionMode::BuildTrap("door".to_string()), door_cost, "D"),
+        ("Spike Trap", InteractionMode::BuildTrap("spike_trap".to_string()), spike_cost, "S"),
     ];
 
     let start_x = PADDING;
@@ -609,17 +653,4 @@ fn draw_research_content(sidebar: &Sidebar, player: &PlayerState, technologies: 
     }
 }
 
-fn interaction_modes_match(m1: &InteractionMode, m2: &InteractionMode) -> bool {
-    match (m1, m2) {
-        (InteractionMode::None, InteractionMode::None) => true,
-        (InteractionMode::Dig, InteractionMode::Dig) => true,
-        (InteractionMode::PlaceSpawner, InteractionMode::PlaceSpawner) => true,
-        (InteractionMode::Pickup, InteractionMode::Pickup) => true,
-        (InteractionMode::Drop, InteractionMode::Drop) => true,
-        (InteractionMode::Sell, InteractionMode::Sell) => true,
-        (InteractionMode::Inspect, InteractionMode::Inspect) => true,
-        (InteractionMode::BuildRoom(a), InteractionMode::BuildRoom(b)) => a == b,
-        (InteractionMode::BuildTrap(a), InteractionMode::BuildTrap(b)) => a == b,
-        _ => false,
-    }
-}
+// Original function replaced by updated version above with SaveGame support

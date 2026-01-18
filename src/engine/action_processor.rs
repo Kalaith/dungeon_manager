@@ -178,6 +178,16 @@ fn process_single_action(
         UiAction::StartResearch(tech_id) => {
             game_state.player.start_research(tech_id);
         }
+
+        UiAction::SaveGame => {
+            // Save to "slot_1" for now
+            if let Err(e) = crate::state::save_system::save_game(game_state, "slot_1") {
+                eprintln!("Failed to save game: {}", e);
+                game_state.notifications.danger(format!("Save Failed: {}", e));
+            } else {
+                game_state.notifications.success("Game Saved!");
+            }
+        }
     }
 
     result
@@ -254,8 +264,9 @@ fn process_place_spawner(game_state: &mut GameState, game_data: &GameData, pos: 
         false
     };
 
-    if game_state.player.gold >= crate::config::SPAWNER_COST && is_valid {
-        game_state.player.gold -= crate::config::SPAWNER_COST;
+    let spawner_cost = game_data.tiles.get("monster_spawner").and_then(|t| t.cost).unwrap_or(50);
+    if game_state.player.gold >= spawner_cost && is_valid {
+        game_state.player.gold -= spawner_cost;
         
         if let Some(tile) = game_state.get_tile_mut(pos) {
             tile.tile_type = tt::MONSTER_SPAWNER.to_string();

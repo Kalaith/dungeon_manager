@@ -100,7 +100,9 @@
         "workshop"
       ],
       "spawn_weight": 2.0,
-      "max_population": 50
+      "max_population": 10,
+      "summon_base_cost": 10,
+      "summon_cost_per_existing": 5
     },
     "visual": {
       "sprite": "creatures/imp.png",

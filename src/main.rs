@@ -1,5 +1,7 @@
 // Allow some warnings that are acceptable during development
 #![allow(dead_code)]  // Some code is kept for future features
+#![allow(unused_variables)] // Some variables are kept for future features
+#![allow(unused_imports)] // Some imports are kept for future features
 
 use macroquad::prelude::*;
 
@@ -46,7 +48,7 @@ impl Game {
             renderer: GameRenderer::new(),
             interaction_mode: InteractionMode::None,
             hovered_tile: None,
-            selected_map_type: MapType::Standard,
+            selected_map_type: MapType::File("assets/maps/level_1.json".to_string()),
             selected_entity: None,
             selected_room: None,
             held_entity: None,
@@ -135,7 +137,7 @@ impl Game {
             &self.phase,
             game_state,
             &self.interaction_mode,
-            self.selected_map_type,
+            &self.selected_map_type,
             self.hovered_tile,
             self.held_entity,
             self.selected_entity,

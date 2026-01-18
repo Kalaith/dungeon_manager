@@ -6,6 +6,7 @@ pub mod spells;
 pub mod traps;
 pub mod technologies;
 pub mod hero_buildings;
+pub mod game_config;
 
 use std::collections::HashMap;
 use std::error::Error;
@@ -18,6 +19,7 @@ pub use spells::SpellData;
 pub use traps::TrapData;
 pub use technologies::TechData;
 pub use hero_buildings::HeroBuildingData;
+pub use game_config::GameConfig;
 
 pub struct GameData {
     pub tiles: HashMap<String, TileData>,
@@ -28,6 +30,7 @@ pub struct GameData {
     pub traps: HashMap<String, TrapData>,
     pub technologies: HashMap<String, TechData>,
     pub hero_buildings: HashMap<String, HeroBuildingData>,
+    pub config: GameConfig,
 }
 
 impl GameData {
@@ -40,6 +43,7 @@ impl GameData {
         let traps = traps::load_traps()?;
         let technologies = technologies::load_technologies()?;
         let hero_buildings = hero_buildings::load_hero_buildings()?;
+        let config = game_config::load_game_config()?;
 
         Ok(Self {
             tiles,
@@ -49,7 +53,8 @@ impl GameData {
             spells,
             traps,
             technologies,
-            hero_buildings
+            hero_buildings,
+            config,
         })
     }
 }

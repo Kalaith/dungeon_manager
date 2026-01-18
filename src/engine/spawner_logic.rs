@@ -2,8 +2,9 @@ use crate::data::GameData;
 use crate::engine::tile_grid::Grid;
 use crate::state::entities::{CreatureState, EntityManager};
 use crate::state::tile_state::TilePos;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq)] // Added PartialEq
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MonsterSpawner {
     pub pos: TilePos,
     pub monster_id: String,

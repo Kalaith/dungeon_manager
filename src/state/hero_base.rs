@@ -36,12 +36,12 @@ pub struct HeroBase {
 }
 
 impl HeroBase {
-    pub fn new() -> Self {
+    pub fn new(game_data: &crate::data::GameData) -> Self {
         Self {
             buildings: Vec::new(),
             position: TilePos { x: 0, y: 0 },
             enabled: false,
-            time_until_next_wave: crate::config::HERO_WAVE_INITIAL_DELAY,
+            time_until_next_wave: game_data.config.hero_waves.initial_delay,
             current_wave_number: 0,
             wave_in_progress: false,
             active_attackers: 0,

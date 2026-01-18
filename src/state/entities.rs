@@ -350,7 +350,7 @@ pub struct HeroState {
 
 impl HeroState {
     /// Create a new hero state
-    pub fn new(hero_id: String, level: u32, max_health: f32, max_mana: f32, spawn_pos: TilePos) -> Self {
+    pub fn new(hero_id: String, level: u32, max_health: f32, max_mana: f32, spawn_pos: TilePos, dig_time: f32) -> Self {
         let can_dig = true; // Allow all heroes to try and breach walls if path is blocked
 
         Self {
@@ -373,7 +373,7 @@ impl HeroState {
             spawn_pos,
             is_digging: false,
             dig_timer: 0.0,
-            max_dig_time: crate::config::HERO_DIG_TIME, // Use configured dig speed
+            max_dig_time: dig_time,
             can_dig,
             is_captured: false,
             conversion_progress: 0.0,

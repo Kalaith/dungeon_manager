@@ -63,15 +63,15 @@ impl PlayerState {
 
 
         Self {
-            gold: crate::config::STARTING_GOLD,
-            mana: crate::config::STARTING_MANA,
-            food: crate::config::STARTING_FOOD,
-            max_gold: crate::config::INITIAL_MAX_GOLD,
-            max_mana: crate::config::INITIAL_MAX_MANA,
+            gold: game_data.config.player_starting_resources.gold,
+            mana: game_data.config.player_starting_resources.mana,
+            food: game_data.config.player_starting_resources.food,
+            max_gold: game_data.config.player_initial_capacity.max_gold,
+            max_mana: game_data.config.player_initial_capacity.max_mana,
 
-            max_food: crate::config::INITIAL_MAX_FOOD,
-            materials: crate::config::STARTING_MATERIALS,
-            max_materials: crate::config::INITIAL_MAX_MATERIALS,
+            max_food: game_data.config.player_initial_capacity.max_food,
+            materials: game_data.config.player_starting_resources.materials,
+            max_materials: game_data.config.player_initial_capacity.max_materials,
 
             unlocked_rooms,
             unlocked_creatures,

@@ -16,6 +16,7 @@ pub struct TileData {
     pub durability: Option<u32>,
     pub damage_per_second: Option<f32>,
     pub speed_modifier: Option<f32>,
+    pub cost: Option<i32>,
     pub visual: VisualData,
     pub special: Option<SpecialData>,
 }
@@ -25,6 +26,8 @@ pub struct ResourceData {
     #[serde(rename = "type")]
     pub resource_type: String,
     pub amount: i32,
+    #[serde(default)]
+    pub mine_value: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

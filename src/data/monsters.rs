@@ -95,6 +95,10 @@ pub struct SpawnData {
     pub preferred_rooms: Vec<String>,
     pub spawn_weight: f32,
     pub max_population: u32,
+    #[serde(default)]
+    pub summon_base_cost: Option<i32>,
+    #[serde(default)]
+    pub summon_cost_per_existing: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

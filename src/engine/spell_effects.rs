@@ -41,6 +41,7 @@ pub fn get_active_cooldowns(game_state: &GameState) -> Vec<SpellCooldown> {
 pub fn can_cast_spell(
     spell: &SpellData,
     game_state: &GameState,
+    game_data: &GameData,
     target_pos: Option<TilePos>,
     target_entity: Option<EntityId>,
 ) -> CastResult {
@@ -62,11 +63,18 @@ pub fn can_cast_spell(
     // Special handling for summon_imps - check max cap and calculate dynamic cost
     if spell.id == "summon_imps" {
         let current_imps = game_state.count_imps();
-        if current_imps >= crate::config::MAX_IMPS {
+        let max_imps = GameState::max_imps(game_data);
+        if current_imps >= max_imps {
             return CastResult::MaxCapReached;
         }
-        // Dynamic cost: base + per-imp cost
-        let dynamic_cost = crate::config::IMP_SUMMON_BASE_COST + (current_imps as i32 * crate::config::IMP_SUMMON_COST_PER_IMP);
+        // Dynamic cost: base + per-imp cost (read from monster data)
+        let (base_cost, per_imp_cost) = game_data.monsters.get("imp")
+            .map(|m| (
+                m.spawn.summon_base_cost.unwrap_or(10),
+                m.spawn.summon_cost_per_existing.unwrap_or(5)
+            ))
+            .unwrap_or((10, 5));
+        let dynamic_cost = base_cost + (current_imps as i32 * per_imp_cost);
         if game_state.player.mana < dynamic_cost {
             return CastResult::InsufficientMana;
         }
@@ -121,7 +129,7 @@ pub fn cast_spell(
     };
 
     // Check if cast is valid
-    let can_cast = can_cast_spell(spell, game_state, target_pos, target_entity);
+    let can_cast = can_cast_spell(spell, game_state, game_data, target_pos, target_entity);
     if !matches!(can_cast, CastResult::Success) {
         return can_cast;
     }
@@ -129,7 +137,13 @@ pub fn cast_spell(
     // Deduct costs - special handling for summon_imps
     if spell_id == "summon_imps" {
         let current_imps = game_state.count_imps();
-        let dynamic_cost = crate::config::IMP_SUMMON_BASE_COST + (current_imps as i32 * crate::config::IMP_SUMMON_COST_PER_IMP);
+        let (base_cost, per_imp_cost) = game_data.monsters.get("imp")
+            .map(|m| (
+                m.spawn.summon_base_cost.unwrap_or(10),
+                m.spawn.summon_cost_per_existing.unwrap_or(5)
+            ))
+            .unwrap_or((10, 5));
+        let dynamic_cost = base_cost + (current_imps as i32 * per_imp_cost);
         game_state.player.mana -= dynamic_cost;
         eprintln!("Cast spell: {} (dynamic mana: {}, imps: {})", spell.name, dynamic_cost, current_imps);
     } else {
@@ -384,8 +398,9 @@ fn spawn_entity_effect(
     if let Some(entity_type) = &effect.entity {
         // Try to spawn an imp
         if entity_type == "imp" {
-            if game_state.count_imps() >= crate::config::MAX_IMPS {
-                eprintln!("Cannot summon imp: max cap of {} reached", crate::config::MAX_IMPS);
+            let max_imps = GameState::max_imps(game_data);
+            if game_state.count_imps() >= max_imps {
+                eprintln!("Cannot summon imp: max cap of {} reached", max_imps);
                 return;
             }
 

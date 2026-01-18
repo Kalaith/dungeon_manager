@@ -13,3 +13,6 @@ Types: PascalCase
 Functions & variables: snake_case  
 Constants: SCREAMING_SNAKE_CASE  
 Modules: snake_case  
+### Maintain
+Keep a running change log of all major changes in CHANGELOG.md
+Keep a running road map of all major changes in ROADMAP.md

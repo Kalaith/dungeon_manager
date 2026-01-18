@@ -1,0 +1,114 @@
+{
+  "player_starting_resources": {
+    "gold": 20000,
+    "mana": 10000,
+    "food": 100,
+    "materials": 100
+  },
+  "player_initial_capacity": {
+    "max_gold": 20000,
+    "max_mana": 0,
+    "max_food": 500,
+    "max_materials": 100
+  },
+  "timing": {
+    "pay_day_interval": 300.0,
+    "initial_creature_spawn_delay": 10.0,
+    "creature_spawn_min_interval": 15.0,
+    "creature_spawn_max_interval": 30.0
+  },
+  "hero_waves": {
+    "initial_delay": 2000.0,
+    "wave_interval": 180.0,
+    "defender_ratio": 0.5,
+    "dig_time": 0.5,
+    "wave_scaling_multiplier": 1.5,
+    "spawn_rate_decay": 0.9,
+    "min_spawn_rate": 5.0,
+    "spawn_search_radius": 4
+  },
+  "creature_ai": {
+    "need_critical_threshold": 30.0,
+    "need_desert_threshold": 10.0,
+    "mood_attention_threshold": 40.0,
+    "need_attention_threshold": 20.0,
+    "gold_carrying_threshold": 20,
+    "training_mood_threshold": 50.0,
+    "research_desirability": 0.8,
+    "wander_radius": 5,
+    "wander_attempts": 10,
+    "marker_distance_threshold": 3,
+    "slap_cooldown": 5.0,
+    "base_mood_efficiency": 0.5,
+    "mood_penalties": {
+      "low_health_threshold": 30.0,
+      "low_health_penalty": 20.0,
+      "angry_penalty": 15.0
+    },
+    "task_desirability": {
+      "base": 1.0,
+      "gold_deposit": 1.5,
+      "skip_deposit": 0.1,
+      "training_high_satisfaction": 1.5,
+      "training_low_satisfaction": 0.5,
+      "wage_collection": 2.0,
+      "satisfaction_threshold": 60.0,
+      "need_modifier": 0.6
+    }
+  },
+  "fog_of_war": {
+    "enabled": true,
+    "sight_radius": 5
+  },
+  "economy": {
+    "room_sell_refund": 5,
+    "gem_mine_value": 25
+  },
+  "combat": {
+    "creature_level_multiplier": 0.1,
+    "creature_health_per_level": 10.0,
+    "hero_level_multiplier": 0.15,
+    "hero_health_per_level": 15.0,
+    "building_base_defense": 10.0,
+    "building_attack_speed": 1.0,
+    "attack_stat_bonus": 0.5,
+    "defense_reduction": 0.3,
+    "counterattack_death_chance": 0.05,
+    "counterattack_level_threshold": 3,
+    "building_xp_reward": 5,
+    "xp_per_victim_level": 10,
+    "max_creature_level": 5,
+    "level_up_health_bonus": 10.0,
+    "xp_requirement_base": 100,
+    "xp_requirement_multiplier": 2.0
+  },
+  "task_execution": {
+    "sleep_satisfaction_rate": 10.0,
+    "food_consumption_rate": 5.0,
+    "food_satisfaction_multiplier": 2.0,
+    "gold_deposit_satisfaction_rate": 5.0,
+    "training_timer_threshold": 1.0,
+    "xp_per_training": 10.0,
+    "level_up_exp_multiplier": 1.5,
+    "level_up_health_multiplier": 1.2,
+    "work_timer_threshold": 5.0,
+    "wage_satisfaction_rate": 5.0,
+    "research_production_rate": 2.0
+  },
+  "imp_behavior": {
+    "dig_completion_delay": 2.0,
+    "gem_priority_bonus": 10000.0,
+    "gold_vein_reward": 50,
+    "gem_seam_reward": 25,
+    "mana_crystal_reward": 20
+  },
+  "spawning": {
+    "monster_spawner_interval": 60.0
+  },
+  "traps": {
+    "default_cooldown": 5.0,
+    "alarm_cooldown_multiplier": 2.0,
+    "boulder_area_radius": 1.5,
+    "boulder_single_radius": 0.5
+  }
+}

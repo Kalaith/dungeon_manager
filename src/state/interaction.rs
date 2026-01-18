@@ -19,4 +19,5 @@ pub enum InteractionMode {
     Inspect, // Inspect minion details
     SetAttackMarker,
     SetDefendMarker,
+    SaveGame,
 }

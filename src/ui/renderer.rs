@@ -34,7 +34,7 @@ impl GameRenderer {
         phase: &GamePhase,
         state: Option<&GameState>,
         interaction_mode: &InteractionMode,
-        selected_map_type: MapType,
+        selected_map_type: &MapType,
         hovered_tile: Option<TilePos>,
         held_entity: Option<EntityId>,
         selected_entity: Option<EntityId>,
@@ -68,7 +68,7 @@ impl GameRenderer {
         }
     }
 
-    fn draw_main_menu(&self, selected_map_type: MapType) {
+    fn draw_main_menu(&self, selected_map_type: &MapType) {
         let mouse_pos = mouse_position();
 
         // Draw title
@@ -94,7 +94,7 @@ impl GameRenderer {
         let map_button_width = 160.0;
         let map_button_height = 40.0;
         let map_button_spacing = 10.0;
-        let total_width = (map_button_width + map_button_spacing) * 4.0 - map_button_spacing;
+        let total_width = (map_button_width + map_button_spacing) * 5.0 - map_button_spacing;
         let map_button_start_x = screen_width() / 2.0 - total_width / 2.0;
 
         let map_types = [
@@ -102,6 +102,7 @@ impl GameRenderer {
             (MapType::Rich, "Rich", "Lots of gold", 1),
             (MapType::Hazardous, "Hazardous", "Many dangers", 2),
             (MapType::Test, "Test", "Fixed seed", 3),
+            (MapType::File("assets/maps/level_1.json".to_string()), "Campaign", "Level 1", 4),
         ];
 
         for (map_type, label, desc, index) in &map_types {
@@ -112,7 +113,7 @@ impl GameRenderer {
                 && mouse_pos.1 >= map_button_y
                 && mouse_pos.1 <= map_button_y + map_button_height;
 
-            let is_selected = selected_map_type == *map_type;
+            let is_selected = *selected_map_type == *map_type;
 
             let button_color = if is_selected {
                 Color::new(0.2, 0.7, 0.3, 1.0) // Green for selected
@@ -147,6 +148,7 @@ impl GameRenderer {
         let button_y = screen_height() / 2.0 + 60.0;
         let button_width = 200.0;
         let button_height = 50.0;
+        let spacing = 20.0;
 
         let is_hovered = mouse_pos.0 >= button_x
             && mouse_pos.0 <= button_x + button_width
@@ -170,11 +172,38 @@ impl GameRenderer {
             WHITE,
         );
 
+        // Load Game Button
+        let load_y = button_y + button_height + spacing;
+        let save_exists = crate::state::save_system::save_exists("slot_1");
+        if save_exists {
+             let is_load_hovered = mouse_pos.0 >= button_x
+                && mouse_pos.0 <= button_x + button_width
+                && mouse_pos.1 >= load_y
+                && mouse_pos.1 <= load_y + button_height;
+
+            let load_color = if is_load_hovered {
+                Color::new(0.4, 0.8, 0.4, 1.0)
+            } else {
+                Color::new(0.3, 0.7, 0.3, 1.0)
+            };
+
+            draw_rectangle(button_x, load_y, button_width, button_height, load_color);
+            draw_rectangle_lines(button_x, load_y, button_width, button_height, 3.0, WHITE);
+
+            draw_text(
+                "LOAD GAME",
+                button_x + 35.0,
+                load_y + 32.0,
+                24.0,
+                WHITE,
+            );
+        }
+
         // Draw hint
         draw_text(
             "Click to start or press SPACE",
             screen_width() / 2.0 - 120.0,
-            screen_height() / 2.0 + 140.0,
+            screen_height() / 2.0 + 200.0,
             16.0,
             Color::new(0.7, 0.7, 0.7, 1.0),
         );
@@ -259,7 +288,13 @@ impl GameRenderer {
                 let cost = self.get_room_cost(lookup_id, game_data);
                 format!("Mode: Build {} ({}g)", room_type, cost)
             }
-            InteractionMode::PlaceSpawner => format!("Mode: Place Spawner ({}g)", crate::config::SPAWNER_COST),
+            InteractionMode::PlaceSpawner => {
+                let cost = game_data.as_ref()
+                    .and_then(|gd| gd.tiles.get("monster_spawner"))
+                    .and_then(|t| t.cost)
+                    .unwrap_or(50);
+                format!("Mode: Place Spawner ({}g)", cost)
+            }
             InteractionMode::Pickup => "Mode: Pickup Minion".to_string(),
             InteractionMode::Drop => "Mode: Drop Minion".to_string(),
             InteractionMode::Sell => "Mode: Sell/Cancel".to_string(),
@@ -267,6 +302,7 @@ impl GameRenderer {
             InteractionMode::BuildTrap(trap_type) => format!("Mode: Build {}", trap_type),
             InteractionMode::SetAttackMarker => "Mode: Set Attack Marker".to_string(),
             InteractionMode::SetDefendMarker => "Mode: Set Defend Marker".to_string(),
+            InteractionMode::SaveGame => "Mode: Saving...".to_string(),
         };
 
         draw_text(
@@ -386,7 +422,8 @@ impl GameRenderer {
                 let pos = TilePos::new(x as i32, y as i32);
                 if let Some(tile) = state.get_tile(pos) {
                      // Check Fog of War
-                    let fog_state = if crate::config::FOG_OF_WAR_ENABLED {
+                    let fog_enabled = game_data.as_ref().map(|gd| gd.config.fog_of_war.enabled).unwrap_or(true);
+                    let fog_state = if fog_enabled {
                         tile.fog_state
                     } else {
                         FogState::Visible
@@ -693,7 +730,7 @@ impl GameRenderer {
                 let texture_opt = graphics.tile_textures.get(&tile.tile_type);
                 
                 // Determine visible color based on Fog of War settings
-                let fog_state = if crate::config::FOG_OF_WAR_ENABLED {
+                let fog_state = if game_data.config.fog_of_war.enabled {
                     tile.fog_state
                 } else {
                     FogState::Visible
@@ -772,7 +809,7 @@ impl GameRenderer {
                     let mut tile_color = crate::ui::core::get_tile_color(&tile.tile_type);
 
                     // Apply fog/tint to tile_color
-                    let fog_state = if crate::config::FOG_OF_WAR_ENABLED {
+                    let fog_state = if game_data.config.fog_of_war.enabled {
                         tile.fog_state
                     } else {
                         FogState::Visible
@@ -875,6 +912,7 @@ impl GameRenderer {
                             InteractionMode::SetDefendMarker => {
                                 outline_color = Some(Color::new(0.2, 0.2, 0.8, 0.5));
                             }
+                            InteractionMode::SaveGame => {}
                         }
 
                         if let Some(color) = outline_color {
@@ -980,7 +1018,7 @@ impl GameRenderer {
         let button_width = 200.0;
         let button_height = 50.0;
         let spacing = 20.0;
-        let start_y = screen_center_y - 50.0;
+        let start_y = screen_center_y - 100.0; // Adjusted to fit more buttons
 
         // Title
         let title = "PAUSED";
@@ -1010,8 +1048,48 @@ impl GameRenderer {
             WHITE
         );
 
+        // Save Game Button
+        let save_y = start_y + button_height + spacing;
+        draw_rectangle(
+            screen_center_x - button_width / 2.0, save_y, 
+            button_width, button_height, 
+            Color::new(0.3, 0.5, 0.7, 1.0)
+        );
+        let save_text = "SAVE GAME";
+        let save_dims = measure_text(save_text, None, 30, 1.0);
+        draw_text(
+            save_text, 
+            screen_center_x - save_dims.width / 2.0, 
+            save_y + 35.0, 
+            30.0, 
+            WHITE
+        );
+
+        // Load Game Button
+        let load_y = start_y + (button_height + spacing) * 2.0;
+        let save_exists = crate::state::save_system::save_exists("slot_1");
+        let load_color = if save_exists {
+            Color::new(0.3, 0.7, 0.4, 1.0)
+        } else {
+            Color::new(0.3, 0.3, 0.3, 1.0) // Grayed out if no save
+        };
+        draw_rectangle(
+            screen_center_x - button_width / 2.0, load_y, 
+            button_width, button_height, 
+            load_color
+        );
+        let load_text = "LOAD GAME";
+        let load_dims = measure_text(load_text, None, 30, 1.0);
+        draw_text(
+            load_text, 
+            screen_center_x - load_dims.width / 2.0, 
+            load_y + 35.0, 
+            30.0, 
+            if save_exists { WHITE } else { GRAY }
+        );
+
         // Main Menu Button
-        let menu_y = start_y + button_height + spacing;
+        let menu_y = start_y + (button_height + spacing) * 3.0;
         draw_rectangle(
             screen_center_x - button_width / 2.0, menu_y, 
             button_width, button_height, 
@@ -1028,7 +1106,7 @@ impl GameRenderer {
         );
 
         // Exit Button
-        let exit_y = start_y + (button_height + spacing) * 2.0;
+        let exit_y = start_y + (button_height + spacing) * 4.0;
         draw_rectangle(
             screen_center_x - button_width / 2.0, exit_y, 
             button_width, button_height, 

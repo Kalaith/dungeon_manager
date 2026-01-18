@@ -4,7 +4,9 @@ use crate::engine::tile_grid::{self, Grid};
 use crate::engine::tile_types::types as tt;
 use crate::state::game_state::MapType;
 use crate::state::tile_state::{TilePos, TileState};
+use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dungeon {
     pub grid: Grid,
     pub width: usize,
@@ -35,6 +37,16 @@ impl Dungeon {
             MapType::Rich => map_generator::generate_rich_map(width, height, game_data),
             MapType::Hazardous => map_generator::generate_hazardous_map(width, height, game_data),
             MapType::Test => map_generator::generate_test_map(width, height, game_data),
+            MapType::File(_) => {
+                // Fallback if called directly (GameState handles File separately via loader)
+                let config = map_generator::MapConfig {
+                    width,
+                    height,
+                    starting_position: random_start,
+                    ..Default::default()
+                };
+                map_generator::generate_map(&config, game_data)
+            }
         };
 
         Self {

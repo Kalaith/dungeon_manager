@@ -61,19 +61,19 @@ pub fn execute_task(
 
     match &task {
         Task::Sleep(room_id) => {
-            execute_sleep(creature_id, *room_id, entities, room_manager, dt);
+            execute_sleep(creature_id, *room_id, entities, room_manager, game_data, dt);
         }
         Task::Eat(room_id) => {
-            result.food_change = execute_eat(creature_id, *room_id, entities, room_manager, player, dt);
+            result.food_change = execute_eat(creature_id, *room_id, entities, room_manager, player, game_data, dt);
         }
         Task::DepositGold(room_id) => {
-            result.gold_change = execute_deposit_gold(creature_id, *room_id, entities, room_manager, dt);
+            result.gold_change = execute_deposit_gold(creature_id, *room_id, entities, room_manager, game_data, dt);
             if result.gold_change > 0 {
                 result.task_complete = true;
             }
         }
         Task::Train(room_id) => {
-            execute_train(creature_id, *room_id, entities, room_manager, dt);
+            execute_train(creature_id, *room_id, entities, room_manager, game_data, dt);
         }
         Task::Dig(_) => {
             // Do nothing here.
@@ -112,7 +112,7 @@ pub fn execute_task(
 }
 
 /// Handle Sleep task
-fn execute_sleep(creature_id: EntityId, room_id: usize, entities: &mut EntityManager, room_manager: &RoomManager, dt: f32) {
+fn execute_sleep(creature_id: EntityId, room_id: usize, entities: &mut EntityManager, room_manager: &RoomManager, game_data: &GameData, dt: f32) {
     let room = match room_manager.rooms.iter().find(|r| r.id == room_id) {
         Some(r) if r.room_type == "lair" => r,
         _ => return,
@@ -121,11 +121,12 @@ fn execute_sleep(creature_id: EntityId, room_id: usize, entities: &mut EntityMan
         Some(c) => c,
         None => return,
     };
-    creature_ai::satisfy_need(creature, "sleep", 10.0, dt);
+    let sleep_rate = game_data.config.task_execution.sleep_satisfaction_rate;
+    creature_ai::satisfy_need(creature, "sleep", sleep_rate, dt);
 }
 
 /// Handle Eat task - returns food consumed (negative)
-fn execute_eat(creature_id: EntityId, room_id: usize, entities: &mut EntityManager, room_manager: &RoomManager, player: &PlayerState, dt: f32) -> i32 {
+fn execute_eat(creature_id: EntityId, room_id: usize, entities: &mut EntityManager, room_manager: &RoomManager, player: &PlayerState, game_data: &GameData, dt: f32) -> i32 {
     let room = match room_manager.rooms.iter().find(|r| r.id == room_id) {
         Some(r) if r.room_type == "hatchery" => r,
         _ => return 0,
@@ -135,16 +136,18 @@ fn execute_eat(creature_id: EntityId, room_id: usize, entities: &mut EntityManag
         return 0;
     }
 
-    let food_consumed = (dt * 5.0).min(player.food as f32) as i32;
+    let food_rate = game_data.config.task_execution.food_consumption_rate;
+    let food_multiplier = game_data.config.task_execution.food_satisfaction_multiplier;
+    let food_consumed = (dt * food_rate).min(player.food as f32) as i32;
     if let Some(creature) = entities.get_mut(creature_id).and_then(|e| e.as_creature_mut()) {
-        creature_ai::satisfy_need(creature, "food", food_consumed as f32 * 2.0, dt);
+        creature_ai::satisfy_need(creature, "food", food_consumed as f32 * food_multiplier, dt);
     }
 
     -food_consumed
 }
 
 /// Handle DepositGold task - returns gold deposited
-fn execute_deposit_gold(creature_id: EntityId, room_id: usize, entities: &mut EntityManager, room_manager: &RoomManager, dt: f32) -> i32 {
+fn execute_deposit_gold(creature_id: EntityId, room_id: usize, entities: &mut EntityManager, room_manager: &RoomManager, game_data: &GameData, dt: f32) -> i32 {
     let is_treasury = room_manager.rooms.iter().any(|r| r.id == room_id && r.room_type == "treasury");
     if !is_treasury {
         return 0;
@@ -157,12 +160,13 @@ fn execute_deposit_gold(creature_id: EntityId, room_id: usize, entities: &mut En
 
     let gold = creature.gold_carried;
     creature.gold_carried = 0;
-    creature_ai::satisfy_need(creature, "gold", 5.0, dt);
+    let gold_satisfaction_rate = game_data.config.task_execution.gold_deposit_satisfaction_rate;
+    creature_ai::satisfy_need(creature, "gold", gold_satisfaction_rate, dt);
     gold
 }
 
 /// Handle Train task
-fn execute_train(creature_id: EntityId, room_id: usize, entities: &mut EntityManager, room_manager: &RoomManager, dt: f32) {
+fn execute_train(creature_id: EntityId, room_id: usize, entities: &mut EntityManager, room_manager: &RoomManager, game_data: &GameData, dt: f32) {
     let is_training_room = room_manager.rooms.iter().any(|r| r.id == room_id && r.room_type == "training_room");
     if !is_training_room {
         return;
@@ -173,15 +177,18 @@ fn execute_train(creature_id: EntityId, room_id: usize, entities: &mut EntityMan
         None => return,
     };
 
+    let task_config = &game_data.config.task_execution;
+    let combat_config = &game_data.config.combat;
+
     creature.training_timer += dt;
-    if creature.training_timer < 1.0 {
+    if creature.training_timer < task_config.training_timer_threshold {
         return;
     }
 
     creature.training_timer = 0.0;
-    creature.experience += 10.0;
+    creature.experience += task_config.xp_per_training;
 
-    if creature.level >= 5 {
+    if creature.level >= combat_config.max_creature_level {
         creature.experience = creature.max_experience;
         return;
     }
@@ -189,8 +196,8 @@ fn execute_train(creature_id: EntityId, room_id: usize, entities: &mut EntityMan
     if creature.experience >= creature.max_experience {
         creature.level += 1;
         creature.experience = 0.0;
-        creature.max_experience *= 1.5;
-        creature.max_health *= 1.2;
+        creature.max_experience *= task_config.level_up_exp_multiplier;
+        creature.max_health *= task_config.level_up_health_multiplier;
         creature.health = creature.max_health;
         eprintln!("Creature {} leveled up to {}", creature.creature_id, creature.level);
     }
@@ -214,7 +221,8 @@ fn execute_work(creature_id: EntityId, room_id: usize, entities: &mut EntityMana
 
     creature.work_timer += dt * room.efficiency * efficiency;
 
-    if creature.work_timer >= 5.0 {
+    let work_threshold = game_data.config.task_execution.work_timer_threshold;
+    if creature.work_timer >= work_threshold {
         creature.work_timer = 0.0;
         eprintln!("Creature {} produced generic material!", creature.creature_id);
         return 1;
@@ -239,7 +247,8 @@ fn execute_collect_wages(creature_id: EntityId, room_id: usize, entities: &mut E
         return 0;
     }
 
-    creature_ai::satisfy_need(creature, "gold", 5.0, dt);
+    let wage_rate = game_data.config.task_execution.wage_satisfaction_rate;
+    creature_ai::satisfy_need(creature, "gold", wage_rate, dt);
     -1
 }
 
@@ -259,5 +268,6 @@ fn execute_research(creature_id: EntityId, room_id: usize, entities: &mut Entity
         .map(|m| creature_ai::calculate_work_efficiency(creature, m))
         .unwrap_or(1.0);
 
-    2.0 * dt * efficiency
+    let research_rate = game_data.config.task_execution.research_production_rate;
+    research_rate * dt * efficiency
 }

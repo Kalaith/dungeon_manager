@@ -89,7 +89,8 @@
     "supports_rooms": false,
     "resources": {
       "type": "gold",
-      "amount": -1
+      "amount": -1,
+      "mine_value": 25
     },
     "durability": 999,
     "visual": {
@@ -238,6 +239,7 @@
     "supports_rooms": false,
     "resources": null,
     "durability": null,
+    "cost": 50,
     "visual": {
       "sprite": "tiles/monster_spawner.png"
     }
