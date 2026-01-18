@@ -134,7 +134,24 @@ fn is_perimeter_secured(pos: TilePos, grid: &Grid, game_data: &GameData) -> bool
     }
 
     let tile = &grid[pos.y as usize][pos.x as usize];
-    tile_types::is_secure(&tile.tile_type, game_data)
+    
+    // Check for walls
+    if tile_types::is_secure(&tile.tile_type, game_data) {
+        return true;
+    }
+
+    // Check for constructed objects that block movement (like doors)
+    if let Some(trap) = &tile.trap {
+        if trap.constructed {
+            if let Some(trap_data) = game_data.traps.get(&trap.trap_type) {
+                if trap_data.effects.blocks_movement {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
 }
 
 /// Flood fill algorithm to find all contiguous tiles from a starting position

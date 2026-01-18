@@ -21,8 +21,18 @@ pub struct UnlockData {
 }
 
 pub fn load_technologies() -> Result<HashMap<String, TechData>, Box<dyn Error>> {
-    let json_content = include_str!("../../assets/data/technologies.json");
-    let techs_vec: Vec<TechData> = serde_json::from_str(json_content)?;
+    let json_content = {
+        #[cfg(target_arch = "wasm32")]
+        {
+            include_str!("../../assets/data/technologies.json").to_string()
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            std::fs::read_to_string("assets/data/technologies.json")?
+        }
+    };
+
+    let techs_vec: Vec<TechData> = serde_json::from_str(&json_content)?;
 
     let mut techs_map = HashMap::new();
     for tech in techs_vec {

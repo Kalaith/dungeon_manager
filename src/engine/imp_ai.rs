@@ -152,18 +152,23 @@ fn process_idle_imp(
     let nearest_marked = find_nearest_marked_tile(dungeon, imp_pos, targeted_tiles, player);
 
     if let Some(marked_pos) = nearest_marked {
+        // Claim the task immediately so other imps don't target it
+        if let Some(entity) = entities.get_mut(imp_id) {
+            if let Some(creature) = entity.as_creature_mut() {
+                creature.current_task = Some(crate::state::entities::Task::Dig(marked_pos));
+            }
+        }
+
         // Check if we are adjacent (or on top) of the marked tile
         if imp_pos.manhattan_distance(&marked_pos) <= 1 {
             // Imp is in position - dig it
             process_digging(dungeon, entities, player, imp_id, marked_pos, dt);
         } else {
-            // Reset task time when moving, but ONLY if we are starting a move to a new target
-            // If we are adjacent, we shouldn't be moving anyway?
-            // Actually, if we are NOT at distance <= 1, we must move.
+            // Reset task time when moving
             if let Some(entity) = entities.get_mut(imp_id) {
                 if let Some(creature) = entity.as_creature_mut() {
                     creature.task_time = 0.0;
-                    creature.current_task = None; // clear task if we have to move
+                    // Do NOT clear current_task here, we want to keep the claim!
                 }
             }
             
@@ -188,6 +193,12 @@ fn process_idle_imp(
                 pathfind_to_target(dungeon, entities, imp_id, imp_pos, target, false);
             } else {
                 // Cannot reach the tile (surrounded by walls?)
+                // If we can't reach it, release the task
+                if let Some(entity) = entities.get_mut(imp_id) {
+                    if let Some(creature) = entity.as_creature_mut() {
+                        creature.current_task = None;
+                    }
+                }
                 wander_randomly(dungeon, entities, imp_id, imp_pos, game_data);
             }
         }

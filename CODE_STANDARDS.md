@@ -73,7 +73,7 @@ Each module/subdirectory owns a single conceptual domain:
 ### 2.2 File Size Guideline
 - Target: 200–400 lines per file
 - Soft limit: 600 lines
-- Hard limit: 800 lines (main.rs excepted for game loop complexity)
+- Hard limit: 800 lines
 - If a file grows beyond this, split by responsibility.
 
 ### 2.3 Folder Structure

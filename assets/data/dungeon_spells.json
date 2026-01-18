@@ -207,5 +207,86 @@
     "visual": {
       "icon": "icons/spells/earth.png"
     }
+  },
+  {
+    "id": "speed_boost",
+    "name": "Unholy Haste",
+    "description": "Increases the movement speed of a friendly creature.",
+    "category": "buff",
+    "cost": {
+      "mana": 15
+    },
+    "targeting": {
+      "type": "creature",
+      "range": 10,
+      "valid_targets": [
+        "friendly"
+      ]
+    },
+    "effects": [
+      {
+        "type": "status_apply",
+        "status": "hasted",
+        "duration": 20
+      }
+    ],
+    "cooldown": 5,
+    "visual": {
+      "icon": "icons/spells/speed.png"
+    }
+  },
+  {
+    "id": "iron_skin",
+    "name": "Iron Skin",
+    "description": "Temporarily toughens a creature's skin, reducing damage taken.",
+    "category": "buff",
+    "cost": {
+      "mana": 25
+    },
+    "targeting": {
+      "type": "creature",
+      "range": 8,
+      "valid_targets": [
+        "friendly"
+      ]
+    },
+    "effects": [
+      {
+        "type": "status_apply",
+        "status": "armored",
+        "duration": 15
+      }
+    ],
+    "cooldown": 10,
+    "visual": {
+      "icon": "icons/spells/iron_skin.png"
+    }
+  },
+  {
+    "id": "chickenify",
+    "name": "Chickenify",
+    "description": "Humiliates an enemy by turning them into a helpless chicken.",
+    "category": "curse",
+    "cost": {
+      "mana": 100
+    },
+    "targeting": {
+      "type": "creature",
+      "range": 6,
+      "valid_targets": [
+        "enemy"
+      ]
+    },
+    "effects": [
+      {
+        "type": "polymorph",
+        "target_form": "chicken",
+        "duration": 10
+      }
+    ],
+    "cooldown": 60,
+    "visual": {
+      "icon": "icons/spells/chicken.png"
+    }
   }
 ]

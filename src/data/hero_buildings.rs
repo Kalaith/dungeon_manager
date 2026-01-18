@@ -48,11 +48,19 @@ struct HeroBuildingsWrapper {
 }
 
 pub fn load_hero_buildings() -> Result<HashMap<String, HeroBuildingData>, Box<dyn Error>> {
-    // Use include_str! for WebGL compatibility (compile-time embedding)
-    let json_content = include_str!("../../assets/data/hero_buildings.json");
+    let json_content = {
+        #[cfg(target_arch = "wasm32")]
+        {
+            include_str!("../../assets/data/hero_buildings.json").to_string()
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            std::fs::read_to_string("assets/data/hero_buildings.json")?
+        }
+    };
     
     // The JSON is an array of objects
-    let buildings_list: Vec<HeroBuildingData> = serde_json::from_str(json_content)?;
+    let buildings_list: Vec<HeroBuildingData> = serde_json::from_str(&json_content)?;
     
     let mut buildings_map = HashMap::new();
     for building in buildings_list {

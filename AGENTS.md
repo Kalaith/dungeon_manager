@@ -1,2 +1,15 @@
-do not add 2>&1 to the command
-do not run cargo build 2>&1
+### General Rules
+run cargo build when testing
+Readability over cleverness  
+Data-driven design over hardcoded values  
+Clean state management  
+Modular services for game logic  
+A clear mental model for game phases and transitions  
+Target: 200–400 lines per file
+Soft limit: 600 lines
+Hard limit: 800 lines
+If a file grows beyond this, split by responsibility.
+Types: PascalCase  
+Functions & variables: snake_case  
+Constants: SCREAMING_SNAKE_CASE  
+Modules: snake_case  

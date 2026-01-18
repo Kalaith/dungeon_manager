@@ -65,6 +65,12 @@ pub struct EffectsData {
     /// Rate at which heroes are converted to creatures in prison (progress per second)
     #[serde(default)]
     pub hero_conversion_rate: f32,
+    #[serde(default)]
+    pub corpse_storage: i32,
+    #[serde(default)]
+    pub spawns_vampires: bool,
+    #[serde(default)]
+    pub grouping_point: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

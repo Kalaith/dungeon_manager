@@ -16,7 +16,9 @@
     },
     "ai": {
       "primary_goal": "destroy_heart",
-      "secondary_goals": ["kill_creatures"],
+      "secondary_goals": [
+        "kill_creatures"
+      ],
       "room_priorities": {
         "dungeon_heart": 2.0,
         "lair": 1.2
@@ -28,7 +30,10 @@
     },
     "combat": {
       "attack_type": "melee",
-      "damage_range": [3, 7],
+      "damage_range": [
+        3,
+        7
+      ],
       "attack_speed": 1.1,
       "armor_type": "none",
       "resistances": {}
@@ -42,7 +47,10 @@
       "will_fight_to_death": false
     },
     "progression": {
-      "level_range": [1, 3],
+      "level_range": [
+        1,
+        3
+      ],
       "stat_growth_per_level": {
         "health": 10,
         "attack": 1,
@@ -53,7 +61,12 @@
     "visual": {
       "sprite": "heroes/peasant_militia.png",
       "scale": 1.0,
-      "animations": ["idle", "walk", "attack", "flee"],
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "flee"
+      ],
       "voice_set": "peasant"
     }
   },
@@ -74,7 +87,10 @@
     },
     "ai": {
       "primary_goal": "explore",
-      "secondary_goals": ["destroy_heart", "steal_gold"],
+      "secondary_goals": [
+        "destroy_heart",
+        "steal_gold"
+      ],
       "room_priorities": {
         "treasury": 2.0,
         "workshop": 1.5
@@ -86,7 +102,10 @@
     },
     "combat": {
       "attack_type": "melee",
-      "damage_range": [2, 5],
+      "damage_range": [
+        2,
+        5
+      ],
       "attack_speed": 1.5,
       "armor_type": "light",
       "resistances": {}
@@ -107,7 +126,10 @@
       "will_fight_to_death": false
     },
     "progression": {
-      "level_range": [1, 4],
+      "level_range": [
+        1,
+        4
+      ],
       "stat_growth_per_level": {
         "health": 8,
         "attack": 1,
@@ -118,7 +140,12 @@
     "visual": {
       "sprite": "heroes/scout.png",
       "scale": 0.9,
-      "animations": ["idle", "walk", "sneak", "attack"],
+      "animations": [
+        "idle",
+        "walk",
+        "sneak",
+        "attack"
+      ],
       "voice_set": "scout"
     }
   },
@@ -139,7 +166,9 @@
     },
     "ai": {
       "primary_goal": "support_allies",
-      "secondary_goals": ["destroy_heart"],
+      "secondary_goals": [
+        "destroy_heart"
+      ],
       "room_priorities": {
         "ritual_circle": 2.0,
         "library": 1.5
@@ -151,7 +180,10 @@
     },
     "combat": {
       "attack_type": "magic",
-      "damage_range": [4, 8],
+      "damage_range": [
+        4,
+        8
+      ],
       "attack_speed": 1.0,
       "armor_type": "none",
       "resistances": {
@@ -180,7 +212,10 @@
       "will_fight_to_death": false
     },
     "progression": {
-      "level_range": [1, 4],
+      "level_range": [
+        1,
+        4
+      ],
       "stat_growth_per_level": {
         "health": 9,
         "mana": 10,
@@ -191,7 +226,12 @@
     "visual": {
       "sprite": "heroes/acolyte.png",
       "scale": 1.0,
-      "animations": ["idle", "walk", "cast", "pray"],
+      "animations": [
+        "idle",
+        "walk",
+        "cast",
+        "pray"
+      ],
       "voice_set": "acolyte"
     }
   },
@@ -212,7 +252,9 @@
     },
     "ai": {
       "primary_goal": "destroy_heart",
-      "secondary_goals": ["kill_creatures"],
+      "secondary_goals": [
+        "kill_creatures"
+      ],
       "room_priorities": {
         "dungeon_heart": 3.0,
         "treasury": 1.5,
@@ -225,7 +267,10 @@
     },
     "combat": {
       "attack_type": "melee",
-      "damage_range": [12, 18],
+      "damage_range": [
+        12,
+        18
+      ],
       "attack_speed": 1.0,
       "armor_type": "medium",
       "resistances": {
@@ -249,18 +294,28 @@
       "will_fight_to_death": false
     },
     "progression": {
-      "level_range": [3, 7],
+      "level_range": [
+        3,
+        7
+      ],
       "stat_growth_per_level": {
         "health": 20,
         "attack": 3,
         "defense": 2
       },
-      "elite_variants": ["knight_commander"]
+      "elite_variants": [
+        "knight_commander"
+      ]
     },
     "visual": {
       "sprite": "heroes/knight.png",
       "scale": 1.1,
-      "animations": ["idle", "walk", "attack", "block"],
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "block"
+      ],
       "voice_set": "knight"
     }
   },
@@ -281,7 +336,10 @@
     },
     "ai": {
       "primary_goal": "kill_creatures",
-      "secondary_goals": ["destroy_heart", "steal_gold"],
+      "secondary_goals": [
+        "destroy_heart",
+        "steal_gold"
+      ],
       "room_priorities": {
         "workshop": 2.0,
         "hatchery": 1.8,
@@ -294,7 +352,10 @@
     },
     "combat": {
       "attack_type": "ranged",
-      "damage_range": [8, 14],
+      "damage_range": [
+        8,
+        14
+      ],
       "attack_speed": 1.2,
       "armor_type": "light",
       "resistances": {}
@@ -315,7 +376,10 @@
       "will_fight_to_death": false
     },
     "progression": {
-      "level_range": [2, 6],
+      "level_range": [
+        2,
+        6
+      ],
       "stat_growth_per_level": {
         "health": 12,
         "attack": 2,
@@ -326,7 +390,12 @@
     "visual": {
       "sprite": "heroes/archer.png",
       "scale": 1.0,
-      "animations": ["idle", "walk", "aim", "shoot"],
+      "animations": [
+        "idle",
+        "walk",
+        "aim",
+        "shoot"
+      ],
       "voice_set": "archer"
     }
   },
@@ -347,7 +416,9 @@
     },
     "ai": {
       "primary_goal": "support_allies",
-      "secondary_goals": ["destroy_heart"],
+      "secondary_goals": [
+        "destroy_heart"
+      ],
       "room_priorities": {
         "dungeon_heart": 2.5,
         "ritual_circle": 2.0
@@ -359,7 +430,10 @@
     },
     "combat": {
       "attack_type": "melee",
-      "damage_range": [6, 10],
+      "damage_range": [
+        6,
+        10
+      ],
       "attack_speed": 0.9,
       "armor_type": "medium",
       "resistances": {
@@ -389,7 +463,10 @@
       "will_fight_to_death": true
     },
     "progression": {
-      "level_range": [3, 7],
+      "level_range": [
+        3,
+        7
+      ],
       "stat_growth_per_level": {
         "health": 18,
         "mana": 15,
@@ -400,7 +477,12 @@
     "visual": {
       "sprite": "heroes/battle_cleric.png",
       "scale": 1.1,
-      "animations": ["idle", "walk", "cast", "smite"],
+      "animations": [
+        "idle",
+        "walk",
+        "cast",
+        "smite"
+      ],
       "voice_set": "cleric"
     }
   },
@@ -421,7 +503,10 @@
     },
     "ai": {
       "primary_goal": "steal_gold",
-      "secondary_goals": ["sabotage", "destroy_heart"],
+      "secondary_goals": [
+        "sabotage",
+        "destroy_heart"
+      ],
       "room_priorities": {
         "treasury": 3.0,
         "workshop": 2.5,
@@ -434,7 +519,10 @@
     },
     "combat": {
       "attack_type": "melee",
-      "damage_range": [10, 16],
+      "damage_range": [
+        10,
+        16
+      ],
       "attack_speed": 1.4,
       "armor_type": "light",
       "resistances": {}
@@ -461,7 +549,10 @@
       "will_fight_to_death": false
     },
     "progression": {
-      "level_range": [2, 6],
+      "level_range": [
+        2,
+        6
+      ],
       "stat_growth_per_level": {
         "health": 11,
         "attack": 2,
@@ -472,7 +563,12 @@
     "visual": {
       "sprite": "heroes/rogue.png",
       "scale": 0.95,
-      "animations": ["idle", "walk", "sneak", "stab"],
+      "animations": [
+        "idle",
+        "walk",
+        "sneak",
+        "stab"
+      ],
       "voice_set": "rogue"
     }
   },
@@ -493,7 +589,9 @@
     },
     "ai": {
       "primary_goal": "destroy_heart",
-      "secondary_goals": ["kill_undead"],
+      "secondary_goals": [
+        "kill_undead"
+      ],
       "room_priorities": {
         "dungeon_heart": 3.5,
         "ritual_circle": 2.5
@@ -505,7 +603,10 @@
     },
     "combat": {
       "attack_type": "melee",
-      "damage_range": [14, 22],
+      "damage_range": [
+        14,
+        22
+      ],
       "attack_speed": 0.9,
       "armor_type": "heavy",
       "resistances": {
@@ -535,7 +636,10 @@
       "will_fight_to_death": true
     },
     "progression": {
-      "level_range": [5, 9],
+      "level_range": [
+        5,
+        9
+      ],
       "stat_growth_per_level": {
         "health": 25,
         "attack": 3,
@@ -546,7 +650,12 @@
     "visual": {
       "sprite": "heroes/paladin.png",
       "scale": 1.2,
-      "animations": ["idle", "walk", "attack", "pray"],
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "pray"
+      ],
       "voice_set": "paladin"
     }
   },
@@ -567,7 +676,9 @@
     },
     "ai": {
       "primary_goal": "disrupt_magic",
-      "secondary_goals": ["destroy_heart"],
+      "secondary_goals": [
+        "destroy_heart"
+      ],
       "room_priorities": {
         "lair": 3.0,
         "library": 2.8,
@@ -580,7 +691,10 @@
     },
     "combat": {
       "attack_type": "magic",
-      "damage_range": [15, 25],
+      "damage_range": [
+        15,
+        25
+      ],
       "attack_speed": 0.8,
       "armor_type": "none",
       "resistances": {
@@ -609,7 +723,10 @@
       "will_fight_to_death": false
     },
     "progression": {
-      "level_range": [4, 8],
+      "level_range": [
+        4,
+        8
+      ],
       "stat_growth_per_level": {
         "health": 10,
         "mana": 20,
@@ -620,7 +737,12 @@
     "visual": {
       "sprite": "heroes/wizard.png",
       "scale": 1.0,
-      "animations": ["idle", "walk", "cast", "teleport"],
+      "animations": [
+        "idle",
+        "walk",
+        "cast",
+        "teleport"
+      ],
       "voice_set": "wizard"
     }
   },
@@ -641,7 +763,9 @@
     },
     "ai": {
       "primary_goal": "sabotage_rooms",
-      "secondary_goals": ["destroy_heart"],
+      "secondary_goals": [
+        "destroy_heart"
+      ],
       "room_priorities": {
         "training_hall": 2.5,
         "workshop": 2.3,
@@ -654,7 +778,10 @@
     },
     "combat": {
       "attack_type": "melee",
-      "damage_range": [8, 12],
+      "damage_range": [
+        8,
+        12
+      ],
       "attack_speed": 1.1,
       "armor_type": "medium",
       "resistances": {
@@ -683,7 +810,10 @@
       "will_fight_to_death": false
     },
     "progression": {
-      "level_range": [4, 8],
+      "level_range": [
+        4,
+        8
+      ],
       "stat_growth_per_level": {
         "health": 15,
         "mana": 15,
@@ -694,7 +824,12 @@
     "visual": {
       "sprite": "heroes/inquisitor.png",
       "scale": 1.05,
-      "animations": ["idle", "walk", "cast", "interrogate"],
+      "animations": [
+        "idle",
+        "walk",
+        "cast",
+        "interrogate"
+      ],
       "voice_set": "inquisitor"
     }
   },
@@ -715,7 +850,9 @@
     },
     "ai": {
       "primary_goal": "destroy_heart",
-      "secondary_goals": ["coordinate_attack"],
+      "secondary_goals": [
+        "coordinate_attack"
+      ],
       "room_priorities": {
         "dungeon_heart": 4.0,
         "guard_post": 2.0
@@ -727,7 +864,10 @@
     },
     "combat": {
       "attack_type": "melee",
-      "damage_range": [16, 24],
+      "damage_range": [
+        16,
+        24
+      ],
       "attack_speed": 0.95,
       "armor_type": "heavy",
       "resistances": {
@@ -757,7 +897,10 @@
       "will_fight_to_death": true
     },
     "progression": {
-      "level_range": [6, 10],
+      "level_range": [
+        6,
+        10
+      ],
       "stat_growth_per_level": {
         "health": 30,
         "attack": 4,
@@ -768,7 +911,12 @@
     "visual": {
       "sprite": "heroes/knight_commander.png",
       "scale": 1.15,
-      "animations": ["idle", "walk", "attack", "command"],
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "command"
+      ],
       "voice_set": "commander"
     }
   },
@@ -789,7 +937,9 @@
     },
     "ai": {
       "primary_goal": "disrupt_rituals",
-      "secondary_goals": ["destroy_heart"],
+      "secondary_goals": [
+        "destroy_heart"
+      ],
       "room_priorities": {
         "ritual_circle": 4.0,
         "library": 3.0,
@@ -802,7 +952,10 @@
     },
     "combat": {
       "attack_type": "magic",
-      "damage_range": [12, 20],
+      "damage_range": [
+        12,
+        20
+      ],
       "attack_speed": 0.9,
       "armor_type": "medium",
       "resistances": {
@@ -832,7 +985,10 @@
       "will_fight_to_death": true
     },
     "progression": {
-      "level_range": [6, 10],
+      "level_range": [
+        6,
+        10
+      ],
       "stat_growth_per_level": {
         "health": 20,
         "mana": 25,
@@ -843,7 +999,12 @@
     "visual": {
       "sprite": "heroes/high_priest.png",
       "scale": 1.1,
-      "animations": ["idle", "walk", "cast", "bless"],
+      "animations": [
+        "idle",
+        "walk",
+        "cast",
+        "bless"
+      ],
       "voice_set": "priest"
     }
   },
@@ -864,7 +1025,9 @@
     },
     "ai": {
       "primary_goal": "destroy_geometry",
-      "secondary_goals": ["destroy_heart"],
+      "secondary_goals": [
+        "destroy_heart"
+      ],
       "room_priorities": {
         "lair": 3.5,
         "hatchery": 3.0,
@@ -877,7 +1040,10 @@
     },
     "combat": {
       "attack_type": "magic",
-      "damage_range": [20, 35],
+      "damage_range": [
+        20,
+        35
+      ],
       "attack_speed": 0.7,
       "armor_type": "none",
       "resistances": {
@@ -906,7 +1072,10 @@
       "will_fight_to_death": false
     },
     "progression": {
-      "level_range": [7, 10],
+      "level_range": [
+        7,
+        10
+      ],
       "stat_growth_per_level": {
         "health": 12,
         "mana": 30,
@@ -917,7 +1086,12 @@
     "visual": {
       "sprite": "heroes/archmage.png",
       "scale": 1.05,
-      "animations": ["idle", "walk", "cast", "teleport"],
+      "animations": [
+        "idle",
+        "walk",
+        "cast",
+        "teleport"
+      ],
       "voice_set": "archmage"
     }
   },
@@ -949,7 +1123,10 @@
     },
     "combat": {
       "attack_type": "melee",
-      "damage_range": [20, 35],
+      "damage_range": [
+        20,
+        35
+      ],
       "attack_speed": 0.85,
       "armor_type": "heavy",
       "resistances": {
@@ -980,7 +1157,10 @@
       "will_fight_to_death": true
     },
     "progression": {
-      "level_range": [8, 10],
+      "level_range": [
+        8,
+        10
+      ],
       "stat_growth_per_level": {
         "health": 50,
         "attack": 5,
@@ -991,8 +1171,265 @@
     "visual": {
       "sprite": "heroes/champion_of_light.png",
       "scale": 1.3,
-      "animations": ["idle", "walk", "attack", "rage"],
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "rage"
+      ],
       "voice_set": "champion"
+    }
+  },
+  {
+    "id": "barbarian",
+    "name": "Barbarian",
+    "description": "A savage warrior who deals high damage but has little discipline.",
+    "tier": 3,
+    "role": "bruiser",
+    "stats": {
+      "health": 200,
+      "mana": 0,
+      "attack": 18,
+      "defense": 4,
+      "speed": 1.2,
+      "sight_radius": 8,
+      "bravery": 95
+    },
+    "ai": {
+      "primary_goal": "kill_creatures",
+      "secondary_goals": [
+        "destroy_rooms"
+      ],
+      "room_priorities": {
+        "training_hall": 2.5,
+        "barracks": 2.0
+      },
+      "threat_response": {
+        "retreat_below_health": 0.1,
+        "call_for_aid": false
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        16,
+        24
+      ],
+      "attack_speed": 1.1,
+      "armor_type": "light",
+      "resistances": {
+        "fear": 0.5
+      }
+    },
+    "abilities": [
+      {
+        "id": "rage",
+        "cooldown": 20,
+        "trigger": "on_low_health",
+        "effect": "increase_damage_and_speed"
+      }
+    ],
+    "behavior": {
+      "trap_awareness": 0.2,
+      "door_break_chance": 0.9,
+      "light_preference": "any",
+      "fear_resistance": 0.9,
+      "will_fight_to_death": true
+    },
+    "progression": {
+      "level_range": [
+        5,
+        9
+      ],
+      "stat_growth_per_level": {
+        "health": 25,
+        "attack": 3
+      },
+      "elite_variants": []
+    },
+    "visual": {
+      "sprite": "heroes/barbarian.png",
+      "scale": 1.15,
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "rage"
+      ],
+      "voice_set": "barbarian"
+    }
+  },
+  {
+    "id": "alchemist",
+    "name": "Alchemist",
+    "description": "Uses potions to damage areas or buff allies.",
+    "tier": 2,
+    "role": "ranged_splash",
+    "stats": {
+      "health": 90,
+      "mana": 40,
+      "attack": 8,
+      "defense": 3,
+      "speed": 1.0,
+      "sight_radius": 10,
+      "bravery": 60
+    },
+    "ai": {
+      "primary_goal": "sabotage_rooms",
+      "secondary_goals": [
+        "kill_creatures"
+      ],
+      "room_priorities": {
+        "library": 2.0,
+        "workshop": 1.8
+      },
+      "threat_response": {
+        "retreat_below_health": 0.3,
+        "call_for_aid": true
+      }
+    },
+    "combat": {
+      "attack_type": "ranged",
+      "damage_range": [
+        6,
+        12
+      ],
+      "attack_speed": 0.9,
+      "armor_type": "light",
+      "resistances": {
+        "poison": 0.9,
+        "acid": 0.9
+      }
+    },
+    "abilities": [
+      {
+        "id": "acid_flask",
+        "cooldown": 10,
+        "trigger": "on_armored_target",
+        "effect": "reduce_armor"
+      },
+      {
+        "id": "explosive_potion",
+        "cooldown": 15,
+        "trigger": "on_group",
+        "effect": "area_damage"
+      }
+    ],
+    "behavior": {
+      "trap_awareness": 0.7,
+      "door_break_chance": 0.3,
+      "light_preference": "bright",
+      "fear_resistance": 0.5,
+      "will_fight_to_death": false
+    },
+    "progression": {
+      "level_range": [
+        3,
+        7
+      ],
+      "stat_growth_per_level": {
+        "health": 10,
+        "attack": 2,
+        "mana": 5
+      },
+      "elite_variants": []
+    },
+    "visual": {
+      "sprite": "heroes/alchemist.png",
+      "scale": 1.0,
+      "animations": [
+        "idle",
+        "walk",
+        "throw",
+        "drink"
+      ],
+      "voice_set": "alchemist"
+    }
+  },
+  {
+    "id": "geomancer",
+    "name": "Geomancer",
+    "description": "Manipulates the earth to create obstacles or crush foes.",
+    "tier": 4,
+    "role": "controller",
+    "stats": {
+      "health": 140,
+      "mana": 120,
+      "attack": 10,
+      "defense": 8,
+      "speed": 0.7,
+      "sight_radius": 9,
+      "bravery": 80
+    },
+    "ai": {
+      "primary_goal": "reshape_dungeon",
+      "secondary_goals": [
+        "destroy_rooms"
+      ],
+      "room_priorities": {
+        "treasury": 2.5,
+        "training_hall": 2.0
+      },
+      "threat_response": {
+        "retreat_below_health": 0.2,
+        "call_for_aid": true
+      }
+    },
+    "combat": {
+      "attack_type": "magic",
+      "damage_range": [
+        14,
+        20
+      ],
+      "attack_speed": 0.6,
+      "armor_type": "heavy",
+      "resistances": {
+        "crush": 0.8
+      }
+    },
+    "abilities": [
+      {
+        "id": "stone_wall",
+        "cooldown": 30,
+        "trigger": "defensive",
+        "effect": "create_obstacle"
+      },
+      {
+        "id": "earthquake",
+        "cooldown": 45,
+        "trigger": "on_large_group",
+        "effect": "area_stun"
+      }
+    ],
+    "behavior": {
+      "trap_awareness": 0.6,
+      "door_break_chance": 1.0,
+      "light_preference": "any",
+      "fear_resistance": 0.8,
+      "will_fight_to_death": true
+    },
+    "progression": {
+      "level_range": [
+        6,
+        10
+      ],
+      "stat_growth_per_level": {
+        "health": 20,
+        "defense": 2,
+        "mana": 10
+      },
+      "elite_variants": []
+    },
+    "visual": {
+      "sprite": "heroes/geomancer.png",
+      "scale": 1.1,
+      "animations": [
+        "idle",
+        "walk",
+        "cast",
+        "smash"
+      ],
+      "voice_set": "geomancer"
     }
   }
 ]

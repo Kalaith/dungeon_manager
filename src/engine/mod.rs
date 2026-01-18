@@ -20,4 +20,5 @@ pub mod spawner_logic;
 pub mod movement;
 
 pub mod input;
+pub mod input_handlers;
 

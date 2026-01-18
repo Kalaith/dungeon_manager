@@ -15,6 +15,7 @@ pub struct TileData {
     pub resources: Option<ResourceData>,
     pub durability: Option<u32>,
     pub damage_per_second: Option<f32>,
+    pub speed_modifier: Option<f32>,
     pub visual: VisualData,
     pub special: Option<SpecialData>,
 }

@@ -16,19 +16,19 @@
     },
     "needs": {
       "sleep": {
-        "decay_per_minute": 20.0,
+        "decay_per_minute": 15.0,
         "satisfied_by": [
           "lair"
         ]
       },
       "food": {
-        "decay_per_minute": 25.0,
+        "decay_per_minute": 20.0,
         "satisfied_by": [
           "hatchery"
         ]
       },
       "gold": {
-        "decay_per_minute": 10.0,
+        "decay_per_minute": 5.0,
         "satisfied_by": [
           "treasury"
         ],
@@ -131,26 +131,26 @@
     },
     "needs": {
       "sleep": {
-        "decay_per_minute": 1.0,
+        "decay_per_minute": 12.0,
         "satisfied_by": [
           "lair"
         ]
       },
       "food": {
-        "decay_per_minute": 1.5,
+        "decay_per_minute": 22.0,
         "satisfied_by": [
           "hatchery"
         ]
       },
       "gold": {
-        "decay_per_minute": 0.5,
+        "decay_per_minute": 8.0,
         "satisfied_by": [
           "treasury"
         ],
         "stash_amount": 50
       },
       "training": {
-        "decay_per_minute": 0.8,
+        "decay_per_minute": 5.0,
         "satisfied_by": [
           "training_hall"
         ]
@@ -260,26 +260,26 @@
     },
     "needs": {
       "sleep": {
-        "decay_per_minute": 1.2,
+        "decay_per_minute": 10.0,
         "satisfied_by": [
           "lair"
         ]
       },
       "food": {
-        "decay_per_minute": 2.0,
+        "decay_per_minute": 18.0,
         "satisfied_by": [
           "hatchery"
         ]
       },
       "gold": {
-        "decay_per_minute": 0.7,
+        "decay_per_minute": 6.0,
         "satisfied_by": [
           "treasury"
         ],
         "stash_amount": 100
       },
       "training": {
-        "decay_per_minute": 1.0,
+        "decay_per_minute": 4.0,
         "satisfied_by": [
           "training_hall"
         ]
@@ -385,26 +385,26 @@
     },
     "needs": {
       "sleep": {
-        "decay_per_minute": 0.8,
+        "decay_per_minute": 8.0,
         "satisfied_by": [
           "lair"
         ]
       },
       "food": {
-        "decay_per_minute": 1.0,
+        "decay_per_minute": 15.0,
         "satisfied_by": [
           "hatchery"
         ]
       },
       "gold": {
-        "decay_per_minute": 0.4,
+        "decay_per_minute": 10.0,
         "satisfied_by": [
           "treasury"
         ],
         "stash_amount": 75
       },
       "training": {
-        "decay_per_minute": 0.6,
+        "decay_per_minute": 3.0,
         "satisfied_by": [
           "library",
           "ritual_circle"
@@ -512,19 +512,19 @@
     },
     "needs": {
       "sleep": {
-        "decay_per_minute": 1.5,
+        "decay_per_minute": 15.0,
         "satisfied_by": [
           "lair"
         ]
       },
       "food": {
-        "decay_per_minute": 2.5,
+        "decay_per_minute": 25.0,
         "satisfied_by": [
           "hatchery"
         ]
       },
       "gold": {
-        "decay_per_minute": 0.8,
+        "decay_per_minute": 12.0,
         "satisfied_by": [
           "treasury"
         ],
@@ -741,26 +741,26 @@
     },
     "needs": {
       "sleep": {
-        "decay_per_minute": 0.5,
+        "decay_per_minute": 10.0,
         "satisfied_by": [
           "lair"
         ]
       },
       "food": {
-        "decay_per_minute": 3.0,
+        "decay_per_minute": 30.0,
         "satisfied_by": [
           "hatchery"
         ]
       },
       "gold": {
-        "decay_per_minute": 1.0,
+        "decay_per_minute": 15.0,
         "satisfied_by": [
           "treasury"
         ],
         "stash_amount": 200
       },
       "training": {
-        "decay_per_minute": 1.2,
+        "decay_per_minute": 6.0,
         "satisfied_by": [
           "training_hall",
           "ritual_circle"
@@ -1058,19 +1058,19 @@
     },
     "needs": {
       "sleep": {
-        "decay_per_minute": 0.7,
+        "decay_per_minute": 10.0,
         "satisfied_by": [
           "lair"
         ]
       },
       "food": {
-        "decay_per_minute": 1.0,
+        "decay_per_minute": 15.0,
         "satisfied_by": [
           "hatchery"
         ]
       },
       "gold": {
-        "decay_per_minute": 1.5,
+        "decay_per_minute": 8.0,
         "satisfied_by": [
           "treasury"
         ],
@@ -1162,6 +1162,350 @@
         "attack"
       ],
       "voice_set": "succubus"
+    }
+  },
+  {
+    "id": "vampire",
+    "name": "Vampire",
+    "description": "An ancient undead lord who drains life from enemies.",
+    "faction": "dungeon",
+    "role": "elite_caster",
+    "stats": {
+      "health": 150,
+      "mana": 100,
+      "attack": 12,
+      "defense": 5,
+      "speed": 1.1,
+      "carry_capacity": 40,
+      "sight_radius": 9
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 8.0,
+        "satisfied_by": [
+          "graveyard"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 20.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 25.0,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 200
+      }
+    },
+    "traits": [
+      "undead",
+      "arrogant"
+    ],
+    "ai": {
+      "base_mood": 60,
+      "anger_threshold": 25,
+      "desertion_threshold": 10,
+      "task_preferences": {
+        "research": 1.5,
+        "train": 1.2
+      },
+      "room_desires": {
+        "graveyard": 2.0,
+        "library": 1.5
+      },
+      "discipline_response": {
+        "slap": -10,
+        "torture": -20,
+        "reward": 5
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        8,
+        14
+      ],
+      "attack_speed": 1.2,
+      "armor_type": "medium",
+      "resistances": {
+        "dark": 0.5
+      },
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        200,
+        500,
+        900,
+        1500
+      ],
+      "stat_growth_per_level": {
+        "health": 20,
+        "mana": 10,
+        "attack": 2
+      },
+      "max_level": 10,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 15,
+      "steals_if_unpaid": true,
+      "drops_gold_on_death": [
+        20,
+        50
+      ]
+    },
+    "spawn": {
+      "source": "room",
+      "min_dungeon_reputation": 200,
+      "preferred_rooms": [
+        "graveyard"
+      ],
+      "spawn_weight": 0.3,
+      "max_population": 3
+    },
+    "visual": {
+      "sprite": "monsters/vampire.png",
+      "scale": 1.0,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "vampire"
+    }
+  },
+  {
+    "id": "hellhound",
+    "name": "Hellhound",
+    "description": "A fierce, two-headed demonic dog.",
+    "faction": "dungeon",
+    "role": "scout_fighter",
+    "stats": {
+      "health": 90,
+      "mana": 0,
+      "attack": 10,
+      "defense": 3,
+      "speed": 1.6,
+      "carry_capacity": 10,
+      "sight_radius": 12
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 15.0,
+        "satisfied_by": [
+          "kennel"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 30.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 0.0,
+        "satisfied_by": [],
+        "stash_amount": 0
+      }
+    },
+    "traits": [
+      "loyal",
+      "beast"
+    ],
+    "ai": {
+      "base_mood": 80,
+      "anger_threshold": 40,
+      "desertion_threshold": 0,
+      "task_preferences": {
+        "guard": 1.8,
+        "scout": 1.5
+      },
+      "room_desires": {
+        "kennel": 2.0
+      },
+      "discipline_response": {
+        "slap": 5,
+        "torture": -5,
+        "reward": 10
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        6,
+        12
+      ],
+      "attack_speed": 1.4,
+      "armor_type": "light",
+      "resistances": {
+        "fire": 0.8
+      },
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        100,
+        250,
+        500,
+        800
+      ],
+      "stat_growth_per_level": {
+        "health": 15,
+        "attack": 2,
+        "speed": 0.05
+      },
+      "max_level": 5,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 0,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [
+        0,
+        0
+      ]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 50,
+      "preferred_rooms": [
+        "kennel"
+      ],
+      "spawn_weight": 0.6,
+      "max_population": 8
+    },
+    "visual": {
+      "sprite": "monsters/hellhound.png",
+      "scale": 0.9,
+      "animations": [
+        "idle",
+        "run",
+        "attack"
+      ],
+      "voice_set": "beast"
+    }
+  },
+  {
+    "id": "bile_demon",
+    "name": "Bile Demon",
+    "description": "A bloated, disgusting demon that excels at manufacturing and eating.",
+    "faction": "dungeon",
+    "role": "worker_tank",
+    "stats": {
+      "health": 300,
+      "mana": 0,
+      "attack": 15,
+      "defense": 8,
+      "speed": 0.6,
+      "carry_capacity": 100,
+      "sight_radius": 6
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 20.0,
+        "satisfied_by": [
+          "lair"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 60.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 15.0,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 50
+      }
+    },
+    "traits": [
+      "glutton",
+      "slow"
+    ],
+    "ai": {
+      "base_mood": 65,
+      "anger_threshold": 30,
+      "desertion_threshold": 15,
+      "task_preferences": {
+        "work": 2.0,
+        "eat": 1.5
+      },
+      "room_desires": {
+        "workshop": 1.5,
+        "hatchery": 2.0
+      },
+      "discipline_response": {
+        "slap": -2,
+        "torture": -10,
+        "reward": 5
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        12,
+        18
+      ],
+      "attack_speed": 0.7,
+      "armor_type": "heavy",
+      "resistances": {
+        "poison": 1.0
+      },
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        200,
+        500,
+        1000,
+        2000
+      ],
+      "stat_growth_per_level": {
+        "health": 50,
+        "attack": 3,
+        "carry_capacity": 20
+      },
+      "max_level": 8,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 20,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [
+        10,
+        30
+      ]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 150,
+      "preferred_rooms": [
+        "workshop",
+        "hatchery"
+      ],
+      "spawn_weight": 0.4,
+      "max_population": 4
+    },
+    "visual": {
+      "sprite": "monsters/bile_demon.png",
+      "scale": 1.4,
+      "animations": [
+        "idle",
+        "walk",
+        "eat",
+        "attack"
+      ],
+      "voice_set": "demon"
     }
   }
 ]

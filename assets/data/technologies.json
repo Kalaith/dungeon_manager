@@ -3,7 +3,7 @@
         "id": "training_tech",
         "name": "Combat Training",
         "description": "Unlocks the Training Room, allowing minions to gain experience.",
-        "cost": 100,
+        "cost": 10,
         "prerequisites": [],
         "unlocks": {
             "rooms": [
@@ -18,7 +18,7 @@
         "id": "prison_tech",
         "name": "Imprisonment",
         "description": "Unlocks the Prison and Guard Post to detain heroes.",
-        "cost": 150,
+        "cost": 15,
         "prerequisites": [
             "training_tech"
         ],
@@ -36,7 +36,7 @@
         "id": "ritual_tech",
         "name": "Dark Rituals",
         "description": "Unlocks the Ritual Circle for mana generation and Warlocks.",
-        "cost": 300,
+        "cost": 30,
         "prerequisites": [
             "prison_tech"
         ],
@@ -57,7 +57,7 @@
         "id": "trap_tech",
         "name": "Advanced Engineering",
         "description": "Unlocks the Workshop and advanced traps.",
-        "cost": 200,
+        "cost": 20,
         "prerequisites": [
             "training_tech"
         ],

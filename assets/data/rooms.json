@@ -816,5 +816,182 @@
         "flicker": true
       }
     }
+  },
+  {
+    "id": "graveyard",
+    "name": "Graveyard",
+    "description": "A place for the dead to rest... or rise.",
+    "category": "storage",
+    "icon": "icons/rooms/graveyard.png",
+    "build": {
+      "cost_per_tile": 150,
+      "mana_cost": 0,
+      "min_tiles": 9,
+      "max_tiles": 100,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
+      "construction_time": 0.5
+    },
+    "requirements": {
+      "research": [],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "corpse_storage": 10,
+      "spawns_vampires": true
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "none",
+      "desirability": 0,
+      "max_creatures": 0,
+      "preferred_creatures": [],
+      "forbidden_creatures": [],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/graveyard.png",
+      "wall_sprite": "tiles/graveyard_wall.png",
+      "object_spawn": [],
+      "light": {
+        "color": [
+          100,
+          255,
+          100
+        ],
+        "intensity": 0.4,
+        "flicker": true
+      }
+    }
+  },
+  {
+    "id": "kennel",
+    "name": "Kennel",
+    "description": "A dark pit for your beasts of war.",
+    "category": "habitation",
+    "icon": "icons/rooms/kennel.png",
+    "build": {
+      "cost_per_tile": 75,
+      "mana_cost": 0,
+      "min_tiles": 4,
+      "max_tiles": 64,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
+      "construction_time": 0.3
+    },
+    "requirements": {
+      "research": [],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "happiness_modifier": 5,
+      "sleep_recovery_rate": 1.2
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "sleep",
+      "desirability": 1.0,
+      "max_creatures": 0,
+      "preferred_creatures": [
+        "hellhound"
+      ],
+      "forbidden_creatures": [],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/kennel.png",
+      "wall_sprite": "tiles/kennel_wall.png",
+      "object_spawn": [],
+      "light": {
+        "color": [
+          255,
+          150,
+          50
+        ],
+        "intensity": 0.6,
+        "flicker": false
+      }
+    }
+  },
+  {
+    "id": "barracks",
+    "name": "Barracks",
+    "description": "Where your soldiers group up and prepare for battle.",
+    "category": "training",
+    "icon": "icons/rooms/barracks.png",
+    "build": {
+      "cost_per_tile": 100,
+      "mana_cost": 0,
+      "min_tiles": 9,
+      "max_tiles": 100,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
+      "construction_time": 0.4
+    },
+    "requirements": {
+      "research": [],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "creature_defense_modifier": 2,
+      "grouping_point": true
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "guard",
+      "desirability": 0.8,
+      "max_creatures": 0,
+      "preferred_creatures": [
+        "orc",
+        "goblin",
+        "bile_demon"
+      ],
+      "forbidden_creatures": [],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/barracks.png",
+      "wall_sprite": "tiles/barracks_wall.png",
+      "object_spawn": [],
+      "light": {
+        "color": [
+          200,
+          200,
+          200
+        ],
+        "intensity": 0.8,
+        "flicker": false
+      }
+    }
   }
 ]

@@ -72,11 +72,85 @@ fn generate_tiles() {
     save_tile("ritual_circle", create_ritual_circle());
     save_tile("monster_spawner", create_monster_spawner());
     
-    // Traps
+    // New Rooms
+    save_tile("graveyard", create_graveyard());
+    save_tile("kennel", create_kennel());
+    save_tile("barracks", create_dungeon_barracks());
+    
+    // New Tiles
+    save_tile("wooden_floor", create_wooden_floor());
+    save_tile("carpet", create_carpet());
+    save_tile("bone_floor", create_bone_floor());
+
+
+    // Trap tiles
     save_tile("door", create_door());
     save_tile("spike_trap", create_spike_trap());
     save_tile("boulder_trap", create_boulder_trap());
     save_tile("alarm_trap", create_alarm_trap());
+}
+
+fn create_graveyard() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([40, 40, 45, 255])); // Dark gray
+    // Add tombstones
+    draw_rect(&mut img, 16, 16, 8, 12, Rgba([90, 90, 95, 255]));
+    draw_rect(&mut img, 40, 24, 8, 12, Rgba([90, 90, 95, 255]));
+    draw_rect(&mut img, 20, 40, 8, 12, Rgba([90, 90, 95, 255]));
+    // Mist/Fog
+    add_noise(&mut img, 15);
+    img
+}
+
+fn create_kennel() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([60, 40, 30, 255])); // Muddy brown
+    // Bones and straw
+    draw_rect(&mut img, 10, 10, 20, 20, Rgba([100, 80, 50, 255])); // Bed
+    draw_circle(&mut img, 40, 40, 5, Rgba([200, 200, 200, 255])); // Bone
+    img
+}
+
+fn create_dungeon_barracks() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([80, 80, 85, 255])); // Stone floor
+    // Bunks or lockers
+    draw_rect(&mut img, 5, 5, 15, 25, Rgba([100, 100, 110, 255]));
+    draw_rect(&mut img, 5, 35, 15, 25, Rgba([100, 100, 110, 255]));
+    draw_rect(&mut img, 44, 5, 15, 25, Rgba([100, 100, 110, 255]));
+    draw_rect(&mut img, 44, 35, 15, 25, Rgba([100, 100, 110, 255]));
+    img
+}
+
+fn create_wooden_floor() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([120, 80, 40, 255])); // Wood
+    // Planks
+    for x in (0..TILE_WIDTH).step_by(8) {
+         for y in 0..TILE_HEIGHT {
+              img.put_pixel(x, y, Rgba([100, 60, 30, 255])); // Groove
+         }
+    }
+    img
+}
+
+fn create_carpet() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([150, 30, 30, 255])); // Red carpet
+    // Gold trim
+    draw_rect(&mut img, 0, 0, TILE_WIDTH, 4, Rgba([200, 180, 50, 255]));
+    draw_rect(&mut img, 0, TILE_HEIGHT-4, TILE_WIDTH, 4, Rgba([200, 180, 50, 255]));
+    draw_rect(&mut img, 0, 0, 4, TILE_HEIGHT, Rgba([200, 180, 50, 255]));
+    draw_rect(&mut img, TILE_WIDTH-4, 0, 4, TILE_HEIGHT, Rgba([200, 180, 50, 255]));
+    img
+}
+
+fn create_bone_floor() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([200, 190, 180, 255])); // Bone white
+    // Skulls/Bones pattern
+    for y in (0..TILE_HEIGHT).step_by(16) {
+        for x in (0..TILE_WIDTH).step_by(16) {
+             draw_circle(&mut img, x+8, y+8, 4, Rgba([180, 170, 160, 255])); // Socket
+             draw_circle(&mut img, x+6, y+6, 2, Rgba([50, 50, 50, 255])); // Eye
+             draw_circle(&mut img, x+10, y+6, 2, Rgba([50, 50, 50, 255])); // Eye
+        }
+    }
+    img
 }
 
 fn save_tile(name: &str, img: RgbaImage) {
@@ -582,6 +656,11 @@ fn generate_monster_sprites() {
     save_sprite("monsters", "demon_spawn", create_demon_spawn_sprite());
     save_sprite("monsters", "spider", create_spider_sprite());
     save_sprite("monsters", "lizard", create_lizard_sprite());
+    
+    // New Monsters
+    save_sprite("monsters", "vampire", create_vampire_sprite());
+    save_sprite("monsters", "hellhound", create_hellhound_sprite());
+    save_sprite("monsters", "bile_demon", create_bile_demon_sprite());
 }
 
 fn generate_hero_sprites() {
@@ -599,6 +678,132 @@ fn generate_hero_sprites() {
     save_sprite("heroes", "high_priest", create_high_priest_sprite());
     save_sprite("heroes", "archmage", create_archmage_sprite());
     save_sprite("heroes", "champion_of_light", create_champion_sprite());
+    
+    // New Heroes
+    save_sprite("heroes", "barbarian", create_barbarian_sprite());
+    save_sprite("heroes", "alchemist", create_alchemist_sprite());
+    save_sprite("heroes", "geomancer", create_geomancer_sprite());
+}
+
+// New Monster Generators
+fn create_vampire_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let skin = Material::matte(220, 220, 230);
+    let cape = Material::matte(40, 10, 10);
+    let clothes = Material::matte(30, 30, 40);
+    
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    // Cape
+    draw_cylinder_3d(&mut img, &mut depth, cx, 15.0, 50.0, 8.0, 10.0, &cape);
+    // Body
+    draw_cylinder_3d(&mut img, &mut depth, cx, 20.0, 45.0, 10.0, 6.0, &clothes);
+    // Head
+    draw_sphere_3d(&mut img, &mut depth, cx, 15.0, 10.0, 5.0, &skin);
+    
+    img
+}
+
+fn create_hellhound_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let fur = Material::matte(180, 50, 40);
+    let eyes = Material::glowing(255, 200, 50);
+    
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    // Body
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 35.0, 10.0, 12.0, 8.0, 8.0, &fur);
+    // Heads (two)
+    draw_sphere_3d(&mut img, &mut depth, cx-6.0, 28.0, 8.0, 5.0, &fur);
+    draw_sphere_3d(&mut img, &mut depth, cx+6.0, 28.0, 8.0, 5.0, &fur);
+    // Eyes
+    draw_sphere_3d(&mut img, &mut depth, cx-7.0, 27.0, 4.0, 1.0, &eyes);
+    draw_sphere_3d(&mut img, &mut depth, cx+5.0, 27.0, 4.0, 1.0, &eyes);
+    
+    img
+}
+
+fn create_bile_demon_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let flab = Material::matte(180, 200, 50);
+    let horns = Material::bone();
+    
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    // Huge Body
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 35.0, 10.0, 18.0, 16.0, 14.0, &flab);
+    // Head integrated into body
+    draw_sphere_3d(&mut img, &mut depth, cx, 20.0, 6.0, 10.0, &flab);
+    // Horns
+    draw_cone_3d(&mut img, &mut depth, cx-10.0, 10.0, 22.0, 6.0, 2.0, &horns);
+    draw_cone_3d(&mut img, &mut depth, cx+10.0, 10.0, 22.0, 6.0, 2.0, &horns);
+    
+    img
+}
+
+// New Hero Generators
+fn create_barbarian_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let skin = Material::matte(200, 140, 100);
+    let leather = Material::leather(120, 80, 40);
+    let metal = Material::metallic(180, 180, 180);
+    
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    // Body (muscular)
+    draw_cylinder_3d(&mut img, &mut depth, cx, 20.0, 45.0, 10.0, 7.0, &skin);
+    // Kilt
+    draw_cylinder_3d(&mut img, &mut depth, cx, 35.0, 50.0, 11.0, 8.0, &leather);
+    // Head
+    draw_sphere_3d(&mut img, &mut depth, cx, 15.0, 10.0, 5.0, &skin);
+    // Huge Axe on back
+    draw_cylinder_3d(&mut img, &mut depth, cx+8.0, 10.0, 50.0, 5.0, 1.0, &leather); // Handle
+    draw_ellipsoid_3d(&mut img, &mut depth, cx+8.0, 15.0, 5.0, 4.0, 8.0, 0.5, &metal); // Blade
+    
+    img
+}
+
+fn create_alchemist_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let robe = Material::matte(40, 140, 80); // Greenish
+    let glass = Material::glowing(100, 255, 100); // Potion
+    
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    // Body
+    draw_cylinder_3d(&mut img, &mut depth, cx, 22.0, 52.0, 10.0, 5.0, &robe);
+    // Head
+    draw_sphere_3d(&mut img, &mut depth, cx, 16.0, 10.0, 5.0, &robe); // Hood
+    // Flask in hand
+    draw_sphere_3d(&mut img, &mut depth, cx+8.0, 30.0, 8.0, 3.0, &glass);
+    
+    img
+}
+
+fn create_geomancer_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let rock_armor = Material::matte(100, 90, 80);
+    let crystal = Material::glowing(200, 100, 200);
+    
+    let cx = SPRITE_SIZE as f32 / 2.0;
+    
+    // Bulky Rock Armor Body
+    draw_cylinder_3d(&mut img, &mut depth, cx, 20.0, 50.0, 10.0, 8.0, &rock_armor);
+    // Shoulders
+    draw_sphere_3d(&mut img, &mut depth, cx-7.0, 22.0, 10.0, 4.0, &rock_armor);
+    draw_sphere_3d(&mut img, &mut depth, cx+7.0, 22.0, 10.0, 4.0, &rock_armor);
+    // Head
+    draw_sphere_3d(&mut img, &mut depth, cx, 16.0, 10.0, 5.0, &rock_armor);
+    // Floating crystal
+    draw_sphere_3d(&mut img, &mut depth, cx, 8.0, 10.0, 2.0, &crystal);
+    
+    img
 }
 
 // Helper to draw a filled rectangle

@@ -18,12 +18,12 @@ pub const ROOM_SELL_REFUND: i32 = 5;
 pub const GEM_MINE_VALUE: i32 = 25;
 
 // Player Starting Stats
-pub const STARTING_GOLD: i32 = 200;
-pub const STARTING_MANA: i32 = 1000;
+pub const STARTING_GOLD: i32 = 20000;
+pub const STARTING_MANA: i32 = 10000;
 pub const STARTING_FOOD: i32 = 100;
 pub const STARTING_MATERIALS: i32 = 100;
 
-pub const INITIAL_MAX_GOLD: i32 = 0; // Capacity determined by treasury/dungeon heart rooms
+pub const INITIAL_MAX_GOLD: i32 = 20000; // Capacity determined by treasury/dungeon heart rooms
 pub const INITIAL_MAX_MANA: i32 = 0;
 pub const INITIAL_MAX_FOOD: i32 = 500;
 pub const INITIAL_MAX_MATERIALS: i32 = 100;
@@ -97,7 +97,7 @@ pub const NEED_ATTENTION_THRESHOLD: f32 = 20.0;
 // ============================================================================
 
 /// Initial delay before first hero wave attacks (5 minutes)
-pub const HERO_WAVE_INITIAL_DELAY: f32 = 20.0;
+pub const HERO_WAVE_INITIAL_DELAY: f32 = 2000.0;
 
 /// Time between hero attack waves (3 minutes)
 pub const HERO_WAVE_INTERVAL: f32 = 180.0;

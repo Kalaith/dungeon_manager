@@ -562,8 +562,13 @@ impl GameState {
         // Recalculate max gold and mana based on rooms
         let mut max_gold = 0; 
         let mut max_mana = 0;
+        let mut lair_tiles_count = 0;
         
         for room in &self.room_manager.rooms {
+            if room.room_type == "lair" {
+                lair_tiles_count += room.tiles.len();
+            }
+
             if let Some(room_data) = game_data.rooms.get(&room.room_type) {
                 if room_data.effects.gold_storage_capacity > 0 {
                     max_gold += room.tiles.len() as i32 * room_data.effects.gold_storage_capacity;
@@ -576,6 +581,9 @@ impl GameState {
         
         self.player.max_gold = max_gold;
         self.player.max_mana = max_mana;
+        
+        // Capacity is exactly equal to the number of lair tiles
+        self.player.max_creatures = lair_tiles_count;
     }
 
     fn detect_hero_base(&mut self, game_data: &GameData) {

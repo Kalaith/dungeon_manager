@@ -196,7 +196,39 @@ impl GameRenderer {
         self.draw_entities(graphics, state, &camera);
         self.draw_markers(state);
 
+         // Draw Mode Cursor / Ghost
+        if let Some(pos) = hovered_tile {
+            match interaction_mode {
+                InteractionMode::SetAttackMarker => {
+                    let world_x = pos.x as f32;
+                    let world_z = pos.y as f32;
+                    draw_cube_wires(vec3(world_x, 0.5, world_z), vec3(1.0, 1.0, 1.0), RED);
+                },
+                InteractionMode::SetDefendMarker => {
+                    let world_x = pos.x as f32;
+                    let world_z = pos.y as f32;
+                    draw_cube_wires(vec3(world_x, 0.5, world_z), vec3(1.0, 1.0, 1.0), BLUE);
+                },
+                _ => {}
+            }
+        }
+
         set_default_camera(); // Go back to 2D for UI
+
+        // Draw 2D Cursor Label
+        if let Some(_) = hovered_tile {
+            match interaction_mode {
+                InteractionMode::SetAttackMarker => {
+                    let mouse = mouse_position();
+                    draw_text("ATTACK", mouse.0 + 20.0, mouse.1, 20.0, RED);
+                },
+                 InteractionMode::SetDefendMarker => {
+                    let mouse = mouse_position();
+                    draw_text("DEFEND", mouse.0 + 20.0, mouse.1, 20.0, BLUE);
+                },
+                _ => {}
+            }
+        }
     }
 
 

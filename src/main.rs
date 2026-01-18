@@ -168,7 +168,7 @@ async fn main() {
             game.load_resources().await;
         }
 
-        let dt = get_frame_time();
+        let dt = get_frame_time().min(0.1);
         game.update(dt);
         game.draw();
 

@@ -301,5 +301,59 @@
     "visual": {
       "sprite": "tiles/dungeon_heart.png"
     }
+  },
+  {
+    "id": "wooden_floor",
+    "name": "Wooden Floor",
+    "category": "floor",
+    "diggable": false,
+    "claimable": true,
+    "blocks_movement": false,
+    "blocks_vision": false,
+    "supports_rooms": true,
+    "resources": null,
+    "durability": 40,
+    "visual": {
+      "sprite": "tiles/wooden_floor.png"
+    }
+  },
+  {
+    "id": "carpet",
+    "name": "Luxury Carpet",
+    "category": "floor",
+    "diggable": false,
+    "claimable": true,
+    "blocks_movement": false,
+    "blocks_vision": false,
+    "supports_rooms": true,
+    "resources": null,
+    "speed_modifier": 1.2,
+    "durability": 30,
+    "visual": {
+      "sprite": "tiles/carpet.png"
+    }
+  },
+  {
+    "id": "bone_floor",
+    "name": "Bone Floor",
+    "category": "floor",
+    "diggable": false,
+    "claimable": true,
+    "blocks_movement": false,
+    "blocks_vision": false,
+    "supports_rooms": true,
+    "resources": null,
+    "special": {
+      "aura": {
+        "radius": 2,
+        "effects": {
+          "hero_fear": 0.1
+        }
+      }
+    },
+    "durability": 80,
+    "visual": {
+      "sprite": "tiles/bone_floor.png"
+    }
   }
 ]

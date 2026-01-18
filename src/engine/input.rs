@@ -1,13 +1,12 @@
 use macroquad::prelude::*;
 use crate::state::game_state::GameState;
-use crate::state::{GamePhase, InteractionMode, TilePos, MapType, Ownership, DragSelection};
+use crate::state::{GamePhase, InteractionMode, TilePos, MapType, DragSelection};
 use crate::data::GameData;
 use crate::state::entities::EntityId;
 use crate::ui::sidebar::{Sidebar, SidebarTab};
 
 use crate::engine::spell_effects;
 use crate::engine::creature_ai;
-use crate::engine::tile_types::{self, types as tt};
 use crate::ui::actions::ActionQueue;
 
 pub struct InputHandler;
@@ -450,31 +449,31 @@ impl InputHandler {
     ) {
         match interaction_mode {
             InteractionMode::Dig => {
-                Self::handle_dig(state, game_data, tile_pos);
+                crate::engine::input_handlers::handle_dig(state, game_data, tile_pos);
             }
             InteractionMode::BuildRoom(room_type) => {
-                Self::handle_build_room(state, game_data, room_type, tile_pos);
+                crate::engine::input_handlers::handle_build_room(state, game_data, room_type, tile_pos);
             }
             InteractionMode::BuildTrap(trap_type) => {
-                Self::handle_build_trap(state, game_data, trap_type, tile_pos);
+                crate::engine::input_handlers::handle_build_trap(state, game_data, trap_type, tile_pos);
             }
             InteractionMode::PlaceSpawner => {
-                Self::handle_place_spawner(state, game_data, tile_pos);
+                crate::engine::input_handlers::handle_place_spawner(state, game_data, tile_pos);
             }
             InteractionMode::Pickup => {
-                Self::handle_pickup(state, held_entity, interaction_mode, tile_pos);
+                crate::engine::input_handlers::handle_pickup(state, held_entity, interaction_mode, tile_pos);
             }
             InteractionMode::Drop => {
-                Self::handle_drop(state, held_entity, interaction_mode, tile_pos, game_data);
+                crate::engine::input_handlers::handle_drop(state, held_entity, interaction_mode, tile_pos, game_data);
             }
             InteractionMode::Sell => {
-                Self::handle_sell(state, game_data, tile_pos);
+                crate::engine::input_handlers::handle_sell(state, game_data, tile_pos);
             }
             InteractionMode::Inspect => {
-                Self::handle_inspect(state, selected_entity, selected_room, tile_pos);
+                crate::engine::input_handlers::handle_inspect(state, selected_entity, selected_room, tile_pos);
             }
             InteractionMode::None => {
-                let found = Self::select_entity_or_room(state, selected_entity, selected_room, tile_pos);
+                let found = crate::engine::input_handlers::select_entity_or_room(state, selected_entity, selected_room, tile_pos);
                 if found {
                     sidebar.switch_to_tab(SidebarTab::Minions);
                 }
@@ -505,221 +504,6 @@ impl InputHandler {
         }
     }
 
-    /// Select an entity or room at the given position, returns true if something was selected
-    fn select_entity_or_room(state: &GameState, selected_entity: &mut Option<EntityId>, selected_room: &mut Option<usize>, tile_pos: TilePos) -> bool {
-        if let Some(entity) = state.entities.at_position(tile_pos).next() {
-            *selected_entity = Some(entity.id);
-            *selected_room = None;
-            return true;
-        }
-
-        *selected_entity = None;
-        let tile = match state.get_tile(tile_pos) {
-            Some(t) => t,
-            None => { *selected_room = None; return false; }
-        };
-
-        if let Some(room_id) = tile.room_id {
-            *selected_room = Some(room_id);
-            return true;
-        }
-
-        *selected_room = None;
-        false
-    }
-
-    fn handle_dig(state: &mut GameState, game_data: &GameData, tile_pos: TilePos) {
-        if let Some(tile) = state.get_tile_mut(tile_pos) {
-            if tile_types::is_diggable(&tile.tile_type, game_data) && tile.ownership == Ownership::Unclaimed {
-                 tile.marked_for_dig = !tile.marked_for_dig;
-            }
-        }
-    }
-
-    fn handle_build_room(state: &mut GameState, game_data: &GameData, room_type: &str, tile_pos: TilePos) {
-        let cost = game_data.rooms
-            .get(room_type)
-            .map(|data| data.build.cost_per_tile)
-            .unwrap_or_else(|| panic!("Room type '{}' missing in rooms.json", room_type));
-
-        let can_build = state.player.gold >= cost;
-        let is_valid_tile = if let Some(tile) = state.get_tile(tile_pos) {
-            tile.ownership == Ownership::Player && tile.room_id.is_none() && tile_types::can_build_room(&tile.tile_type, game_data)
-        } else { 
-            false 
-        };
-
-        if !state.player.is_room_unlocked(room_type) {
-            eprintln!("Cannot build {}: Not yet unlocked!", room_type);
-            return;
-        }
-
-        if can_build && is_valid_tile {
-            state.player.gold -= cost;
-            if let Some(tile) = state.get_tile_mut(tile_pos) {
-                tile.tile_type = room_type.to_string();
-            }
-            state.detect_and_update_rooms(game_data);
-        }
-    }
-
-    fn handle_build_trap(state: &mut GameState, game_data: &GameData, trap_type: &str, tile_pos: TilePos) {
-        // Check for Workshop requirement
-        let has_workshop = state.room_manager.rooms.iter().any(|r| r.room_type == "workshop");
-        if !has_workshop {
-            eprintln!("Cannot build trap: No functioning Workshop!");
-            return;
-        }
-
-        // Add to pending builds
-        if let Some(tile) = state.get_tile_mut(tile_pos) {
-            if tile.ownership == Ownership::Player 
-                && tile_types::can_build_room(&tile.tile_type, game_data) 
-                && tile.trap.is_none() 
-            {
-                 // Create trap in "unconstructed" state
-                 tile.trap = Some(crate::state::tile_state::TrapState {
-                     trap_type: trap_type.to_string(),
-                     constructed: false,
-                     construction_progress: 0.0,
-                     active: false,
-                     funded: false,
-                     cooldown: 0.0,
-                     triggered: false,
-                 });
-                 
-                 state.pending_trap_builds.insert(tile_pos);
-                 eprintln!("Trap '{}' placement started at {:?}. Waiting for construction.", trap_type, tile_pos);
-            }
-        }
-    }
-
-    fn handle_place_spawner(state: &mut GameState, game_data: &GameData, tile_pos: TilePos) {
-        if state.player.gold < crate::config::SPAWNER_COST {
-            return;
-        }
-
-        let tile = match state.get_tile(tile_pos) {
-            Some(t) => t,
-            None => return,
-        };
-
-        if tile.ownership != Ownership::Player || !tile_types::can_build_room(&tile.tile_type, game_data) {
-            return;
-        }
-
-        state.player.gold -= crate::config::SPAWNER_COST;
-        if let Some(tile_mut) = state.get_tile_mut(tile_pos) {
-            tile_mut.tile_type = tt::MONSTER_SPAWNER.to_string();
-        }
-    }
-
-    fn handle_pickup(
-        state: &mut GameState, 
-        held_entity: &mut Option<EntityId>, 
-        interaction_mode: &mut InteractionMode,
-        tile_pos: TilePos
-    ) {
-        // Find pickable entity
-        let mut pickable_id = None;
-        
-        if let Some(entity) = state.entities.at_position(tile_pos).next() {
-            let can_pickup = match &entity.entity_type {
-                crate::state::entities::EntityType::Creature(_) => true,
-                crate::state::entities::EntityType::Hero(h) => h.is_captured,
-                crate::state::entities::EntityType::Structure(_) => false,
-            };
-            
-            if can_pickup {
-                pickable_id = Some(entity.id);
-            }
-        }
-
-        if let Some(id) = pickable_id {
-            *held_entity = Some(id);
-            eprintln!("Picked up entity: {}", id);
-            *interaction_mode = InteractionMode::Drop;
-        }
-    }
-
-    fn handle_drop(
-        state: &mut GameState,
-        held_entity: &mut Option<EntityId>,
-        interaction_mode: &mut InteractionMode,
-        tile_pos: TilePos,
-        game_data: &GameData,
-    ) {
-        let entity_id = match *held_entity {
-            Some(id) => id,
-            None => return,
-        };
-
-        let tile = match state.get_tile(tile_pos) {
-            Some(t) => t,
-            None => return,
-        };
-
-        let is_walkable = tile.ownership == Ownership::Player && tile_types::is_walkable(&tile.tile_type, game_data);
-        if !is_walkable {
-            return;
-        }
-
-        let entity = match state.entities.get_mut(entity_id) {
-            Some(e) => e,
-            None => return,
-        };
-
-        entity.pos = tile_pos;
-        if let Some(creature) = entity.as_creature_mut() {
-            creature.current_path = None;
-            creature.current_task = None;
-            creature.task_time = 0.0;
-            creature.move_timer = 0.0;
-        }
-
-        eprintln!("Dropped entity {} at {:?}", entity_id, tile_pos);
-        *held_entity = None;
-        *interaction_mode = InteractionMode::Pickup;
-    }
-
-    fn handle_sell(state: &mut GameState, game_data: &GameData, tile_pos: TilePos) {
-        let mut action = None;
-        if let Some(tile) = state.get_tile(tile_pos) {
-            if tile.marked_for_dig {
-                action = Some("unmark");
-            } else if state.player.is_room_unlocked(&tile.tile_type) && tile.ownership == Ownership::Player {
-                action = Some("sell");
-            }
-        }
-
-        match action {
-            Some("unmark") => {
-                if let Some(tile) = state.get_tile_mut(tile_pos) {
-                    tile.marked_for_dig = false;
-                }
-            }
-            Some("sell") => {
-                state.player.gold += 5;
-                if let Some(tile) = state.get_tile_mut(tile_pos) {
-                    tile.tile_type = tt::CLAIMED_FLOOR.to_string();
-                    tile.room_id = None;
-                }
-                state.detect_and_update_rooms(game_data);
-            }
-            _ => {}
-        }
-    }
-
-    fn handle_inspect(
-        state: &GameState,
-        selected_entity: &mut Option<EntityId>,
-        selected_room: &mut Option<usize>,
-        tile_pos: TilePos
-    ) {
-        // Reuse the same selection logic
-        Self::select_entity_or_room(state, selected_entity, selected_room, tile_pos);
-    }
-
     /// Check if the current interaction mode supports drag selection
     fn is_drag_mode(mode: &InteractionMode) -> bool {
         matches!(
@@ -744,142 +528,19 @@ impl InputHandler {
             .collect();
 
         match mode {
-            InteractionMode::Dig => Self::handle_dig_multi(state, game_data, &tiles),
+            InteractionMode::Dig => {
+                crate::engine::input_handlers::handle_dig_multi(state, game_data, &tiles);
+            },
             InteractionMode::BuildRoom(room_type) => {
-                Self::handle_build_room_multi(state, game_data, room_type, &tiles);
+                crate::engine::input_handlers::handle_build_room_multi(state, game_data, room_type, &tiles);
             }
             InteractionMode::BuildTrap(trap_type) => {
-                Self::handle_build_trap_multi(state, game_data, trap_type, &tiles);
+                crate::engine::input_handlers::handle_build_trap_multi(state, game_data, trap_type, &tiles);
             }
             InteractionMode::PlaceSpawner => {
-                Self::handle_place_spawner_multi(state, game_data, &tiles);
+                crate::engine::input_handlers::handle_place_spawner_multi(state, game_data, &tiles);
             }
             _ => {}
-        }
-    }
-
-    /// Mark/unmark multiple tiles for digging
-    fn handle_dig_multi(state: &mut GameState, game_data: &GameData, tiles: &[TilePos]) {
-        for &tile_pos in tiles {
-            if let Some(tile) = state.get_tile_mut(tile_pos) {
-                if tile_types::is_diggable(&tile.tile_type, game_data) && tile.ownership == Ownership::Unclaimed {
-                    tile.marked_for_dig = true; // Always mark when dragging (not toggle)
-                }
-            }
-        }
-    }
-
-    /// Build rooms on multiple tiles
-    fn handle_build_room_multi(state: &mut GameState, game_data: &GameData, room_type: &str, tiles: &[TilePos]) {
-        let cost_per_tile = game_data.rooms
-            .get(room_type)
-            .map(|data| data.build.cost_per_tile)
-            .unwrap_or_else(|| panic!("Room type '{}' missing in rooms.json", room_type));
-
-        if !state.player.is_room_unlocked(room_type) {
-            eprintln!("Cannot build {}: Not yet unlocked!", room_type);
-            return;
-        }
-
-        // Count valid tiles first
-        let valid_tiles: Vec<TilePos> = tiles
-            .iter()
-            .filter(|&&pos| {
-                if let Some(tile) = state.get_tile(pos) {
-                    tile.ownership == Ownership::Player
-                        && tile.room_id.is_none()
-                        && tile_types::can_build_room(&tile.tile_type, game_data)
-                } else {
-                    false
-                }
-            })
-            .copied()
-            .collect();
-
-        // Calculate total cost and check if we can afford it
-        let total_cost = cost_per_tile * valid_tiles.len() as i32;
-        if state.player.gold < total_cost {
-            eprintln!("Cannot build {}: Not enough gold! Need {}, have {}", room_type, total_cost, state.player.gold);
-            return;
-        }
-
-        // Apply the build to all valid tiles
-        if !valid_tiles.is_empty() {
-            state.player.gold -= total_cost;
-            for tile_pos in valid_tiles {
-                if let Some(tile) = state.get_tile_mut(tile_pos) {
-                    tile.tile_type = room_type.to_string();
-                }
-            }
-            state.detect_and_update_rooms(game_data);
-        }
-    }
-
-    /// Place traps on multiple tiles
-    fn handle_build_trap_multi(state: &mut GameState, game_data: &GameData, trap_type: &str, tiles: &[TilePos]) {
-        // Check for Workshop requirement
-        let has_workshop = state.room_manager.rooms.iter().any(|r| r.room_type == "workshop");
-        if !has_workshop {
-            eprintln!("Cannot build trap: No functioning Workshop!");
-            return;
-        }
-
-        for &tile_pos in tiles {
-            if let Some(tile) = state.get_tile_mut(tile_pos) {
-                if tile.ownership == Ownership::Player
-                    && tile_types::can_build_room(&tile.tile_type, game_data)
-                    && tile.trap.is_none()
-                {
-                    // Create trap in "unconstructed" state
-                    tile.trap = Some(crate::state::tile_state::TrapState {
-                        trap_type: trap_type.to_string(),
-                        constructed: false,
-                        construction_progress: 0.0,
-                        active: false,
-                        funded: false,
-                        cooldown: 0.0,
-                        triggered: false,
-                    });
-
-                    state.pending_trap_builds.insert(tile_pos);
-                }
-            }
-        }
-    }
-
-    /// Place spawners on multiple tiles
-    fn handle_place_spawner_multi(state: &mut GameState, game_data: &GameData, tiles: &[TilePos]) {
-        let cost = crate::config::SPAWNER_COST;
-
-        // Count valid tiles
-        let valid_tiles: Vec<TilePos> = tiles
-            .iter()
-            .filter(|&&pos| {
-                if let Some(tile) = state.get_tile(pos) {
-                    tile.ownership == Ownership::Player
-                        && tile_types::can_build_room(&tile.tile_type, game_data)
-                } else {
-                    false
-                }
-            })
-            .copied()
-            .collect();
-
-        // Calculate total cost
-        let total_cost = cost * valid_tiles.len() as i32;
-        if state.player.gold < total_cost {
-            eprintln!("Cannot place spawners: Not enough gold! Need {}, have {}", total_cost, state.player.gold);
-            return;
-        }
-
-        // Apply
-        if !valid_tiles.is_empty() {
-            state.player.gold -= total_cost;
-            for tile_pos in valid_tiles {
-                if let Some(tile) = state.get_tile_mut(tile_pos) {
-                    tile.tile_type = tt::MONSTER_SPAWNER.to_string();
-                }
-            }
         }
     }
 }
