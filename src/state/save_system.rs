@@ -1,6 +1,14 @@
 use crate::state::game_state::GameState;
 use serde::{Serialize, Deserialize};
 
+#[cfg(not(target_arch = "wasm32"))]
+use std::fs;
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::Path;
+
+#[cfg(target_arch = "wasm32")]
+use quad_storage::STORAGE;
+
 /// Wrapper for saving game state with metadata (uses reference to avoid Clone)
 #[derive(Serialize)]
 struct GameSaveWrapper<'a> {
@@ -19,13 +27,13 @@ struct GameLoadWrapper {
     version: String,
 }
 
-/// Save game to persistent storage (works on both native and WebGL/WASM)
-/// On native: saves to local.data file
-/// On WebGL: uses browser localStorage
+/// Save game to persistent storage
+/// On native: saves to .json file
+/// On WebGL: uses quad-storage (localStorage)
 pub fn save_game(game_state: &GameState, slot_name: &str) -> Result<(), String> {
     let wrapper = GameSaveWrapper {
         game_state,
-        save_date: "Unknown Date".to_string(),
+        save_date: "Unknown Date".to_string(), 
         version: "0.1.0".to_string(),
     };
 
@@ -34,29 +42,54 @@ pub fn save_game(game_state: &GameState, slot_name: &str) -> Result<(), String> 
     
     let key = format!("save_{}", slot_name);
     
-    let mut storage = quad_storage::STORAGE.lock()
-        .map_err(|e| format!("Storage lock error: {}", e))?;
-    
-    storage.set(&key, &serialized);
-    
-    eprintln!("Game saved to {} (quad-storage)", slot_name);
-    Ok(())
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Ok(mut storage) = STORAGE.lock() {
+            storage.set(&key, &serialized);
+            eprintln!("Game saved to quad-storage key: {}", key);
+            Ok(())
+        } else {
+            Err("Failed to lock quad-storage".to_string())
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let filename = format!("{}.json", key);
+        fs::write(&filename, serialized)
+            .map_err(|e| format!("File write error: {}", e))?;
+        eprintln!("Game saved to file: {}", filename);
+        Ok(())
+    }
 }
 
-/// Load game from persistent storage (works on both native and WebGL/WASM)
+/// Load game from persistent storage
 pub fn load_game(slot_name: &str) -> Result<GameState, String> {
     let key = format!("save_{}", slot_name);
     
-    let storage = quad_storage::STORAGE.lock()
-        .map_err(|e| format!("Storage lock error: {}", e))?;
-    
-    let content = storage.get(&key)
-        .ok_or_else(|| format!("No save found for slot: {}", slot_name))?;
+    let content = {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Ok(storage) = STORAGE.lock() {
+                storage.get(&key)
+                    .ok_or_else(|| format!("No save found for slot: {}", slot_name))?
+            } else {
+                return Err("Failed to lock quad-storage".to_string());
+            }
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let filename = format!("{}.json", key);
+            fs::read_to_string(&filename)
+                 .map_err(|e| format!("File read error: {}", e))?
+        }
+    };
     
     let wrapper: GameLoadWrapper = serde_json::from_str(&content)
         .map_err(|e| format!("Deserialization error: {}", e))?;
     
-    eprintln!("Game loaded from {} (quad-storage)", slot_name);
+    eprintln!("Game loaded from {}", slot_name);
     Ok(wrapper.game_state)
 }
 
@@ -64,16 +97,24 @@ pub fn load_game(slot_name: &str) -> Result<GameState, String> {
 pub fn save_exists(slot_name: &str) -> bool {
     let key = format!("save_{}", slot_name);
     
-    if let Ok(storage) = quad_storage::STORAGE.lock() {
-        storage.get(&key).is_some()
-    } else {
-        false
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Ok(storage) = STORAGE.lock() {
+            storage.get(&key).is_some()
+        } else {
+            false
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let filename = format!("{}.json", key);
+        Path::new(&filename).exists()
     }
 }
 
 /// Get list of available save slots
 pub fn get_save_files() -> Vec<String> {
-    // quad-storage doesn't provide iteration, so we check known slots
     let known_slots = ["slot_1", "slot_2", "slot_3", "autosave"];
     let mut saves = Vec::new();
     
@@ -85,3 +126,4 @@ pub fn get_save_files() -> Vec<String> {
     
     saves
 }
+

@@ -1,4 +1,14 @@
+//! Billboard rendering utilities
+//!
+//! NOTE: This functionality has been extracted to macroquad-toolkit.
+//! For new projects, use: macroquad_toolkit::render3d::billboard::draw_billboard
+//!
+//! Keeping local copy here for backward compatibility.
+
 use macroquad::prelude::*;
+
+// Re-export from toolkit for convenience
+pub use macroquad_toolkit::render3d::billboard::draw_billboard_tinted;
 
 pub fn draw_billboard(pos: Vec3, size: Vec2, texture: &Texture2D, camera_pos: Vec3) {
     let to_cam = camera_pos - pos;

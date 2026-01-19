@@ -172,7 +172,13 @@ fn process_single_action(
         }
 
         UiAction::TogglePause => {
-            // TODO: Implement pause
+            game_state.paused = !game_state.paused;
+            if game_state.paused {
+                result.new_mode = Some(InteractionMode::None);
+                result.deselect_entity = true;
+                result.deselect_room = true;
+                *selected_spell = None;
+            }
         }
 
         UiAction::StartResearch(tech_id) => {

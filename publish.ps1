@@ -123,6 +123,13 @@ if ($buildWebGL) {
     if (Test-Path $AssetsPath) { Copy-Item $AssetsPath -Destination $WebGLPackageDir -Recurse }
     $JsBundlePath = Join-Path $WebGLPackageDir "mq_js_bundle.js"
     try { Invoke-WebRequest -Uri "https://not-fl3.github.io/miniquad-samples/mq_js_bundle.js" -OutFile $JsBundlePath } catch { Write-Warning "Could not download mq_js_bundle.js" }
+    
+    $SappPath = Join-Path $WebGLPackageDir "sapp_jsutils.js"
+    try { Invoke-WebRequest -Uri "https://raw.githubusercontent.com/not-fl3/sapp-jsutils/master/js/sapp_jsutils.js" -OutFile $SappPath } catch { Write-Warning "Could not download sapp_jsutils.js" }
+
+    $QuadStoragePath = Join-Path $WebGLPackageDir "quad-storage.js"
+    try { Invoke-WebRequest -Uri "https://raw.githubusercontent.com/optozorax/quad-storage/master/js/quad-storage.js" -OutFile $QuadStoragePath } catch { Write-Warning "Could not download quad-storage.js" }
+
     $WebGLZipPath = Join-Path $DistDir "${ProjectName}_webgl.zip"
     Compress-Archive -Path "$WebGLPackageDir\*" -DestinationPath $WebGLZipPath -CompressionLevel Optimal
     Write-Host "WebGL package created!" -ForegroundColor Green
@@ -142,8 +149,15 @@ if ($DryRun) {
     if (Test-Path $WebGLSourceDir) {
         $wasmFile = Join-Path $WebGLSourceDir "$ProjectName.wasm"
         if (Test-Path $wasmFile) { Copy-Item $wasmFile $DeployDir -Force; Write-Host "  Copied: $ProjectName.wasm" -ForegroundColor Gray }
+        
         $jsBundle = Join-Path $WebGLSourceDir "mq_js_bundle.js"
         if (Test-Path $jsBundle) { Copy-Item $jsBundle $DeployDir -Force; Write-Host "  Copied: mq_js_bundle.js" -ForegroundColor Gray }
+        
+        $sappUtils = Join-Path $WebGLSourceDir "sapp_jsutils.js"
+        if (Test-Path $sappUtils) { Copy-Item $sappUtils $DeployDir -Force; Write-Host "  Copied: sapp_jsutils.js" -ForegroundColor Gray }
+        
+        $quadStorage = Join-Path $WebGLSourceDir "quad-storage.js"
+        if (Test-Path $quadStorage) { Copy-Item $quadStorage $DeployDir -Force; Write-Host "  Copied: quad-storage.js" -ForegroundColor Gray }
         $assetsDir = Join-Path $WebGLSourceDir "assets"
         if (Test-Path $assetsDir) {
             $destAssets = Join-Path $DeployDir "assets"

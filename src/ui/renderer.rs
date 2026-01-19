@@ -175,29 +175,33 @@ impl GameRenderer {
         // Load Game Button
         let load_y = button_y + button_height + spacing;
         let save_exists = crate::state::save_system::save_exists("slot_1");
-        if save_exists {
-             let is_load_hovered = mouse_pos.0 >= button_x
-                && mouse_pos.0 <= button_x + button_width
-                && mouse_pos.1 >= load_y
-                && mouse_pos.1 <= load_y + button_height;
 
-            let load_color = if is_load_hovered {
+        
+        let is_load_hovered = mouse_pos.0 >= button_x
+            && mouse_pos.0 <= button_x + button_width
+            && mouse_pos.1 >= load_y
+            && mouse_pos.1 <= load_y + button_height;
+
+        let load_color = if save_exists {
+            if is_load_hovered {
                 Color::new(0.4, 0.8, 0.4, 1.0)
             } else {
                 Color::new(0.3, 0.7, 0.3, 1.0)
-            };
+            }
+        } else {
+            Color::new(0.3, 0.3, 0.3, 1.0)
+        };
 
-            draw_rectangle(button_x, load_y, button_width, button_height, load_color);
-            draw_rectangle_lines(button_x, load_y, button_width, button_height, 3.0, WHITE);
+        draw_rectangle(button_x, load_y, button_width, button_height, load_color);
+        draw_rectangle_lines(button_x, load_y, button_width, button_height, 3.0, if save_exists { WHITE } else { GRAY });
 
-            draw_text(
-                "LOAD GAME",
-                button_x + 35.0,
-                load_y + 32.0,
-                24.0,
-                WHITE,
-            );
-        }
+        draw_text(
+            "LOAD GAME",
+            button_x + 35.0,
+            load_y + 32.0,
+            24.0,
+            if save_exists { WHITE } else { GRAY },
+        );
 
         // Draw hint
         draw_text(

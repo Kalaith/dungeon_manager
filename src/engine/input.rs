@@ -159,8 +159,9 @@ impl InputHandler {
         }
 
         if is_key_pressed(KeyCode::Escape) {
-            state.paused = !state.paused;
-            // Clear selection when pausing/unpausing
+            action_queue.push(crate::ui::actions::UiAction::TogglePause);
+            
+            // Clear selection logic remains here as Sidebar is UI-owned
             *interaction_mode = InteractionMode::None;
             sidebar.clear_selection();
             drag_selection.cancel();
