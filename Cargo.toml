@@ -26,3 +26,7 @@ path = "src/main.rs"
 [[bin]]
 name = "build_graphics"
 path = "build_graphics.rs"
+
+[[bin]]
+name = "balance_calculator"
+path = "src/bin/balance_calculator.rs"

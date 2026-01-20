@@ -115,7 +115,7 @@ fn process_single_action(
         }
 
         UiAction::SellTile(pos) => {
-            process_sell_tile(game_state, pos);
+            process_sell_tile(game_state, game_data, pos);
         }
 
         UiAction::PickupEntity(entity_id) => {
@@ -302,13 +302,25 @@ fn process_place_spawner(game_state: &mut GameState, game_data: &GameData, pos: 
     }
 }
 
-fn process_sell_tile(game_state: &mut GameState, pos: TilePos) {
+fn process_sell_tile(game_state: &mut GameState, game_data: &GameData, pos: TilePos) {
     // Check if tile is owned and calculate refund first
     let refund = if let Some(tile) = game_state.get_tile(pos) {
-        if tile.ownership == Ownership::Player {
-            if tile.room_id.is_some() { 5 } else { 0 }
+        if tile.ownership == Ownership::Player && tile.room_id.is_some() {
+             // Calculate refund percentage
+            let refund_pct = game_data.config.economy.room_sell_refund_percentage;
+            
+            // Try to resolve room type from tile type
+            if let Some(room_data) = game_data.rooms.get(&tile.tile_type) {
+                let cost = room_data.build.cost_per_tile;
+                let raw_refund = (cost as f32 * refund_pct).ceil() as i32;
+                // Round up to nearest 5
+                ((raw_refund + 4) / 5) * 5
+            } else {
+                // Fallback if room data not found
+                5
+            }
         } else {
-            return; // Not player-owned, exit early
+            return; // Not player-owned or no room, exit early
         }
     } else {
         return;

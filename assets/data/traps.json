@@ -33,7 +33,9 @@
         "effects": {
             "damage": 50,
             "trigger_type": "pressure",
-            "area": true
+            "area": true,
+            "area_radius": 1.5,
+            "single_radius": 0.5
         }
     },
     {
@@ -44,7 +46,8 @@
         "cost": 30,
         "build_time": 3.0,
         "effects": {
-            "alert_radius": 10
+            "alert_radius": 10,
+            "cooldown_multiplier": 2.0
         }
     }
 ]

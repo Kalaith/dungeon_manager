@@ -195,8 +195,11 @@ fn trigger_spike_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, tr
 
 fn trigger_boulder_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, entities: &mut EntityManager, dungeon: &mut Dungeon, game_data: &GameData) -> Option<TrapTriggerResult> {
     let damage = trap_data.effects.damage;
-    let trap_config = &game_data.config.traps;
-    let radius = if trap_data.effects.area { trap_config.boulder_area_radius } else { trap_config.boulder_single_radius };
+    let radius = if trap_data.effects.area { 
+        trap_data.effects.area_radius.unwrap_or(1.5) 
+    } else { 
+        trap_data.effects.single_radius.unwrap_or(0.5) 
+    };
 
     let affected_entities: Vec<EntityId> = entities.heroes()
         .filter_map(|(id, _)| entities.get(id).map(|e| (id, e.pos)))
@@ -232,7 +235,8 @@ fn trigger_alarm_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, en
 
     eprintln!("Alarm trap triggered at {:?}! Alerted {} creatures.", pos, alerted_count);
     let cooldown = game_data.config.traps.default_cooldown;
-    set_trap_cooldown(dungeon, pos, cooldown * 2.0);
+    let cooldown_multiplier = trap_data.effects.cooldown_multiplier.unwrap_or(2.0);
+    set_trap_cooldown(dungeon, pos, cooldown * cooldown_multiplier);
 }
 
 fn set_trap_cooldown(dungeon: &mut Dungeon, pos: TilePos, cooldown: f32) {

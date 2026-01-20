@@ -174,7 +174,7 @@ fn spawn_hero_at(state: &mut GameState, hero_id: &str, building_pos: TilePos, ga
             hero_data.stats.health,
             hero_data.stats.mana,
             spawn_pos,
-            game_data.config.hero_waves.dig_time,
+            hero_data.stats.dig_time,
         );
         
         // Determine if this hero should be a defender based on current ratio

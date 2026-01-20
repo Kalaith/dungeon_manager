@@ -48,7 +48,6 @@ pub struct HeroWaveConfig {
     pub initial_delay: f32,
     pub wave_interval: f32,
     pub defender_ratio: f32,
-    pub dig_time: f32,
     pub wave_scaling_multiplier: f32,
     pub spawn_rate_decay: f32,
     pub min_spawn_rate: f32,
@@ -100,8 +99,7 @@ pub struct FogOfWarConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EconomyConfig {
-    pub room_sell_refund: i32,
-    pub gem_mine_value: i32,
+    pub room_sell_refund_percentage: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -156,9 +154,6 @@ pub struct SpawningConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrapConfig {
     pub default_cooldown: f32,
-    pub alarm_cooldown_multiplier: f32,
-    pub boulder_area_radius: f32,
-    pub boulder_single_radius: f32,
 }
 
 pub fn load_game_config() -> Result<GameConfig, Box<dyn Error>> {

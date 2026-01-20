@@ -322,7 +322,29 @@ pub fn handle_sell(state: &mut GameState, game_data: &GameData, tile_pos: TilePo
             }
         }
         Some("sell") => {
-            state.player.gold += 5;
+            // Calculate refund percentage
+            let refund_pct = game_data.config.economy.room_sell_refund_percentage;
+            
+            // Default refund logic if we can't determine the original cost
+            // This is a bit tricky as we don't store what room was here
+            // But tile_type usually stores the room ID string which maps to room config
+            let mut refund_amount = 0;
+            if let Some(tile) = state.get_tile(tile_pos) {
+                if tile.room_id.is_some() {
+                    // Try to resolve room type from tile type
+                    if let Some(room_data) = game_data.rooms.get(&tile.tile_type) {
+                        let cost = room_data.build.cost_per_tile;
+                        let raw_refund = (cost as f32 * refund_pct).ceil() as i32;
+                        // Round up to nearest 5
+                        refund_amount = ((raw_refund + 4) / 5) * 5;
+                    } else {
+                        // Fallback if room data not found (shouldn't happen for valid rooms)
+                        refund_amount = 5;
+                    }
+                }
+            }
+            
+            state.player.gold += refund_amount;
             if let Some(tile) = state.get_tile_mut(tile_pos) {
                 tile.tile_type = tt::CLAIMED_FLOOR.to_string();
                 tile.room_id = None;

@@ -27,6 +27,7 @@ pub struct HeroStatsData {
     pub speed: f32,
     pub sight_radius: u32,
     pub bravery: f32,
+    pub dig_time: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -29,6 +29,12 @@ pub struct TrapEffects {
     pub area: bool,
     #[serde(default)]
     pub alert_radius: f32,
+    #[serde(default)]
+    pub cooldown_multiplier: Option<f32>,
+    #[serde(default)]
+    pub area_radius: Option<f32>,
+    #[serde(default)]
+    pub single_radius: Option<f32>,
 }
 
 pub fn load_traps() -> Result<HashMap<String, TrapData>, Box<dyn Error>> {
