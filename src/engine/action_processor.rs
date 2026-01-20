@@ -194,6 +194,28 @@ fn process_single_action(
                 game_state.notifications.success("Game Saved!");
             }
         }
+
+        UiAction::LoadGame => {
+             // Load from "slot_1" for now
+             if crate::state::save_system::save_exists("slot_1") {
+                 match crate::state::save_system::load_game("slot_1") {
+                     Ok(loaded_state) => {
+                         *game_state = loaded_state;
+                         game_state.notifications.success("Game Loaded!");
+                         // Reset selection states
+                         result.deselect_entity = true;
+                         result.deselect_room = true;
+                         *selected_spell = None;
+                     }
+                     Err(e) => {
+                         eprintln!("Failed to load game: {}", e);
+                         game_state.notifications.danger(format!("Load Failed: {}", e));
+                     }
+                 }
+             } else {
+                 game_state.notifications.warning("No save game found!");
+             }
+        }
     }
 
     result

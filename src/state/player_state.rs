@@ -59,7 +59,10 @@ impl PlayerState {
 
         let mut unlocked_spells = HashSet::new();
         unlocked_spells.insert("summon_imps".to_string());
-        unlocked_spells.insert("create_food".to_string()); // Basic mana spender
+        unlocked_spells.insert("lightning_strike".to_string());
+        unlocked_spells.insert("heal".to_string());
+        unlocked_spells.insert("speed_boost".to_string());
+        // unlocked_spells.insert("create_food".to_string()); // Removed as it wasn't in json
 
 
         Self {

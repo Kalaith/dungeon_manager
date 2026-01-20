@@ -97,6 +97,9 @@ impl Sidebar {
                 } else if mouse_pos.0 >= start_x + tab_width * 4.0 && mouse_pos.0 < start_x + tab_width * 5.0 {
                     self.current_tab = SidebarTab::Research;
                     self.is_expanded = true;
+                } else if mouse_pos.0 >= start_x + tab_width * 5.0 && mouse_pos.0 < start_x + tab_width * 6.0 {
+                    self.current_tab = SidebarTab::Utils;
+                    self.is_expanded = true;
                 } else if mouse_pos.0 >= screen_width() - RIGHT_MARGIN - 40.0 && mouse_pos.0 <= screen_width() - RIGHT_MARGIN {
                     // Toggle expand/collapse
                     self.is_expanded = !self.is_expanded;
@@ -350,7 +353,7 @@ impl Sidebar {
         None
     }
 
-    pub fn draw(&self, current_mode: &InteractionMode, player: &PlayerState, game_data: &crate::data::GameData, held_entity: Option<EntityId>, selected_entity: Option<EntityId>, selected_room: Option<usize>, entities: &crate::state::entities::EntityManager, rooms: &[crate::engine::room_validator::Room]) {
+    pub fn draw(&self, current_mode: &InteractionMode, player: &PlayerState, game_data: &crate::data::GameData, held_entity: Option<EntityId>, selected_entity: Option<EntityId>, selected_room: Option<usize>, entities: &crate::state::entities::EntityManager, rooms: &[crate::engine::room_validator::Room], graphics: Option<&crate::ui::resources::GraphicsCache>) {
         crate::ui::sidebar_renderer::draw_sidebar(
             self,
             current_mode,
@@ -360,7 +363,8 @@ impl Sidebar {
             selected_entity,
             selected_room,
             entities,
-            rooms
+            rooms,
+            graphics
         );
     }
     
@@ -415,14 +419,25 @@ impl Sidebar {
          let start_y = self.panel_y + PADDING;
 
          // Save Game Button
-         let save_btn_width = 150.0;
-         let save_btn_height = BUTTON_SIZE;
+         let btn_width = 150.0;
+         let btn_height = BUTTON_SIZE;
+         let spacing = 20.0;
+         
          let save_x = start_x;
          let save_y = start_y;
          
-         if mouse_pos.0 >= save_x && mouse_pos.0 <= save_x + save_btn_width
-            && mouse_pos.1 >= save_y && mouse_pos.1 <= save_y + save_btn_height {
+         if mouse_pos.0 >= save_x && mouse_pos.0 <= save_x + btn_width
+            && mouse_pos.1 >= save_y && mouse_pos.1 <= save_y + btn_height {
                 action_queue.push(crate::ui::actions::UiAction::SaveGame);
+         }
+         
+         // Load Game Button
+         let load_x = save_x + btn_width + spacing;
+         let load_y = start_y;
+         
+         if mouse_pos.0 >= load_x && mouse_pos.0 <= load_x + btn_width
+            && mouse_pos.1 >= load_y && mouse_pos.1 <= load_y + btn_height {
+                action_queue.push(crate::ui::actions::UiAction::LoadGame);
          }
     }
     
@@ -437,6 +452,8 @@ impl Sidebar {
             (InteractionMode::Inspect, InteractionMode::Inspect) => true,
             (InteractionMode::BuildRoom(a), InteractionMode::BuildRoom(b)) => a == b,
             (InteractionMode::BuildTrap(a), InteractionMode::BuildTrap(b)) => a == b,
+            (InteractionMode::SaveGame, InteractionMode::SaveGame) => true,
+            // Mode doesn't really matter for Load as it overrides everything immediately
             _ => false,
         }
     }

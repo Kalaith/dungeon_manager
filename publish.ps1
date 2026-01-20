@@ -127,8 +127,9 @@ if ($buildWebGL) {
     $SappPath = Join-Path $WebGLPackageDir "sapp_jsutils.js"
     try { Invoke-WebRequest -Uri "https://raw.githubusercontent.com/not-fl3/sapp-jsutils/master/js/sapp_jsutils.js" -OutFile $SappPath } catch { Write-Warning "Could not download sapp_jsutils.js" }
 
-    $QuadStoragePath = Join-Path $WebGLPackageDir "quad-storage.js"
-    try { Invoke-WebRequest -Uri "https://raw.githubusercontent.com/optozorax/quad-storage/master/js/quad-storage.js" -OutFile $QuadStoragePath } catch { Write-Warning "Could not download quad-storage.js" }
+    # Copy local storage.js
+    $StoragePath = Join-Path $ProjectRoot "storage.js"
+    if (Test-Path $StoragePath) { Copy-Item $StoragePath $WebGLPackageDir }
 
     $WebGLZipPath = Join-Path $DistDir "${ProjectName}_webgl.zip"
     Compress-Archive -Path "$WebGLPackageDir\*" -DestinationPath $WebGLZipPath -CompressionLevel Optimal
@@ -155,9 +156,10 @@ if ($DryRun) {
         
         $sappUtils = Join-Path $WebGLSourceDir "sapp_jsutils.js"
         if (Test-Path $sappUtils) { Copy-Item $sappUtils $DeployDir -Force; Write-Host "  Copied: sapp_jsutils.js" -ForegroundColor Gray }
-        
-        $quadStorage = Join-Path $WebGLSourceDir "quad-storage.js"
-        if (Test-Path $quadStorage) { Copy-Item $quadStorage $DeployDir -Force; Write-Host "  Copied: quad-storage.js" -ForegroundColor Gray }
+
+        $storageJs = Join-Path $WebGLSourceDir "storage.js"
+        if (Test-Path $storageJs) { Copy-Item $storageJs $DeployDir -Force; Write-Host "  Copied: storage.js" -ForegroundColor Gray }
+
         $assetsDir = Join-Path $WebGLSourceDir "assets"
         if (Test-Path $assetsDir) {
             $destAssets = Join-Path $DeployDir "assets"

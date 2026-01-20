@@ -37,6 +37,7 @@ pub enum UiAction {
     // UI actions
     StartResearch(String),
     SaveGame,
+    LoadGame,
     Cancel,
     TogglePause,
 }

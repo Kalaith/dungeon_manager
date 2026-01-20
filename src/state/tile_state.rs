@@ -75,7 +75,7 @@ impl TileState {
             pos,
             ownership: Ownership::Unclaimed,
             room_id: None,
-            fog_state: FogState::Revealed, // Start revealed so players can see the map
+            fog_state: FogState::Hidden, // Start hidden so players must explore
             resources_remaining: None,
             marked_for_dig: false,
             claimed_by_entity: None,

@@ -22,8 +22,8 @@ impl GameRenderer {
         }
     }
 
-    pub async fn load_resources(&mut self) {
-        match GraphicsCache::load_all().await {
+    pub async fn load_resources(&mut self, game_data: Option<&crate::data::GameData>) {
+        match GraphicsCache::load_all(game_data).await {
             Ok(cache) => self.graphics_cache = Some(cache),
             Err(e) => eprintln!("Failed to load graphics: {}", e),
         }
@@ -71,6 +71,25 @@ impl GameRenderer {
     fn draw_main_menu(&self, selected_map_type: &MapType) {
         let mouse_pos = mouse_position();
 
+        // Draw background if available
+        if let Some(cache) = &self.graphics_cache {
+            if let Some(bg_tex) = cache.ui_textures.get("main_menu_bg") {
+                draw_texture_ex(
+                    bg_tex,
+                    0.0,
+                    0.0,
+                    WHITE,
+                    DrawTextureParams {
+                        dest_size: Some(vec2(screen_width(), screen_height())),
+                        ..Default::default()
+                    },
+                );
+            }
+        }
+
+        // Dark overlay for readability (less intense than solid color)
+        draw_rectangle(0.0, 0.0, screen_width(), screen_height(), Color::new(0.0, 0.0, 0.0, 0.4));
+
         // Draw title
         draw_text(
             "Deep Dominion",
@@ -116,11 +135,11 @@ impl GameRenderer {
             let is_selected = *selected_map_type == *map_type;
 
             let button_color = if is_selected {
-                Color::new(0.2, 0.7, 0.3, 1.0) // Green for selected
+                Color::new(0.2, 0.7, 0.3, 0.9) // Green for selected (slight transparency)
             } else if is_hovered {
-                Color::new(0.4, 0.6, 0.9, 1.0) // Blue for hover
+                Color::new(0.4, 0.6, 0.9, 0.9) // Blue for hover
             } else {
-                Color::new(0.3, 0.3, 0.4, 1.0) // Gray default
+                Color::new(0.2, 0.2, 0.3, 0.8) // Dark Blue-Gray default
             };
 
             draw_rectangle(btn_x, map_button_y, map_button_width, map_button_height, button_color);
@@ -189,7 +208,7 @@ impl GameRenderer {
                 Color::new(0.3, 0.7, 0.3, 1.0)
             }
         } else {
-            Color::new(0.3, 0.3, 0.3, 1.0)
+            Color::new(0.3, 0.3, 0.3, 0.5) // Transparent gray
         };
 
         draw_rectangle(button_x, load_y, button_width, button_height, load_color);
@@ -227,6 +246,7 @@ impl GameRenderer {
 
         self.draw_tiles(graphics, state, interaction_mode, hovered_tile, game_data, drag_selection);
         self.draw_entities(graphics, state, &camera);
+        self.draw_projectiles(graphics, state, &camera);
         self.draw_markers(state);
 
          // Draw Mode Cursor / Ghost
@@ -376,7 +396,8 @@ impl GameRenderer {
                 selected_entity,
                 selected_room,
                 &state.entities,
-                &state.room_manager.rooms
+                &state.room_manager.rooms,
+                self.graphics_cache.as_ref()
             );
         }
 
@@ -530,6 +551,18 @@ impl GameRenderer {
             }
 
             if let Some(tile) = state.get_tile(pos) {
+                // Determine visible color based on Fog of War settings
+                let fog_enabled = game_data.as_ref().map(|gd| gd.config.fog_of_war.enabled).unwrap_or(true);
+                let fog_state = if fog_enabled {
+                    tile.fog_state
+                } else {
+                    crate::state::tile_state::FogState::Visible
+                };
+
+                if fog_state == crate::state::tile_state::FogState::Hidden {
+                    return;
+                }
+
                 let mut lines = Vec::new();
                 
                 // Tile Name
@@ -740,16 +773,13 @@ impl GameRenderer {
                     FogState::Visible
                 };
 
-                let mut color = match fog_state {
+                let color = match fog_state {
                     FogState::Hidden => crate::ui::core::colors::FOG_HIDDEN,
                     FogState::Revealed => crate::ui::core::colors::FOG_REVEALED,
                     FogState::Visible => crate::ui::core::colors::FOG_VISIBLE,
                 };
 
-                // Show marked tiles with yellow tint
-                if tile.marked_for_dig {
-                    color = Color::new(1.0, 1.0, 0.3, 1.0);
-                }
+                // Removed simple tint for marked tiles to use overlay instead
 
                 let is_wall = tile_types::is_wall(&tile.tile_type, game_data);
 
@@ -768,6 +798,33 @@ impl GameRenderer {
                             vec3(1.0, 0.5, 1.0),
                             Some(texture),
                             color,
+                        );
+                    }
+
+                    // Draw Dig Marker Overlay
+                    if tile.marked_for_dig {
+                        // 1. Darken the tile slightly with a semi-transparent black box to make the marker pop
+                        // and to indicate "pending change"
+                        let overlay_color = Color::new(0.0, 0.0, 0.0, 0.4); 
+                        let (y_pos, size) = if is_wall {
+                            (0.5, vec3(1.01, 1.01, 1.01)) // Slightly larger to avoid z-fighting
+                        } else {
+                            (0.01, vec3(0.9, 0.1, 0.9)) // Flat on floor
+                        };
+                        
+                        draw_cube(
+                            vec3(pos_x, y_pos, pos_z),
+                            size,
+                            None,
+                            overlay_color
+                        );
+
+                        // 2. Draw a bright "X" or box wireframe
+                        let marker_color = Color::new(1.0, 0.0, 0.0, 0.8); // Bright Red
+                        draw_cube_wires(
+                            vec3(pos_x, y_pos, pos_z),
+                            size,
+                            marker_color
                         );
                     }
 
@@ -828,9 +885,7 @@ impl GameRenderer {
                         }
                         FogState::Visible => {}
                     }
-                    if tile.marked_for_dig {
-                        tile_color = Color::new(1.0, 0.8, 0.0, 1.0);
-                    }
+                    // Removed simple tint for marked tiles
 
                     if is_wall {
                         draw_cube(
@@ -845,6 +900,31 @@ impl GameRenderer {
                             vec3(1.0, 0.5, 1.0),
                             None,
                             tile_color,
+                        );
+                    }
+
+                    // Draw Dig Marker Overlay (Same as textured)
+                    if tile.marked_for_dig {
+                         let overlay_color = Color::new(0.0, 0.0, 0.0, 0.4); 
+                         let (y_pos, size) = if is_wall {
+                            (0.5, vec3(1.01, 1.01, 1.01))
+                        } else {
+                            (0.01, vec3(0.9, 0.1, 0.9))
+                        };
+                        
+                        draw_cube(
+                            vec3(pos_x, y_pos, pos_z),
+                            size,
+                            None,
+                            overlay_color
+                        );
+
+                        // 2. Draw a bright "X" or box wireframe
+                        let marker_color = Color::new(1.0, 0.0, 0.0, 0.8); // Bright Red
+                        draw_cube_wires(
+                            vec3(pos_x, y_pos, pos_z),
+                            size,
+                            marker_color
                         );
                     }
                 }
@@ -964,6 +1044,14 @@ impl GameRenderer {
         // Draw sorted entities
         for entity in sorted_entities {
             let (x, z) = entity.visual_pos;
+
+            // Fog of War check: Don't draw entities on hidden tiles
+            let tile_pos = entity.pos;
+            if let Some(tile) = state.get_tile(tile_pos) {
+                if tile.fog_state == FogState::Hidden {
+                    continue; // Skip drawing - tile is not visible to player
+                }
+            }
 
             // Handle Structures separately (draw as blocks/cubes)
             if let crate::state::entities::EntityType::Structure(state) = &entity.entity_type {
@@ -1216,6 +1304,45 @@ impl GameRenderer {
         }
         if let Some(pos) = state.defend_marker {
             draw_flag(pos, BLUE);
+        }
+    }
+
+    fn draw_projectiles(&self, graphics: &GraphicsCache, state: &GameState, camera: &Camera3D) {
+        for projectile in state.projectiles.active_projectiles() {
+            let (x, z) = projectile.current_position();
+            let texture_key = projectile.projectile_type.texture_key();
+            
+            if let Some(tex) = graphics.projectile_textures.get(texture_key) {
+                // Draw projectile slightly above ground level
+                let y_height = match projectile.projectile_type {
+                    crate::state::projectiles::ProjectileType::Melee => 0.5,  // At entity level
+                    crate::state::projectiles::ProjectileType::Arrow => 0.6,  // Slightly higher
+                    crate::state::projectiles::ProjectileType::Magic => 0.7,  // Floating orb
+                };
+                
+                // Scale based on projectile type
+                let scale = match projectile.projectile_type {
+                    crate::state::projectiles::ProjectileType::Melee => vec2(0.6, 0.3),
+                    crate::state::projectiles::ProjectileType::Arrow => vec2(0.5, 0.3),
+                    crate::state::projectiles::ProjectileType::Magic => vec2(0.4, 0.4),
+                };
+                
+                // Use billboard drawing for projectiles
+                crate::draw_utils::draw_billboard(
+                    vec3(x, y_height, z),
+                    scale,
+                    tex,
+                    camera.position,
+                );
+            } else {
+                // Fallback: simple colored sphere for debugging
+                let color = match projectile.projectile_type {
+                    crate::state::projectiles::ProjectileType::Melee => ORANGE,
+                    crate::state::projectiles::ProjectileType::Arrow => BROWN,
+                    crate::state::projectiles::ProjectileType::Magic => PURPLE,
+                };
+                draw_sphere(vec3(x, 0.5, z), 0.15, None, color);
+            }
         }
     }
 }

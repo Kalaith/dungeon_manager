@@ -196,9 +196,14 @@ pub fn calculate_fog_state(
     if player_vision.contains(&tile.pos) {
         FogState::Visible
     } else if tile.fog_state == FogState::Visible {
+        // Tile was visible before, now it's not -> transition to Revealed (explored but not seen)
+        FogState::Revealed
+    } else if tile.fog_state == FogState::Revealed {
+        // Keep Revealed tiles as Revealed (previously explored, still explored)
         FogState::Revealed
     } else {
-        tile.fog_state
+        // Never explored -> stays Hidden
+        FogState::Hidden
     }
 }
 
@@ -257,15 +262,29 @@ pub fn update_fog_of_war(
     let mut visible_tiles = HashSet::new();
 
     // Add all claimed tiles to visible
-    for pos in claimed_tiles {
-        visible_tiles.insert(*pos);
-    }
-
     // Create a read-only snapshot of tile types for line-of-sight checks
     let tile_types: Vec<Vec<String>> = grid
         .iter()
         .map(|row| row.iter().map(|t| t.tile_type.clone()).collect())
         .collect();
+
+    // Reveal adjacent walls for claimed tiles (radius 1.5)
+    for claimed_pos in claimed_tiles {
+        visible_tiles.insert(*claimed_pos);
+        
+        let radius = 1.5f32;
+        let r_ceil = radius.ceil() as i32;
+        
+        for dy in -r_ceil..=r_ceil {
+            for dx in -r_ceil..=r_ceil {
+                let distance = (dx * dx + dy * dy) as f32;
+                if distance <= (radius * radius) {
+                   let tile_pos = TilePos::new(claimed_pos.x + dx, claimed_pos.y + dy);
+                    visible_tiles.insert(tile_pos);
+                }
+            }
+        }
+    }
 
     // Add tiles around creatures (with line-of-sight check)
     for creature_pos in creature_positions {

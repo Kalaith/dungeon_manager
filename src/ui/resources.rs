@@ -5,6 +5,8 @@ pub struct GraphicsCache {
     pub tile_textures: HashMap<String, Texture2D>,
     pub monster_textures: HashMap<String, Texture2D>,
     pub hero_textures: HashMap<String, Texture2D>,
+    pub ui_textures: HashMap<String, Texture2D>,
+    pub projectile_textures: HashMap<String, Texture2D>,
 }
 
 impl GraphicsCache {
@@ -13,10 +15,12 @@ impl GraphicsCache {
             tile_textures: HashMap::new(),
             monster_textures: HashMap::new(),
             hero_textures: HashMap::new(),
+            ui_textures: HashMap::new(),
+            projectile_textures: HashMap::new(),
         }
     }
 
-    pub async fn load_all() -> Result<Self, String> {
+    pub async fn load_all(game_data: Option<&crate::data::GameData>) -> Result<Self, String> {
         let mut cache = Self::new();
 
         // Load tile textures
@@ -94,6 +98,53 @@ impl GraphicsCache {
                     cache.hero_textures.insert(hero.to_string(), tex);
                 }
                 Err(e) => println!("Failed to load texture {}: {}", path, e),
+            }
+        }
+
+        // Load UI textures
+        let ui_textures = vec!["main_menu_bg"];
+        for tex_name in ui_textures {
+            let path = format!("assets/ui/{}.png", tex_name);
+             match load_texture(&path).await {
+                Ok(tex) => {
+                    tex.set_filter(FilterMode::Linear); // UI usually looks better with Linear
+                    cache.ui_textures.insert(tex_name.to_string(), tex);
+                }
+                Err(e) => println!("Failed to load texture {}: {}", path, e),
+            }
+        }
+
+        // Load Spell Icons dynamically from GameData
+        // Only load icons that are known to exist to avoid panics from missing files
+        let known_spell_icons = ["icons/spells/heal.png", "icons/spells/lightning.png",
+                                  "icons/spells/speed.png", "icons/spells/summon.png"];
+        if let Some(data) = game_data {
+            for spell in data.spells.values() {
+                let icon_path = &spell.visual.icon;
+                if !icon_path.is_empty() && known_spell_icons.contains(&icon_path.as_str()) {
+                    let path = format!("assets/{}", icon_path);
+                    match load_texture(&path).await {
+                        Ok(tex) => {
+                            tex.set_filter(FilterMode::Nearest);
+                            println!("Loaded spell icon: {} -> {}", icon_path, path);
+                            cache.ui_textures.insert(icon_path.clone(), tex);
+                        }
+                        Err(e) => println!("Failed to load spell icon {}: {}", path, e),
+                    }
+                }
+            }
+        }
+
+        // Load projectile textures
+        let projectiles = vec!["projectile_melee", "projectile_arrow", "projectile_magic"];
+        for projectile in projectiles {
+            let path = format!("assets/sprites/projectiles/{}.png", projectile);
+            match load_texture(&path).await {
+                Ok(tex) => {
+                    tex.set_filter(FilterMode::Nearest);
+                    cache.projectile_textures.insert(projectile.to_string(), tex);
+                }
+                Err(e) => println!("Failed to load projectile texture {}: {}", path, e),
             }
         }
 

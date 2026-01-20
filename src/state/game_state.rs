@@ -9,6 +9,7 @@ use crate::state::entities::{EntityId, EntityManager, EntityType};
 use crate::state::player_state::PlayerState;
 use crate::state::tile_state::{Ownership, TilePos};
 use crate::state::room_manager::RoomManager;
+use crate::state::projectiles::ProjectileManager;
 use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 
@@ -64,6 +65,9 @@ pub struct GameState {
     // Markers
     pub attack_marker: Option<TilePos>,
     pub defend_marker: Option<TilePos>,
+
+    /// Active attack projectiles for visual effects
+    pub projectiles: ProjectileManager,
 }
 
 impl GameState {
@@ -136,6 +140,7 @@ impl GameState {
             dungeon_heart_health: 1000.0,
             attack_marker: None,
             defend_marker: None,
+            projectiles: ProjectileManager::new(),
         };
 
         // Recalculate max gold and other room-based stats
@@ -159,6 +164,7 @@ impl GameState {
         self.tick_accumulator += dt;
         self.camera.update(dt); // Update smooth camera zoom
         self.notifications.update(dt); // Update notification display timers
+        self.projectiles.update(dt); // Update attack projectiles
 
         // Smooth movement interpolation
         for entity in self.entities.all_mut() {
@@ -887,6 +893,7 @@ impl GameState {
             };
 
             let attack_type = get_entity_attack_type(&attacker.entity_type, game_data);
+            let attacker_visual_pos = attacker.visual_pos;
             let targets = crate::engine::combat::find_combat_targets(attacker, self.entities.entities(), &self.dungeon, game_data);
 
             for target_id in targets {
@@ -899,7 +906,20 @@ impl GameState {
                     continue;
                 }
 
+                let defender_visual_pos = defender.visual_pos;
                 let result = resolve_combat_tick(attacker, defender, dt, game_data);
+                
+                // Spawn projectile if damage was dealt
+                if result.damage_dealt > 0.0 {
+                    self.projectiles.spawn(
+                        attacker_visual_pos,
+                        defender_visual_pos,
+                        &attack_type,
+                        attacker_id,
+                        target_id,
+                    );
+                }
+                
                 crate::engine::combat::apply_combat_result(&result, attacker_id, target_id, self.entities.entities_mut(), game_data);
                 break;
             }

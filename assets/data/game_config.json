@@ -1,12 +1,12 @@
 {
   "player_starting_resources": {
-    "gold": 20000,
-    "mana": 10000,
+    "gold": 2000,
+    "mana": 100,
     "food": 100,
     "materials": 100
   },
   "player_initial_capacity": {
-    "max_gold": 20000,
+    "max_gold": 2000,
     "max_mana": 0,
     "max_food": 500,
     "max_materials": 100
@@ -18,7 +18,7 @@
     "creature_spawn_max_interval": 30.0
   },
   "hero_waves": {
-    "initial_delay": 2000.0,
+    "initial_delay": 30.0,
     "wave_interval": 180.0,
     "defender_ratio": 0.5,
     "dig_time": 0.5,

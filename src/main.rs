@@ -77,7 +77,7 @@ impl Game {
         // Load graphics
         if self.renderer.graphics_cache.is_none() {
             eprintln!("Loading graphics...");
-            self.renderer.load_resources().await;
+            self.renderer.load_resources(self.game_data.as_ref()).await;
             if self.renderer.graphics_cache.is_some() {
                  self.phase = GamePhase::MainMenu;
             }

@@ -15,7 +15,8 @@ pub fn draw_sidebar(
     selected_entity: Option<EntityId>,
     selected_room: Option<usize>,
     entities: &crate::state::entities::EntityManager,
-    rooms: &[crate::engine::room_validator::Room]
+    rooms: &[crate::engine::room_validator::Room],
+    graphics: Option<&crate::ui::resources::GraphicsCache>
 ) {
     if !sidebar.is_expanded {
         // Draw just tabs
@@ -32,7 +33,7 @@ pub fn draw_sidebar(
     // Draw Content based on Tab
     match sidebar.current_tab {
         SidebarTab::Build => draw_build_content(sidebar, current_mode, player, game_data),
-        SidebarTab::Magic => draw_magic_content(sidebar, player, &game_data.spells),
+        SidebarTab::Magic => draw_magic_content(sidebar, player, &game_data.spells, graphics),
         SidebarTab::Minions => draw_minions_content(sidebar, current_mode, held_entity, selected_entity, selected_room, entities, rooms),
         SidebarTab::Traps => draw_traps_content(sidebar, current_mode, player, game_data),
         SidebarTab::Research => draw_research_content(sidebar, player, &game_data.technologies),
@@ -110,8 +111,10 @@ fn draw_utils_content(sidebar: &Sidebar, current_mode: &InteractionMode) {
      let start_y = sidebar.panel_y + PADDING;
 
      // Save Game Button
-     let save_btn_width = 150.0;
-     let save_btn_height = BUTTON_SIZE;
+     let btn_width = 150.0;
+     let btn_height = BUTTON_SIZE;
+     let spacing = 20.0;
+     
      let save_x = start_x;
      let save_y = start_y;
      
@@ -123,9 +126,25 @@ fn draw_utils_content(sidebar: &Sidebar, current_mode: &InteractionMode) {
          Color::new(0.25, 0.25, 0.3, 1.0)
      };
 
-     draw_rectangle(save_x, save_y, save_btn_width, save_btn_height, save_color);
-     draw_rectangle_lines(save_x, save_y, save_btn_width, save_btn_height, 2.0, WHITE);
+     draw_rectangle(save_x, save_y, btn_width, btn_height, save_color);
+     draw_rectangle_lines(save_x, save_y, btn_width, btn_height, 2.0, WHITE);
      draw_text("Save Game", save_x + 30.0, save_y + 30.0, 16.0, WHITE);
+     
+     // Load Game Button
+     let load_x = save_x + btn_width + spacing;
+     let load_y = start_y;
+     
+     let save_exists = crate::state::save_system::save_exists("slot_1");
+     
+     let load_color = if save_exists {
+         Color::new(0.3, 0.4, 0.6, 1.0)
+     } else {
+         Color::new(0.2, 0.2, 0.2, 0.5)
+     };
+     
+     draw_rectangle(load_x, load_y, btn_width, btn_height, load_color);
+     draw_rectangle_lines(load_x, load_y, btn_width, btn_height, 2.0, if save_exists { WHITE } else { GRAY });
+     draw_text("Load Game", load_x + 30.0, load_y + 30.0, 16.0, if save_exists { WHITE } else { GRAY });
 }
 
 fn interaction_modes_match(m1: &InteractionMode, m2: &InteractionMode) -> bool {
@@ -312,7 +331,7 @@ fn draw_tooltip(pos: (f32, f32), lines: Vec<String>) {
     }
 }
 
-fn draw_magic_content(sidebar: &Sidebar, player: &PlayerState, spells: &HashMap<String, SpellData>) {
+fn draw_magic_content(sidebar: &Sidebar, player: &PlayerState, spells: &HashMap<String, SpellData>, graphics: Option<&crate::ui::resources::GraphicsCache>) {
     let start_x = PADDING;
     let start_y = sidebar.panel_y + PADDING;
     
@@ -350,15 +369,43 @@ fn draw_magic_content(sidebar: &Sidebar, player: &PlayerState, spells: &HashMap<
         let color = if is_selected {
             Color::new(0.2, 0.6, 0.8, 1.0)
         } else {
-            Color::new(0.2, 0.2, 0.25, 1.0)
+            // Darker background for icons
+            Color::new(0.15, 0.15, 0.2, 1.0)
         };
         
         draw_rectangle(btn_x, btn_y, BUTTON_SIZE, BUTTON_SIZE, color);
         draw_rectangle_lines(btn_x, btn_y, BUTTON_SIZE, BUTTON_SIZE, 2.0, WHITE);
         
-        // Icon placeholder (first letter)
-        let abbrev = &spell_id[0..1].to_uppercase();
-        draw_text(abbrev, btn_x + 15.0, btn_y + 30.0, 24.0, WHITE);
+        // Draw Icon if available
+        let mut icon_drawn = false;
+        if let Some(cache) = graphics {
+            // Determine icon lookup name based on spell data
+            if let Some(data) = spells.get(*spell_id) {
+                let icon_path = &data.visual.icon;
+                if !icon_path.is_empty() {
+                    // Look up using the exact path string, as stored in resources.rs
+                    if let Some(tex) = cache.ui_textures.get(icon_path) {
+                         draw_texture_ex(
+                            tex,
+                            btn_x + 4.0,
+                            btn_y + 4.0,
+                            WHITE,
+                            DrawTextureParams {
+                                dest_size: Some(vec2(BUTTON_SIZE - 8.0, BUTTON_SIZE - 8.0)),
+                                ..Default::default()
+                            },
+                        );
+                        icon_drawn = true;
+                    }
+                }
+            }
+        }
+
+        if !icon_drawn {
+            // Fallback: Icon placeholder (first letter)
+            let abbrev = &spell_id[0..1].to_uppercase();
+            draw_text(abbrev, btn_x + 15.0, btn_y + 30.0, 24.0, WHITE);
+        }
         
         // Cost
         if let Some(data) = spells.get(*spell_id) {

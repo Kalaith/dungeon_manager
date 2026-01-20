@@ -66,6 +66,10 @@ This document tracks what's currently being worked on and planned future feature
 - [x] Library room logic
 - [x] Research tasks and UI
 
+### Technical
+- [x] Save/Load system (Native & WebGL)
+
+
 ---
 
 ## 🔨 In Progress
@@ -117,7 +121,7 @@ This document tracks what's currently being worked on and planned future feature
 - [ ] Status effects (poison, burn, freeze)
 
 ### Technical
-- [ ] Save/Load system
+
 - [ ] Settings menu
 - [ ] Sound system
 - [ ] Music

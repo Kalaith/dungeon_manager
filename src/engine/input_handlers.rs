@@ -236,6 +236,13 @@ pub fn handle_pickup(
     interaction_mode: &mut InteractionMode,
     tile_pos: TilePos
 ) {
+    // Fog check: Cannot interact with hidden tiles
+    if let Some(tile) = state.get_tile(tile_pos) {
+        if tile.fog_state == crate::state::tile_state::FogState::Hidden {
+            return;
+        }
+    }
+
     // Find pickable entity
     let mut pickable_id = None;
     
@@ -328,6 +335,18 @@ pub fn handle_sell(state: &mut GameState, game_data: &GameData, tile_pos: TilePo
 
 /// Select an entity or room at the given position, returns true if something was selected
 pub fn select_entity_or_room(state: &GameState, selected_entity: &mut Option<EntityId>, selected_room: &mut Option<usize>, tile_pos: TilePos) -> bool {
+    // Fog check: Cannot interact with hidden tiles
+    let tile = match state.get_tile(tile_pos) {
+        Some(t) => t,
+        None => { *selected_room = None; *selected_entity = None; return false; }
+    };
+    
+    if tile.fog_state == crate::state::tile_state::FogState::Hidden {
+        *selected_entity = None;
+        *selected_room = None;
+        return false;
+    }
+
     if let Some(entity) = state.entities.at_position(tile_pos).next() {
         *selected_entity = Some(entity.id);
         *selected_room = None;
@@ -335,10 +354,6 @@ pub fn select_entity_or_room(state: &GameState, selected_entity: &mut Option<Ent
     }
 
     *selected_entity = None;
-    let tile = match state.get_tile(tile_pos) {
-        Some(t) => t,
-        None => { *selected_room = None; return false; }
-    };
 
     if let Some(room_id) = tile.room_id {
         *selected_room = Some(room_id);

@@ -11,6 +11,10 @@ pub mod save_system;
 pub mod drag_selection;
 pub mod room_manager;
 pub mod map_loader;
+pub mod projectiles;
+
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_storage;
 
 pub use tile_state::{TilePos, Ownership};
 pub use game_state::MapType;

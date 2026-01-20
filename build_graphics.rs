@@ -13,6 +13,7 @@ const TILE_SIZE: u32 = 64;
 const TILE_WIDTH: u32 = 64;
 const TILE_HEIGHT: u32 = 64;
 const SPRITE_SIZE: u32 = 64;
+const PROJECTILE_SIZE: u32 = 32;
 
 fn main() {
     println!("Generating game graphics...");
@@ -39,6 +40,9 @@ fn main() {
     save_hero_building("armory", create_armory());
     save_hero_building("hero_wall", create_hero_wall());
     save_hero_building("hero_gate", create_hero_gate());
+    
+    // Generate projectile sprites
+    generate_projectile_sprites();
     
     println!("Graphics generation complete!");
 }
@@ -1939,3 +1943,153 @@ fn create_hero_gate() -> RgbaImage {
     add_noise(&mut img, 8);
     img
 }
+
+// ============================================================================
+// PROJECTILE SPRITE GENERATORS
+// ============================================================================
+
+fn generate_projectile_sprites() {
+    std::fs::create_dir_all("assets/sprites/projectiles").unwrap();
+    
+    save_projectile("projectile_melee", create_melee_slash());
+    save_projectile("projectile_arrow", create_arrow_projectile());
+    save_projectile("projectile_magic", create_magic_orb());
+}
+
+fn save_projectile(name: &str, img: RgbaImage) {
+    let path = format!("assets/sprites/projectiles/{}.png", name);
+    img.save(&path).unwrap();
+    println!("Generated: {}", path);
+}
+
+/// Melee slash - short orange/red horizontal bar with motion blur
+fn create_melee_slash() -> RgbaImage {
+    let mut img = RgbaImage::new(PROJECTILE_SIZE, PROJECTILE_SIZE);
+    let cx = PROJECTILE_SIZE as f32 / 2.0;
+    let cy = PROJECTILE_SIZE as f32 / 2.0;
+    
+    // Motion blur trail (fainter)
+    for i in 0..4 {
+        let offset = i as f32 * 2.0;
+        let alpha = 100 - i * 20;
+        let trail_color = Rgba([255, 100 + i * 30, 0, alpha as u8]);
+        for y in (cy as i32 - 2)..(cy as i32 + 2) {
+            for x in (cx as i32 - 12 + i as i32)..(cx as i32 + 12 - i as i32) {
+                if x >= 0 && x < PROJECTILE_SIZE as i32 && y >= 0 && y < PROJECTILE_SIZE as i32 {
+                    let current = img.get_pixel(x as u32, y as u32);
+                    if current[3] == 0 {
+                        img.put_pixel(x as u32, y as u32, trail_color);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Main slash (bright core)
+    let core_color = Rgba([255, 220, 100, 255]);
+    for y in (cy as i32 - 1)..(cy as i32 + 2) {
+        for x in (cx as i32 - 10)..(cx as i32 + 10) {
+            if x >= 0 && x < PROJECTILE_SIZE as i32 && y >= 0 && y < PROJECTILE_SIZE as i32 {
+                img.put_pixel(x as u32, y as u32, core_color);
+            }
+        }
+    }
+    
+    // White highlight
+    for x in (cx as i32 - 6)..(cx as i32 + 6) {
+        if x >= 0 && x < PROJECTILE_SIZE as i32 {
+            img.put_pixel(x as u32, cy as u32, Rgba([255, 255, 255, 255]));
+        }
+    }
+    
+    img
+}
+
+/// Arrow projectile - brown shaft with metal arrowhead
+fn create_arrow_projectile() -> RgbaImage {
+    let mut img = RgbaImage::new(PROJECTILE_SIZE, PROJECTILE_SIZE);
+    let cx = PROJECTILE_SIZE as f32 / 2.0;
+    let cy = PROJECTILE_SIZE as f32 / 2.0;
+    
+    let wood_color = Rgba([139, 90, 43, 255]);
+    let metal_color = Rgba([180, 180, 190, 255]);
+    let fletching_color = Rgba([100, 80, 60, 255]);
+    
+    // Shaft (horizontal arrow pointing right)
+    for x in (cx as i32 - 10)..(cx as i32 + 6) {
+        if x >= 0 && x < PROJECTILE_SIZE as i32 {
+            img.put_pixel(x as u32, cy as u32, wood_color);
+            img.put_pixel(x as u32, (cy - 1.0) as u32, wood_color);
+        }
+    }
+    
+    // Arrowhead (triangle pointing right)
+    for i in 0..6 {
+        let x = cx as i32 + 6 + i;
+        let half_height = (6 - i) / 2;
+        for dy in -half_height..=half_height {
+            let y = cy as i32 + dy;
+            if x >= 0 && x < PROJECTILE_SIZE as i32 && y >= 0 && y < PROJECTILE_SIZE as i32 {
+                img.put_pixel(x as u32, y as u32, metal_color);
+            }
+        }
+    }
+    
+    // Fletching (feathers at the back)
+    for i in 0..4 {
+        let x = cx as i32 - 10 - i;
+        if x >= 0 && x < PROJECTILE_SIZE as i32 {
+            img.put_pixel(x as u32, (cy - 2.0) as u32, fletching_color);
+            img.put_pixel(x as u32, (cy + 2.0) as u32, fletching_color);
+        }
+    }
+    
+    img
+}
+
+/// Magic orb - glowing purple/blue sphere with aura
+fn create_magic_orb() -> RgbaImage {
+    let mut img = RgbaImage::new(PROJECTILE_SIZE, PROJECTILE_SIZE);
+    let cx = PROJECTILE_SIZE as f32 / 2.0;
+    let cy = PROJECTILE_SIZE as f32 / 2.0;
+    
+    // Outer glow (soft purple aura)
+    for y in 0..PROJECTILE_SIZE {
+        for x in 0..PROJECTILE_SIZE {
+            let dx = x as f32 - cx;
+            let dy = y as f32 - cy;
+            let dist = (dx * dx + dy * dy).sqrt();
+            
+            if dist < 12.0 && dist > 6.0 {
+                let alpha = ((12.0 - dist) / 6.0 * 100.0) as u8;
+                img.put_pixel(x, y, Rgba([150, 100, 255, alpha]));
+            }
+        }
+    }
+    
+    // Core orb
+    for y in 0..PROJECTILE_SIZE {
+        for x in 0..PROJECTILE_SIZE {
+            let dx = x as f32 - cx;
+            let dy = y as f32 - cy;
+            let dist = (dx * dx + dy * dy).sqrt();
+            
+            if dist < 6.0 {
+                // Gradient from bright center to purple edge
+                let brightness = 1.0 - (dist / 6.0);
+                let r = (100.0 + brightness * 155.0) as u8;
+                let g = (50.0 + brightness * 150.0) as u8;
+                let b = (200.0 + brightness * 55.0) as u8;
+                img.put_pixel(x, y, Rgba([r, g, b, 255]));
+            }
+        }
+    }
+    
+    // White highlight sparkle
+    img.put_pixel((cx - 2.0) as u32, (cy - 2.0) as u32, Rgba([255, 255, 255, 255]));
+    img.put_pixel((cx - 1.0) as u32, (cy - 2.0) as u32, Rgba([255, 255, 255, 200]));
+    img.put_pixel((cx - 2.0) as u32, (cy - 1.0) as u32, Rgba([255, 255, 255, 200]));
+    
+    img
+}
+
