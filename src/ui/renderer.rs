@@ -354,21 +354,21 @@ impl GameRenderer {
         
         // Draw held entity if any
         if let Some(entity_id) = held_entity {
-             let texture_opt = if let Some(entity) = state.entities.get(entity_id) {
+             let texture_opt: Option<Texture2D> = if let Some(entity) = state.entities.get(entity_id) {
                  match &entity.entity_type {
                     crate::state::entities::EntityType::Hero(hero_state) => {
-                        graphics.hero_textures.get(&hero_state.hero_id)
+                        graphics.get_hero_texture(&hero_state.hero_id, hero_state.visual_seed)
                     }
                     crate::state::entities::EntityType::Creature(creature_state) => {
-                        graphics.monster_textures.get(&creature_state.creature_id)
+                        graphics.get_creature_texture(&creature_state.creature_id, creature_state.visual_seed)
                     }
-                    crate::state::entities::EntityType::Structure(state) => {
-                        graphics.tile_textures.get(&state.building_id)
+                    crate::state::entities::EntityType::Structure(s) => {
+                        graphics.tile_textures.get(&s.building_id).cloned()
                     }
                 }
              } else { None };
 
-             if let Some(texture) = texture_opt {
+             if let Some(ref texture) = texture_opt {
                  draw_texture_ex(
                     texture,
                     mouse_pos.0 - 24.0,
@@ -1066,17 +1066,18 @@ impl GameRenderer {
                 }
             }
 
-            let texture = match &entity.entity_type {
+            // Get texture with visual variation applied
+            let texture: Option<Texture2D> = match &entity.entity_type {
                 crate::state::entities::EntityType::Creature(c) => {
-                    graphics.monster_textures.get(&c.creature_id)
+                    graphics.get_creature_texture(&c.creature_id, c.visual_seed)
                 }
                 crate::state::entities::EntityType::Hero(h) => {
-                    graphics.hero_textures.get(&h.hero_id)
+                    graphics.get_hero_texture(&h.hero_id, h.visual_seed)
                 }
                 crate::state::entities::EntityType::Structure(_) => None, // Should not happen due to block above
             };
 
-            if let Some(tex) = texture {
+            if let Some(ref tex) = texture {
                 crate::draw_utils::draw_billboard(
                     vec3(x, 0.5, z),
                     vec2(0.8, 0.8),

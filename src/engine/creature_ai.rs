@@ -850,7 +850,7 @@ mod tests {
     #[test]
     fn test_calculate_mood() {
         let monster_data = create_test_monster_data();
-        let mut creature = CreatureState::new("test_creature".to_string(), 1, 100.0, 0.0);
+        let mut creature = CreatureState::new("test_creature".to_string(), 1, 100.0, 0.0, 0);
 
         // High need satisfaction = high mood
         creature.set_need("sleep".to_string(), 80.0);
@@ -866,7 +866,7 @@ mod tests {
     #[test]
     fn test_should_desert() {
         let monster_data = create_test_monster_data();
-        let mut creature = CreatureState::new("test_creature".to_string(), 1, 100.0, 0.0);
+        let mut creature = CreatureState::new("test_creature".to_string(), 1, 100.0, 0.0, 0);
 
         creature.mood = 50.0;
         assert!(!should_desert(&creature, &monster_data));
@@ -878,7 +878,7 @@ mod tests {
     #[test]
     fn test_task_desirability() {
         let monster_data = create_test_monster_data();
-        let mut creature = CreatureState::new("test_creature".to_string(), 1, 100.0, 0.0);
+        let mut creature = CreatureState::new("test_creature".to_string(), 1, 100.0, 0.0, 0);
 
         // Low sleep need = low desirability for sleep task
         creature.set_need("sleep".to_string(), 90.0);

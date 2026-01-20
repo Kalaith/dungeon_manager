@@ -31,6 +31,8 @@ impl SpawnSystem {
         let hero_ids: Vec<&String> = game_data.heroes.keys().collect();
         if let Some(&hero_id) = hero_ids.get(macroquad::rand::gen_range(0, hero_ids.len())) {
             if let Some(hero_data) = game_data.heroes.get(hero_id) {
+                // Generate visual variation seed
+                let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
                 let hero_state = HeroState::new(
                     hero_id.clone(),
                     1, // level
@@ -38,6 +40,7 @@ impl SpawnSystem {
                     hero_data.stats.mana, // max_mana
                     spawn_pos,
                     hero_data.stats.dig_time,
+                    visual_seed,
                 );
                 entities.spawn_hero(spawn_pos, hero_state);
                 eprintln!("Spawned hero {} at hero entrance {:?}", hero_id, spawn_pos);
@@ -145,20 +148,23 @@ impl SpawnSystem {
 
         if let Some(&creature_id) = valid_creatures.get(macroquad::rand::gen_range(0, valid_creatures.len())) {
             if let Some(monster_data) = game_data.monsters.get(creature_id) {
+                // Generate visual variation seed
+                let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
                 // Create creature with food need initialized
                 let mut creature_state = CreatureState::new(
                     creature_id.to_string(),
                     1,
                     monster_data.stats.health,
                     monster_data.stats.mana,
+                    visual_seed,
                 );
-                
+
                 // Initialize food need
                 creature_state.set_need("food".to_string(), 100.0);
-                
+
                 let entity_id = entities.spawn_creature(spawn_pos, creature_state);
                 eprintln!("Spawned creature {} at spawner {:?}", creature_id, spawn_pos);
-                
+
                 // Claim a lair tile for this creature
                 room_manager.find_and_claim_lair_tile(dungeon, entity_id);
             }

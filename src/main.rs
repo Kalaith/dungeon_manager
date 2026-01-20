@@ -11,6 +11,7 @@ mod state;
 mod ui;
 mod config;
 mod draw_utils;
+mod sprite_variation;
 
 use data::GameData;
 use state::MapType;

@@ -254,34 +254,60 @@ impl GameState {
         // Dungeon Heart Attack Logic
         let heart_pos = self.find_dungeon_heart_position();
         if let Some(target_pos) = heart_pos {
-             let mut total_damage = 0.0;
-             // Check for adjacent heroes with DestroyHeart goal
-             for entity in self.entities.all() {
+            let mut total_damage = 0.0;
+            let mut attackers: Vec<(EntityId, (f32, f32), String)> = Vec::new();
+
+            // Check for heroes in range with DestroyHeart goal
+            for entity in self.entities.all() {
                 if let Some(hero) = entity.as_hero() {
                     if matches!(hero.current_goal, crate::state::entities::HeroGoal::DestroyHeart) {
-                        let dx = (entity.pos.x - target_pos.x).abs();
-                        let dy = (entity.pos.y - target_pos.y).abs();
-                        
-                        // Debug log to see why it might fail
-                        if dx <= 2 && dy <= 2 {
-                             /*eprintln!("Hero {} at {:?} attacking heart at {:?} (dx={}, dy={}, goal={:?})", 
-                                hero.hero_id, entity.pos, target_pos, dx, dy, hero.current_goal);*/
-                        }
+                        // Get the hero's attack type and stats
+                        let hero_data = game_data.heroes.get(&hero.hero_id);
+                        let attack_type = hero_data
+                            .map(|d| d.combat.attack_type.clone())
+                            .unwrap_or_else(|| "melee".to_string());
+                        let attack_speed = hero_data
+                            .map(|d| d.combat.attack_speed)
+                            .unwrap_or(1.0);
 
-                        // If adjacent (manhattan distance <= 1 ensures N/S/E/W adjacency)
-                        // Diagonal adjacency would be dx <= 1 && dy <= 1 && (dx+dy) > 0
-                        // Let's allow diagonals for attacking too since they can pathfind diagonally
-                        // Also allow dx=0, dy=0 (standing on it) for robustness
-                        if dx <= 1 && dy <= 1 {
-                             total_damage += 20.0 * dt; // 20 DPS per hero
-                             // eprintln!("Applying damage! Heart Health: {:.1} - Damage: {:.1}", self.dungeon_heart_health, 20.0 * dt);
+                        // Calculate Manhattan distance for range check
+                        let manhattan_dist = (entity.pos.x - target_pos.x).abs() + (entity.pos.y - target_pos.y).abs();
+
+                        // Determine attack range based on attack type
+                        let attack_range = match attack_type.as_str() {
+                            "melee" => 1,  // Must be adjacent (Manhattan distance 1)
+                            "ranged" => 5, // Can attack from 5 tiles away
+                            "magic" => 8,  // Can attack from 8 tiles away
+                            _ => 1,        // Default to melee range
+                        };
+
+                        if manhattan_dist <= attack_range {
+                            // Use probabilistic attack like normal combat
+                            let attack_chance = attack_speed * dt;
+                            if macroquad::rand::gen_range(0.0f32, 1.0) < attack_chance {
+                                // Calculate damage based on hero stats
+                                let base_damage = hero_data
+                                    .map(|d| {
+                                        let (min, max) = (d.combat.damage_range[0] as f32, d.combat.damage_range[1] as f32);
+                                        macroquad::rand::gen_range(min, max)
+                                    })
+                                    .unwrap_or(5.0);
+
+                                total_damage += base_damage;
+
+                                // Store attacker info for projectile spawning
+                                attackers.push((entity.id, entity.visual_pos, attack_type));
+                            }
                         }
-                    } else {
-                        // eprintln!("Hero {} adjacent but NOT DestroyHeart. Goal: {:?}", hero.hero_id, hero.current_goal);
                     }
                 }
             }
-            
+
+            // Spawn projectiles for each attacker that landed an attack
+            for (attacker_id, visual_pos, attack_type) in attackers {
+                self.projectiles.spawn_at_position(visual_pos, target_pos, &attack_type, attacker_id);
+            }
+
             if total_damage > 0.0 {
                 self.dungeon_heart_health -= total_damage;
                 eprintln!("Heart taking damage! Health: {:.1} -> {:.1}", self.dungeon_heart_health + total_damage, self.dungeon_heart_health);
@@ -289,18 +315,6 @@ impl GameState {
                     self.game_over = true;
                     self.notifications.danger("DUNGEON HEART DESTROYED! GAME OVER");
                 }
-            } else {
-                 // Check if heroes are nearby but not damaging
-                 for entity in self.entities.all() {
-                    if let Some(hero) = entity.as_hero() {
-                        let dx = (entity.pos.x - target_pos.x).abs();
-                        let dy = (entity.pos.y - target_pos.y).abs();
-                        if dx <= 5 && dy <= 5 {
-                             eprintln!("Review: Hero {} at {:?} (dist {}, {}) Goal: {:?}. Dmg: 0", 
-                                hero.hero_id, entity.pos, dx, dy, hero.current_goal);
-                        }
-                    }
-                 }
             }
         }
         for hero_id in hero_entities {
@@ -858,11 +872,13 @@ impl GameState {
 
         // Spawn the imp
         if let Some(monster_data) = game_data.monsters.get("imp") {
+            let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
             let creature_state = crate::state::entities::CreatureState::new(
                 "imp".to_string(),
                 1,
                 monster_data.stats.health,
                 monster_data.stats.mana,
+                visual_seed,
             );
             self.entities.spawn_creature(pos, creature_state);
             eprintln!("Spawned imp at {:?}", pos);
@@ -1059,11 +1075,13 @@ impl GameState {
                       self.entities.remove(hero_id);
                       
                       if let Some(monster_data) = game_data.monsters.get("skeleton") {
+                            let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
                             let creature_state = crate::state::entities::CreatureState::new(
                                 "skeleton".to_string(),
                                 1,
                                 monster_data.stats.health,
                                 monster_data.stats.mana,
+                                visual_seed,
                             );
                             self.entities.spawn_creature(pos, creature_state);
                             self.notifications.success("Captured hero rotted into a Skeleton!");

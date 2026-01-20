@@ -167,7 +167,9 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
 fn spawn_hero_at(state: &mut GameState, hero_id: &str, building_pos: TilePos, game_data: &GameData) {
     if let Some(hero_data) = game_data.heroes.get(hero_id) {
         let spawn_pos = find_spawn_pos(state, building_pos, game_data);
-        
+
+        // Generate visual variation seed
+        let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
         let mut hero_state = HeroState::new(
             hero_id.to_string(),
             1, // Level 1
@@ -175,6 +177,7 @@ fn spawn_hero_at(state: &mut GameState, hero_id: &str, building_pos: TilePos, ga
             hero_data.stats.mana,
             spawn_pos,
             hero_data.stats.dig_time,
+            visual_seed,
         );
         
         // Determine if this hero should be a defender based on current ratio

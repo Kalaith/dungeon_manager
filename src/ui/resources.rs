@@ -1,5 +1,7 @@
 use macroquad::prelude::*;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use crate::sprite_variation::SpriteVariationCache;
 
 pub struct GraphicsCache {
     pub tile_textures: HashMap<String, Texture2D>,
@@ -7,6 +9,8 @@ pub struct GraphicsCache {
     pub hero_textures: HashMap<String, Texture2D>,
     pub ui_textures: HashMap<String, Texture2D>,
     pub projectile_textures: HashMap<String, Texture2D>,
+    /// Cache for runtime-generated sprite variations (uses RefCell for interior mutability)
+    variation_cache: RefCell<SpriteVariationCache>,
 }
 
 impl GraphicsCache {
@@ -17,7 +21,38 @@ impl GraphicsCache {
             hero_textures: HashMap::new(),
             ui_textures: HashMap::new(),
             projectile_textures: HashMap::new(),
+            variation_cache: RefCell::new(SpriteVariationCache::new()),
         }
+    }
+
+    /// Get a varied texture for a creature, generating it if needed
+    /// Uses interior mutability (RefCell) so this can be called with &self
+    pub fn get_creature_texture(&self, creature_id: &str, visual_seed: u64) -> Option<Texture2D> {
+        // If seed is 0, return base texture (no variation)
+        if visual_seed == 0 {
+            return self.monster_textures.get(creature_id).cloned();
+        }
+
+        // Get base texture
+        let base_texture = self.monster_textures.get(creature_id)?;
+
+        // Get or create varied texture (borrow RefCell mutably)
+        Some(self.variation_cache.borrow_mut().get_or_create(creature_id, visual_seed, base_texture))
+    }
+
+    /// Get a varied texture for a hero, generating it if needed
+    /// Uses interior mutability (RefCell) so this can be called with &self
+    pub fn get_hero_texture(&self, hero_id: &str, visual_seed: u64) -> Option<Texture2D> {
+        // If seed is 0, return base texture (no variation)
+        if visual_seed == 0 {
+            return self.hero_textures.get(hero_id).cloned();
+        }
+
+        // Get base texture
+        let base_texture = self.hero_textures.get(hero_id)?;
+
+        // Get or create varied texture (borrow RefCell mutably)
+        Some(self.variation_cache.borrow_mut().get_or_create(hero_id, visual_seed, base_texture))
     }
 
     pub async fn load_all(game_data: Option<&crate::data::GameData>) -> Result<Self, String> {

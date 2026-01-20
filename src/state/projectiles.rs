@@ -131,7 +131,7 @@ impl ProjectileManager {
         }
     }
 
-    /// Spawn a new projectile
+    /// Spawn a new projectile targeting an entity
     pub fn spawn(
         &mut self,
         start_pos: (f32, f32),
@@ -142,6 +142,21 @@ impl ProjectileManager {
     ) {
         let projectile_type = ProjectileType::from_attack_type(attack_type);
         let projectile = Projectile::new(start_pos, end_pos, projectile_type, attacker_id, defender_id);
+        self.projectiles.push(projectile);
+    }
+
+    /// Spawn a projectile targeting a position (for structures like dungeon heart)
+    pub fn spawn_at_position(
+        &mut self,
+        start_pos: (f32, f32),
+        target_pos: TilePos,
+        attack_type: &str,
+        attacker_id: EntityId,
+    ) {
+        let projectile_type = ProjectileType::from_attack_type(attack_type);
+        let end_pos = (target_pos.x as f32, target_pos.y as f32);
+        // Use attacker_id as both since there's no defender entity
+        let projectile = Projectile::new(start_pos, end_pos, projectile_type, attacker_id, attacker_id);
         self.projectiles.push(projectile);
     }
 

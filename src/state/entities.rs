@@ -131,6 +131,9 @@ pub struct CreatureState {
     /// Reference to creature data ID (e.g., "imp", "goblin")
     pub creature_id: String,
 
+    /// Visual variation seed for unique appearance
+    pub visual_seed: u64,
+
     /// Current level (1-based)
     pub level: u32,
 
@@ -197,9 +200,10 @@ pub struct CreatureState {
 
 impl CreatureState {
     /// Create a new creature state from data
-    pub fn new(creature_id: String, level: u32, max_health: f32, max_mana: f32) -> Self {
+    pub fn new(creature_id: String, level: u32, max_health: f32, max_mana: f32, visual_seed: u64) -> Self {
         Self {
             creature_id,
+            visual_seed,
             level,
             health: max_health,
             max_health,
@@ -278,6 +282,9 @@ pub struct HeroState {
     /// Reference to hero data ID (e.g., "knight", "archer")
     pub hero_id: String,
 
+    /// Visual variation seed for unique appearance
+    pub visual_seed: u64,
+
     /// Current level
     pub level: u32,
 
@@ -350,11 +357,12 @@ pub struct HeroState {
 
 impl HeroState {
     /// Create a new hero state
-    pub fn new(hero_id: String, level: u32, max_health: f32, max_mana: f32, spawn_pos: TilePos, dig_time: f32) -> Self {
+    pub fn new(hero_id: String, level: u32, max_health: f32, max_mana: f32, spawn_pos: TilePos, dig_time: f32, visual_seed: u64) -> Self {
         let can_dig = true; // Allow all heroes to try and breach walls if path is blocked
 
         Self {
             hero_id,
+            visual_seed,
             level,
             health: max_health,
             max_health,
@@ -656,7 +664,7 @@ mod tests {
     #[test]
     fn test_entity_manager_spawn() {
         let mut manager = EntityManager::new();
-        let creature = CreatureState::new("imp".to_string(), 1, 100.0, 20.0);
+        let creature = CreatureState::new("imp".to_string(), 1, 100.0, 20.0, 0);
         let id = manager.spawn_creature(TilePos::new(5, 5), creature);
 
         assert_eq!(manager.count(), 1);
@@ -668,7 +676,7 @@ mod tests {
 
     #[test]
     fn test_creature_needs() {
-        let mut creature = CreatureState::new("goblin".to_string(), 1, 120.0, 0.0);
+        let mut creature = CreatureState::new("goblin".to_string(), 1, 120.0, 0.0, 0);
         creature.set_need("sleep".to_string(), 80.0);
         creature.set_need("food".to_string(), 30.0);
 
@@ -684,10 +692,10 @@ mod tests {
     fn test_remove_dead() {
         let mut manager = EntityManager::new();
 
-        let mut creature1 = CreatureState::new("imp".to_string(), 1, 100.0, 20.0);
+        let mut creature1 = CreatureState::new("imp".to_string(), 1, 100.0, 20.0, 0);
         creature1.health = 0.0; // Dead
 
-        let creature2 = CreatureState::new("goblin".to_string(), 1, 120.0, 0.0);
+        let creature2 = CreatureState::new("goblin".to_string(), 1, 120.0, 0.0, 0);
         // Alive
 
         manager.spawn_creature(TilePos::new(0, 0), creature1);

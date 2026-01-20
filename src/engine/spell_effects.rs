@@ -134,23 +134,10 @@ pub fn cast_spell(
         return can_cast;
     }
 
-    // Deduct costs - special handling for summon_imps
-    if spell_id == "summon_imps" {
-        let current_imps = game_state.count_imps();
-        let (base_cost, per_imp_cost) = game_data.monsters.get("imp")
-            .map(|m| (
-                m.spawn.summon_base_cost.unwrap_or(10),
-                m.spawn.summon_cost_per_existing.unwrap_or(5)
-            ))
-            .unwrap_or((10, 5));
-        let dynamic_cost = base_cost + (current_imps as i32 * per_imp_cost);
-        game_state.player.mana -= dynamic_cost;
-        eprintln!("Cast spell: {} (dynamic mana: {}, imps: {})", spell.name, dynamic_cost, current_imps);
-    } else {
-        game_state.player.mana -= spell.cost.mana;
-        game_state.player.gold -= spell.cost.gold;
-        eprintln!("Cast spell: {} (mana: {}, gold: {})", spell.name, spell.cost.mana, spell.cost.gold);
-    }
+    // Deduct costs from spell data
+    game_state.player.mana -= spell.cost.mana;
+    game_state.player.gold -= spell.cost.gold;
+    eprintln!("Cast spell: {} (mana: {}, gold: {})", spell.name, spell.cost.mana, spell.cost.gold);
 
     // Apply effects
     for effect in &spell.effects {
@@ -405,11 +392,13 @@ fn spawn_entity_effect(
             }
 
             if let Some(monster_data) = game_data.monsters.get("imp") {
+                let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
                 let creature_state = CreatureState::new(
                     "imp".to_string(),
                     1,
                     monster_data.stats.health,
                     monster_data.stats.mana,
+                    visual_seed,
                 );
 
                 game_state.entities.spawn_creature(pos, creature_state);
