@@ -10,7 +10,7 @@ use super::core::*;
 // ============================================================================
 
 pub fn create_town_hall() -> RgbaImage {
-    let mut img = create_tile_base(image::Rgba([180, 160, 140, 255]));
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
     let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
     let cx = SPRITE_SIZE as f32 / 2.0;
 
@@ -20,6 +20,7 @@ pub fn create_town_hall() -> RgbaImage {
     let banner_mat = Material::matte(180, 40, 40);
     let light_mat = Material::glowing(255, 200, 100);
 
+    draw_shadow(&mut img, cx, 52.0, 22.0, 8.0);
     draw_cylinder_3d(&mut img, &mut depth, cx, 20.0, 50.0, 5.0, 20.0, &stone_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 10.0, 30.0, 0.0, 8.0, &stone_mat);
     draw_cone_3d(&mut img, &mut depth, cx, -5.0, 10.0, 0.0, 10.0, &gold_mat);
@@ -33,7 +34,7 @@ pub fn create_town_hall() -> RgbaImage {
 }
 
 pub fn create_barracks() -> RgbaImage {
-    let mut img = create_tile_base(image::Rgba([139, 90, 43, 255]));
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
     let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
     let cx = SPRITE_SIZE as f32 / 2.0;
 
@@ -42,6 +43,7 @@ pub fn create_barracks() -> RgbaImage {
     let shield_mat = Material::metallic(160, 160, 180);
     let red_mat = Material::matte(150, 30, 30);
 
+    draw_shadow(&mut img, cx, 52.0, 20.0, 8.0);
     draw_cylinder_3d(&mut img, &mut depth, cx, 20.0, 50.0, 5.0, 18.0, &wood_mat);
     draw_cone_3d(&mut img, &mut depth, cx, 5.0, 20.0, 5.0, 22.0, &dark_wood_mat);
     draw_ellipsoid_3d(&mut img, &mut depth, cx - 12.0, 40.0, 22.0, 4.0, 6.0, 2.0, &shield_mat);
@@ -54,7 +56,7 @@ pub fn create_barracks() -> RgbaImage {
 }
 
 pub fn create_archery_range() -> RgbaImage {
-    let mut img = create_tile_base(image::Rgba([100, 120, 80, 255]));
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
     let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
     let cx = SPRITE_SIZE as f32 / 2.0;
 
@@ -63,6 +65,7 @@ pub fn create_archery_range() -> RgbaImage {
     let target_red = Material::matte(200, 20, 20);
     let hay_mat = Material::matte(200, 180, 100);
 
+    draw_shadow(&mut img, cx, 54.0, 26.0, 8.0);
     for i in 0..5 {
         let x = 12.0 + i as f32 * 10.0;
         draw_cylinder_3d(&mut img, &mut depth, x, 40.0, 55.0, 20.0, 2.0, &wood_mat);
@@ -84,7 +87,7 @@ pub fn create_archery_range() -> RgbaImage {
 }
 
 pub fn create_church() -> RgbaImage {
-    let mut img = create_tile_base(image::Rgba([230, 230, 240, 255]));
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
     let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
     let cx = SPRITE_SIZE as f32 / 2.0;
 
@@ -93,6 +96,7 @@ pub fn create_church() -> RgbaImage {
     let gold_mat = Material::metallic(218, 165, 32);
     let glass_mat = Material::glowing(100, 150, 255);
 
+    draw_shadow(&mut img, cx, 52.0, 20.0, 8.0);
     draw_cylinder_3d(&mut img, &mut depth, cx, 25.0, 50.0, 5.0, 18.0, &stone_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 5.0, 25.0, 0.0, 6.0, &stone_mat);
     draw_cone_3d(&mut img, &mut depth, cx, -15.0, 5.0, 0.0, 7.0, &roof_mat);
@@ -105,7 +109,7 @@ pub fn create_church() -> RgbaImage {
 }
 
 pub fn create_mage_tower() -> RgbaImage {
-    let mut img = create_tile_base(image::Rgba([80, 80, 120, 255]));
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
     let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
     let cx = SPRITE_SIZE as f32 / 2.0;
 
@@ -114,6 +118,7 @@ pub fn create_mage_tower() -> RgbaImage {
     let crystal_mat = Material::crystal(150, 100, 255);
     let aura_mat = Material::glowing(100, 200, 255);
 
+    draw_shadow(&mut img, cx, 56.0, 14.0, 6.0);
     draw_cylinder_3d(&mut img, &mut depth, cx, 10.0, 55.0, 5.0, 10.0, &stone_mat);
     draw_cone_3d(&mut img, &mut depth, cx, -15.0, 10.0, 5.0, 12.0, &roof_mat);
     draw_sphere_3d(&mut img, &mut depth, cx - 12.0, 20.0, 15.0, 3.0, &crystal_mat);
@@ -126,7 +131,7 @@ pub fn create_mage_tower() -> RgbaImage {
 }
 
 pub fn create_stable() -> RgbaImage {
-    let mut img = create_tile_base(image::Rgba([160, 120, 80, 255]));
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
     let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
     let cx = SPRITE_SIZE as f32 / 2.0;
 
@@ -134,6 +139,7 @@ pub fn create_stable() -> RgbaImage {
     let dark_wood_mat = Material::wood(90, 60, 30);
     let hay_mat = Material::matte(200, 180, 100);
 
+    draw_shadow(&mut img, cx, 52.0, 22.0, 8.0);
     draw_cylinder_3d(&mut img, &mut depth, cx, 25.0, 50.0, 5.0, 20.0, &wood_mat);
     draw_cone_3d(&mut img, &mut depth, cx, 10.0, 25.0, 5.0, 22.0, &dark_wood_mat);
     draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 20.0, 10.0, 10.0, 5.0, &hay_mat);
@@ -144,7 +150,7 @@ pub fn create_stable() -> RgbaImage {
 }
 
 pub fn create_armory() -> RgbaImage {
-    let mut img = create_tile_base(image::Rgba([120, 120, 120, 255]));
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
     let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
     let cx = SPRITE_SIZE as f32 / 2.0;
 
@@ -152,6 +158,7 @@ pub fn create_armory() -> RgbaImage {
     let iron_mat = Material::metallic(80, 80, 90);
     let fire_mat = Material::fire();
 
+    draw_shadow(&mut img, cx, 52.0, 24.0, 8.0);
     draw_cylinder_3d(&mut img, &mut depth, cx, 20.0, 50.0, 5.0, 22.0, &stone_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 25.0, 30.0, 4.0, 23.0, &iron_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 40.0, 45.0, 4.0, 23.0, &iron_mat);
@@ -168,12 +175,13 @@ pub fn create_armory() -> RgbaImage {
 // ============================================================================
 
 pub fn create_hero_wall() -> RgbaImage {
-    let mut img = create_tile_base(image::Rgba([150, 150, 150, 255]));
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
     let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
     let cx = SPRITE_SIZE as f32 / 2.0;
 
     let stone_mat = Material::stone(140, 140, 150);
 
+    draw_shadow(&mut img, cx, 56.0, 26.0, 6.0);
     draw_cylinder_3d(&mut img, &mut depth, cx, 15.0, 55.0, 0.0, 25.0, &stone_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx - 15.0, 5.0, 15.0, 0.0, 6.0, &stone_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 5.0, 15.0, 0.0, 6.0, &stone_mat);
@@ -184,7 +192,7 @@ pub fn create_hero_wall() -> RgbaImage {
 }
 
 pub fn create_hero_gate() -> RgbaImage {
-    let mut img = create_tile_base(image::Rgba([120, 100, 80, 255]));
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
     let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
     let cx = SPRITE_SIZE as f32 / 2.0;
 
@@ -192,6 +200,7 @@ pub fn create_hero_gate() -> RgbaImage {
     let iron_mat = Material::metallic(60, 60, 70);
     let torch_mat = Material::glowing(255, 180, 50);
 
+    draw_shadow(&mut img, cx, 56.0, 24.0, 8.0);
     draw_cylinder_3d(&mut img, &mut depth, cx - 20.0, 5.0, 55.0, 0.0, 6.0, &wood_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx + 20.0, 5.0, 55.0, 0.0, 6.0, &wood_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 10.0, 50.0, 5.0, 20.0, &wood_mat);
@@ -206,7 +215,7 @@ pub fn create_hero_gate() -> RgbaImage {
 
 /// Guard tower - NEW
 pub fn create_guard_tower() -> RgbaImage {
-    let mut img = create_tile_base(image::Rgba([140, 130, 120, 255]));
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
     let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
     let cx = SPRITE_SIZE as f32 / 2.0;
 
@@ -214,6 +223,7 @@ pub fn create_guard_tower() -> RgbaImage {
     let wood_mat = Material::wood(100, 70, 40);
     let torch_mat = Material::glowing(255, 180, 50);
 
+    draw_shadow(&mut img, cx, 56.0, 16.0, 6.0);
     // Tower base
     draw_cylinder_3d(&mut img, &mut depth, cx, 30.0, 55.0, 5.0, 14.0, &stone_mat);
     // Tower body
@@ -233,7 +243,7 @@ pub fn create_guard_tower() -> RgbaImage {
 
 /// Blacksmith forge - NEW
 pub fn create_blacksmith() -> RgbaImage {
-    let mut img = create_tile_base(image::Rgba([100, 90, 80, 255]));
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
     let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
     let cx = SPRITE_SIZE as f32 / 2.0;
 
@@ -242,6 +252,7 @@ pub fn create_blacksmith() -> RgbaImage {
     let fire_mat = Material::fire();
     let smoke_mat = Material::matte(180, 180, 180);
 
+    draw_shadow(&mut img, cx, 56.0, 20.0, 8.0);
     // Main structure
     draw_cylinder_3d(&mut img, &mut depth, cx, 25.0, 55.0, 5.0, 18.0, &stone_mat);
     // Forge opening
@@ -261,7 +272,7 @@ pub fn create_blacksmith() -> RgbaImage {
 
 /// Inn/Tavern - NEW
 pub fn create_tavern() -> RgbaImage {
-    let mut img = create_tile_base(image::Rgba([130, 100, 70, 255]));
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
     let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
     let cx = SPRITE_SIZE as f32 / 2.0;
 
@@ -270,6 +281,7 @@ pub fn create_tavern() -> RgbaImage {
     let light_mat = Material::glowing(255, 220, 150);
     let sign_mat = Material::wood(100, 70, 40);
 
+    draw_shadow(&mut img, cx, 56.0, 22.0, 8.0);
     // Main building
     draw_cylinder_3d(&mut img, &mut depth, cx, 25.0, 55.0, 5.0, 20.0, &wood_mat);
     // Roof

@@ -38,6 +38,7 @@ pub fn draw_sidebar(
         SidebarTab::Traps => draw_traps_content(sidebar, current_mode, player, game_data),
         SidebarTab::Research => draw_research_content(sidebar, player, &game_data.technologies),
         SidebarTab::Utils => draw_utils_content(sidebar, current_mode),
+        SidebarTab::Cheats => draw_cheats_content(sidebar),
     }
     
     // Draw selected spell hint if any
@@ -60,6 +61,7 @@ fn draw_tabs(sidebar: &Sidebar) {
         (SidebarTab::Traps, "Traps"),
         (SidebarTab::Research, "Tech"),
         (SidebarTab::Utils, "Utils"),
+        (SidebarTab::Cheats, "Cheats"),
     ];
 
     let tab_width = 100.0;
@@ -701,3 +703,82 @@ fn draw_research_content(sidebar: &Sidebar, player: &PlayerState, technologies: 
 }
 
 // Original function replaced by updated version above with SaveGame support
+
+fn draw_cheats_content(sidebar: &Sidebar) {
+    let start_x = PADDING;
+    let start_y = sidebar.panel_y + PADDING;
+    
+    // --- Row 1: Spawning Controls ---
+    let row1_y = start_y;
+    
+    // 1. Category Button
+    let cat_text = format!("{:?}", sidebar.cheat_state.category);
+    let cat_btn_width = 120.0;
+    draw_rectangle(start_x, row1_y, cat_btn_width, BUTTON_SIZE, Color::new(0.2, 0.4, 0.6, 1.0));
+    draw_rectangle_lines(start_x, row1_y, cat_btn_width, BUTTON_SIZE, 2.0, WHITE);
+    draw_text(&cat_text, start_x + 10.0, row1_y + 30.0, 16.0, WHITE);
+
+    // 2. Level Controls
+    let lvl_minus_x = start_x + cat_btn_width + BUTTON_SPACING;
+    draw_rectangle(lvl_minus_x, row1_y, BUTTON_SIZE, BUTTON_SIZE, Color::new(0.4, 0.2, 0.2, 1.0));
+    draw_rectangle_lines(lvl_minus_x, row1_y, BUTTON_SIZE, BUTTON_SIZE, 2.0, WHITE);
+    draw_text("-", lvl_minus_x + 15.0, row1_y + 30.0, 20.0, WHITE);
+    
+    let lvl_text = format!("Lvl {}", sidebar.cheat_state.level);
+    let lvl_text_x = lvl_minus_x + BUTTON_SIZE + BUTTON_SPACING;
+    draw_text(&lvl_text, lvl_text_x, row1_y + 30.0, 16.0, WHITE);
+    
+    let lvl_plus_x = lvl_text_x + 50.0 + BUTTON_SPACING; // Assumes text fits in 50px
+    draw_rectangle(lvl_plus_x, row1_y, BUTTON_SIZE, BUTTON_SIZE, Color::new(0.2, 0.4, 0.2, 1.0));
+    draw_rectangle_lines(lvl_plus_x, row1_y, BUTTON_SIZE, BUTTON_SIZE, 2.0, WHITE);
+    draw_text("+", lvl_plus_x + 15.0, row1_y + 30.0, 20.0, WHITE);
+
+    // 3. Entity ID
+    let id_x = lvl_plus_x + BUTTON_SIZE + BUTTON_SPACING;
+    let id_text = &sidebar.cheat_state.entity_id;
+    let id_btn_width = 200.0;
+    draw_rectangle(id_x, row1_y, id_btn_width, BUTTON_SIZE, Color::new(0.3, 0.3, 0.35, 1.0));
+    draw_rectangle_lines(id_x, row1_y, id_btn_width, BUTTON_SIZE, 2.0, WHITE);
+    draw_text(id_text, id_x + 10.0, row1_y + 30.0, 16.0, WHITE);
+
+    // 4. Spawn Button
+    let spawn_x = id_x + id_btn_width + BUTTON_SPACING;
+    let spawn_btn_width = 140.0;
+    draw_rectangle(spawn_x, row1_y, spawn_btn_width, BUTTON_SIZE, Color::new(0.6, 0.2, 0.6, 1.0));
+    draw_rectangle_lines(spawn_x, row1_y, spawn_btn_width, BUTTON_SIZE, 2.0, WHITE);
+    draw_text("Prepare Spawn", spawn_x + 10.0, row1_y + 30.0, 16.0, WHITE);
+
+    // --- Row 2: Cheats & Toggles ---
+    let row2_y = row1_y + BUTTON_SIZE + BUTTON_SPACING;
+
+    // 1. Gold
+    let gold_btn_width = 120.0;
+    draw_rectangle(start_x, row2_y, gold_btn_width, BUTTON_SIZE, GOLD);
+    draw_rectangle_lines(start_x, row2_y, gold_btn_width, BUTTON_SIZE, 2.0, WHITE);
+    draw_text("Gold +100", start_x + 10.0, row2_y + 30.0, 16.0, BLACK);
+    
+    // 2. Toggle Fog
+    let fow_x = start_x + gold_btn_width + BUTTON_SPACING;
+    let fow_width = 150.0;
+    draw_rectangle(fow_x, row2_y, fow_width, BUTTON_SIZE, Color::new(0.3, 0.3, 0.4, 1.0));
+    draw_rectangle_lines(fow_x, row2_y, fow_width, BUTTON_SIZE, 2.0, WHITE);
+    draw_text("Toggle Fog", fow_x + 10.0, row2_y + 30.0, 16.0, WHITE);
+
+    // 3. Instant Dig
+    let dig_x = fow_x + fow_width + BUTTON_SPACING;
+    let dig_width = 130.0;
+    let dig_active = sidebar.cheat_state.instant_dig_active;
+    let dig_color = if dig_active { GREEN } else { RED };
+    draw_rectangle(dig_x, row2_y, dig_width, BUTTON_SIZE, dig_color);
+    draw_rectangle_lines(dig_x, row2_y, dig_width, BUTTON_SIZE, 2.0, WHITE);
+    draw_text("Instant Dig", dig_x + 10.0, row2_y + 30.0, 16.0, WHITE);
+
+    // 4. God Mode
+    let heart_x = dig_x + dig_width + BUTTON_SPACING;
+    let heart_width = 140.0;
+    let heart_active = sidebar.cheat_state.immortal_heart_active;
+    let heart_color = if heart_active { GREEN } else { RED };
+    draw_rectangle(heart_x, row2_y, heart_width, BUTTON_SIZE, heart_color);
+    draw_rectangle_lines(heart_x, row2_y, heart_width, BUTTON_SIZE, 2.0, WHITE);
+    draw_text("God Mode", heart_x + 10.0, row2_y + 30.0, 16.0, WHITE);
+}

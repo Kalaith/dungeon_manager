@@ -15,6 +15,7 @@ pub mod types {
     
     // Floor tiles
     pub const CLAIMED_FLOOR: &str = "claimed_floor";
+    pub const FLOOR: &str = "floor";
     pub const REINFORCED_WALL: &str = "reinforced_wall";
     
     // Special tiles

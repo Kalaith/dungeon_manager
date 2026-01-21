@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GameConfig {
     pub player_starting_resources: PlayerStartingResources,
     pub player_initial_capacity: PlayerInitialCapacity,
@@ -13,13 +13,16 @@ pub struct GameConfig {
     pub fog_of_war: FogOfWarConfig,
     pub economy: EconomyConfig,
     pub combat: CombatConfig,
+    pub combat_ranges: CombatRangesConfig,
     pub task_execution: TaskExecutionConfig,
     pub imp_behavior: ImpBehaviorConfig,
     pub spawning: SpawningConfig,
     pub traps: TrapConfig,
+    pub dungeon: DungeonConfig,
+    pub conversion: ConversionConfig,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PlayerStartingResources {
     pub gold: i32,
     pub mana: i32,
@@ -27,7 +30,7 @@ pub struct PlayerStartingResources {
     pub materials: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PlayerInitialCapacity {
     pub max_gold: i32,
     pub max_mana: i32,
@@ -35,7 +38,7 @@ pub struct PlayerInitialCapacity {
     pub max_materials: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TimingConfig {
     pub pay_day_interval: f32,
     pub initial_creature_spawn_delay: f32,
@@ -43,7 +46,7 @@ pub struct TimingConfig {
     pub creature_spawn_max_interval: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct HeroWaveConfig {
     pub initial_delay: f32,
     pub wave_interval: f32,
@@ -54,7 +57,7 @@ pub struct HeroWaveConfig {
     pub spawn_search_radius: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CreatureAIConfig {
     pub need_critical_threshold: f32,
     pub need_desert_threshold: f32,
@@ -72,14 +75,14 @@ pub struct CreatureAIConfig {
     pub task_desirability: TaskDesirabilityConfig,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MoodPenaltiesConfig {
     pub low_health_threshold: f32,
     pub low_health_penalty: f32,
     pub angry_penalty: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TaskDesirabilityConfig {
     pub base: f32,
     pub gold_deposit: f32,
@@ -91,18 +94,18 @@ pub struct TaskDesirabilityConfig {
     pub need_modifier: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct FogOfWarConfig {
     pub enabled: bool,
     pub sight_radius: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct EconomyConfig {
     pub room_sell_refund_percentage: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CombatConfig {
     pub creature_level_multiplier: f32,
     pub creature_health_per_level: f32,
@@ -122,7 +125,7 @@ pub struct CombatConfig {
     pub xp_requirement_multiplier: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TaskExecutionConfig {
     pub sleep_satisfaction_rate: f32,
     pub food_consumption_rate: f32,
@@ -137,7 +140,7 @@ pub struct TaskExecutionConfig {
     pub research_production_rate: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ImpBehaviorConfig {
     pub dig_completion_delay: f32,
     pub gem_priority_bonus: f32,
@@ -146,14 +149,34 @@ pub struct ImpBehaviorConfig {
     pub mana_crystal_reward: i32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SpawningConfig {
     pub monster_spawner_interval: f32,
+    pub max_monsters_per_spawner: usize,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TrapConfig {
     pub default_cooldown: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CombatRangesConfig {
+    pub melee: i32,
+    pub ranged: i32,
+    pub magic: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DungeonConfig {
+    pub heart_max_health: f32,
+    pub initial_imp_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ConversionConfig {
+    pub skeleton_rate: f32,
+    pub torture_rate: f32,
 }
 
 pub fn load_game_config() -> Result<GameConfig, Box<dyn Error>> {

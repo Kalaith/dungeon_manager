@@ -21,7 +21,7 @@ pub fn update_creatures(
     dt: f32,
     attack_marker: Option<TilePos>,
     defend_marker: Option<TilePos>,
-    get_task_target: impl Fn(&Task, &RoomManager) -> Option<TilePos>,
+    get_task_target: impl Fn(&Task, &RoomManager, &EntityManager) -> Option<TilePos>,
 ) {
     let creature_ids: Vec<EntityId> = entities.creatures()
         .filter(|(_, c)| c.creature_id != "imp") // Imps have their own AI (digging)
@@ -53,7 +53,7 @@ fn update_single_creature(
     dt: f32,
     attack_marker: Option<TilePos>,
     defend_marker: Option<TilePos>,
-    get_task_target: &impl Fn(&Task, &RoomManager) -> Option<TilePos>,
+    get_task_target: &impl Fn(&Task, &RoomManager, &EntityManager) -> Option<TilePos>,
 ) {
     // Get current position and state
     let (current_pos, needs_new_task, needs_path, task_target, creature_type) = {
@@ -69,7 +69,7 @@ fn update_single_creature(
 
         let needs_new_task = creature.current_path.is_none() && creature.current_task.is_none();
         let needs_path = creature.current_path.is_none() && creature.current_task.is_some();
-        let task_target = creature.current_task.as_ref().and_then(|task| get_task_target(task, room_manager));
+        let task_target = creature.current_task.as_ref().and_then(|task| get_task_target(task, room_manager, entities));
 
         (entity.pos, needs_new_task, needs_path, task_target, creature.creature_id.clone())
     };
@@ -104,7 +104,7 @@ fn update_single_creature(
                 }
             }
         } else {
-            decide_and_assign_task(creature_id, current_pos, entities, room_manager, game_data, attack_marker, defend_marker);
+            decide_and_assign_task(creature_id, current_pos, entities, dungeon, room_manager, game_data, attack_marker, defend_marker);
         }
     }
 
@@ -130,6 +130,7 @@ fn decide_and_assign_task(
     creature_id: EntityId,
     current_pos: TilePos,
     entities: &mut EntityManager,
+    dungeon: &Dungeon,
     room_manager: &RoomManager,
     game_data: &GameData,
     attack_marker: Option<TilePos>,
@@ -148,14 +149,16 @@ fn decide_and_assign_task(
 
         // Create a temporary GameState-like access for decide_task
         // For now, we'll pass room_manager directly since that's what decide_task needs
-        decide_task_from_rooms(creature, current_pos, room_manager, game_data, attack_marker, defend_marker)
+        // Create a temporary GameState-like access for decide_task
+        // For now, we'll pass room_manager directly since that's what decide_task needs
+        decide_task_from_rooms(creature, entity, entities, dungeon, current_pos, room_manager, game_data, attack_marker, defend_marker)
     };
 
     // Apply the new task
     if let Some(entity) = entities.get_mut(creature_id) {
         if let Some(creature) = entity.as_creature_mut() {
             if new_task.is_some() {
-                eprintln!("[AI] Creature {} decided new task: {:?}", creature.creature_id, new_task);
+                // eprintln!("[AI] Creature {} decided new task: {:?}", creature.creature_id, new_task);
             }
             creature.current_task = new_task;
         }
@@ -165,6 +168,9 @@ fn decide_and_assign_task(
 /// Simplified decide_task that works with RoomManager directly
 fn decide_task_from_rooms(
     creature: &CreatureState,
+    entity: &crate::state::entities::Entity,
+    entities: &EntityManager,
+    dungeon: &Dungeon,
     creature_pos: TilePos,
     room_manager: &RoomManager,
     game_data: &GameData,
@@ -187,10 +193,6 @@ fn decide_task_from_rooms(
         if dist > marker_dist_threshold {
              return Some(Task::MoveTo(marker));
         }
-        // If at marker, we stay/patrol/attack automatically via combat system + idle wander
-        // But to ensure they don't leave, we can keep returning MoveTo if they wander too far?
-        // Or just let them Idle (wander) nearby.
-        // For now: MoveTo ensures they gather.
     }
 
     // Defend Marker
@@ -198,6 +200,16 @@ fn decide_task_from_rooms(
         let dist = (creature_pos.x - marker.x).abs() + (creature_pos.y - marker.y).abs();
         if dist > marker_dist_threshold {
              return Some(Task::MoveTo(marker));
+        }
+    }
+
+    // Priority 2: Combat - Look for enemies
+    // Only attack if not fleeing
+    if !creature.is_deserting {
+        let targets = crate::engine::combat::find_combat_targets(entity, entities.entities(), dungeon, game_data);
+        if let Some(target_id) = targets.first() {
+            // Found a target!
+            return Some(Task::Attack(*target_id));
         }
     }
 
@@ -695,7 +707,7 @@ pub fn can_perform_task(
     match task {
         Task::Idle | Task::Flee => true,
 
-        Task::Dig(_) => {
+        Task::Dig(_) | Task::ClaimTile(_) | Task::PickupResource(_) => {
             // Would check if creature is an imp or can dig
             creature.creature_id == "imp"
         }
@@ -849,23 +861,27 @@ mod tests {
 
     #[test]
     fn test_calculate_mood() {
+        use crate::data::GameData;
         let monster_data = create_test_monster_data();
+        let game_data = GameData::default();
         let mut creature = CreatureState::new("test_creature".to_string(), 1, 100.0, 0.0, 0);
 
         // High need satisfaction = high mood
         creature.set_need("sleep".to_string(), 80.0);
-        let mood = calculate_mood(&creature, &monster_data);
+        let mood = calculate_mood(&creature, &monster_data, &game_data);
         assert!(mood > 70.0);
 
         // Low need satisfaction = low mood
         creature.set_need("sleep".to_string(), 20.0);
-        let mood = calculate_mood(&creature, &monster_data);
+        let mood = calculate_mood(&creature, &monster_data, &game_data);
         assert!(mood < 70.0);
     }
 
     #[test]
     fn test_should_desert() {
+        use crate::data::GameData;
         let monster_data = create_test_monster_data();
+        let game_data = GameData::default();
         let mut creature = CreatureState::new("test_creature".to_string(), 1, 100.0, 0.0, 0);
 
         creature.mood = 50.0;
@@ -877,18 +893,20 @@ mod tests {
 
     #[test]
     fn test_task_desirability() {
+        use crate::data::GameData;
         let monster_data = create_test_monster_data();
+        let game_data = GameData::default();
         let mut creature = CreatureState::new("test_creature".to_string(), 1, 100.0, 0.0, 0);
 
         // Low sleep need = low desirability for sleep task
         creature.set_need("sleep".to_string(), 90.0);
         let task = Task::Sleep(0);
-        let desirability = calculate_task_desirability(&task, &creature, &monster_data);
+        let desirability = calculate_task_desirability(&task, &creature, &monster_data, &game_data);
         assert!(desirability < 1.5);
 
         // High sleep need = high desirability for sleep task
         creature.set_need("sleep".to_string(), 10.0);
-        let desirability = calculate_task_desirability(&task, &creature, &monster_data);
+        let desirability = calculate_task_desirability(&task, &creature, &monster_data, &game_data);
         assert!(desirability > 1.5);
     }
 }

@@ -357,5 +357,20 @@
     "visual": {
       "sprite": "tiles/bone_floor.png"
     }
+  },
+  {
+    "id": "floor",
+    "name": "Unclaimed Floor",
+    "category": "floor",
+    "diggable": false,
+    "claimable": true,
+    "blocks_movement": false,
+    "blocks_vision": false,
+    "supports_rooms": true,
+    "resources": null,
+    "durability": 50,
+    "visual": {
+      "sprite": "tiles/claimed_floor.png"
+    }
   }
 ]

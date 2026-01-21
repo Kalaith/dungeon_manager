@@ -272,6 +272,7 @@ fn apply_trap_damage(entity: &mut crate::state::entities::Entity, damage: f32) {
         EntityType::Structure(_) => {
             // Structures don't take trap damage
         }
+        EntityType::ResourcePile(_) => {} // Piles don't take trap damage
     }
 }
 

@@ -9,6 +9,8 @@ use crate::state::entities::EntityId;
 use crate::data::spells::SpellData;
 use std::collections::HashMap;
 
+use crate::state::entities::EntityCategory;
+
 pub const PANEL_HEIGHT: f32 = 180.0;
 pub const TAB_HEIGHT: f32 = 30.0;
 pub const BUTTON_SIZE: f32 = 48.0;
@@ -17,8 +19,32 @@ pub const PADDING: f32 = 10.0;
 pub const RIGHT_MARGIN: f32 = 170.0;
 
 /// Get color based on efficiency value
-pub fn efficiency_color(efficiency: f32) -> Color {
+pub fn efficiency_color(efficiency: f32) -> macroquad::prelude::Color {
+    use macroquad::prelude::*;
     if efficiency >= 0.9 { GREEN } else if efficiency >= 0.5 { YELLOW } else { RED }
+}
+
+#[derive(Debug, Clone)]
+pub struct CheatState {
+    pub category: EntityCategory,
+    pub entity_id: String,
+    pub level: u32,
+    pub instant_dig_active: bool,
+    pub immortal_heart_active: bool,
+}
+
+
+
+impl Default for CheatState {
+    fn default() -> Self {
+        Self {
+            category: EntityCategory::Monster,
+            entity_id: "goblin".to_string(),
+            level: 1,
+            instant_dig_active: false,
+            immortal_heart_active: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -29,6 +55,7 @@ pub enum SidebarTab {
     Traps,
     Research,
     Utils, // Save/Load, Settings, etc.
+    Cheats,
 }
 
 pub struct Sidebar {
@@ -38,6 +65,7 @@ pub struct Sidebar {
     
     // UI State
     pub selected_spell: Option<String>,
+    pub cheat_state: CheatState,
 }
 
 impl Sidebar {
@@ -47,6 +75,7 @@ impl Sidebar {
             is_expanded: true,
             panel_y: screen_height() - PANEL_HEIGHT,
             selected_spell: None,
+            cheat_state: CheatState::default(),
         }
     }
 
@@ -100,6 +129,9 @@ impl Sidebar {
                 } else if mouse_pos.0 >= start_x + tab_width * 5.0 && mouse_pos.0 < start_x + tab_width * 6.0 {
                     self.current_tab = SidebarTab::Utils;
                     self.is_expanded = true;
+                } else if mouse_pos.0 >= start_x + tab_width * 6.0 && mouse_pos.0 < start_x + tab_width * 7.0 {
+                    self.current_tab = SidebarTab::Cheats;
+                    self.is_expanded = true;
                 } else if mouse_pos.0 >= screen_width() - RIGHT_MARGIN - 40.0 && mouse_pos.0 <= screen_width() - RIGHT_MARGIN {
                     // Toggle expand/collapse
                     self.is_expanded = !self.is_expanded;
@@ -134,6 +166,9 @@ impl Sidebar {
                     SidebarTab::Utils => {
                         self.handle_utils_tab_click(mouse_pos, action_queue);
                         return None;
+                    }
+                    SidebarTab::Cheats => {
+                        return self.handle_cheats_tab_click(mouse_pos, action_queue, game_data);
                     }
                 }
             }
@@ -467,6 +502,117 @@ impl Sidebar {
         mouse_pos.1 >= self.panel_y - TAB_HEIGHT
     }
     
+    pub fn handle_cheats_tab_click(
+        &mut self,
+        mouse_pos: (f32, f32),
+        action_queue: &mut crate::ui::actions::ActionQueue,
+        game_data: &crate::data::GameData,
+    ) -> Option<InteractionMode> {
+        let start_x = PADDING;
+        let start_y = self.panel_y + PADDING;
+        
+        // --- Row 1: Spawning Controls ---
+        let row1_y = start_y;
+
+        // 1. Category Button (Width 120)
+        let cat_btn_width = 120.0;
+        if mouse_pos.0 >= start_x && mouse_pos.0 <= start_x + cat_btn_width
+           && mouse_pos.1 >= row1_y && mouse_pos.1 <= row1_y + BUTTON_SIZE {
+               self.cheat_state.category = match self.cheat_state.category {
+                   EntityCategory::Monster => EntityCategory::Hero,
+                   EntityCategory::Hero => EntityCategory::Monster,
+               };
+               // Reset ID
+               self.cheat_state.entity_id = match self.cheat_state.category {
+                   EntityCategory::Monster => game_data.monsters.keys().next().unwrap_or(&"goblin".to_string()).clone(),
+                   EntityCategory::Hero => game_data.heroes.keys().next().unwrap_or(&"knight".to_string()).clone(),
+               };
+        }
+
+        // 2. Level -
+        let lvl_minus_x = start_x + cat_btn_width + BUTTON_SPACING;
+        if mouse_pos.0 >= lvl_minus_x && mouse_pos.0 <= lvl_minus_x + BUTTON_SIZE
+           && mouse_pos.1 >= row1_y && mouse_pos.1 <= row1_y + BUTTON_SIZE {
+               if self.cheat_state.level > 1 {
+                   self.cheat_state.level -= 1;
+               }
+        }
+
+        // 3. Level + 
+        // Logic matches renderer: lvl_plus_x = lvl_text_x + 50.0 + BUTTON_SPACING;
+        let lvl_text_x = lvl_minus_x + BUTTON_SIZE + BUTTON_SPACING;
+        let lvl_plus_x = lvl_text_x + 50.0 + BUTTON_SPACING; 
+        if mouse_pos.0 >= lvl_plus_x && mouse_pos.0 <= lvl_plus_x + BUTTON_SIZE
+           && mouse_pos.1 >= row1_y && mouse_pos.1 <= row1_y + BUTTON_SIZE {
+               if self.cheat_state.level < 10 {
+                   self.cheat_state.level += 1;
+               }
+        }
+
+        // 4. Entity ID (Width 200)
+        let id_x = lvl_plus_x + BUTTON_SIZE + BUTTON_SPACING;
+        let id_btn_width = 200.0;
+        if mouse_pos.0 >= id_x && mouse_pos.0 <= id_x + id_btn_width
+           && mouse_pos.1 >= row1_y && mouse_pos.1 <= row1_y + BUTTON_SIZE {
+               let ids: Vec<&String> = match self.cheat_state.category {
+                    EntityCategory::Monster => game_data.monsters.keys().collect(),
+                    EntityCategory::Hero => game_data.heroes.keys().collect(),
+               };
+               let current_idx = ids.iter().position(|id| **id == self.cheat_state.entity_id).unwrap_or(0);
+               let next_idx = (current_idx + 1) % ids.len();
+               self.cheat_state.entity_id = ids[next_idx].clone();
+        }
+
+        // 5. Spawn Button (Width 140)
+        let spawn_x = id_x + id_btn_width + BUTTON_SPACING;
+        let spawn_btn_width = 140.0;
+         if mouse_pos.0 >= spawn_x && mouse_pos.0 <= spawn_x + spawn_btn_width
+           && mouse_pos.1 >= row1_y && mouse_pos.1 <= row1_y + BUTTON_SIZE {
+               return Some(InteractionMode::Summon(
+                    self.cheat_state.entity_id.clone(),
+                    self.cheat_state.category.clone(),
+                    self.cheat_state.level
+                ));
+        }
+
+        // --- Row 2: Cheats & Toggles ---
+        let row2_y = row1_y + BUTTON_SIZE + BUTTON_SPACING;
+
+        // 1. Gold (Width 120)
+        let gold_btn_width = 120.0;
+        if mouse_pos.0 >= start_x && mouse_pos.0 <= start_x + gold_btn_width
+           && mouse_pos.1 >= row2_y && mouse_pos.1 <= row2_y + BUTTON_SIZE {
+               action_queue.push(crate::ui::actions::UiAction::CheatAddGold(100));
+        }
+
+        // 2. Toggle Fog (Width 150)
+        let fow_x = start_x + gold_btn_width + BUTTON_SPACING;
+        let fow_width = 150.0;
+        if mouse_pos.0 >= fow_x && mouse_pos.0 <= fow_x + fow_width
+           && mouse_pos.1 >= row2_y && mouse_pos.1 <= row2_y + BUTTON_SIZE {
+               action_queue.push(crate::ui::actions::UiAction::CheatToggleFog);
+        }
+
+        // 3. Instant Dig (Width 130)
+        let dig_x = fow_x + fow_width + BUTTON_SPACING;
+        let dig_width = 130.0;
+        if mouse_pos.0 >= dig_x && mouse_pos.0 <= dig_x + dig_width
+           && mouse_pos.1 >= row2_y && mouse_pos.1 <= row2_y + BUTTON_SIZE {
+               self.cheat_state.instant_dig_active = !self.cheat_state.instant_dig_active;
+        }
+
+        // 4. God Mode (Width 140)
+        let heart_x = dig_x + dig_width + BUTTON_SPACING;
+        let heart_width = 140.0;
+        if mouse_pos.0 >= heart_x && mouse_pos.0 <= heart_x + heart_width
+           && mouse_pos.1 >= row2_y && mouse_pos.1 <= row2_y + BUTTON_SIZE {
+               self.cheat_state.immortal_heart_active = !self.cheat_state.immortal_heart_active;
+               action_queue.push(crate::ui::actions::UiAction::CheatToggleImmortalHeart);
+        }
+
+        None
+    }
+
     pub fn clear_selection(&mut self) {
         self.selected_spell = None;
     }

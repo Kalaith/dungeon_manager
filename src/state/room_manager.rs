@@ -96,14 +96,14 @@ impl RoomManager {
     }
 
     /// Generate food from hatcheries based on their size
-    pub fn generate_food_from_hatcheries(&self, dt: f32) -> i32 {
-        let mut total_food_generated = 0;
+    pub fn generate_food_from_hatcheries(&self, dt: f32) -> f32 {
+        let mut total_food_generated = 0.0;
 
         for room in &self.rooms {
             if room.room_type == "hatchery" && room.active {
                 // Each hatchery tile generates 1 food per second * efficiency
                 let food_rate = room.tiles.len() as f32 * room.efficiency;
-                total_food_generated += (food_rate * dt) as i32;
+                total_food_generated += food_rate * dt;
             }
         }
         total_food_generated

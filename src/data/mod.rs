@@ -21,6 +21,7 @@ pub use technologies::TechData;
 pub use hero_buildings::HeroBuildingData;
 pub use game_config::GameConfig;
 
+#[derive(Default)]
 pub struct GameData {
     pub tiles: HashMap<String, TileData>,
     pub rooms: HashMap<String, RoomData>,

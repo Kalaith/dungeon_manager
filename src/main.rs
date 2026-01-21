@@ -13,6 +13,9 @@ mod config;
 mod draw_utils;
 mod sprite_variation;
 
+#[cfg(test)]
+mod combat_tests;
+
 use data::GameData;
 use state::MapType;
 use state::{GamePhase, InteractionMode, DragSelection};
@@ -49,7 +52,7 @@ impl Game {
             renderer: GameRenderer::new(),
             interaction_mode: InteractionMode::None,
             hovered_tile: None,
-            selected_map_type: MapType::File("assets/maps/level_1.json".to_string()),
+            selected_map_type: MapType::Standard, // Default to Standard Map
             selected_entity: None,
             selected_room: None,
             held_entity: None,
@@ -89,7 +92,7 @@ impl Game {
         InputHandler::update(
             dt,
             &mut self.phase,
-            &self.game_data,
+            &mut self.game_data, // Changed to mut to allow applying cheats
             &mut self.interaction_mode,
             &mut self.selected_map_type,
             &mut self.hovered_tile,
@@ -128,24 +131,46 @@ impl Game {
     }
 
     fn draw(&mut self) {
-        let game_state = if let GamePhase::Playing(ref state) = self.phase {
-            Some(state)
-        } else {
-            None
-        };
+        clear_background(Color::new(0.05, 0.05, 0.05, 1.0)); // Ensure background is cleared every frame
 
-        self.renderer.draw(
-            &self.phase,
-            game_state,
-            &self.interaction_mode,
-            &self.selected_map_type,
-            self.hovered_tile,
-            self.held_entity,
-            self.selected_entity,
-            self.selected_room,
-            &self.game_data,
-            &self.drag_selection,
-        );
+        match self.phase {
+            GamePhase::Playing(ref mut state) => {
+                if let Some(ref data) = self.game_data {
+                    self.renderer.draw_game(
+                        state,
+                        &self.interaction_mode,
+                        self.hovered_tile,
+                        self.held_entity,
+                        data,
+                        &self.drag_selection
+                    );
+                }
+                self.renderer.draw_gui(
+                    state, 
+                    &mut self.interaction_mode, 
+                    self.hovered_tile, 
+                    self.held_entity, 
+                    self.selected_entity, 
+                    self.selected_room, 
+                    &self.game_data, // Helper takes Option
+                    &self.drag_selection
+                );
+            },
+            _ => {
+                self.renderer.draw(
+                    &self.phase,
+                    None,
+                    &mut self.interaction_mode,
+                    &self.selected_map_type,
+                    self.hovered_tile,
+                    self.held_entity,
+                    self.selected_entity,
+                    self.selected_room,
+                    &self.game_data,
+                    &self.drag_selection,
+                );
+            }
+        }
     }
 }
 

@@ -387,13 +387,7 @@ mod tests {
         use crate::data::GameData;
         use std::collections::HashMap;
 
-        let game_data = GameData {
-            tiles: HashMap::new(),
-            rooms: HashMap::new(),
-            monsters: HashMap::new(),
-            heroes: HashMap::new(),
-            spells: HashMap::new(),
-        };
+        let game_data = GameData::default();
 
         let grid = create_grid(5, 5, &game_data);
         let center = TilePos::new(2, 2);

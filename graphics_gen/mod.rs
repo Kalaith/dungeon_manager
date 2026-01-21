@@ -65,6 +65,7 @@ fn generate_tile_sprites() {
     tiles::save_tile("lava", tiles::create_lava());
     tiles::save_tile("water", tiles::create_water());
     tiles::save_tile("bridge", tiles::create_bridge());
+    tiles::save_tile("gold_pile", tiles::create_gold_pile());
 
     // Floor variations
     tiles::save_tile("corrupted_floor", tiles::create_corrupted_floor());

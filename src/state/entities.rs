@@ -91,6 +91,7 @@ impl Entity {
             EntityType::Creature(state) => state.health > 0.0,
             EntityType::Hero(state) => state.health > 0.0,
             EntityType::Structure(state) => state.health > 0.0,
+            EntityType::ResourcePile(_) => true,
         }
     }
 }
@@ -101,6 +102,13 @@ pub enum EntityType {
     Creature(CreatureState),
     Hero(HeroState),
     Structure(StructureState),
+    ResourcePile(ResourcePileState),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EntityCategory {
+    Monster,
+    Hero,
 }
 
 /// Runtime state for a static structure
@@ -122,6 +130,22 @@ impl StructureState {
     
     pub fn take_damage(&mut self, amount: f32) {
         self.health = (self.health - amount).max(0.0);
+    }
+}
+
+/// Runtime state for a resource pile
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourcePileState {
+    pub resource_type: String, // "gold"
+    pub amount: i32,
+}
+
+impl ResourcePileState {
+    pub fn new(resource_type: String, amount: i32) -> Self {
+        Self {
+            resource_type,
+            amount,
+        }
     }
 }
 
@@ -445,6 +469,12 @@ pub enum Task {
 
     /// Collecting wages from treasury
     CollectWages(usize), // room_id
+
+    /// Claiming a tile
+    ClaimTile(TilePos),
+
+    /// Picking up a resource pile
+    PickupResource(EntityId),
 }
 
 impl Task {
@@ -463,6 +493,8 @@ impl Task {
             Task::MoveTo(_) => "move",
             Task::Attack(_) => "attack",
             Task::Flee => "flee",
+            Task::ClaimTile(_) => "claim_tile",
+            Task::PickupResource(_) => "pickup_resource",
         }
     }
 
@@ -561,6 +593,21 @@ impl EntityManager {
         self.next_id += 1;
 
         let entity = Entity::new_structure(id, pos, structure_state);
+        self.entities.insert(id, entity);
+        id
+    }
+
+    /// Spawn a new resource pile
+    pub fn spawn_resource_pile(&mut self, pos: TilePos, state: ResourcePileState) -> EntityId {
+        let id = self.next_id;
+        self.next_id += 1;
+
+        let entity = Entity {
+            id,
+            entity_type: EntityType::ResourcePile(state),
+            pos,
+            visual_pos: (pos.x as f32, pos.y as f32),
+        };
         self.entities.insert(id, entity);
         id
     }

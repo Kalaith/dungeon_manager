@@ -87,7 +87,14 @@ pub fn can_cast_spell(
                 return CastResult::InvalidTarget;
             }
             // Check range if specified
+            // Start check
             if let Some(pos) = target_pos {
+                // Must be claimed by player
+                let tile_owned = game_state.get_tile(pos).map(|t| t.ownership == Ownership::Player).unwrap_or(false);
+                if !tile_owned {
+                    return CastResult::InvalidTarget;
+                }
+
                 if let Some(heart_pos) = game_state.find_dungeon_heart_position() {
                     let distance = ((pos.x - heart_pos.x).abs() + (pos.y - heart_pos.y).abs()) as u32;
                     if spell.targeting.range > 0 && distance > spell.targeting.range {
@@ -248,7 +255,9 @@ fn apply_damage_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &m
                     structure.building_id, damage, structure.health, structure.max_health
                 );
             }
+            crate::state::entities::EntityType::ResourcePile(_) => {}
         }
+
     }
 }
 
@@ -278,6 +287,7 @@ fn apply_heal_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &mut
                     structure.building_id, heal_amount, structure.health, structure.max_health
                 );
             }
+            crate::state::entities::EntityType::ResourcePile(_) => {} // Cannot heal a pile
         }
     }
 }
@@ -309,13 +319,11 @@ fn apply_status_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &m
 
             match &mut entity.entity_type {
                 crate::state::entities::EntityType::Creature(creature) => {
-                    // Add status effect
                     creature.status_effects.push(crate::state::entities::StatusEffect {
                         effect_type: status.clone(),
                         duration,
                         strength,
                     });
-
                     eprintln!(
                         "Status applied: {} gained '{}' for {} seconds",
                         creature.creature_id, status, duration
@@ -332,9 +340,8 @@ fn apply_status_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &m
                         hero.hero_id, status, duration
                     );
                 }
-                crate::state::entities::EntityType::Structure(_) => {
-                    // Structures currently don't have status effects
-                }
+                crate::state::entities::EntityType::Structure(_) => {}
+                crate::state::entities::EntityType::ResourcePile(_) => {}
             }
         }
     }

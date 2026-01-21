@@ -65,6 +65,8 @@ pub struct Projectile {
     pub duration: f32,
     /// Time elapsed
     pub elapsed: f32,
+    /// Damage to deal on impact
+    pub damage: f32,
 }
 
 impl Projectile {
@@ -75,6 +77,7 @@ impl Projectile {
         projectile_type: ProjectileType,
         attacker_id: EntityId,
         defender_id: EntityId,
+        damage: f32,
     ) -> Self {
         let duration = projectile_type.duration();
         Self {
@@ -86,6 +89,7 @@ impl Projectile {
             defender_id,
             duration,
             elapsed: 0.0,
+            damage,
         }
     }
 
@@ -117,6 +121,14 @@ impl Projectile {
     }
 }
 
+/// Event generated when projectile hits target
+pub struct Impact {
+    pub projectile_type: ProjectileType,
+    pub attacker_id: EntityId,
+    pub defender_id: EntityId,
+    pub damage: f32,
+}
+
 /// Manager for all active projectiles
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ProjectileManager {
@@ -139,9 +151,10 @@ impl ProjectileManager {
         attack_type: &str,
         attacker_id: EntityId,
         defender_id: EntityId,
+        damage: f32,
     ) {
         let projectile_type = ProjectileType::from_attack_type(attack_type);
-        let projectile = Projectile::new(start_pos, end_pos, projectile_type, attacker_id, defender_id);
+        let projectile = Projectile::new(start_pos, end_pos, projectile_type, attacker_id, defender_id, damage);
         self.projectiles.push(projectile);
     }
 
@@ -152,17 +165,33 @@ impl ProjectileManager {
         target_pos: TilePos,
         attack_type: &str,
         attacker_id: EntityId,
+        damage: f32,
     ) {
         let projectile_type = ProjectileType::from_attack_type(attack_type);
         let end_pos = (target_pos.x as f32, target_pos.y as f32);
         // Use attacker_id as both since there's no defender entity
-        let projectile = Projectile::new(start_pos, end_pos, projectile_type, attacker_id, attacker_id);
+        let projectile = Projectile::new(start_pos, end_pos, projectile_type, attacker_id, attacker_id, damage);
         self.projectiles.push(projectile);
     }
 
-    /// Update all projectiles, removing completed ones
-    pub fn update(&mut self, dt: f32) {
-        self.projectiles.retain_mut(|p| p.update(dt));
+    /// Update all projectiles, removing completed ones and returning impacts
+    pub fn update(&mut self, dt: f32) -> Vec<Impact> {
+        let mut impacts = Vec::new();
+        
+        self.projectiles.retain_mut(|p| {
+            let still_active = p.update(dt);
+            if !still_active {
+                impacts.push(Impact {
+                    projectile_type: p.projectile_type.clone(),
+                    attacker_id: p.attacker_id,
+                    defender_id: p.defender_id,
+                    damage: p.damage,
+                });
+            }
+            still_active
+        });
+        
+        impacts
     }
 
     /// Get all active projectiles for rendering

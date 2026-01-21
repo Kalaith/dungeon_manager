@@ -40,6 +40,12 @@ pub enum UiAction {
     LoadGame,
     Cancel,
     TogglePause,
+    
+    // Cheats
+    CheatAddGold(i32),
+    CheatToggleFog,
+    CheatInstantDig(crate::state::tile_state::TilePos),
+    CheatToggleImmortalHeart,
 }
 
 /// Target for spell casting

@@ -20,4 +20,5 @@ pub enum InteractionMode {
     SetAttackMarker,
     SetDefendMarker,
     SaveGame,
+    Summon(String, crate::state::entities::EntityCategory, u32), // id, category, level
 }

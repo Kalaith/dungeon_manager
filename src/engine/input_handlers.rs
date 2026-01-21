@@ -251,6 +251,7 @@ pub fn handle_pickup(
             crate::state::entities::EntityType::Creature(_) => true,
             crate::state::entities::EntityType::Hero(h) => h.is_captured,
             crate::state::entities::EntityType::Structure(_) => false,
+            crate::state::entities::EntityType::ResourcePile(_) => false,
         };
         
         if can_pickup {

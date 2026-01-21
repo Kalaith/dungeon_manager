@@ -4,6 +4,15 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
+/// Accumulator for fractional resource gains
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ResourceAccumulator {
+    pub gold: f32,
+    pub mana: f32,
+    pub food: f32,
+    pub materials: f32,
+}
+
 /// Player's current resources and state
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerState {
@@ -16,6 +25,10 @@ pub struct PlayerState {
     pub max_food: i32,
     pub materials: i32,
     pub max_materials: i32,
+
+    // Fractional resource accumulator
+    #[serde(default)]
+    pub accumulators: ResourceAccumulator,
 
     // Research and unlocks
     pub unlocked_rooms: HashSet<String>,
@@ -75,6 +88,8 @@ impl PlayerState {
             max_food: game_data.config.player_initial_capacity.max_food,
             materials: game_data.config.player_starting_resources.materials,
             max_materials: game_data.config.player_initial_capacity.max_materials,
+            
+            accumulators: ResourceAccumulator::default(),
 
             unlocked_rooms,
             unlocked_creatures,
@@ -121,6 +136,30 @@ impl PlayerState {
         self.mana = (self.mana + mana).min(self.max_mana);
         self.food = (self.food + food).min(self.max_food);
         self.materials = (self.materials + materials).min(self.max_materials);
+    }
+
+    /// Add resources with precision, accumulating fractional amounts
+    pub fn add_resources_precise(&mut self, gold: f32, mana: f32, food: f32, materials: f32) {
+        // Accumulate fractional partials
+        self.accumulators.gold += gold;
+        self.accumulators.mana += mana;
+        self.accumulators.food += food;
+        self.accumulators.materials += materials;
+
+        // Extract integer parts
+        let gold_int = self.accumulators.gold.trunc() as i32;
+        let mana_int = self.accumulators.mana.trunc() as i32;
+        let food_int = self.accumulators.food.trunc() as i32;
+        let materials_int = self.accumulators.materials.trunc() as i32;
+
+        // Reduce accumulators by the extracted integer parts
+        self.accumulators.gold -= gold_int as f32;
+        self.accumulators.mana -= mana_int as f32;
+        self.accumulators.food -= food_int as f32;
+        self.accumulators.materials -= materials_int as f32;
+
+        // Add to main resources (can be negative consumption)
+        self.add_resources(gold_int, mana_int, food_int, materials_int);
     }
 
     /// Check if a room type is unlocked
@@ -253,6 +292,7 @@ mod tests {
         let mut player = PlayerState {
             gold: 200, mana: 1000, food: 100, max_gold: 10000, max_mana: 5000, max_food: 1000,
             materials: 100, max_materials: 500,
+            accumulators: ResourceAccumulator::default(),
             unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
             completed_technologies: HashSet::new(),
             research_points: 0, active_research: None, research_progress: 0.0,
@@ -269,10 +309,44 @@ mod tests {
     }
 
     #[test]
+    fn test_resource_accumulation() {
+        let mut player = PlayerState {
+            gold: 0, mana: 0, food: 0, max_gold: 100, max_mana: 100, max_food: 100,
+            materials: 0, max_materials: 100,
+            accumulators: ResourceAccumulator::default(),
+            unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
+            completed_technologies: HashSet::new(),
+            research_points: 0, active_research: None, research_progress: 0.0,
+            dungeon_heart_health: 100.0, max_creatures: 20, current_creature_count: 0,
+            claimed_tile_count: 0, spell_cooldowns: HashMap::new(),
+            kills: HashMap::new(), deaths: HashMap::new(), gold_mined: 0, spells_cast: HashMap::new(), game_time: 0.0,
+        };
+
+        // Add small fractional amount 10 times
+        for _ in 0..10 {
+            player.add_resources_precise(0.1, 0.0, 0.0, 0.0);
+        }
+
+        // Should have 1 gold
+        assert_eq!(player.gold, 1);
+        // Accumulator should be effectively 0 (or close to it due to float precision)
+        assert!(player.accumulators.gold < 0.001);
+
+        // Add 0.3 three times
+        for _ in 0..3 {
+            player.add_resources_precise(0.0, 0.35, 0.0, 0.0);
+        }
+        // 0.35 * 3 = 1.05
+        assert_eq!(player.mana, 1);
+        assert!(player.accumulators.mana > 0.04); // Remaining 0.05
+    }
+
+    #[test]
     fn test_cannot_overspend() {
         let mut player = PlayerState {
             gold: 200, mana: 1000, food: 100, max_gold: 10000, max_mana: 5000, max_food: 1000,
             materials: 100, max_materials: 500,
+            accumulators: ResourceAccumulator::default(),
             unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
             completed_technologies: HashSet::new(),
             research_points: 0, active_research: None, research_progress: 0.0,
@@ -291,6 +365,7 @@ mod tests {
         let mut player = PlayerState {
             gold: 200, mana: 1000, food: 100, max_gold: 10000, max_mana: 5000, max_food: 1000,
             materials: 100, max_materials: 500,
+            accumulators: ResourceAccumulator::default(),
             unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
             completed_technologies: HashSet::new(),
             research_points: 0, active_research: None, research_progress: 0.0,

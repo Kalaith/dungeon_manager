@@ -23,6 +23,7 @@ fn get_entity_attack_type(entity_type: &EntityType, game_data: &GameData) -> Str
             .map(|d| d.combat.attack_type.clone())
             .unwrap_or_else(|| "melee".to_string()),
         EntityType::Structure(_) => "none".to_string(),
+        EntityType::ResourcePile(_) => "none".to_string(),
     }
 }
 
@@ -68,6 +69,13 @@ pub struct GameState {
 
     /// Active attack projectiles for visual effects
     pub projectiles: ProjectileManager,
+
+    /// In-game cheat menu state
+    pub cheat_menu: crate::ui::cheat_menu::CheatMenuState,
+    
+    /// Cheat toggles
+    pub cheat_fog_enabled: bool,
+    pub cheat_immortal_heart: bool,
 }
 
 impl GameState {
@@ -109,9 +117,9 @@ impl GameState {
                         // Randomly pick Spider or Lizard
                         let monster_id = if macroquad::rand::gen_range(0.0f32, 1.0) < 0.5 { "spider" } else { "lizard" };
                         spawners.push(crate::engine::spawner_logic::MonsterSpawner::new(
-                            pos, 
-                            monster_id.to_string(), 
-                            10 // Max 10 monsters
+                            pos,
+                            monster_id.to_string(),
+                            game_data.config.spawning.max_monsters_per_spawner
                         ));
                     }
                 }
@@ -137,10 +145,13 @@ impl GameState {
             game_over: false,
             victory: false,
             notifications: crate::state::notifications::NotificationManager::new(),
-            dungeon_heart_health: 1000.0,
+            dungeon_heart_health: game_data.config.dungeon.heart_max_health,
             attack_marker: None,
             defend_marker: None,
             projectiles: ProjectileManager::new(),
+            cheat_menu: crate::ui::cheat_menu::CheatMenuState::default(),
+            cheat_fog_enabled: true,
+            cheat_immortal_heart: false,
         };
 
         // Recalculate max gold and other room-based stats
@@ -153,7 +164,7 @@ impl GameState {
             .count();
             
         if imp_count == 0 {
-            state.spawn_starting_imps(game_data, 3);
+            state.spawn_starting_imps(game_data, game_data.config.dungeon.initial_imp_count);
         }
 
         state
@@ -164,7 +175,17 @@ impl GameState {
         self.tick_accumulator += dt;
         self.camera.update(dt); // Update smooth camera zoom
         self.notifications.update(dt); // Update notification display timers
-        self.projectiles.update(dt); // Update attack projectiles
+        
+        // Update attack projectiles and resolve impacts
+        let impacts = self.projectiles.update(dt);
+        for impact in impacts {
+             // Resolve deferred combat impact
+             crate::engine::combat::apply_projectile_impact(
+                 &impact, 
+                 &mut self.entities, 
+                 game_data
+             );
+        }
 
         // Smooth movement interpolation
         for entity in self.entities.all_mut() {
@@ -275,10 +296,10 @@ impl GameState {
 
                         // Determine attack range based on attack type
                         let attack_range = match attack_type.as_str() {
-                            "melee" => 1,  // Must be adjacent (Manhattan distance 1)
-                            "ranged" => 5, // Can attack from 5 tiles away
-                            "magic" => 8,  // Can attack from 8 tiles away
-                            _ => 1,        // Default to melee range
+                            "melee" => game_data.config.combat_ranges.melee,
+                            "ranged" => game_data.config.combat_ranges.ranged,
+                            "magic" => game_data.config.combat_ranges.magic,
+                            _ => game_data.config.combat_ranges.melee,
                         };
 
                         if manhattan_dist <= attack_range {
@@ -305,10 +326,10 @@ impl GameState {
 
             // Spawn projectiles for each attacker that landed an attack
             for (attacker_id, visual_pos, attack_type) in attackers {
-                self.projectiles.spawn_at_position(visual_pos, target_pos, &attack_type, attacker_id);
+                self.projectiles.spawn_at_position(visual_pos, target_pos, &attack_type, attacker_id, 0.0);
             }
 
-            if total_damage > 0.0 {
+            if total_damage > 0.0 && !self.cheat_immortal_heart {
                 self.dungeon_heart_health -= total_damage;
                 eprintln!("Heart taking damage! Health: {:.1} -> {:.1}", self.dungeon_heart_health + total_damage, self.dungeon_heart_health);
                 if self.dungeon_heart_health <= 0.0 && !self.game_over {
@@ -328,6 +349,45 @@ impl GameState {
 
                     let mut hero_state_clone = hero_state.clone();
                     crate::engine::hero_ai::update_hero_ai(entity, &mut hero_state_clone, self, game_data, dt);
+                    
+                    // HANDLE GOLD PICKUP
+                    // If hero is on a tile with a gold pile, pick it up
+                    // This is done here because we need mutable access to entities (to remove the pile)
+                    let hero_pos = entity.pos;
+                    let mut picked_up_value = 0;
+                    let mut pile_to_remove = None;
+
+                    // Scan for pile at hero position
+                    // We can't iterate self.entities mutably while iterating hero_ids easily, 
+                    // but we can query by position if we had a spatial map, or just scan all (slow but safe for now)
+                    // Or better: scan all piles? Piles are entities.
+                    // Doing a full scan inside a loop is O(N*M). Optimization: Only do this if hero goal is StealGold?
+                    // Let's do it if hero_state_clone.current_goal is StealGold or Explore
+                    
+                    let can_pickup = matches!(hero_state_clone.current_goal, 
+                        crate::state::entities::HeroGoal::StealGold(_) | crate::state::entities::HeroGoal::Explore);
+                        
+                    if can_pickup {
+                         for (other_id, other) in self.entities.entities() {
+                            if *other_id == hero_id { continue; }
+                            if other.pos == hero_pos {
+                                if let crate::state::entities::EntityType::ResourcePile(pile) = &other.entity_type {
+                                    if pile.resource_type == "gold" {
+                                        picked_up_value = pile.amount;
+                                        pile_to_remove = Some(*other_id);
+                                        break; // Pick up one at a time
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if let Some(pile_id) = pile_to_remove {
+                        self.entities.remove(pile_id);
+                        hero_state_clone.gold_stolen += picked_up_value;
+                         eprintln!("Hero {} stole gold pile worth {}", hero_id, picked_up_value);
+                    }
+
                      // Update the entity with the new hero state
                     if let Some(entity_mut) = self.entities.get_mut(hero_id) {
                         if let Some(hero_state_mut) = entity_mut.as_hero_mut() {
@@ -496,12 +556,12 @@ impl GameState {
             dt,
             self.attack_marker,
             self.defend_marker,
-            |task, room_manager| GameState::get_task_target_position_static(task, room_manager),
+            |task, room_manager, entities| GameState::get_task_target_position_static(task, room_manager, entities),
         );
     }
 
     /// Static version of get_task_target_position that doesn't require &self
-    fn get_task_target_position_static(task: &crate::state::entities::Task, room_manager: &crate::state::room_manager::RoomManager) -> Option<TilePos> {
+    fn get_task_target_position_static(task: &crate::state::entities::Task, room_manager: &crate::state::room_manager::RoomManager, entities: &crate::state::entities::EntityManager) -> Option<TilePos> {
         use crate::state::entities::Task;
 
         match task {
@@ -517,8 +577,12 @@ impl GameState {
                     .map(|room: &crate::engine::room_validator::Room| room.get_center())
             }
             Task::Dig(pos) => Some(*pos),
+            Task::ClaimTile(pos) => Some(*pos),
+            Task::PickupResource(target_id) => entities.get(*target_id).map(|e| e.pos),
             Task::MoveTo(pos) => Some(*pos),
-            Task::Attack(entity_id) => None, // Would need entity positions
+            Task::Attack(entity_id) => {
+                entities.get(*entity_id).map(|e| e.pos)
+            },
             Task::Idle | Task::Flee => None,
         }
     }
@@ -538,14 +602,14 @@ impl GameState {
         );
 
         // Apply state changes from task result
-        if result.gold_change != 0 {
-            self.player.add_resources(result.gold_change, 0, 0, 0);
+        if result.gold_change.abs() > 0.001 {
+            self.player.add_resources_precise(result.gold_change, 0.0, 0.0, 0.0);
         }
-        if result.food_change != 0 {
-            self.player.add_resources(0, 0, result.food_change, 0);
+        if result.food_change.abs() > 0.001 {
+            self.player.add_resources_precise(0.0, 0.0, result.food_change, 0.0);
         }
-        if result.materials_change != 0 {
-            self.player.add_resources(0, 0, 0, result.materials_change);
+        if result.materials_change.abs() > 0.001 {
+            self.player.add_resources_precise(0.0, 0.0, 0.0, result.materials_change);
         }
         if result.research_change > 0.0 {
             if let Some(active_tech_id) = &self.player.active_research {
@@ -725,10 +789,11 @@ impl GameState {
     }
 
     /// Generate food from hatcheries based on their size
+    /// Generate food from hatcheries based on their size
     fn generate_food_from_hatcheries(&mut self, dt: f32) {
         let total_food_generated = self.room_manager.generate_food_from_hatcheries(dt);
-        if total_food_generated > 0 {
-            self.player.add_resources(0, 0, total_food_generated, 0);
+        if total_food_generated > 0.0 {
+            self.player.add_resources_precise(0.0, 0.0, total_food_generated, 0.0);
         }
     }
 
@@ -925,14 +990,26 @@ impl GameState {
                 let defender_visual_pos = defender.visual_pos;
                 let result = resolve_combat_tick(attacker, defender, dt, game_data);
                 
-                // Spawn projectile if damage was dealt
-                if result.damage_dealt > 0.0 {
+                // Handle projectile spawning
+                if let Some((p_type, damage)) = result.projectile_spawned.clone() {
+                    // Ranged/Magic: Spawn actual projectile carrying damage
                     self.projectiles.spawn(
+                        attacker_visual_pos,
+                        defender_visual_pos,
+                        &p_type,
+                        attacker_id,
+                        target_id,
+                        damage,
+                    );
+                } else if result.damage_dealt > 0.0 {
+                    // Melee with damage: Spawn visual projectile (0 damage)
+                     self.projectiles.spawn(
                         attacker_visual_pos,
                         defender_visual_pos,
                         &attack_type,
                         attacker_id,
                         target_id,
+                        0.0,
                     );
                 }
                 
@@ -1011,12 +1088,9 @@ impl GameState {
              }
         }
 
-        // Get conversion rates
-        // Prison Rate (for Skeletons)
-        let skeleton_rate = 0.05; // Fixed slow rate for now, or fetch from room data
-
-        // Torture Rate (for Conversion)
-        let torture_base_rate = 0.1; // Base rate
+        // Get conversion rates from config
+        let skeleton_rate = game_data.config.conversion.skeleton_rate;
+        let torture_base_rate = game_data.config.conversion.torture_rate;
         
         let mut conversions_to_process: Vec<(EntityId, String, bool)> = Vec::new(); // (Id, Type, IsTorture)
 

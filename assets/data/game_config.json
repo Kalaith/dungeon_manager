@@ -1,12 +1,12 @@
 {
   "player_starting_resources": {
-    "gold": 2000,
+    "gold": 500,
     "mana": 100,
     "food": 100,
     "materials": 100
   },
   "player_initial_capacity": {
-    "max_gold": 2000,
+    "max_gold": 0,
     "max_mana": 0,
     "max_food": 500,
     "max_materials": 100
@@ -18,10 +18,10 @@
     "creature_spawn_max_interval": 30.0
   },
   "hero_waves": {
-    "initial_delay": 30.0,
+    "initial_delay": 300.0,
     "wave_interval": 180.0,
     "defender_ratio": 0.5,
-    "wave_scaling_multiplier": 1.5,
+    "wave_scaling_multiplier": 1.1,
     "spawn_rate_decay": 0.9,
     "min_spawn_rate": 5.0,
     "spawn_search_radius": 4
@@ -56,8 +56,8 @@
     }
   },
   "fog_of_war": {
-    "enabled": true,
-    "sight_radius": 5
+    "enabled": false,
+    "sight_radius": 50
   },
   "economy": {
     "room_sell_refund_percentage": 0.5
@@ -101,7 +101,21 @@
     "mana_crystal_reward": 20
   },
   "spawning": {
-    "monster_spawner_interval": 60.0
+    "monster_spawner_interval": 60.0,
+    "max_monsters_per_spawner": 10
+  },
+  "combat_ranges": {
+    "melee": 1,
+    "ranged": 5,
+    "magic": 8
+  },
+  "dungeon": {
+    "heart_max_health": 1000.0,
+    "initial_imp_count": 3
+  },
+  "conversion": {
+    "skeleton_rate": 0.05,
+    "torture_rate": 0.1
   },
   "traps": {
     "default_cooldown": 5.0

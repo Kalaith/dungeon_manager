@@ -96,6 +96,24 @@ pub fn create_gem_seam() -> RgbaImage {
     img
 }
 
+pub fn create_gold_pile() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([180, 140, 20, 255])); // Darker gold base
+    for y in 0..TILE_HEIGHT {
+        for x in 0..TILE_WIDTH {
+            let hash = ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            if hash % 5 < 2 {
+                 img.put_pixel(x, y, Rgba([255, 215, 0, 255])); // Shiny gold coins
+            } else if hash % 7 < 1 {
+                 img.put_pixel(x, y, Rgba([255, 255, 150, 255])); // Highlights
+            }
+        }
+    }
+    // Make it look like a pile (fade edges/corners?) - Texture wrapping on cube might make this weird if edges are dark.
+    // For a simple texture, uniform-ish is better.
+    add_noise(&mut img, 10);
+    img
+}
+
 pub fn create_mana_crystal() -> RgbaImage {
     let mut img = create_tile_base(Rgba([40, 40, 60, 255]));
     let center_x = TILE_WIDTH / 2;

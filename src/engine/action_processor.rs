@@ -213,8 +213,45 @@ fn process_single_action(
                      }
                  }
              } else {
-                 game_state.notifications.warning("No save game found!");
-             }
+                game_state.notifications.warning("No save game found!");
+            }
+        }
+
+        UiAction::CheatAddGold(amount) => {
+            game_state.player.gold += amount;
+            game_state.notifications.success(format!("Added {} Gold", amount));
+        }
+
+        UiAction::CheatToggleFog => {
+            game_state.cheat_fog_enabled = !game_state.cheat_fog_enabled;
+            if game_state.cheat_fog_enabled {
+                 game_state.notifications.info("Fog Enabled");
+            } else {
+                 game_state.notifications.warning("Fog Disabled (Map Revealed)");
+            }
+        }
+
+        UiAction::CheatInstantDig(pos) => {
+            if let Some(tile) = game_state.get_tile_mut(pos) {
+                // "Instant Dig": Turn walls/earth/resources into owned floor
+                if tile.tile_type != "floor" && tile.tile_type != "claimed_floor" {
+                     // Basic logic: if it has resources, give them? 
+                     // For now, just clear the tile.
+                     tile.tile_type = "floor".to_string();
+                     tile.ownership = crate::state::tile_state::Ownership::Player;
+                     tile.marked_for_dig = false; // Clear mark if it was marked
+                     // Update bitmask/visuals? Usually happens in update loop or separate system.
+                }
+            }
+        }
+
+        UiAction::CheatToggleImmortalHeart => {
+            game_state.cheat_immortal_heart = !game_state.cheat_immortal_heart;
+             if game_state.cheat_immortal_heart {
+                 game_state.notifications.success("Immortal Heart ENABLED");
+            } else {
+                 game_state.notifications.warning("Immortal Heart DISABLED");
+            }
         }
     }
 

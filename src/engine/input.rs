@@ -15,7 +15,7 @@ impl InputHandler {
     pub fn update(
         dt: f32,
         phase: &mut GamePhase,
-        game_data: &Option<GameData>,
+        game_data: &mut Option<GameData>,
         interaction_mode: &mut InteractionMode,
         selected_map_type: &mut MapType,
         hovered_tile: &mut Option<TilePos>,
@@ -25,13 +25,18 @@ impl InputHandler {
         sidebar: &mut Sidebar,
         action_queue: &mut ActionQueue,
         drag_selection: &mut DragSelection,
+
     ) {
         match phase {
             GamePhase::Loading => {
                 // Loading is handled asynchronously in main loop
             }
             GamePhase::MainMenu => {
-                Self::handle_main_menu(selected_map_type, phase, game_data);
+                Self::handle_main_menu(
+                    selected_map_type,
+                    phase,
+                    game_data,
+                );
             }
             GamePhase::Playing(state) => {
                 if let Some(ref data) = game_data {
@@ -54,55 +59,46 @@ impl InputHandler {
     fn handle_main_menu(
         selected_map_type: &mut MapType, 
         phase: &mut GamePhase, 
-        game_data: &Option<GameData>
+        game_data: &mut Option<GameData>,
     ) {
         let mouse_pos = mouse_position();
+        
+        // Cheat menu popup removed
 
-        // Map type selection buttons (coords matched from original)
-        // Map type selection buttons (coords matched from original)
-        let map_button_y = screen_height() / 2.0 - 50.0;
-        let map_button_width = 160.0;
-        let map_button_height = 40.0;
-        let map_button_spacing = 10.0;
-        let total_width = (map_button_width + map_button_spacing) * 5.0 - map_button_spacing; // 5 buttons now
-        let map_button_start_x = screen_width() / 2.0 - total_width / 2.0;
 
-        let map_types = [
-            (MapType::Standard, 0),
-            (MapType::Rich, 1),
-            (MapType::Hazardous, 2),
-            (MapType::Test, 3),
-            (MapType::File("assets/maps/level_1.json".to_string()), 4),
-        ];
+        // --- Standard Main Menu Buttons ---
 
-        if is_mouse_button_pressed(MouseButton::Left) {
-            for (map_type, index) in &map_types {
-                let btn_x = map_button_start_x + (map_button_width + map_button_spacing) * (*index as f32);
-                if mouse_pos.0 >= btn_x
-                    && mouse_pos.0 <= btn_x + map_button_width
-                    && mouse_pos.1 >= map_button_y
-                    && mouse_pos.1 <= map_button_y + map_button_height
-                {
-                    *selected_map_type = map_type.clone();
-                }
-            }
-        }
+        // Map Type is effectively hardcoded to Standard via the button
+        // "Standard Map" Button can be just a label or selection setter.
+        // Let's implement the buttons layout:
+        // 1. Standard Map (selects Standard)
+        // 2. Start Game
+        // 3. Load Game
+        // 4. Cheats
 
-        // Check for SPACE key or mouse click on start button
-        let button_x = screen_width() / 2.0 - 100.0;
-        let button_y = screen_height() / 2.0 + 60.0;
+        // Buttons
         let button_width = 200.0;
         let button_height = 50.0;
+        let spacing = 20.0;
+        let start_y = screen_height() / 2.0 - 50.0;
+        let center_x = screen_width() / 2.0 - button_width / 2.0;
 
+        // Button 1: Start Game (Act as Standard Map + Start)
+        let start_btn_y = start_y;
+        
         let should_start = is_key_pressed(KeyCode::Space)
             || (is_mouse_button_pressed(MouseButton::Left)
-                && mouse_pos.0 >= button_x
-                && mouse_pos.0 <= button_x + button_width
-                && mouse_pos.1 >= button_y
-                && mouse_pos.1 <= button_y + button_height);
+                && mouse_pos.0 >= center_x
+                && mouse_pos.0 <= center_x + button_width
+                && mouse_pos.1 >= start_btn_y
+                && mouse_pos.1 <= start_btn_y + button_height);
 
         if should_start {
-            if let Some(ref data) = game_data {
+            // Force Standard Map type
+            *selected_map_type = MapType::Standard;
+            
+            if let Some(ref mut data) = game_data {
+                // Cheats removed from here
                 let game_state = GameState::new_with_map_type(
                     50,
                     50,
@@ -113,11 +109,11 @@ impl InputHandler {
             }
         }
         
-        // Handle Load Game
-         let load_y = button_y + button_height + 20.0; // Spacing logic matched with renderer
-         let should_load = is_mouse_button_pressed(MouseButton::Left)
-            && mouse_pos.0 >= button_x
-            && mouse_pos.0 <= button_x + button_width
+        // Button 3: Load Game
+        let load_y = start_btn_y + button_height + spacing;
+        let should_load = is_mouse_button_pressed(MouseButton::Left)
+            && mouse_pos.0 >= center_x
+            && mouse_pos.0 <= center_x + button_width
             && mouse_pos.1 >= load_y
             && mouse_pos.1 <= load_y + button_height;
 
@@ -127,6 +123,8 @@ impl InputHandler {
                 match crate::state::save_system::load_game("slot_1") {
                     Ok(loaded_state) => {
                         println!("Game loaded successfully!");
+                        // Overwrite cheats with loaded state? 
+                        // Actually loading game replaces state, so cheats don't matter unless persistent.
                         *phase = GamePhase::Playing(loaded_state);
                     }
                     Err(e) => {
@@ -135,6 +133,7 @@ impl InputHandler {
                 }
             }
         }
+
     }
 
     fn handle_playing(
@@ -157,6 +156,9 @@ impl InputHandler {
             }
             return false; // Block other input
         }
+
+        // Cheat Menu (Moved to Sidebar)
+        // if is_key_pressed(KeyCode::F1) { ... }
 
         if is_key_pressed(KeyCode::Escape) {
             action_queue.push(crate::ui::actions::UiAction::TogglePause);
@@ -324,7 +326,7 @@ impl InputHandler {
                 if mouse_over_ui {
                     drag_selection.cancel();
                 } else if let Some((min, max)) = drag_selection.finish() {
-                    Self::apply_drag_action(state, game_data, interaction_mode, min, max);
+                    Self::apply_drag_action(state, game_data, interaction_mode, min, max, sidebar, action_queue);
                 }
             }
         } else {
@@ -332,7 +334,7 @@ impl InputHandler {
             if is_mouse_button_pressed(MouseButton::Left) && !mouse_over_ui {
                 Self::handle_tile_interaction(
                     state, game_data, interaction_mode, held_entity, 
-                    selected_entity, selected_room, tile_pos, sidebar
+                    selected_entity, selected_room, tile_pos, sidebar, action_queue
                 );
             }
         }
@@ -515,10 +517,15 @@ impl InputHandler {
         selected_room: &mut Option<usize>,
         tile_pos: TilePos,
         sidebar: &mut Sidebar,
+        action_queue: &mut ActionQueue,
     ) {
         match interaction_mode {
             InteractionMode::Dig => {
-                crate::engine::input_handlers::handle_dig(state, game_data, tile_pos);
+                if sidebar.cheat_state.instant_dig_active {
+                    action_queue.push(crate::ui::actions::UiAction::CheatInstantDig(tile_pos));
+                } else {
+                    crate::engine::input_handlers::handle_dig(state, game_data, tile_pos);
+                }
             }
             InteractionMode::BuildRoom(room_type) => {
                 crate::engine::input_handlers::handle_build_room(state, game_data, room_type, tile_pos);
@@ -555,6 +562,42 @@ impl InputHandler {
             }
             InteractionMode::SaveGame => {
                 // No tile interaction for SaveGame
+            }
+            InteractionMode::Summon(id, category, level) => {
+                 match category {
+                     crate::state::entities::EntityCategory::Monster => {
+                         let max_health = game_data.monsters.get(id).map(|m| m.stats.health).unwrap_or(100.0) * (*level as f32); 
+                         let max_mana = game_data.monsters.get(id).map(|m| m.stats.mana).unwrap_or(20.0);
+                         let creature_state = crate::state::entities::CreatureState::new(
+                             id.clone(),
+                             *level,
+                             max_health,
+                             max_mana,
+                             macroquad::rand::gen_range(0, 1000000)
+                         );
+                         state.entities.spawn_creature(tile_pos, creature_state);
+                         state.notifications.success(format!("Summoned Lvl {} {}", level, id));
+                     },
+                     crate::state::entities::EntityCategory::Hero => {
+                         let max_health = game_data.heroes.get(id).map(|h| h.stats.health).unwrap_or(100.0) * (*level as f32);
+                         let max_mana = game_data.heroes.get(id).map(|h| h.stats.mana).unwrap_or(20.0);
+                         let dig_time = game_data.heroes.get(id).map(|h| h.stats.dig_time).unwrap_or(1.0);
+                         let hero_state = crate::state::entities::HeroState::new(
+                             id.clone(),
+                             *level,
+                             max_health,
+                             max_mana,
+                             tile_pos,
+                             dig_time,
+                             macroquad::rand::gen_range(0, 1000000)
+                         );
+                         state.entities.spawn_hero(tile_pos, hero_state);
+                         state.notifications.success(format!("Summoned Lvl {} {}", level, id));
+                     }
+                 }
+                 // Reset to None or keep summoning?
+                 // The user implies they want to summon multiple ("putting them in a room").
+                 // So we keep the mode active.
             }
         }
     }
@@ -594,6 +637,8 @@ impl InputHandler {
         mode: &InteractionMode,
         min: TilePos,
         max: TilePos,
+        sidebar: &Sidebar,
+        action_queue: &mut ActionQueue,
     ) {
         let tiles: Vec<TilePos> = (min.y..=max.y)
             .flat_map(|y| (min.x..=max.x).map(move |x| TilePos::new(x, y)))
@@ -601,7 +646,13 @@ impl InputHandler {
 
         match mode {
             InteractionMode::Dig => {
-                crate::engine::input_handlers::handle_dig_multi(state, game_data, &tiles);
+                if sidebar.cheat_state.instant_dig_active {
+                    for tile in tiles {
+                        action_queue.push(crate::ui::actions::UiAction::CheatInstantDig(tile));
+                    }
+                } else {
+                    crate::engine::input_handlers::handle_dig_multi(state, game_data, &tiles);
+                }
             },
             InteractionMode::BuildRoom(room_type) => {
                 crate::engine::input_handlers::handle_build_room_multi(state, game_data, room_type, &tiles);

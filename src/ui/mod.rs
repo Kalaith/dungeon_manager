@@ -5,7 +5,8 @@ pub mod renderer;
 pub mod sidebar;
 pub mod sidebar_renderer;
 pub mod actions;
-
-// Will also contain:
-// - hud.rs
-// - creature_panel.rs
+pub mod cheat_menu;
+pub mod tooltips;
+pub mod notifications;
+pub mod minimap;
+pub mod menus;

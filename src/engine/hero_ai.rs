@@ -431,6 +431,27 @@ pub fn update_hero_ai(
                 }
             }
         }
+        HeroGoal::StealGold(_) => {
+            // Priority: Visible gold piles -> Treasury room
+            let mut found_pile = false;
+            
+            // 1. Look for nearby gold piles (visual range)
+            if hero_state.target_pos.is_none() {
+                 if let Some(pile_pos) = find_nearby_gold_pile(hero_entity.pos, game_state) {
+                     hero_state.target_pos = Some(pile_pos);
+                     hero_state.target_room_id = None; // Ignore room if we see gold
+                     found_pile = true;
+                     eprintln!("[DEBUG] Hero {} spotted gold pile at {:?}", hero_state.hero_id, pile_pos);
+                 }
+            }
+
+            // 2. If no pile visible, go to treasury
+            if !found_pile {
+                 if hero_state.target_room_id.is_none() && hero_state.target_pos.is_none() {
+                    hero_state.target_room_id = find_target_room(hero_entity.pos, &hero_state.hero_id, &hero_state.current_goal, game_state, game_data);
+                 }
+            }
+        }
         _ => {
             // For goals that target rooms, try to find a target room
             if hero_state.target_room_id.is_none() && hero_state.target_pos.is_none() {
@@ -581,4 +602,25 @@ fn find_emergency_wander_target(current_pos: TilePos, game_state: &GameState) ->
         }
     }
     None
+}
+
+/// Find nearest visible gold pile
+fn find_nearby_gold_pile(hero_pos: TilePos, game_state: &GameState) -> Option<TilePos> {
+    let mut best_pos = None;
+    let mut min_dist = f32::MAX;
+    let vision_radius = 8.0; // Heroes can see gold from this far
+
+    for entity in game_state.entities.all() {
+        if let crate::state::entities::EntityType::ResourcePile(pile) = &entity.entity_type {
+            if pile.resource_type == "gold" {
+                let dist = calculate_distance(hero_pos, entity.pos);
+                if dist <= vision_radius && dist < min_dist {
+                    min_dist = dist;
+                    best_pos = Some(entity.pos);
+                }
+            }
+        }
+    }
+    
+    best_pos
 }
