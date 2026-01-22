@@ -6,6 +6,7 @@ use macroquad::rand;
 use std::collections::VecDeque;
 
 use super::config::{Grid, MapConfig};
+use crate::data::GameData;
 use super::utils::distance_f32;
 
 // ============================================================================
@@ -21,23 +22,31 @@ struct ResourcePlacementStrategy {
 }
 
 /// Add mineral veins strategically based on risk/reward placement
-pub fn add_mineral_veins(grid: &mut Grid, config: &MapConfig, start_pos: TilePos) {
+/// Resource counts scale with map size using config from game_data
+pub fn add_mineral_veins(grid: &mut Grid, config: &MapConfig, start_pos: TilePos, game_data: &GameData) {
     let height = grid.len();
     let width = grid[0].len();
+    
+    // Calculate map size scaling factor
+    let map_area = (width * height) as f32;
+    let base_area = game_data.config.resource_generation.base_map_area as f32;
+    let size_scale = map_area / base_area;
     
     // Gold veins - moderate distance, basic resources
     let gold_strategy = ResourcePlacementStrategy {
         min_distance_from_start: 8.0,
-        max_distance_from_start: 35.0,
+        max_distance_from_start: 35.0 * size_scale.sqrt(), // Scale distance with map size
         prefer_near_hazards: false,
         hazard_bonus_radius: 0.0,
     };
-    let num_gold_veins = (config.gold_richness * 10.0) as usize + 2;
+    let base_gold = game_data.config.resource_generation.base_gold_veins;
+    let num_gold_veins = ((config.gold_richness * 10.0) as usize + base_gold) * ((size_scale.sqrt()) as usize).max(1);
     place_strategic_veins(grid, start_pos, "gold_vein", num_gold_veins, 12..25, 2, &gold_strategy);
     
-    // Gem seams - RARE, single tiles only (4-6 on entire map)
+    // Gem seams - RARE, single tiles only, scales with map size
     // Far from start, dangerous areas - these are finite high-value finds
-    let num_gems = 4 + (config.gem_richness * 3.0) as usize; // 4-6 gems
+    let base_gems = game_data.config.resource_generation.base_gem_seams;
+    let num_gems = ((base_gems as f32 + config.gem_richness * 3.0) * size_scale.sqrt()) as usize;
     place_single_gems(grid, start_pos, num_gems);
     
     // Mana crystals - scattered but bonus if near hero portals
@@ -47,21 +56,21 @@ pub fn add_mineral_veins(grid: &mut Grid, config: &MapConfig, start_pos: TilePos
         prefer_near_hazards: false,
         hazard_bonus_radius: 0.0,
     };
-    let num_mana_veins = (config.mana_richness * 10.0) as usize + 2;
+    let base_mana = game_data.config.resource_generation.base_mana_veins;
+    let num_mana_veins = ((config.mana_richness * 10.0) as usize + base_mana) * ((size_scale.sqrt()) as usize).max(1);
     place_strategic_veins(grid, start_pos, "mana_crystal", num_mana_veins, 8..15, 1, &mana_strategy);
     
     // Place bonus mana near hero portals
     place_mana_near_portals(grid);
 
     // Scattered resources (single tiles spread everywhere including near base)
-    // Scale count by map size (assuming 50x50 base)
-    let map_area = (width * height) as f32;
-    let density_scale = map_area / 2500.0;
-    
-    let scattered_gold = (180.0 * config.gold_richness * density_scale) as usize;
+    // Scale count by map size using config
+    let scattered_gold_density = game_data.config.resource_generation.scattered_gold_density;
+    let scattered_gold = (scattered_gold_density * config.gold_richness * size_scale) as usize;
     place_scattered_resources(grid, "gold_vein", scattered_gold);
     
-    let scattered_mana = (90.0 * config.mana_richness * density_scale) as usize;
+    let scattered_mana_density = game_data.config.resource_generation.scattered_mana_density;
+    let scattered_mana = (scattered_mana_density * config.mana_richness * size_scale) as usize;
     place_scattered_resources(grid, "mana_crystal", scattered_mana);
 }
 
@@ -287,7 +296,7 @@ fn place_scattered_resources(grid: &mut Grid, tile_type: &str, count: usize) {
         
         // Set resource amount based on type
         let amount = match tile_type {
-            "gold_vein" => rand::gen_range(50u32, 100), // Smaller amount for single tiles
+            "gold_vein" => 100, // Fixed amount for single tiles
             "mana_crystal" => rand::gen_range(100u32, 200),
             _ => 100
         };
@@ -342,7 +351,7 @@ fn place_vein_segment(grid: &mut Grid, center: TilePos, tile_type: &str, thickne
                 if current_type == "solid_rock" || current_type == "earth" {
                     grid[y][x].tile_type = tile_type.to_string();
                     let resources = match tile_type {
-                        "gold_vein" => rand::gen_range(80u32, 150),
+                        "gold_vein" => 100,
                         "gem_seam" => rand::gen_range(150u32, 300),
                         "mana_crystal" => rand::gen_range(200u32, 350),
                         _ => 100,

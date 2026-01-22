@@ -1,0 +1,66 @@
+[
+    {
+        "id": "dungeon_heart",
+        "name": "Dungeon Heart",
+        "description": "The pulsing core of your dungeon, generating mana and sustaining your evil presence.",
+        "category": "core",
+        "icon": "icons/rooms/dungeon_heart.png",
+        "build": {
+            "cost_per_tile": 0,
+            "mana_cost": 0,
+            "min_tiles": 1,
+            "max_tiles": 1,
+            "dig_required": false,
+            "requires_claimed": false,
+            "can_overlap": false,
+            "allowed_terrain": [
+                "claimed_floor"
+            ],
+            "construction_time": 0
+        },
+        "requirements": {
+            "research": [],
+            "global_rooms_required": [],
+            "max_instances": 1,
+            "forbidden_if": []
+        },
+        "effects": {
+            "mana_generation_per_second": 1.0,
+            "happiness_modifier": 5,
+            "gold_storage_capacity": 500,
+            "mana_storage_capacity": 100
+        },
+        "scaling": {
+            "per_tile_multiplier": 1.0,
+            "size_thresholds": [],
+            "shape_penalties": {}
+        },
+        "ai": {
+            "task_type": "none",
+            "desirability": 0,
+            "max_creatures": 0,
+            "preferred_creatures": [],
+            "forbidden_creatures": [],
+            "entry_conditions": {}
+        },
+        "visual": {
+            "floor_sprite": "tiles/dungeon_heart_floor.png",
+            "wall_sprite": "tiles/dungeon_heart_wall.png",
+            "object_spawn": [
+                {
+                    "object": "dungeon_heart",
+                    "density": 1.0
+                }
+            ],
+            "light": {
+                "color": [
+                    255,
+                    0,
+                    0
+                ],
+                "intensity": 1.0,
+                "flicker": true
+            }
+        }
+    }
+]

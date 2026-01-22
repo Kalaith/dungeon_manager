@@ -3,33 +3,19 @@
 
 /// Tile type string constants
 pub mod types {
-    // Terrain tiles
-    pub const SOLID_ROCK: &str = "solid_rock";
-    pub const EARTH: &str = "earth";
-    pub const BEDROCK: &str = "bedrock";
-    
     // Resource tiles
     pub const GOLD_VEIN: &str = "gold_vein";
     pub const GEM_SEAM: &str = "gem_seam";
     pub const MANA_CRYSTAL: &str = "mana_crystal";
-    
+
     // Floor tiles
-    pub const CLAIMED_FLOOR: &str = "claimed_floor";
     pub const FLOOR: &str = "floor";
+    pub const CLAIMED_FLOOR: &str = "claimed_floor";
     pub const REINFORCED_WALL: &str = "reinforced_wall";
-    
+
     // Special tiles
     pub const DUNGEON_HEART: &str = "dungeon_heart";
     pub const MONSTER_SPAWNER: &str = "monster_spawner";
-    pub const HERO_ENTRANCE: &str = "hero_entrance";
-    
-    // Room tiles
-    pub const LAIR: &str = "lair";
-    pub const HATCHERY: &str = "hatchery";
-    pub const TREASURY: &str = "treasury";
-    pub const TRAINING_ROOM: &str = "training_room";
-    pub const LIBRARY: &str = "library";
-    pub const WORKSHOP: &str = "workshop";
 }
 
 use crate::data::GameData;
@@ -47,13 +33,6 @@ pub fn is_wall(tile_type: &str, game_data: &GameData) -> bool {
 pub fn is_diggable(tile_type: &str, game_data: &GameData) -> bool {
     game_data.tiles.get(tile_type)
         .map(|t| t.diggable)
-        .unwrap_or(false)
-}
-
-/// Check if a tile type is a resource tile
-pub fn is_resource(tile_type: &str, game_data: &GameData) -> bool {
-    game_data.tiles.get(tile_type)
-        .map(|t| t.resources.is_some())
         .unwrap_or(false)
 }
 

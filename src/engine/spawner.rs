@@ -1,6 +1,6 @@
 use crate::data::GameData;
 use crate::state::dungeon::Dungeon;
-use crate::state::entities::{EntityManager, HeroState, CreatureState};
+use crate::state::entities::{EntityManager, CreatureState};
 use crate::state::room_manager::RoomManager;
 use crate::state::tile_state::{Ownership, TilePos};
 use crate::engine::pathfinding::{find_path, Heuristic, PathfindingGrid, Pos};
@@ -9,45 +9,6 @@ use crate::engine::tile_types::types as tt;
 pub struct SpawnSystem;
 
 impl SpawnSystem {
-    pub fn spawn_random_hero(
-        room_manager: &RoomManager,
-        entities: &mut EntityManager,
-        game_data: &GameData
-    ) {
-        // Find the hero entrance room to spawn from
-        let spawn_pos = if let Some(hero_entrance) = room_manager.rooms.iter().find(|r| r.room_type == tt::HERO_ENTRANCE) {
-            // Pick a random tile in the hero entrance
-            let tiles: Vec<&TilePos> = hero_entrance.tiles.iter().collect();
-            if tiles.is_empty() {
-                return; // No tiles to spawn from
-            }
-            *tiles[macroquad::rand::gen_range(0, tiles.len())]
-        } else {
-            eprintln!("Warning: No hero entrance found, cannot spawn heroes");
-            return;
-        };
-
-        // Pick a random hero type
-        let hero_ids: Vec<&String> = game_data.heroes.keys().collect();
-        if let Some(&hero_id) = hero_ids.get(macroquad::rand::gen_range(0, hero_ids.len())) {
-            if let Some(hero_data) = game_data.heroes.get(hero_id) {
-                // Generate visual variation seed
-                let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
-                let hero_state = HeroState::new(
-                    hero_id.clone(),
-                    1, // level
-                    hero_data.stats.health, // max_health
-                    hero_data.stats.mana, // max_mana
-                    spawn_pos,
-                    hero_data.stats.dig_time,
-                    visual_seed,
-                );
-                entities.spawn_hero(spawn_pos, hero_state);
-                eprintln!("Spawned hero {} at hero entrance {:?}", hero_id, spawn_pos);
-            }
-        }
-    }
-
     pub fn spawn_random_creature(
         dungeon: &mut Dungeon,
         room_manager: &RoomManager,

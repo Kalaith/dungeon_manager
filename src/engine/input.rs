@@ -100,8 +100,8 @@ impl InputHandler {
             if let Some(ref mut data) = game_data {
                 // Cheats removed from here
                 let game_state = GameState::new_with_map_type(
-                    50,
-                    50,
+                    data.config.map_size.width,
+                    data.config.map_size.height,
                     data,
                     selected_map_type.clone(),
                 );

@@ -440,8 +440,8 @@ pub enum Task {
     /// Digging a specific tile
     Dig(TilePos),
 
-    /// Working in a room
-    Work(usize), // room_id
+    /// Working in a room at a specific slot
+    Work(usize, TilePos), // room_id, target_pos
 
     /// Sleeping in lair
     Sleep(usize), // room_id
@@ -483,7 +483,7 @@ impl Task {
         match self {
             Task::Idle => "idle",
             Task::Dig(_) => "dig",
-            Task::Work(_) => "work",
+            Task::Work(_, _) => "work",
             Task::Sleep(_) => "sleep",
             Task::Eat(_) => "eat",
             Task::Train(_) => "train",
@@ -501,7 +501,7 @@ impl Task {
     /// Get the room ID if this task involves a room
     pub fn room_id(&self) -> Option<usize> {
         match self {
-            Task::Work(id)
+            Task::Work(id, _)
             | Task::Sleep(id)
             | Task::Eat(id)
             | Task::Train(id)

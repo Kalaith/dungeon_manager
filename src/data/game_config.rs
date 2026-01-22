@@ -7,6 +7,7 @@ use std::error::Error;
 pub struct GameConfig {
     pub player_starting_resources: PlayerStartingResources,
     pub player_initial_capacity: PlayerInitialCapacity,
+    pub map_size: MapSizeConfig,
     pub timing: TimingConfig,
     pub hero_waves: HeroWaveConfig,
     pub creature_ai: CreatureAIConfig,
@@ -20,6 +21,7 @@ pub struct GameConfig {
     pub traps: TrapConfig,
     pub dungeon: DungeonConfig,
     pub conversion: ConversionConfig,
+    pub resource_generation: ResourceGenerationConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -36,6 +38,18 @@ pub struct PlayerInitialCapacity {
     pub max_mana: i32,
     pub max_food: i32,
     pub max_materials: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MapSizeConfig {
+    pub width: usize,
+    pub height: usize,
+}
+
+impl Default for MapSizeConfig {
+    fn default() -> Self {
+        Self { width: 50, height: 50 }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -177,6 +191,29 @@ pub struct DungeonConfig {
 pub struct ConversionConfig {
     pub skeleton_rate: f32,
     pub torture_rate: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceGenerationConfig {
+    pub base_gold_veins: usize,
+    pub base_gem_seams: usize,
+    pub base_mana_veins: usize,
+    pub scattered_gold_density: f32,
+    pub scattered_mana_density: f32,
+    pub base_map_area: usize,
+}
+
+impl Default for ResourceGenerationConfig {
+    fn default() -> Self {
+        Self {
+            base_gold_veins: 2,
+            base_gem_seams: 4,
+            base_mana_veins: 2,
+            scattered_gold_density: 360.0,
+            scattered_mana_density: 90.0,
+            base_map_area: 2500,
+        }
+    }
 }
 
 pub fn load_game_config() -> Result<GameConfig, Box<dyn Error>> {

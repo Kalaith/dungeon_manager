@@ -1,9 +1,8 @@
 use crate::data::GameData;
-use crate::engine::tile_grid::{Grid, get_tile_mut};
 use crate::state::dungeon::Dungeon;
-use crate::state::entities::{EntityManager, EntityType, CreatureState};
-use crate::state::tile_state::{TilePos, TileState, Ownership, FogState};
-use serde::{Deserialize, Serialize};
+use crate::state::entities::{EntityManager, CreatureState};
+use crate::state::tile_state::{TilePos, TileState};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
 

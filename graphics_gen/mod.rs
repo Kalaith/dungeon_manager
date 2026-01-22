@@ -23,11 +23,18 @@ pub mod projectiles;
 
 // Re-export commonly used items from core for external use
 pub use core::{
-    Material, DepthBuffer,
+    Material, DepthBuffer, GradientDirection,
     draw_sphere_3d, draw_ellipsoid_3d, draw_cylinder_3d, draw_cone_3d,
     draw_torus_3d, draw_box_3d, draw_wedge_3d,
     draw_shadow, create_tile_base, add_noise, add_outline,
     draw_rect, draw_circle, draw_line, blend_colors,
+    // Texture functions
+    value_noise, fbm_noise, turbulence,
+    add_fbm_noise, add_color_variation, add_edge_bevel,
+    add_crack_pattern, add_gradient_overlay, add_3d_border, add_specular_highlights,
+    // Volumetric wall functions
+    create_volumetric_wall, create_carved_block, draw_raised_platform,
+    add_carved_inset, lighten_color, darken_color, WALL_HEIGHT,
     SPRITE_SIZE, TILE_SIZE,
 };
 
@@ -96,6 +103,7 @@ fn generate_tile_sprites() {
     tiles::save_tile("dungeon_barracks", tiles::create_dungeon_barracks());
     tiles::save_tile("torture_chamber", tiles::create_torture_chamber());
     tiles::save_tile("casino", tiles::create_casino());
+    tiles::save_tile("temple", tiles::create_temple());
 
     // Traps and doors
     tiles::save_tile("door", tiles::create_door());

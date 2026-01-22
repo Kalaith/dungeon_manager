@@ -44,14 +44,18 @@ impl RoomManager {
                            continue;
                       }
 
-                      // Create room
+                       // Create room
                       let room_id = self.next_room_id;
                       self.next_room_id += 1;
+
+                      let work_size = room_data.ai.work_size.clone().unwrap_or([1, 1]); // Default to 1x1 if not specified (e.g. special rooms)
+                      let work_slots = room_validator::calculate_work_slots(&room_tiles, work_size, &dungeon.grid, game_data);
 
                       let mut room = Room::new(
                            room_id,
                            room_type.to_string(),
                            room_tiles.clone(),
+                           work_slots,
                       );
                       room.active = true;
                       

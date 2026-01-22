@@ -385,14 +385,6 @@ pub fn apply_projectile_impact(
     }
 }
 
-/// Calculate experience needed for next level
-fn calculate_exp_needed(current_level: u32, game_data: &GameData) -> u32 {
-    // Simple exponential growth
-    let base = game_data.config.combat.xp_requirement_base;
-    let multiplier = game_data.config.combat.xp_requirement_multiplier;
-    (base as f32 * multiplier.powi(current_level as i32 - 1)) as u32
-}
-
 /// Level up a creature
 fn level_up_creature(state: &mut crate::state::entities::CreatureState, game_data: &GameData) {
     if state.level >= game_data.config.combat.max_creature_level {
@@ -413,24 +405,75 @@ fn level_up_creature(state: &mut crate::state::entities::CreatureState, game_dat
 // Placeholder - will act validation in next step
 
 
+/// Get the attack range for a given attack type
+pub fn get_attack_range(attack_type: &str, game_data: &GameData) -> i32 {
+    match attack_type {
+        "melee" => game_data.config.combat_ranges.melee,
+        "ranged" => game_data.config.combat_ranges.ranged,
+        "magic" => game_data.config.combat_ranges.magic,
+        _ => game_data.config.combat_ranges.melee,
+    }
+}
+
+/// Get the preferred combat range for an attack type
+/// Melee units want to be adjacent (distance 1)
+/// Ranged/Magic units want to be at max range to kite
+pub fn get_preferred_range(attack_type: &str, game_data: &GameData) -> i32 {
+    match attack_type {
+        "melee" => 1, // Melee wants to stay adjacent
+        "ranged" => game_data.config.combat_ranges.ranged, // Ranged wants max distance
+        "magic" => game_data.config.combat_ranges.magic,   // Magic wants max distance
+        _ => 1,
+    }
+}
+
+/// Check if an entity is at its preferred combat range
+pub fn at_preferred_range(
+    attacker_pos: TilePos,
+    defender_pos: TilePos,
+    attack_type: &str,
+    game_data: &GameData,
+) -> bool {
+    let distance = calculate_manhattan_distance(attacker_pos, defender_pos);
+    let preferred = get_preferred_range(attack_type, game_data);
+    let max_range = get_attack_range(attack_type, game_data);
+
+    match attack_type {
+        "melee" => distance == 1, // Melee must be exactly adjacent
+        _ => distance >= 2 && distance <= max_range, // Ranged wants to be between 2 and max range
+    }
+}
+
+/// Check if an entity is too close for ranged combat (needs to kite)
+pub fn too_close_for_ranged(
+    attacker_pos: TilePos,
+    defender_pos: TilePos,
+    attack_type: &str,
+) -> bool {
+    if attack_type == "melee" {
+        return false; // Melee never needs to kite
+    }
+    let distance = calculate_manhattan_distance(attacker_pos, defender_pos);
+    distance <= 1 // If adjacent to a melee enemy, ranged should try to back off
+}
+
+/// Calculate Manhattan distance between two positions (public for use elsewhere)
+pub fn manhattan_distance(a: TilePos, b: TilePos) -> i32 {
+    calculate_manhattan_distance(a, b)
+}
+
 /// Check if two entities are in combat range and have line of sight
 pub fn in_combat_range(
-    attacker_pos: TilePos, 
-    defender_pos: TilePos, 
+    attacker_pos: TilePos,
+    defender_pos: TilePos,
     attack_type: &str,
     dungeon_grid: &Vec<Vec<crate::state::tile_state::TileState>>,
     game_data: &GameData
 ) -> bool {
     let distance = calculate_manhattan_distance(attacker_pos, defender_pos);
+    let max_range = get_attack_range(attack_type, game_data);
 
-    let in_range = match attack_type {
-        "melee" => distance <= game_data.config.combat_ranges.melee,
-        "ranged" => distance <= game_data.config.combat_ranges.ranged,
-        "magic" => distance <= game_data.config.combat_ranges.magic,
-        _ => distance <= game_data.config.combat_ranges.melee,
-    };
-
-    if !in_range {
+    if distance > max_range {
         return false;
     }
 
@@ -492,45 +535,80 @@ fn tile_blocks_vision(x: i32, y: i32, grid: &Vec<Vec<crate::state::tile_state::T
     game_data.tiles.get(&tile.tile_type).map(|td| td.blocks_vision).unwrap_or(false)
 }
 
-/// Find potential combat targets for an entity
+/// Get detection range for an entity (how far they can see enemies to engage)
+pub fn get_detection_range(entity: &Entity, game_data: &GameData) -> i32 {
+    match &entity.entity_type {
+        crate::state::entities::EntityType::Creature(state) => {
+            game_data.monsters.get(&state.creature_id)
+                .map(|data| data.stats.sight_radius as i32)
+                .unwrap_or(8)
+        }
+        crate::state::entities::EntityType::Hero(state) => {
+            game_data.heroes.get(&state.hero_id)
+                .map(|data| data.stats.sight_radius as i32)
+                .unwrap_or(8)
+        }
+        _ => 8,
+    }
+}
+
+/// Find potential combat targets for an entity within detection range, sorted by distance (closest first)
+/// This uses DETECTION range (sight), not attack range - creatures will chase enemies they can see
 pub fn find_combat_targets(
     entity: &Entity,
     entities: &HashMap<EntityId, Entity>,
-    dungeon: &crate::state::dungeon::Dungeon, // Pass Dungeon struct
+    dungeon: &crate::state::dungeon::Dungeon,
     game_data: &GameData,
 ) -> Vec<EntityId> {
-    let mut targets = Vec::new();
+    let mut targets: Vec<(EntityId, i32)> = Vec::new();
+
+    let detection_range = get_detection_range(entity, game_data);
 
     for (other_id, other_entity) in entities {
         if *other_id == entity.id {
             continue; // Don't target self
         }
 
+        if !other_entity.is_alive() {
+            continue; // Skip dead entities
+        }
+
         // Check if entities are hostile
         if are_hostile(entity, other_entity, game_data) {
-            // Check if in range
-            let attack_type = match &entity.entity_type {
-                crate::state::entities::EntityType::Creature(state) => {
-                    game_data.monsters.get(&state.creature_id)
-                        .map(|data| data.combat.attack_type.clone())
-                        .unwrap_or_else(|| "melee".to_string())
-                }
-                crate::state::entities::EntityType::Hero(state) => {
-                    game_data.heroes.get(&state.hero_id)
-                        .map(|data| data.combat.attack_type.clone())
-                        .unwrap_or_else(|| "melee".to_string())
-                }
-                crate::state::entities::EntityType::Structure(_) => "none".to_string(),
-                crate::state::entities::EntityType::ResourcePile(_) => "none".to_string(),
-            };
+            let distance = calculate_manhattan_distance(entity.pos, other_entity.pos);
 
-            if in_combat_range(entity.pos, other_entity.pos, &attack_type, &dungeon.grid, game_data) {
-                targets.push(*other_id);
+            // Check if within detection range (sight range)
+            if distance <= detection_range {
+                // Also check line of sight for ranged detection
+                if distance <= 1 || check_line_of_sight(entity.pos, other_entity.pos, &dungeon.grid, game_data) {
+                    targets.push((*other_id, distance));
+                }
             }
         }
     }
 
-    targets
+    // Sort by distance (closest first)
+    targets.sort_by_key(|(_, dist)| *dist);
+
+    targets.into_iter().map(|(id, _)| id).collect()
+}
+
+/// Get the attack type for an entity
+pub fn get_entity_attack_type(entity: &Entity, game_data: &GameData) -> String {
+    match &entity.entity_type {
+        crate::state::entities::EntityType::Creature(state) => {
+            game_data.monsters.get(&state.creature_id)
+                .map(|data| data.combat.attack_type.clone())
+                .unwrap_or_else(|| "melee".to_string())
+        }
+        crate::state::entities::EntityType::Hero(state) => {
+            game_data.heroes.get(&state.hero_id)
+                .map(|data| data.combat.attack_type.clone())
+                .unwrap_or_else(|| "melee".to_string())
+        }
+        crate::state::entities::EntityType::Structure(_) => "none".to_string(),
+        crate::state::entities::EntityType::ResourcePile(_) => "none".to_string(),
+    }
 }
 
 /// Check if two entities are hostile to each other
@@ -542,8 +620,11 @@ fn are_hostile(entity_a: &Entity, entity_b: &Entity, game_data: &GameData) -> bo
         ("resource", _) | (_, "resource") => false, // Resources are neutral
         ("dungeon", "hero") => true,
         ("hero", "dungeon") => true,
-        ("wild", _) => true, // Wild monsters attack everyone
-        (_, "wild") => true, // Everyone attacks wild monsters
+        ("wild", "wild") => false,   // Wild creatures don't attack each other
+        ("wild", "dungeon") => true, // Wild attacks dungeon creatures
+        ("wild", "hero") => true,    // Wild attacks heroes
+        ("dungeon", "wild") => true, // Dungeon creatures attack wild
+        ("hero", "wild") => true,    // Heroes attack wild
         ("hero", "hero") => false,
         ("dungeon", "dungeon") => false, // Friendly fire off
         _ => false,

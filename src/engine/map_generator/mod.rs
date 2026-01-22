@@ -27,7 +27,7 @@ use macroquad::rand;
 // ============================================================================
 
 /// Main map generation function
-pub fn generate_map(config: &MapConfig, _game_data: &GameData) -> Grid {
+pub fn generate_map(config: &MapConfig, game_data: &GameData) -> Grid {
     // Seed the RNG if a seed is provided
     if let Some(seed) = config.seed {
         rand::srand(seed);
@@ -63,7 +63,7 @@ pub fn generate_map(config: &MapConfig, _game_data: &GameData) -> Grid {
     }
 
     // Step 7: Add strategic mineral veins (risk/reward placement)
-    resources::add_mineral_veins(&mut grid, config, start_pos);
+    resources::add_mineral_veins(&mut grid, config, start_pos, game_data);
 
     // Step 8: Apply biome features
     if config.enable_biomes {
@@ -145,31 +145,6 @@ pub fn generate_hazardous_map(width: usize, height: usize, game_data: &GameData)
         use_noise_terrain: false,  // Flat solid terrain
         enable_biomes: false,
         num_hero_portals: 4,
-        ..Default::default()
-    };
-    generate_map(&config, game_data)
-}
-
-/// Generate a map with traditional flat terrain (no caves)
-pub fn generate_classic_map(width: usize, height: usize, game_data: &GameData) -> Grid {
-    let config = MapConfig {
-        width,
-        height,
-        seed: None,
-        use_noise_terrain: false,
-        enable_biomes: false,
-        ..Default::default()
-    };
-    generate_map(&config, game_data)
-}
-
-/// Generate a corner-start map for different gameplay
-pub fn generate_corner_start_map(width: usize, height: usize, game_data: &GameData) -> Grid {
-    let config = MapConfig {
-        width,
-        height,
-        seed: None,
-        starting_position: StartingPosition::Corner,
         ..Default::default()
     };
     generate_map(&config, game_data)

@@ -117,19 +117,6 @@ impl PathfindingGrid {
         }
     }
 
-    /// Set a rectangular region as walkable/unwalkable
-    pub fn set_region_walkable(&mut self, min: Pos, max: Pos, walkable: bool) {
-        let min_x = min.x.max(0) as usize;
-        let min_y = min.y.max(0) as usize;
-        let max_x = (max.x as usize).min(self.width);
-        let max_y = (max.y as usize).min(self.height);
-
-        for y in min_y..max_y {
-            for x in min_x..max_x {
-                self.walkable[y][x] = walkable;
-            }
-        }
-    }
 }
 
 /// A pathfinding result with waypoints and cost
@@ -324,109 +311,6 @@ fn reconstruct_path(came_from: &HashMap<Pos, Pos>, mut current: Pos, total_cost:
 
     path.reverse();
     Path::new(path, total_cost)
-}
-
-/// Path cache for avoiding repeated pathfinding calculations
-pub struct PathCache {
-    cache: HashMap<(Pos, Pos), Path>,
-    invalidated_positions: HashSet<Pos>,
-    max_cache_size: usize,
-}
-
-impl PathCache {
-    /// Create a new path cache
-    pub fn new(max_cache_size: usize) -> Self {
-        Self {
-            cache: HashMap::new(),
-            invalidated_positions: HashSet::new(),
-            max_cache_size,
-        }
-    }
-
-    /// Find a path with caching
-    pub fn find_path_cached(
-        &mut self,
-        start: Pos,
-        goal: Pos,
-        grid: &PathfindingGrid,
-        heuristic: Heuristic,
-        allow_diagonals: bool,
-    ) -> Option<Path> {
-        let key = (start, goal);
-
-        // Check if we need to invalidate this cached path
-        if let Some(cached_path) = self.cache.get(&key) {
-            // Check if any waypoint has been invalidated
-            let is_invalid = cached_path
-                .waypoints
-                .iter()
-                .any(|pos| self.invalidated_positions.contains(pos));
-
-            if !is_invalid {
-                // Cache hit - return cloned path
-                return Some(cached_path.clone());
-            } else {
-                // Path invalidated, remove from cache
-                self.cache.remove(&key);
-            }
-        }
-
-        // Cache miss - compute new path
-        if let Some(path) = find_path(start, goal, grid, heuristic, allow_diagonals) {
-            // Add to cache if we have room
-            if self.cache.len() < self.max_cache_size {
-                self.cache.insert(key, path.clone());
-            } else {
-                // Cache full - could implement LRU here, for now just skip caching
-            }
-            Some(path)
-        } else {
-            None
-        }
-    }
-
-    /// Invalidate paths that pass through specific positions
-    pub fn invalidate_positions(&mut self, positions: &[Pos]) {
-        for pos in positions {
-            self.invalidated_positions.insert(*pos);
-        }
-
-        // Remove paths that use invalidated positions
-        self.cache.retain(|_, path| {
-            !path
-                .waypoints
-                .iter()
-                .any(|pos| self.invalidated_positions.contains(pos))
-        });
-    }
-
-    /// Clear all invalidated positions tracking
-    pub fn clear_invalidations(&mut self) {
-        self.invalidated_positions.clear();
-    }
-
-    /// Clear entire cache
-    pub fn clear(&mut self) {
-        self.cache.clear();
-        self.invalidated_positions.clear();
-    }
-
-    /// Get cache statistics
-    pub fn stats(&self) -> CacheStats {
-        CacheStats {
-            cached_paths: self.cache.len(),
-            invalidated_positions: self.invalidated_positions.len(),
-            max_size: self.max_cache_size,
-        }
-    }
-}
-
-/// Cache statistics
-#[derive(Debug, Clone)]
-pub struct CacheStats {
-    pub cached_paths: usize,
-    pub invalidated_positions: usize,
-    pub max_size: usize,
 }
 
 #[cfg(test)]

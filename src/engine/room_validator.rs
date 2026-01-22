@@ -18,11 +18,12 @@ pub struct Room {
     pub quality: f32,
     pub efficiency: f32,
     pub active: bool,
+    pub work_slots: Vec<TilePos>,
 }
 
 impl Room {
     /// Create a new room instance
-    pub fn new(id: usize, room_type: String, tiles: HashSet<TilePos>) -> Self {
+    pub fn new(id: usize, room_type: String, tiles: HashSet<TilePos>, work_slots: Vec<TilePos>) -> Self {
         Self {
             id,
             room_type,
@@ -30,6 +31,7 @@ impl Room {
             quality: 0.0,
             efficiency: 1.0,
             active: false,
+            work_slots,
         }
     }
 
@@ -50,6 +52,71 @@ impl Room {
     pub fn size(&self) -> usize {
         self.tiles.len()
     }
+}
+
+/// Calculate valid work slots for a room based on work station size
+/// Uses a greedy packing algorithm to find non-overlapping rectangles
+pub fn calculate_work_slots(tiles: &HashSet<TilePos>, work_size: [u32; 2], grid: &Grid, game_data: &GameData) -> Vec<TilePos> {
+    let mut slots = Vec::new();
+    let width = work_size[0] as i32;
+    let height = work_size[1] as i32;
+
+    // If work size is 1x1, every tile is a potential slot (optimization)
+    if width == 1 && height == 1 {
+        // For 1x1, we can just use all tiles, or maybe a subset?
+        // Let's use all tiles for now, but sort them for consistency
+        let mut sorted_tiles: Vec<TilePos> = tiles.iter().cloned().collect();
+        sorted_tiles.sort_by(|a, b| (a.y, a.x).cmp(&(b.y, b.x)));
+        return sorted_tiles;
+    }
+
+    // For larger slots, we need to pack them
+    // Sort tiles to try filling from top-left
+    let mut sorted_tiles: Vec<TilePos> = tiles.iter().cloned().collect();
+    sorted_tiles.sort_by(|a, b| (a.y, a.x).cmp(&(b.y, b.x)));
+
+    let mut occupied = HashSet::new();
+
+    for start_pos in &sorted_tiles {
+        if occupied.contains(start_pos) {
+            continue;
+        }
+
+        // Check if a rectangle of size width x height fits here
+        let mut fits = true;
+        let mut slot_tiles = Vec::new();
+
+        for dy in 0..height {
+            for dx in 0..width {
+                let check_pos = TilePos::new(start_pos.x + dx, start_pos.y + dy);
+                if !tiles.contains(&check_pos) || occupied.contains(&check_pos) {
+                    fits = false;
+                    break;
+                }
+                // Also ensure the tile is secure/valid? check walls?
+                // The room validation already checks for walls, but internal obstructions might exist
+                // Logic already implies tiles are part of the room, so they are floor.
+                slot_tiles.push(check_pos);
+            }
+            if !fits { break; }
+        }
+
+        if fits {
+            // Mark these tiles as occupied
+            for tile in slot_tiles {
+                occupied.insert(tile);
+            }
+
+            // The slot position is the center of the rectangle
+            // For even sizes it's between tiles, so we pick: x + (width-1)/2, y + (height-1)/2
+            let slot_center_x = start_pos.x + ((width - 1) / 2);
+            let slot_center_y = start_pos.y + ((height - 1) / 2);
+
+            slots.push(TilePos::new(slot_center_x, slot_center_y));
+        }
+    }
+
+    slots
 }
 
 /// Metrics describing the shape of a room
@@ -376,7 +443,7 @@ pub fn find_nearest_room(
 ) -> Option<(usize, f32)> {
     let mut best: Option<(usize, f32)> = None;
 
-    for (idx, room) in rooms.iter().enumerate() {
+    for room in rooms.iter() {
         // Check if room matches type and quality requirements
         if room.room_type != room_type || room.quality < min_quality || !room.active {
             continue;
@@ -400,27 +467,6 @@ pub fn find_nearest_room(
     }
 
     best
-}
-
-/// Calculate task desirability for a room based on distance and quality
-pub fn calculate_task_desirability(
-    room: &Room,
-    room_data: &RoomData,
-    creature_pos: TilePos,
-    base_desirability: f32,
-) -> f32 {
-    let center = room.get_center();
-    let dx = (center.x - creature_pos.x) as f32;
-    let dy = (center.y - creature_pos.y) as f32;
-    let distance = (dx * dx + dy * dy).sqrt();
-
-    // Desirability decreases with distance
-    let distance_factor = 1.0 / (1.0 + distance * 0.1);
-
-    // Quality multiplier (normalize to 0.5-1.5 range)
-    let quality_factor = 0.5 + (room.quality / 200.0).min(1.0);
-
-    base_desirability * distance_factor * quality_factor
 }
 
 #[cfg(test)]
@@ -474,7 +520,7 @@ mod tests {
         tiles.insert(TilePos::new(2, 0));
         tiles.insert(TilePos::new(1, 1));
 
-        let room = Room::new(0, "test".to_string(), tiles);
+        let room = Room::new(0, "test".to_string(), tiles, Vec::new());
         let center = room.get_center();
 
         // Average: x = (0+2+1)/3 = 1, y = (0+0+1)/3 = 0

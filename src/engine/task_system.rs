@@ -80,7 +80,7 @@ pub fn execute_task(
             // Digging is handled by imp_ai system which manages the task timer.
             // If we complete it here, the imp will stop digging instantly every frame.
         }
-        Task::Work(room_id) => {
+        Task::Work(room_id, _) => {
             result.materials_change = execute_work(creature_id, *room_id, entities, room_manager, game_data, dt);
         }
         Task::Research(room_id) => {

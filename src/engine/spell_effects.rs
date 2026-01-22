@@ -19,24 +19,6 @@ pub enum CastResult {
     MaxCapReached,
 }
 
-/// Active spell cooldown tracker
-#[derive(Debug, Clone)]
-pub struct SpellCooldown {
-    pub spell_id: String,
-    pub remaining_time: f32,
-}
-
-/// Get active spell cooldowns as SpellCooldown structs
-pub fn get_active_cooldowns(game_state: &GameState) -> Vec<SpellCooldown> {
-    game_state.player.spell_cooldowns
-        .iter()
-        .map(|(spell_id, remaining)| SpellCooldown {
-            spell_id: spell_id.clone(),
-            remaining_time: *remaining,
-        })
-        .collect()
-}
-
 /// Check if a spell can be cast
 pub fn can_cast_spell(
     spell: &SpellData,

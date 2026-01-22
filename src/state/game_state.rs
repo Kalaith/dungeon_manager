@@ -3,7 +3,6 @@
 
 use crate::data::GameData;
 use crate::engine::combat::{resolve_combat_tick, update_status_effects};
-use crate::engine::hero_ai::update_hero_ai;
 use crate::engine::tile_grid;
 use crate::state::entities::{EntityId, EntityManager, EntityType};
 use crate::state::player_state::PlayerState;
@@ -566,9 +565,13 @@ impl GameState {
 
         match task {
             Task::Sleep(room_id)
-            | Task::Eat(room_id)
-            | Task::Work(room_id)
-            | Task::Train(room_id)
+            | Task::Eat(room_id) => {
+                room_manager.rooms.iter()
+                    .find(|r| r.id == *room_id)
+                    .map(|room: &crate::engine::room_validator::Room| room.get_center())
+            }
+            Task::Work(_, pos) => Some(*pos),
+            Task::Train(room_id)
             | Task::Research(room_id)
             | Task::DepositGold(room_id)
             | Task::CollectWages(room_id) => {
@@ -646,15 +649,15 @@ impl GameState {
         match task {
             Task::Dig(pos) => Some(*pos),
             Task::MoveTo(pos) => Some(*pos),
+            Task::Work(_, pos) => Some(*pos),
             Task::Sleep(room_id) | Task::Eat(room_id) | Task::DepositGold(room_id)
-            | Task::Work(room_id) | Task::Train(room_id) | Task::Research(room_id) | Task::CollectWages(room_id) => {
+            | Task::Train(room_id) | Task::Research(room_id) | Task::CollectWages(room_id) => {
                 // Find room center
                 self.room_manager.rooms
                     .iter()
                     .find(|r| r.id == *room_id)
                     .map(|room| {
-                        let center = self.calculate_room_center(room);
-                        center
+                        self.room_manager.calculate_room_center(room)
                     })
             }
             _ => None,
@@ -751,18 +754,6 @@ impl GameState {
     }
 
 
-
-    fn calculate_room_center(&self, room: &crate::engine::room_validator::Room) -> TilePos {
-        self.room_manager.calculate_room_center(room)
-    }
-
-    fn spawn_random_hero(&mut self, game_data: &GameData) {
-        crate::engine::spawner::SpawnSystem::spawn_random_hero(
-            &self.room_manager,
-            &mut self.entities,
-            game_data
-        );
-    }
 
     fn spawn_random_creature(&mut self, game_data: &GameData) {
         crate::engine::spawner::SpawnSystem::spawn_random_creature(
@@ -1082,7 +1073,7 @@ impl GameState {
         let mut active_torture_rooms = std::collections::HashSet::new();
         for (_, creature) in self.entities.creatures() {
              if creature.creature_id == "succubus" {
-                 if let Some(crate::state::entities::Task::Work(room_id)) = creature.current_task {
+                 if let Some(crate::state::entities::Task::Work(room_id, _)) = creature.current_task {
                       active_torture_rooms.insert(room_id);
                  }
              }

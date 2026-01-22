@@ -1,5 +1,4 @@
 use macroquad::prelude::*;
-use macroquad::ui::hash;
 use crate::state::game_state::GameState;
 use crate::state::{GamePhase, InteractionMode, Ownership, MapType, DragSelection};
 use crate::ui::resources::GraphicsCache;

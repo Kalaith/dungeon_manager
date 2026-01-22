@@ -1,7 +1,3 @@
-// Allow some warnings that are acceptable during development
-#![allow(dead_code)]  // Some code is kept for future features
-#![allow(unused_variables)] // Some variables are kept for future features
-#![allow(unused_imports)] // Some imports are kept for future features
 
 use macroquad::prelude::*;
 

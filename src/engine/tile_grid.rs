@@ -1,5 +1,5 @@
-//! Tile grid operations and isometric projection
-//! Stateless functions for grid creation, coordinate conversion, and neighbor detection.
+//! Tile grid operations and coordinate conversion
+//! Stateless functions for coordinate conversion and neighbor detection.
 
 use crate::state::tile_state::{TilePos, TileState, FogState};
 use crate::data::GameData;
@@ -7,65 +7,6 @@ use crate::engine::tile_types;
 use std::collections::HashSet;
 
 pub type Grid = Vec<Vec<TileState>>;
-
-/// Create a new grid with the specified dimensions
-pub fn create_grid(width: usize, height: usize, game_data: &GameData) -> Grid {
-    let mut grid = Vec::with_capacity(height);
-
-    for y in 0..height {
-        let mut row = Vec::with_capacity(width);
-        for x in 0..width {
-            let pos = TilePos::new(x as i32, y as i32);
-
-            // Default to earth for most tiles, solid rock for edges
-            let tile_type = if x == 0 || y == 0 || x == width - 1 || y == height - 1 {
-                "solid_rock".to_string()
-            } else {
-                // 10% chance of gold vein
-                if macroquad::rand::gen_range(0.0f32, 1.0) < 0.10 {
-                    "gold_vein".to_string()
-                } else {
-                    "earth".to_string()
-                }
-            };
-
-            let mut tile = TileState::new(tile_type.clone(), pos);
-
-            // Set up resources for resource tiles
-            if let Some(tile_data) = game_data.tiles.get(&tile_type) {
-                if let Some(resources) = &tile_data.resources {
-                    if resources.amount > 0 {
-                        tile = tile.with_resources(resources.amount as u32);
-                    }
-                }
-            }
-
-            // Gold veins have gold resources
-            if tile_type == "gold_vein" {
-                tile = tile.with_resources(100); // 100 gold per vein
-            }
-
-            row.push(tile);
-        }
-        grid.push(row);
-    }
-
-    grid
-}
-
-/// Convert world coordinates to isometric screen coordinates
-pub fn world_to_iso(x: f32, y: f32, tile_width: f32, tile_height: f32) -> (f32, f32) {
-    let iso_x = (x - y) * tile_width / 2.0;
-    let iso_y = (x + y) * tile_height / 2.0;
-    (iso_x, iso_y)
-}
-
-/// Convert isometric screen coordinates to world coordinates
-pub fn iso_to_world(iso_x: f32, iso_y: f32, tile_width: f32, tile_height: f32) -> (f32, f32) {
-    let x = (iso_x / (tile_width / 2.0) + iso_y / (tile_height / 2.0)) / 2.0;
-    let y = (iso_y / (tile_height / 2.0) - iso_x / (tile_width / 2.0)) / 2.0;
-    (x, y)
-}
 
 /// Convert screen position to tile position using 3D raycasting with optional grid collision
 pub fn screen_to_tile(
@@ -153,26 +94,6 @@ pub fn get_tile_mut(grid: &mut Grid, pos: TilePos) -> Option<&mut TileState> {
     None
 }
 
-/// Get all 8 neighbors of a tile (including diagonals)
-pub fn get_neighbors(grid: &Grid, pos: TilePos) -> Vec<TilePos> {
-    let mut neighbors = Vec::new();
-
-    for dy in -1..=1 {
-        for dx in -1..=1 {
-            if dx == 0 && dy == 0 {
-                continue;
-            }
-
-            let neighbor_pos = TilePos::new(pos.x + dx, pos.y + dy);
-            if get_tile(grid, neighbor_pos).is_some() {
-                neighbors.push(neighbor_pos);
-            }
-        }
-    }
-
-    neighbors
-}
-
 /// Get the 4 cardinal neighbors (no diagonals)
 pub fn get_cardinal_neighbors(grid: &Grid, pos: TilePos) -> Vec<TilePos> {
     let offsets = [(0, -1), (1, 0), (0, 1), (-1, 0)];
@@ -205,50 +126,6 @@ pub fn calculate_fog_state(
         // Never explored -> stays Hidden
         FogState::Hidden
     }
-}
-
-/// Check if there's a clear line of sight between two positions (not blocked by solid tiles)
-fn has_line_of_sight(grid: &Grid, from: TilePos, to: TilePos, game_data: &GameData) -> bool {
-    // Use Bresenham's line algorithm to check tiles between from and to
-    let mut x0 = from.x;
-    let mut y0 = from.y;
-    let x1 = to.x;
-    let y1 = to.y;
-
-    let dx = (x1 - x0).abs();
-    let dy = -(y1 - y0).abs();
-    let sx = if x0 < x1 { 1 } else { -1 };
-    let sy = if y0 < y1 { 1 } else { -1 };
-    let mut err = dx + dy;
-
-    loop {
-        // Check if current tile blocks vision (skip the start position)
-        if (x0, y0) != (from.x, from.y) {
-            let pos = TilePos::new(x0, y0);
-            if let Some(tile) = get_tile(grid, pos) {
-                // Solid tiles block vision
-                if tile_types::blocks_vision(&tile.tile_type, game_data) {
-                    return false;
-                }
-            }
-        }
-
-        if x0 == x1 && y0 == y1 {
-            break;
-        }
-
-        let e2 = 2 * err;
-        if e2 >= dy {
-            err += dy;
-            x0 += sx;
-        }
-        if e2 <= dx {
-            err += dx;
-            y0 += sy;
-        }
-    }
-
-    true
 }
 
 /// Update fog of war based on claimed tiles and creature positions

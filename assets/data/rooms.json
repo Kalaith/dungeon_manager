@@ -1,69 +1,5 @@
 [
   {
-    "id": "dungeon_heart",
-    "name": "Dungeon Heart",
-    "description": "The pulsing core of your dungeon, generating mana and sustaining your evil presence.",
-    "category": "core",
-    "icon": "icons/rooms/dungeon_heart.png",
-    "build": {
-      "cost_per_tile": 0,
-      "mana_cost": 0,
-      "min_tiles": 1,
-      "max_tiles": 1,
-      "dig_required": false,
-      "requires_claimed": false,
-      "can_overlap": false,
-      "allowed_terrain": [
-        "claimed_floor"
-      ],
-      "construction_time": 0
-    },
-    "requirements": {
-      "research": [],
-      "global_rooms_required": [],
-      "max_instances": 1,
-      "forbidden_if": []
-    },
-    "effects": {
-      "mana_generation_per_second": 1.0,
-      "happiness_modifier": 5,
-      "gold_storage_capacity": 500,
-      "mana_storage_capacity": 100
-    },
-    "scaling": {
-      "per_tile_multiplier": 1.0,
-      "size_thresholds": [],
-      "shape_penalties": {}
-    },
-    "ai": {
-      "task_type": "none",
-      "desirability": 0,
-      "max_creatures": 0,
-      "preferred_creatures": [],
-      "forbidden_creatures": [],
-      "entry_conditions": {}
-    },
-    "visual": {
-      "floor_sprite": "tiles/dungeon_heart_floor.png",
-      "wall_sprite": "tiles/dungeon_heart_wall.png",
-      "object_spawn": [
-        {
-          "object": "dungeon_heart",
-          "density": 1.0
-        }
-      ],
-      "light": {
-        "color": [
-          255,
-          0,
-          0
-        ],
-        "intensity": 1.0,
-        "flicker": true
-      }
-    }
-  },
-  {
     "id": "lair",
     "name": "Lair",
     "description": "A cozy sleeping area where creatures rest and recover.",
@@ -114,6 +50,10 @@
       "max_creatures": 10,
       "preferred_creatures": [],
       "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
       "entry_conditions": {
         "mood_below": 80
       }
@@ -191,6 +131,10 @@
         "imp"
       ],
       "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
       "entry_conditions": {}
     },
     "visual": {
@@ -262,6 +206,10 @@
       "max_creatures": 0,
       "preferred_creatures": [],
       "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
       "entry_conditions": {}
     },
     "visual": {
@@ -335,6 +283,10 @@
         "warlock"
       ],
       "forbidden_creatures": [],
+      "work_size": [
+        2,
+        2
+      ],
       "entry_conditions": {}
     },
     "visual": {
@@ -409,6 +361,10 @@
         "goblin"
       ],
       "forbidden_creatures": [],
+      "work_size": [
+        3,
+        3
+      ],
       "entry_conditions": {}
     },
     "visual": {
@@ -493,6 +449,10 @@
       "forbidden_creatures": [
         "imp"
       ],
+      "work_size": [
+        1,
+        1
+      ],
       "entry_conditions": {
         "min_level": 2
       }
@@ -566,6 +526,10 @@
         "orc"
       ],
       "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
       "entry_conditions": {}
     },
     "visual": {
@@ -636,6 +600,10 @@
         "orc"
       ],
       "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
       "entry_conditions": {}
     },
     "visual": {
@@ -716,6 +684,10 @@
         "warlock"
       ],
       "forbidden_creatures": [],
+      "work_size": [
+        2,
+        2
+      ],
       "entry_conditions": {
         "min_level": 5
       }
@@ -791,6 +763,10 @@
         "succubus"
       ],
       "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
       "entry_conditions": {}
     },
     "visual": {
@@ -857,6 +833,10 @@
       "max_creatures": 0,
       "preferred_creatures": [],
       "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
       "entry_conditions": {}
     },
     "visual": {
@@ -916,6 +896,10 @@
         "hellhound"
       ],
       "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
       "entry_conditions": {}
     },
     "visual": {
@@ -977,6 +961,10 @@
         "bile_demon"
       ],
       "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
       "entry_conditions": {}
     },
     "visual": {
@@ -991,6 +979,96 @@
         ],
         "intensity": 0.8,
         "flicker": false
+      }
+    }
+  },
+  {
+    "id": "temple",
+    "name": "Temple",
+    "description": "A dark shrine where creatures pray, channeling their devotion into mana.",
+    "category": "magic",
+    "icon": "icons/rooms/temple.png",
+    "build": {
+      "cost_per_tile": 175,
+      "mana_cost": 25,
+      "min_tiles": 9,
+      "max_tiles": 64,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
+      "construction_time": 0.6
+    },
+    "requirements": {
+      "research": [],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "mana_generation_per_second": 0.3,
+      "prayer_mana_per_creature": 0.5,
+      "happiness_modifier": 5
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        {
+          "tiles": 9,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 25,
+          "multiplier": 1.4
+        },
+        {
+          "tiles": 49,
+          "multiplier": 1.8
+        }
+      ],
+      "shape_penalties": {
+        "fragmented": 0.7
+      }
+    },
+    "ai": {
+      "task_type": "pray",
+      "desirability": 1.0,
+      "max_creatures": 8,
+      "preferred_creatures": [
+        "warlock",
+        "vampire",
+        "skeleton"
+      ],
+      "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/temple.png",
+      "wall_sprite": "tiles/temple_wall.png",
+      "object_spawn": [
+        {
+          "object": "altar",
+          "density": 0.1
+        },
+        {
+          "object": "candle",
+          "density": 0.15
+        }
+      ],
+      "light": {
+        "color": [
+          180,
+          100,
+          255
+        ],
+        "intensity": 0.7,
+        "flicker": true
       }
     }
   }
