@@ -56,7 +56,7 @@ impl Room {
 
 /// Calculate valid work slots for a room based on work station size
 /// Uses a greedy packing algorithm to find non-overlapping rectangles
-pub fn calculate_work_slots(tiles: &HashSet<TilePos>, work_size: [u32; 2], grid: &Grid, game_data: &GameData) -> Vec<TilePos> {
+pub fn calculate_work_slots(tiles: &HashSet<TilePos>, work_size: [u32; 2]) -> Vec<TilePos> {
     let mut slots = Vec::new();
     let width = work_size[0] as i32;
     let height = work_size[1] as i32;

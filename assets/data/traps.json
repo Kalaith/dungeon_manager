@@ -20,7 +20,8 @@
         "build_time": 10.0,
         "effects": {
             "damage": 25,
-            "trigger_type": "pressure"
+            "trigger_type": "pressure",
+            "cooldown": 5.0
         }
     },
     {
@@ -48,6 +49,19 @@
         "effects": {
             "alert_radius": 10,
             "cooldown_multiplier": 2.0
+        }
+    },
+    {
+        "id": "blowgun_trap",
+        "name": "Blowgun Trap",
+        "description": "Shoots a dart at enemies.",
+        "category": "offense",
+        "cost": 75,
+        "build_time": 8.0,
+        "effects": {
+            "damage": 15,
+            "trigger_type": "pressure",
+            "cooldown": 2.5
         }
     }
 ]

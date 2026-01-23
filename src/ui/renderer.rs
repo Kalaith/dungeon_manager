@@ -72,7 +72,7 @@ impl GameRenderer {
             GamePhase::Playing(_) => {
                 if let Some(inner_state) = state {
                     if let Some(ref data) = game_data {
-                        self.draw_game(inner_state, interaction_mode, hovered_tile, held_entity, data, drag_selection);
+                        self.draw_game(inner_state, interaction_mode, hovered_tile, data, drag_selection);
                     }
                     self.draw_gui(inner_state, interaction_mode, hovered_tile, held_entity, selected_entity, selected_room, game_data, drag_selection);
                 }
@@ -80,7 +80,7 @@ impl GameRenderer {
         }
     }
 
-    pub fn draw_game(&self, state: &GameState, interaction_mode: &InteractionMode, hovered_tile: Option<TilePos>, held_entity: Option<EntityId>, game_data: &GameData, drag_selection: &DragSelection) {
+    pub fn draw_game(&self, state: &GameState, interaction_mode: &InteractionMode, hovered_tile: Option<TilePos>, game_data: &GameData, drag_selection: &DragSelection) {
         let graphics = if let Some(ref cache) = self.graphics_cache {
             cache
         } else {
@@ -701,6 +701,48 @@ impl GameRenderer {
                     crate::state::entities::EntityType::ResourcePile(_) => GOLD,
                 };
                 draw_cube_wires(vec3(x, 0.5, z), vec3(0.5, 1.0, 0.5), color);
+            }
+
+            // Draw Health Bar if recently damaged
+            if state.time_elapsed - entity.last_damage_time < 3.0 {
+                let (hp, max_hp) = match &entity.entity_type {
+                    crate::state::entities::EntityType::Creature(c) => (c.health, c.max_health),
+                    crate::state::entities::EntityType::Hero(h) => (h.health, h.max_health),
+                    crate::state::entities::EntityType::Structure(s) => (s.health, s.max_health), // Structure verified ok
+                    _ => (0.0, 0.0), // No health bar for others
+                };
+
+                if max_hp > 0.0 {
+                    let health_pct = (hp / max_hp).clamp(0.0f32, 1.0f32);
+                    let bar_width = 0.8;
+                    let bar_height = 0.1;
+                    let y_offset = 1.2;
+
+                    // Background (Black)
+                    draw_cube(
+                        vec3(x, y_offset, z),
+                        vec3(bar_width, bar_height, 0.05),
+                        None,
+                        BLACK,
+                    );
+
+                    // Foreground (Green/Red based on HP?) -> Green
+                    // Calculate offset to align left (since draw_cube is centered)
+                    // If full width is 0.8 at pos X.
+                    // If pct is 0.5, width is 0.4. Center should be X - 0.2.
+                    // Shift = (bar_width - (bar_width * health_pct)) / 2.0 * -1.0
+                    //       = -0.5 * bar_width * (1.0 - health_pct)
+                    let x_shift = -0.5 * bar_width * (1.0 - health_pct);
+                    
+                    let bar_color = if health_pct < 0.3 { RED } else { GREEN };
+
+                    draw_cube(
+                        vec3(x + x_shift, y_offset, z),
+                        vec3(bar_width * health_pct, bar_height, 0.06), // Slightly thicker to z-fight
+                        None,
+                        bar_color,
+                    );
+                }
             }
         }
     }

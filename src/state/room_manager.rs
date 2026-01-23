@@ -40,7 +40,7 @@ impl RoomManager {
             
             for room_tiles in connected_rooms {
                  if let Some(room_data) = game_data.rooms.get(room_type) {
-                      if let Err(e) = room_validator::validate_room_shape(&room_tiles, room_data) {
+                      if let Err(_error) = room_validator::validate_room_shape(&room_tiles, room_data) {
                            continue;
                       }
 
@@ -49,7 +49,7 @@ impl RoomManager {
                       self.next_room_id += 1;
 
                       let work_size = room_data.ai.work_size.clone().unwrap_or([1, 1]); // Default to 1x1 if not specified (e.g. special rooms)
-                      let work_slots = room_validator::calculate_work_slots(&room_tiles, work_size, &dungeon.grid, game_data);
+                      let work_slots = room_validator::calculate_work_slots(&room_tiles, work_size);
 
                       let mut room = Room::new(
                            room_id,

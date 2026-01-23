@@ -45,8 +45,6 @@ pub fn process_actions(
             action,
             game_state,
             game_data,
-            interaction_mode,
-            *held_entity,
             selected_spell,
         );
 
@@ -77,8 +75,6 @@ fn process_single_action(
     action: UiAction,
     game_state: &mut GameState,
     game_data: &GameData,
-    _current_mode: &InteractionMode,
-    held_entity: Option<EntityId>,
     selected_spell: &mut Option<String>,
 ) -> ActionResult {
     let mut result = ActionResult::default();

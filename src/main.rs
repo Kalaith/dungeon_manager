@@ -136,7 +136,6 @@ impl Game {
                         state,
                         &self.interaction_mode,
                         self.hovered_tile,
-                        self.held_entity,
                         data,
                         &self.drag_selection
                     );

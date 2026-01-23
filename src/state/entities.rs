@@ -16,6 +16,12 @@ pub struct Entity {
     pub pos: TilePos,
     #[serde(skip, default = "default_visual_pos")]
     pub visual_pos: (f32, f32),
+    #[serde(skip, default = "default_damage_time")]
+    pub last_damage_time: f32,
+}
+
+fn default_damage_time() -> f32 {
+    -100.0
 }
 
 fn default_visual_pos() -> (f32, f32) {
@@ -30,6 +36,7 @@ impl Entity {
             entity_type: EntityType::Creature(creature_state),
             pos,
             visual_pos: (pos.x as f32, pos.y as f32),
+            last_damage_time: -100.0,
         }
     }
 
@@ -40,6 +47,7 @@ impl Entity {
             entity_type: EntityType::Hero(hero_state),
             pos,
             visual_pos: (pos.x as f32, pos.y as f32),
+            last_damage_time: -100.0,
         }
     }
 
@@ -48,8 +56,9 @@ impl Entity {
         Self {
             id,
             entity_type: EntityType::Structure(structure_state),
-            pos,
             visual_pos: (pos.x as f32, pos.y as f32),
+            pos,
+            last_damage_time: -100.0,
         }
     }
 
@@ -607,6 +616,7 @@ impl EntityManager {
             entity_type: EntityType::ResourcePile(state),
             pos,
             visual_pos: (pos.x as f32, pos.y as f32),
+            last_damage_time: -100.0,
         };
         self.entities.insert(id, entity);
         id

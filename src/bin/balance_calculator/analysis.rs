@@ -1,669 +1,19 @@
-//! Balance Calculator - Automated game balance analysis tool
-//!
-//! Run with: cargo run --bin balance_calculator [mode]
-//!
-//! Modes:
-//!   (none)      - Run standard analysis
-//!   simulate    - Run headless combat simulations
-//!   waves       - Simulate wave survival scenarios
-//!   economy     - Simulate economy over time
-//!
-//! Analyzes game data and outputs balance metrics for:
-//! - Creature efficiency (HP/gold, DPS/gold)
-//! - Combat time-to-kill matrices
-//! - Economy sustainability
-//! - Wave difficulty estimates
-//! - Room/trap/spell value analysis
-
 use std::collections::HashMap;
-use std::env;
+use super::data;
+use super::sim::{self, CombatUnit};
+use super::rng::SimpleRng;
 
-// Include game data at compile time (same as main game)
-mod data {
-    use serde::Deserialize;
-    use std::collections::HashMap;
-
-    #[derive(Debug, Deserialize)]
-    pub struct MonsterData {
-        pub id: String,
-        pub name: String,
-        pub stats: CreatureStats,
-        #[serde(default)]
-        pub combat: Option<CombatData>,
-        #[serde(default)]
-        pub economy: Option<EconomyData>,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct CreatureStats {
-        pub health: f32,
-        pub attack: f32,
-        pub defense: f32,
-        pub speed: f32,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct CombatData {
-        #[serde(default)]
-        pub damage_range: Option<[f32; 2]>,
-        #[serde(default)]
-        pub attack_speed: Option<f32>,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct EconomyData {
-        #[serde(default)]
-        pub wage_per_minute: Option<f32>,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct HeroData {
-        pub id: String,
-        pub name: String,
-        pub stats: CreatureStats,
-        #[serde(default)]
-        pub tier: Option<u32>,
-        #[serde(default)]
-        pub combat: Option<CombatData>,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct RoomData {
-        pub id: String,
-        pub name: String,
-        #[serde(default)]
-        pub build: Option<RoomBuild>,
-        #[serde(default)]
-        pub effects: Option<RoomEffects>,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct RoomBuild {
-        #[serde(default)]
-        pub cost_per_tile: i32,
-        #[serde(default)]
-        pub min_tiles: Option<u32>,
-        #[serde(default)]
-        pub max_tiles: Option<u32>,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct RoomEffects {
-        #[serde(default)]
-        pub food_generation_per_second: Option<f32>,
-        #[serde(default)]
-        pub mana_generation_per_second: Option<f32>,
-        #[serde(default)]
-        pub gold_storage_capacity: Option<i32>,
-        #[serde(default)]
-        pub research_speed: Option<f32>,
-        #[serde(default)]
-        pub training_xp_per_second: Option<f32>,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct TrapData {
-        pub id: String,
-        pub name: String,
-        pub cost: i32,
-        #[serde(default)]
-        pub build_time: Option<f32>,
-        #[serde(default)]
-        pub effects: Option<TrapEffects>,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct TrapEffects {
-        #[serde(default)]
-        pub damage: Option<f32>,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct SpellData {
-        pub id: String,
-        pub name: String,
-        pub cost: SpellCost,
-        pub effects: Vec<SpellEffect>,
-        pub cooldown: f32,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct SpellCost {
-        #[serde(default)]
-        pub mana: i32,
-        #[serde(default)]
-        pub gold: i32,
-        #[serde(default)]
-        pub health: i32,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct SpellEffect {
-        #[serde(rename = "type")]
-        pub effect_type: String,
-        #[serde(default)]
-        pub amount: f32,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct GameConfig {
-        pub player_starting_resources: ResourceConfig,
-        pub player_initial_capacity: CapacityConfig,
-        pub hero_waves: WaveConfig,
-        pub combat: CombatConfig,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct ResourceConfig {
-        pub gold: i32,
-        pub mana: i32,
-        pub food: i32,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct CapacityConfig {
-        pub max_gold: i32,
-        pub max_mana: i32,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct WaveConfig {
-        pub initial_delay: f32,
-        pub wave_interval: f32,
-        pub wave_scaling_multiplier: f32,
-        #[serde(default)]
-        pub spawn_rate_decay: Option<f32>,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct CombatConfig {
-        pub attack_stat_bonus: f32,
-        pub defense_reduction: f32,
-        #[serde(default)]
-        pub creature_level_multiplier: Option<f32>,
-        #[serde(default)]
-        pub hero_level_multiplier: Option<f32>,
-    }
-
-    pub fn load_monsters() -> HashMap<String, MonsterData> {
-        let json = include_str!("../../assets/data/monsters.json");
-        let list: Vec<MonsterData> = serde_json::from_str(json).expect("Failed to parse monsters.json");
-        list.into_iter().map(|m| (m.id.clone(), m)).collect()
-    }
-
-    pub fn load_heroes() -> HashMap<String, HeroData> {
-        let json = include_str!("../../assets/data/heroes.json");
-        let list: Vec<HeroData> = serde_json::from_str(json).expect("Failed to parse heroes.json");
-        list.into_iter().map(|h| (h.id.clone(), h)).collect()
-    }
-
-    pub fn load_rooms() -> HashMap<String, RoomData> {
-        let json = include_str!("../../assets/data/rooms.json");
-        let list: Vec<RoomData> = serde_json::from_str(json).expect("Failed to parse rooms.json");
-        list.into_iter().map(|r| (r.id.clone(), r)).collect()
-    }
-
-    pub fn load_traps() -> HashMap<String, TrapData> {
-        let json = include_str!("../../assets/data/traps.json");
-        let list: Vec<TrapData> = serde_json::from_str(json).expect("Failed to parse traps.json");
-        list.into_iter().map(|t| (t.id.clone(), t)).collect()
-    }
-
-    pub fn load_spells() -> HashMap<String, SpellData> {
-        let json = include_str!("../../assets/data/dungeon_spells.json");
-        let list: Vec<SpellData> = serde_json::from_str(json).expect("Failed to parse spells.json");
-        list.into_iter().map(|s| (s.id.clone(), s)).collect()
-    }
-
-    pub fn load_config() -> GameConfig {
-        let json = include_str!("../../assets/data/game_config.json");
-        serde_json::from_str(json).expect("Failed to parse game_config.json")
-    }
+pub fn print_header(title: &str) {
+    println!("\n{}", "=".repeat(70));
+    println!(" {}", title);
+    println!("{}", "=".repeat(70));
 }
 
-// ============================================================================
-// Simple RNG (Linear Congruential Generator)
-// ============================================================================
-
-struct SimpleRng {
-    state: u64,
+pub fn print_subheader(title: &str) {
+    println!("\n--- {} ---", title);
 }
 
-impl SimpleRng {
-    fn new(seed: u64) -> Self {
-        Self { state: seed }
-    }
-
-    fn next(&mut self) -> u64 {
-        // LCG parameters from Numerical Recipes
-        self.state = self.state.wrapping_mul(6364136223846793005).wrapping_add(1);
-        self.state
-    }
-
-    fn next_f32(&mut self) -> f32 {
-        (self.next() as f32) / (u64::MAX as f32)
-    }
-
-    fn range(&mut self, min: f32, max: f32) -> f32 {
-        min + self.next_f32() * (max - min)
-    }
-}
-
-// ============================================================================
-// Combat Simulation
-// ============================================================================
-
-#[derive(Clone)]
-struct CombatUnit {
-    name: String,
-    hp: f32,
-    max_hp: f32,
-    attack: f32,
-    defense: f32,
-    damage_min: f32,
-    damage_max: f32,
-    attack_speed: f32,
-}
-
-impl CombatUnit {
-    fn from_monster(m: &data::MonsterData) -> Self {
-        let (damage_min, damage_max) = m.combat.as_ref()
-            .and_then(|c| c.damage_range)
-            .map(|r| (r[0], r[1]))
-            .unwrap_or((5.0, 10.0));
-        let attack_speed = m.combat.as_ref()
-            .and_then(|c| c.attack_speed)
-            .unwrap_or(1.0);
-        Self {
-            name: m.name.clone(),
-            hp: m.stats.health,
-            max_hp: m.stats.health,
-            attack: m.stats.attack,
-            defense: m.stats.defense,
-            damage_min,
-            damage_max,
-            attack_speed,
-        }
-    }
-
-    fn from_hero(h: &data::HeroData) -> Self {
-        let (damage_min, damage_max) = h.combat.as_ref()
-            .and_then(|c| c.damage_range)
-            .map(|r| (r[0], r[1]))
-            .unwrap_or((5.0, 10.0));
-        let attack_speed = h.combat.as_ref()
-            .and_then(|c| c.attack_speed)
-            .unwrap_or(1.0);
-        Self {
-            name: h.name.clone(),
-            hp: h.stats.health,
-            max_hp: h.stats.health,
-            attack: h.stats.attack,
-            defense: h.stats.defense,
-            damage_min,
-            damage_max,
-            attack_speed,
-        }
-    }
-
-    fn calculate_damage(&self, target: &CombatUnit, attack_mult: f32, defense_mult: f32) -> f32 {
-        let base_damage = (self.damage_min + self.damage_max) / 2.0;
-        let attack_damage = base_damage + (self.attack * attack_mult);
-        let defense_reduction = target.defense * defense_mult;
-        (attack_damage - defense_reduction).max(1.0)
-    }
-
-    fn dps(&self, target_defense: f32, attack_mult: f32, defense_mult: f32) -> f32 {
-        let base_damage = (self.damage_min + self.damage_max) / 2.0;
-        let attack_damage = base_damage + (self.attack * attack_mult);
-        let defense_reduction = target_defense * defense_mult;
-        let damage_per_hit = (attack_damage - defense_reduction).max(1.0);
-        damage_per_hit * self.attack_speed
-    }
-}
-
-struct CombatResult {
-    winner: String,
-    duration_secs: f32,
-    winner_hp_remaining: f32,
-}
-
-fn simulate_combat(
-    mut attacker: CombatUnit,
-    mut defender: CombatUnit,
-    attack_mult: f32,
-    defense_mult: f32,
-) -> CombatResult {
-    let mut time = 0.0;
-    let mut attacker_cooldown = 0.0;
-    let mut defender_cooldown = 0.0;
-    let dt = 0.1; // simulation timestep
-
-    while attacker.hp > 0.0 && defender.hp > 0.0 && time < 300.0 {
-        time += dt;
-        attacker_cooldown -= dt;
-        defender_cooldown -= dt;
-
-        if attacker_cooldown <= 0.0 {
-            let damage = attacker.calculate_damage(&defender, attack_mult, defense_mult);
-            defender.hp -= damage;
-            attacker_cooldown = 1.0 / attacker.attack_speed;
-        }
-
-        if defender_cooldown <= 0.0 && defender.hp > 0.0 {
-            let damage = defender.calculate_damage(&attacker, attack_mult, defense_mult);
-            attacker.hp -= damage;
-            defender_cooldown = 1.0 / defender.attack_speed;
-        }
-    }
-
-    if attacker.hp > 0.0 {
-        CombatResult {
-            winner: attacker.name,
-            duration_secs: time,
-            winner_hp_remaining: attacker.hp,
-        }
-    } else {
-        CombatResult {
-            winner: defender.name,
-            duration_secs: time,
-            winner_hp_remaining: defender.hp,
-        }
-    }
-}
-
-// ============================================================================
-// Headless Simulation Functions
-// ============================================================================
-
-fn simulate_combat_random(
-    mut attacker: CombatUnit,
-    mut defender: CombatUnit,
-    attack_mult: f32,
-    defense_mult: f32,
-    rng: &mut SimpleRng,
-) -> CombatResult {
-    let mut time = 0.0;
-    let mut attacker_cooldown = 0.0;
-    let mut defender_cooldown = 0.0;
-    let dt = 0.1;
-
-    while attacker.hp > 0.0 && defender.hp > 0.0 && time < 300.0 {
-        time += dt;
-        attacker_cooldown -= dt;
-        defender_cooldown -= dt;
-
-        if attacker_cooldown <= 0.0 {
-            // Randomized damage within range
-            let base_damage = rng.range(attacker.damage_min, attacker.damage_max);
-            let attack_damage = base_damage + (attacker.attack * attack_mult);
-            let defense_reduction = defender.defense * defense_mult;
-            let damage = (attack_damage - defense_reduction).max(1.0);
-            defender.hp -= damage;
-            attacker_cooldown = 1.0 / attacker.attack_speed;
-        }
-
-        if defender_cooldown <= 0.0 && defender.hp > 0.0 {
-            let base_damage = rng.range(defender.damage_min, defender.damage_max);
-            let attack_damage = base_damage + (defender.attack * attack_mult);
-            let defense_reduction = attacker.defense * defense_mult;
-            let damage = (attack_damage - defense_reduction).max(1.0);
-            attacker.hp -= damage;
-            defender_cooldown = 1.0 / defender.attack_speed;
-        }
-    }
-
-    if attacker.hp > 0.0 {
-        CombatResult {
-            winner: attacker.name,
-            duration_secs: time,
-            winner_hp_remaining: attacker.hp,
-        }
-    } else {
-        CombatResult {
-            winner: defender.name,
-            duration_secs: time,
-            winner_hp_remaining: defender.hp,
-        }
-    }
-}
-
-#[derive(Default)]
-struct BattleStats {
-    total_battles: u32,
-    attacker_wins: u32,
-    defender_wins: u32,
-    avg_duration: f32,
-    avg_winner_hp_pct: f32,
-    min_duration: f32,
-    max_duration: f32,
-}
-
-fn run_mass_battles(
-    attacker_template: &CombatUnit,
-    defender_template: &CombatUnit,
-    num_battles: u32,
-    attack_mult: f32,
-    defense_mult: f32,
-    seed: u64,
-) -> BattleStats {
-    let mut rng = SimpleRng::new(seed);
-    let mut stats = BattleStats {
-        total_battles: num_battles,
-        min_duration: f32::MAX,
-        max_duration: 0.0,
-        ..Default::default()
-    };
-
-    let mut total_duration = 0.0;
-    let mut total_hp_pct = 0.0;
-
-    for _ in 0..num_battles {
-        let attacker = attacker_template.clone();
-        let defender = defender_template.clone();
-        let result = simulate_combat_random(attacker, defender, attack_mult, defense_mult, &mut rng);
-
-        total_duration += result.duration_secs;
-        stats.min_duration = stats.min_duration.min(result.duration_secs);
-        stats.max_duration = stats.max_duration.max(result.duration_secs);
-
-        if result.winner == attacker_template.name {
-            stats.attacker_wins += 1;
-            total_hp_pct += result.winner_hp_remaining / attacker_template.max_hp;
-        } else {
-            stats.defender_wins += 1;
-            total_hp_pct += result.winner_hp_remaining / defender_template.max_hp;
-        }
-    }
-
-    stats.avg_duration = total_duration / num_battles as f32;
-    stats.avg_winner_hp_pct = total_hp_pct / num_battles as f32 * 100.0;
-
-    stats
-}
-
-struct ArmyBattleResult {
-    winner: String, // "attacker" or "defender"
-    survivors_attacker: u32,
-    survivors_defender: u32,
-    duration_secs: f32,
-}
-
-fn simulate_army_battle(
-    mut attackers: Vec<CombatUnit>,
-    mut defenders: Vec<CombatUnit>,
-    attack_mult: f32,
-    defense_mult: f32,
-    rng: &mut SimpleRng,
-) -> ArmyBattleResult {
-    let mut time = 0.0;
-    let dt = 0.1;
-    let mut cooldowns_atk: Vec<f32> = vec![0.0; attackers.len()];
-    let mut cooldowns_def: Vec<f32> = vec![0.0; defenders.len()];
-
-    while !attackers.is_empty() && !defenders.is_empty() && time < 600.0 {
-        time += dt;
-
-        // Attackers attack
-        for i in 0..attackers.len() {
-            cooldowns_atk[i] -= dt;
-            if cooldowns_atk[i] <= 0.0 && !defenders.is_empty() {
-                // Pick a random defender
-                let target_idx = (rng.next() as usize) % defenders.len();
-                let base_damage = rng.range(attackers[i].damage_min, attackers[i].damage_max);
-                let attack_damage = base_damage + (attackers[i].attack * attack_mult);
-                let defense_reduction = defenders[target_idx].defense * defense_mult;
-                let damage = (attack_damage - defense_reduction).max(1.0);
-                defenders[target_idx].hp -= damage;
-                cooldowns_atk[i] = 1.0 / attackers[i].attack_speed;
-            }
-        }
-
-        // Defenders attack
-        for i in 0..defenders.len() {
-            cooldowns_def[i] -= dt;
-            if cooldowns_def[i] <= 0.0 && !attackers.is_empty() {
-                let target_idx = (rng.next() as usize) % attackers.len();
-                let base_damage = rng.range(defenders[i].damage_min, defenders[i].damage_max);
-                let attack_damage = base_damage + (defenders[i].attack * attack_mult);
-                let defense_reduction = attackers[target_idx].defense * defense_mult;
-                let damage = (attack_damage - defense_reduction).max(1.0);
-                attackers[target_idx].hp -= damage;
-                cooldowns_def[i] = 1.0 / defenders[i].attack_speed;
-            }
-        }
-
-        // Remove dead units
-        let mut i = 0;
-        while i < defenders.len() {
-            if defenders[i].hp <= 0.0 {
-                defenders.remove(i);
-                cooldowns_def.remove(i);
-            } else {
-                i += 1;
-            }
-        }
-
-        let mut i = 0;
-        while i < attackers.len() {
-            if attackers[i].hp <= 0.0 {
-                attackers.remove(i);
-                cooldowns_atk.remove(i);
-            } else {
-                i += 1;
-            }
-        }
-    }
-
-    ArmyBattleResult {
-        winner: if attackers.is_empty() { "defender".to_string() } else { "attacker".to_string() },
-        survivors_attacker: attackers.len() as u32,
-        survivors_defender: defenders.len() as u32,
-        duration_secs: time,
-    }
-}
-
-struct WaveSurvivalResult {
-    waves_survived: u32,
-    total_heroes_killed: u32,
-    final_army_size: u32,
-    final_gold: i32,
-}
-
-fn simulate_wave_survival(
-    monsters: &HashMap<String, data::MonsterData>,
-    heroes: &HashMap<String, data::HeroData>,
-    config: &data::GameConfig,
-    initial_army: Vec<(&str, u32)>, // (monster_id, count)
-    num_waves: u32,
-    seed: u64,
-) -> WaveSurvivalResult {
-    let mut rng = SimpleRng::new(seed);
-    let attack_mult = config.combat.attack_stat_bonus;
-    let defense_mult = config.combat.defense_reduction;
-
-    // Build initial army
-    let mut army: Vec<CombatUnit> = Vec::new();
-    for (monster_id, count) in &initial_army {
-        if let Some(monster) = monsters.get(*monster_id) {
-            for _ in 0..*count {
-                army.push(CombatUnit::from_monster(monster));
-            }
-        }
-    }
-
-    let mut gold = config.player_starting_resources.gold;
-    let mut total_heroes_killed = 0u32;
-    let mut waves_survived = 0u32;
-
-    // Hero pool by tier
-    let tier1: Vec<_> = heroes.values().filter(|h| h.tier.unwrap_or(1) == 1).collect();
-    let tier2: Vec<_> = heroes.values().filter(|h| h.tier.unwrap_or(1) == 2).collect();
-    let tier3: Vec<_> = heroes.values().filter(|h| h.tier.unwrap_or(1) == 3).collect();
-
-    for wave in 1..=num_waves {
-        if army.is_empty() {
-            break;
-        }
-
-        // Generate wave heroes based on wave number
-        let mut wave_heroes: Vec<CombatUnit> = Vec::new();
-        let hero_count = 2 + (wave as f32 * config.hero_waves.wave_scaling_multiplier) as u32;
-
-        for _ in 0..hero_count {
-            // Higher waves get higher tier heroes
-            let tier_roll = rng.next_f32();
-            let hero_pool = if wave >= 8 && tier_roll < 0.3 && !tier3.is_empty() {
-                &tier3
-            } else if wave >= 4 && tier_roll < 0.5 && !tier2.is_empty() {
-                &tier2
-            } else if !tier1.is_empty() {
-                &tier1
-            } else {
-                continue;
-            };
-
-            if !hero_pool.is_empty() {
-                let idx = (rng.next() as usize) % hero_pool.len();
-                wave_heroes.push(CombatUnit::from_hero(hero_pool[idx]));
-            }
-        }
-
-        // Simulate battle
-        let heroes_in_wave = wave_heroes.len() as u32;
-        let result = simulate_army_battle(army.clone(), wave_heroes, attack_mult, defense_mult, &mut rng);
-
-        if result.winner == "attacker" {
-            waves_survived = wave;
-            total_heroes_killed += heroes_in_wave;
-            // Update army with survivors (simplified: just reduce count)
-            army.truncate(result.survivors_attacker as usize);
-            // Gold reward per hero killed
-            gold += (heroes_in_wave * 10) as i32;
-        } else {
-            // Army wiped
-            army.clear();
-            total_heroes_killed += heroes_in_wave - result.survivors_defender;
-        }
-
-        // Wage costs (simplified: 1 minute per wave)
-        for (monster_id, count) in &initial_army {
-            if let Some(monster) = monsters.get(*monster_id) {
-                let wage = monster.economy.as_ref().and_then(|e| e.wage_per_minute).unwrap_or(0.0);
-                gold -= (wage * *count as f32) as i32;
-            }
-        }
-    }
-
-    WaveSurvivalResult {
-        waves_survived,
-        total_heroes_killed,
-        final_army_size: army.len() as u32,
-        final_gold: gold,
-    }
-}
-
-fn run_simulation_mode(
+pub fn run_simulation_mode(
     monsters: &HashMap<String, data::MonsterData>,
     heroes: &HashMap<String, data::HeroData>,
     config: &data::GameConfig,
@@ -694,7 +44,7 @@ fn run_simulation_mode(
             let attacker = CombatUnit::from_monster(monster);
             let defender = CombatUnit::from_hero(hero);
 
-            let stats = run_mass_battles(&attacker, &defender, num_battles, attack_mult, defense_mult, 12345);
+            let stats = sim::run_mass_battles(&attacker, &defender, num_battles, attack_mult, defense_mult, 12345);
 
             let m_win_pct = stats.attacker_wins as f32 / stats.total_battles as f32 * 100.0;
             let h_win_pct = stats.defender_wins as f32 / stats.total_battles as f32 * 100.0;
@@ -744,7 +94,7 @@ fn run_simulation_mode(
         let atk_count = attackers.len();
         let def_count = defenders.len();
 
-        let result = simulate_army_battle(attackers, defenders, attack_mult, defense_mult, &mut rng);
+        let result = sim::simulate_army_battle(attackers, defenders, attack_mult, defense_mult, &mut rng);
 
         println!("\n{}", label);
         println!("  Winner: {} ({}v{} -> survivors: {} atk, {} def)",
@@ -755,7 +105,7 @@ fn run_simulation_mode(
     }
 }
 
-fn run_wave_mode(
+pub fn run_wave_mode(
     monsters: &HashMap<String, data::MonsterData>,
     heroes: &HashMap<String, data::HeroData>,
     config: &data::GameConfig,
@@ -776,7 +126,7 @@ fn run_wave_mode(
     println!("{}", "-".repeat(75));
 
     for (army, label) in army_compositions {
-        let result = simulate_wave_survival(monsters, heroes, config, army, 15, 99999);
+        let result = sim::simulate_wave_survival(monsters, heroes, config, army, 15, 99999);
 
         println!("{:<30} {:>8} {:>12} {:>10} {:>10}",
             label,
@@ -797,7 +147,7 @@ fn run_wave_mode(
     let mut max_waves = 0;
 
     for seed in 0..10 {
-        let result = simulate_wave_survival(monsters, heroes, config, test_army.clone(), 15, seed * 1000 + 42);
+        let result = sim::simulate_wave_survival(monsters, heroes, config, test_army.clone(), 15, seed * 1000 + 42);
         total_waves += result.waves_survived;
         min_waves = min_waves.min(result.waves_survived);
         max_waves = max_waves.max(result.waves_survived);
@@ -809,8 +159,8 @@ fn run_wave_mode(
         total_waves as f32 / 10.0, min_waves, max_waves);
 }
 
-fn run_economy_mode(
-    monsters: &HashMap<String, data::MonsterData>,
+pub fn run_economy_mode(
+    _monsters: &HashMap<String, data::MonsterData>,
     rooms: &HashMap<String, data::RoomData>,
     config: &data::GameConfig,
 ) {
@@ -822,7 +172,7 @@ fn run_economy_mode(
 
     // Assume a standard room setup
     let hatchery_tiles = 9;
-    let treasury_tiles = 4;
+    let _treasury_tiles = 4;
 
     let food_per_sec = rooms.get("hatchery")
         .and_then(|r| r.effects.as_ref())
@@ -897,21 +247,7 @@ fn run_economy_mode(
     }
 }
 
-// ============================================================================
-// Analysis Functions
-// ============================================================================
-
-fn print_header(title: &str) {
-    println!("\n{}", "=".repeat(70));
-    println!(" {}", title);
-    println!("{}", "=".repeat(70));
-}
-
-fn print_subheader(title: &str) {
-    println!("\n--- {} ---", title);
-}
-
-fn analyze_creature_efficiency(monsters: &HashMap<String, data::MonsterData>) {
+pub fn analyze_creature_efficiency(monsters: &HashMap<String, data::MonsterData>) {
     print_header("CREATURE EFFICIENCY ANALYSIS");
 
     let mut creatures: Vec<_> = monsters.values().collect();
@@ -979,7 +315,7 @@ fn analyze_creature_efficiency(monsters: &HashMap<String, data::MonsterData>) {
     }
 }
 
-fn analyze_combat_matchups(
+pub fn analyze_combat_matchups(
     monsters: &HashMap<String, data::MonsterData>,
     heroes: &HashMap<String, data::HeroData>,
     config: &data::GameConfig,
@@ -1013,7 +349,7 @@ fn analyze_combat_matchups(
                 if let Some(hero) = heroes.get(*hero_id) {
                     let creature_unit = CombatUnit::from_monster(monster);
                     let hero_unit = CombatUnit::from_hero(hero);
-                    let result = simulate_combat(creature_unit, hero_unit, attack_mult, defense_mult);
+                    let result = sim::simulate_combat(creature_unit, hero_unit, attack_mult, defense_mult);
 
                     let winner_short = if result.winner == monster.name { "C" } else { "H" };
                     print!("{:>10.1}s({})", result.duration_secs, winner_short);
@@ -1041,7 +377,7 @@ fn analyze_combat_matchups(
         if let (Some(monster), Some(hero)) = (monsters.get(creature_id), heroes.get(hero_id)) {
             let creature_unit = CombatUnit::from_monster(monster);
             let hero_unit = CombatUnit::from_hero(hero);
-            let result = simulate_combat(creature_unit, hero_unit, attack_mult, defense_mult);
+            let result = sim::simulate_combat(creature_unit, hero_unit, attack_mult, defense_mult);
 
             println!("\n{}: {} vs {}", description, monster.name, hero.name);
             println!("  Winner: {} in {:.1}s with {:.0} HP remaining ({:.0}%)",
@@ -1054,7 +390,7 @@ fn analyze_combat_matchups(
     }
 }
 
-fn analyze_economy(
+pub fn analyze_economy(
     monsters: &HashMap<String, data::MonsterData>,
     rooms: &HashMap<String, data::RoomData>,
     config: &data::GameConfig,
@@ -1144,7 +480,7 @@ fn analyze_economy(
     }
 }
 
-fn analyze_waves(
+pub fn analyze_waves(
     heroes: &HashMap<String, data::HeroData>,
     config: &data::GameConfig,
 ) {
@@ -1201,7 +537,7 @@ fn analyze_waves(
     }
 }
 
-fn analyze_traps(traps: &HashMap<String, data::TrapData>, heroes: &HashMap<String, data::HeroData>) {
+pub fn analyze_traps(traps: &HashMap<String, data::TrapData>, heroes: &HashMap<String, data::HeroData>) {
     print_header("TRAP EFFECTIVENESS ANALYSIS");
 
     print_subheader("Trap Stats");
@@ -1255,7 +591,7 @@ fn analyze_traps(traps: &HashMap<String, data::TrapData>, heroes: &HashMap<Strin
     }
 }
 
-fn analyze_spells(spells: &HashMap<String, data::SpellData>) {
+pub fn analyze_spells(spells: &HashMap<String, data::SpellData>) {
     print_header("SPELL VALUE ANALYSIS");
 
     print_subheader("Damage Spells - Mana Efficiency");
@@ -1307,7 +643,7 @@ fn analyze_spells(spells: &HashMap<String, data::SpellData>) {
     }
 }
 
-fn print_recommendations(
+pub fn print_recommendations(
     monsters: &HashMap<String, data::MonsterData>,
     config: &data::GameConfig,
 ) {
@@ -1357,26 +693,22 @@ fn print_recommendations(
     println!("  • Spike Trap Damage: 25 → 35");
 }
 
-// ============================================================================
-// Automated Balance Tests
-// ============================================================================
-
 #[derive(Debug)]
-struct BalanceTestResult {
-    name: String,
-    passed: bool,
-    message: String,
-    severity: TestSeverity,
+pub struct BalanceTestResult {
+    pub name: String,
+    pub passed: bool,
+    pub message: String,
+    pub severity: TestSeverity,
 }
 
 #[derive(Debug, Clone, Copy)]
-enum TestSeverity {
+pub enum TestSeverity {
     Critical,
     Warning,
     Info,
 }
 
-fn run_balance_tests(
+pub fn run_balance_tests(
     monsters: &HashMap<String, data::MonsterData>,
     heroes: &HashMap<String, data::HeroData>,
     rooms: &HashMap<String, data::RoomData>,
@@ -1448,7 +780,7 @@ fn run_balance_tests(
     if let (Some(goblin), Some(militia)) = (monsters.get("goblin"), heroes.get("peasant_militia")) {
         let goblin_unit = CombatUnit::from_monster(goblin);
         let militia_unit = CombatUnit::from_hero(militia);
-        let result = simulate_combat(
+        let result = sim::simulate_combat(
             goblin_unit,
             militia_unit,
             config.combat.attack_stat_bonus,
@@ -1469,7 +801,7 @@ fn run_balance_tests(
     if let (Some(demon), Some(paladin)) = (monsters.get("demon_spawn"), heroes.get("paladin")) {
         let demon_unit = CombatUnit::from_monster(demon);
         let paladin_unit = CombatUnit::from_hero(paladin);
-        let result = simulate_combat(
+        let result = sim::simulate_combat(
             demon_unit,
             paladin_unit,
             config.combat.attack_stat_bonus,
@@ -1490,10 +822,6 @@ fn run_balance_tests(
         });
     }
 
-    // Test 7: Room sell refund shouldn't be below 10%
-    // (This would need to be added to config - checking rooms.json structure)
-    // For now, we note this as a manual check
-
     // Test 8: Wave scaling should be between 1.1 and 2.0
     results.push(BalanceTestResult {
         name: "Wave scaling multiplier".to_string(),
@@ -1507,7 +835,7 @@ fn run_balance_tests(
 
     // Test 9: Army can survive wave 1 simulation
     let test_army = vec![("goblin", 5)];
-    let wave_result = simulate_wave_survival(monsters, heroes, config, test_army, 3, 12345);
+    let wave_result = sim::simulate_wave_survival(monsters, heroes, config, test_army, 3, 12345);
     results.push(BalanceTestResult {
         name: "5 Goblins survive waves 1-3".to_string(),
         passed: wave_result.waves_survived >= 1,
@@ -1520,7 +848,7 @@ fn run_balance_tests(
 
     // Test 10: Mixed army should do better
     let mixed_army = vec![("orc", 3), ("goblin", 2)];
-    let mixed_result = simulate_wave_survival(monsters, heroes, config, mixed_army, 5, 12345);
+    let mixed_result = sim::simulate_wave_survival(monsters, heroes, config, mixed_army, 5, 12345);
     results.push(BalanceTestResult {
         name: "Mixed army (3 Orcs + 2 Goblins) wave survival".to_string(),
         passed: mixed_result.waves_survived >= 3,
@@ -1560,7 +888,7 @@ fn run_balance_tests(
     results
 }
 
-fn print_test_results(results: &[BalanceTestResult]) {
+pub fn print_test_results(results: &[BalanceTestResult]) {
     print_header("AUTOMATED BALANCE TEST RESULTS");
 
     let passed = results.iter().filter(|r| r.passed).count();
@@ -1594,7 +922,7 @@ fn print_test_results(results: &[BalanceTestResult]) {
     }
 }
 
-fn output_json_results(results: &[BalanceTestResult]) {
+pub fn output_json_results(results: &[BalanceTestResult]) {
     println!("{{");
     println!("  \"total\": {},", results.len());
     println!("  \"passed\": {},", results.iter().filter(|r| r.passed).count());
@@ -1620,124 +948,4 @@ fn output_json_results(results: &[BalanceTestResult]) {
     }
     println!("  ]");
     println!("}}");
-}
-
-fn print_usage() {
-    println!("Usage: balance_calculator [MODE] [OPTIONS]");
-    println!();
-    println!("Modes:");
-    println!("  (none)      Run full analysis with all reports");
-    println!("  simulate    Run headless combat simulations");
-    println!("  waves       Run wave survival simulations");
-    println!("  economy     Run economy over time simulation");
-    println!("  test        Run automated balance tests");
-    println!("  test-json   Run tests and output JSON results");
-    println!();
-    println!("Examples:");
-    println!("  cargo run --bin balance_calculator");
-    println!("  cargo run --bin balance_calculator simulate");
-    println!("  cargo run --bin balance_calculator test");
-    println!("  cargo run --bin balance_calculator test-json > results.json");
-}
-
-// ============================================================================
-// Main
-// ============================================================================
-
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    let mode = args.get(1).map(|s| s.as_str()).unwrap_or("");
-
-    // Load all game data
-    let monsters = data::load_monsters();
-    let heroes = data::load_heroes();
-    let rooms = data::load_rooms();
-    let traps = data::load_traps();
-    let spells = data::load_spells();
-    let config = data::load_config();
-
-    match mode {
-        "help" | "--help" | "-h" => {
-            print_usage();
-        }
-        "simulate" => {
-            println!("\n{}", "╔══════════════════════════════════════════════════════════════════════╗");
-            println!("║           DUNGEON MANAGER - COMBAT SIMULATION                        ║");
-            println!("╚══════════════════════════════════════════════════════════════════════╝");
-            println!("\nLoading game data...");
-            println!("  Loaded {} creatures, {} heroes", monsters.len(), heroes.len());
-            run_simulation_mode(&monsters, &heroes, &config);
-        }
-        "waves" => {
-            println!("\n{}", "╔══════════════════════════════════════════════════════════════════════╗");
-            println!("║           DUNGEON MANAGER - WAVE SIMULATION                          ║");
-            println!("╚══════════════════════════════════════════════════════════════════════╝");
-            println!("\nLoading game data...");
-            println!("  Loaded {} creatures, {} heroes", monsters.len(), heroes.len());
-            run_wave_mode(&monsters, &heroes, &config);
-        }
-        "economy" => {
-            println!("\n{}", "╔══════════════════════════════════════════════════════════════════════╗");
-            println!("║           DUNGEON MANAGER - ECONOMY SIMULATION                       ║");
-            println!("╚══════════════════════════════════════════════════════════════════════╝");
-            println!("\nLoading game data...");
-            println!("  Loaded {} creatures, {} rooms", monsters.len(), rooms.len());
-            run_economy_mode(&monsters, &rooms, &config);
-        }
-        "test" => {
-            let results = run_balance_tests(&monsters, &heroes, &rooms, &config);
-            print_test_results(&results);
-
-            // Exit with error code if any critical tests failed
-            let critical_failures = results.iter()
-                .filter(|r| !r.passed && matches!(r.severity, TestSeverity::Critical))
-                .count();
-            if critical_failures > 0 {
-                std::process::exit(1);
-            }
-        }
-        "test-json" => {
-            let results = run_balance_tests(&monsters, &heroes, &rooms, &config);
-            output_json_results(&results);
-
-            let critical_failures = results.iter()
-                .filter(|r| !r.passed && matches!(r.severity, TestSeverity::Critical))
-                .count();
-            if critical_failures > 0 {
-                std::process::exit(1);
-            }
-        }
-        "" => {
-            println!("\n{}", "╔══════════════════════════════════════════════════════════════════════╗");
-            println!("║           DUNGEON MANAGER - BALANCE CALCULATOR v1.0                   ║");
-            println!("╚══════════════════════════════════════════════════════════════════════╝");
-
-            println!("\nLoading game data...");
-            println!("  Loaded {} creatures", monsters.len());
-            println!("  Loaded {} heroes", heroes.len());
-            println!("  Loaded {} rooms", rooms.len());
-            println!("  Loaded {} traps", traps.len());
-            println!("  Loaded {} spells", spells.len());
-
-            // Run all analyses
-            analyze_creature_efficiency(&monsters);
-            analyze_combat_matchups(&monsters, &heroes, &config);
-            analyze_economy(&monsters, &rooms, &config);
-            analyze_waves(&heroes, &config);
-            analyze_traps(&traps, &heroes);
-            analyze_spells(&spells);
-            print_recommendations(&monsters, &config);
-
-            println!("\n{}", "=".repeat(70));
-            println!(" Analysis Complete!");
-            println!(" Run with 'test' mode for automated balance verification.");
-            println!("{}", "=".repeat(70));
-        }
-        other => {
-            eprintln!("Unknown mode: {}", other);
-            eprintln!();
-            print_usage();
-            std::process::exit(1);
-        }
-    }
 }

@@ -40,7 +40,6 @@ pub fn execute_task(
     player: &PlayerState,
     game_data: &GameData,
     dt: f32,
-    get_tile: impl Fn(TilePos) -> Option<TileState>,
 ) -> TaskResult {
     let mut result = TaskResult::default();
 
@@ -113,10 +112,10 @@ pub fn execute_task(
 
 /// Handle Sleep task
 fn execute_sleep(creature_id: EntityId, room_id: usize, entities: &mut EntityManager, room_manager: &RoomManager, game_data: &GameData, dt: f32) {
-    let room = match room_manager.rooms.iter().find(|r| r.id == room_id) {
-        Some(r) if r.room_type == "lair" => r,
-        _ => return,
-    };
+    // Verify room is a lair
+    if !room_manager.rooms.iter().any(|r| r.id == room_id && r.room_type == "lair") {
+        return;
+    }
     let creature = match entities.get_mut(creature_id).and_then(|e| e.as_creature_mut()) {
         Some(c) => c,
         None => return,
@@ -127,10 +126,10 @@ fn execute_sleep(creature_id: EntityId, room_id: usize, entities: &mut EntityMan
 
 /// Handle Eat task - returns food consumed (negative)
 fn execute_eat(creature_id: EntityId, room_id: usize, entities: &mut EntityManager, room_manager: &RoomManager, player: &PlayerState, game_data: &GameData, dt: f32) -> f32 {
-    let room = match room_manager.rooms.iter().find(|r| r.id == room_id) {
-        Some(r) if r.room_type == "hatchery" => r,
-        _ => return 0.0,
-    };
+    // Verify room is a hatchery
+    if !room_manager.rooms.iter().any(|r| r.id == room_id && r.room_type == "hatchery") {
+        return 0.0;
+    }
 
     if player.food <= 0 {
         return 0.0;

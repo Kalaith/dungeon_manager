@@ -18,6 +18,10 @@ pub mod action_processor;
 pub mod spawner;
 pub mod spawner_logic;
 pub mod movement;
+pub mod prison_system;
+pub mod hero_digging;
+pub mod creature_needs;
+pub mod creature_task_logic;
 
 pub mod input;
 pub mod input_handlers;

@@ -29,4 +29,4 @@ path = "build_graphics.rs"
 
 [[bin]]
 name = "balance_calculator"
-path = "src/bin/balance_calculator.rs"
+path = "src/bin/balance_calculator/main.rs"

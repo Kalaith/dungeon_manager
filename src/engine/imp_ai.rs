@@ -22,8 +22,7 @@ pub fn update_imp_digging(
     // Get all imp IDs
     let mut imp_ids: Vec<EntityId> = entities
         .creatures()
-        .filter(|(id, creature)| creature.creature_id == "imp")
-        .filter(|(id, _)| entities.get(*id).map(|e| e.is_alive()).unwrap_or(false))
+        .filter(|(_, creature)| creature.creature_id == "imp" && creature.health > 0.0)
         .map(|(id, _)| id)
         .collect();
 

@@ -182,7 +182,8 @@ impl GameState {
              crate::engine::combat::apply_projectile_impact(
                  &impact, 
                  &mut self.entities, 
-                 game_data
+                 game_data,
+                 self.time_elapsed
              );
         }
 
@@ -347,7 +348,7 @@ impl GameState {
                     }
 
                     let mut hero_state_clone = hero_state.clone();
-                    crate::engine::hero_ai::update_hero_ai(entity, &mut hero_state_clone, self, game_data, dt);
+                    crate::engine::hero_ai::update_hero_ai(entity, &mut hero_state_clone, self, game_data);
                     
                     // HANDLE GOLD PICKUP
                     // If hero is on a tile with a gold pile, pick it up
@@ -397,7 +398,8 @@ impl GameState {
             }
 
             // Handle hero digging logic
-            let (carved_wall, should_move) = self.process_hero_digging(hero_id, game_data, dt);
+            // Handle hero digging logic
+            let (carved_wall, should_move) = crate::engine::hero_digging::process_hero_digging(&mut self.entities, &self.dungeon, game_data, hero_id, dt);
 
             if let Some(pos) = carved_wall {
                 if let Some(tile) = self.dungeon.get_tile_mut(pos) {
@@ -427,13 +429,13 @@ impl GameState {
         self.generate_food_from_hatcheries(dt);
 
         // Check for starving creatures that need to desert
-        self.handle_creature_desertion(game_data);
+        crate::engine::creature_needs::handle_creature_desertion(&mut self.entities, &self.room_manager, &mut self.dungeon, game_data);
 
         // Handle dead heroes - check for prison capture
-        self.handle_prison_captures(game_data);
+        crate::engine::prison_system::handle_prison_captures(&mut self.entities, &self.room_manager, &mut self.notifications);
 
         // Progress prison conversions
-        self.progress_prison_conversions(game_data, dt);
+        crate::engine::prison_system::progress_prison_conversions(&mut self.entities, &self.room_manager, &mut self.notifications, game_data, dt);
 
         // Remove dead entities and release their lair space (but not captured heroes)
         let dead_ids: Vec<EntityId> = self.entities.all()
@@ -451,8 +453,32 @@ impl GameState {
             .collect();
 
         for entity_id in dead_ids {
+            // Check if it's a structure before removing
+            let mut structure_pos = None;
+            if let Some(entity) = self.entities.get(entity_id) {
+                if let crate::state::entities::EntityType::Structure(_) = entity.entity_type {
+                    structure_pos = Some(entity.pos);
+                }
+            }
+
             self.release_lair_tile(entity_id);
             self.entities.remove(entity_id);
+
+            // If a structure died, destroy the tile
+            if let Some(pos) = structure_pos {
+                if let Some(tile) = self.dungeon.get_tile_mut(pos) {
+                    // Turn into rubble or floor
+                     eprintln!("Structure at {:?} destroyed!", pos);
+                    tile.tile_type = "claimed_floor".to_string(); // Or specific rubble tile if exists
+                    tile.ownership = Ownership::Unclaimed; // Reset ownership? Or keep Player/Hero? 
+                    // Usually destroying enemy room makes it neutral or effectively 'floor'
+                }
+                
+                // Also remove from hero_base list
+                if let Some(building_idx) = self.hero_base.buildings.iter().position(|b| b.pos == pos) {
+                    self.hero_base.buildings.remove(building_idx);
+                }
+            }
         }
 
         // Update fog of war based on claimed tiles and creature positions
@@ -601,7 +627,6 @@ impl GameState {
             &self.player,
             game_data,
             dt,
-            |pos| self.dungeon.get_tile(pos).cloned(),
         );
 
         // Apply state changes from task result
@@ -725,12 +750,27 @@ impl GameState {
                             entity_id: None,
                         };
 
-                        // Spawn Structure Entity
-                        let structure_state = crate::state::entities::StructureState::new(
-                            tile.tile_type.clone(),
-                            building_data.hp as f32
-                        );
-                        let entity_id = self.entities.spawn_structure(pos, structure_state);
+                        // Check if Structure Entity already exists to avoid health reset
+                        let mut existing_id = None;
+                        for entity in self.entities.all() {
+                            if entity.pos == pos {
+                                if let crate::state::entities::EntityType::Structure(_) = entity.entity_type {
+                                    existing_id = Some(entity.id);
+                                    break;
+                                }
+                            }
+                        }
+
+                        let entity_id = if let Some(id) = existing_id {
+                            id
+                        } else {
+                            let structure_state = crate::state::entities::StructureState::new(
+                                tile.tile_type.clone(),
+                                building_data.hp as f32
+                            );
+                            self.entities.spawn_structure(pos, structure_state)
+                        };
+
                         building.entity_id = Some(entity_id);
 
                         self.hero_base.buildings.push(building);
@@ -788,43 +828,7 @@ impl GameState {
         }
     }
 
-    /// Check for creatures with critical needs and make them desert
-    fn handle_creature_desertion(&mut self, game_data: &GameData) {
-        use crate::engine::creature_ai;
 
-        let mut deserting_ids = Vec::new();
-
-        // Check all creatures for desertion
-        for (creature_id, creature) in self.entities.creatures() {
-            // Check ALL critical needs, not just food
-            let food_need = creature.get_need("food");
-            let sleep_need = creature.get_need("sleep");
-            let gold_need = creature.get_need("gold");
-
-            // Creature is in critical condition if any need is below threshold
-            let desert_threshold = game_data.config.creature_ai.need_desert_threshold;
-            let is_critical = food_need < desert_threshold
-                || sleep_need < desert_threshold
-                || gold_need < desert_threshold;
-
-            if is_critical {
-                if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
-                    // Check if they should desert using AI logic (mood-based)
-                    if creature_ai::should_desert(creature, monster_data) {
-                        deserting_ids.push(creature_id);
-                        eprintln!("Creature {} is deserting! (mood: {:.1}, food: {:.1}, sleep: {:.1}, gold: {:.1})",
-                            creature.creature_id, creature.mood, food_need, sleep_need, gold_need);
-                    }
-                }
-            }
-        }
-
-        // Remove deserting creatures
-        for creature_id in deserting_ids {
-            self.release_lair_tile(creature_id);
-            self.entities.remove(creature_id);
-        }
-    }
 
     /// Find the dungeon heart tile position
     pub fn find_dungeon_heart_position(&self) -> Option<TilePos> {
@@ -1004,239 +1008,19 @@ impl GameState {
                     );
                 }
                 
-                crate::engine::combat::apply_combat_result(&result, attacker_id, target_id, self.entities.entities_mut(), game_data);
+                crate::engine::combat::apply_combat_result(&result, attacker_id, target_id, self.entities.entities_mut(), game_data, self.time_elapsed);
                 break;
             }
         }
     }
 
-    /// Handle capturing dead heroes - teleport to available prison
-    fn handle_prison_captures(&mut self, game_data: &GameData) {
-        // Find heroes that just died (health <= 0) and aren't already captured
-        let mut heroes_to_capture: Vec<EntityId> = Vec::new();
 
-        for (hero_id, hero) in self.entities.heroes() {
-            if hero.health <= 0.0 && !hero.is_captured && !hero.is_converted {
-                heroes_to_capture.push(hero_id);
-            }
-        }
 
-        if heroes_to_capture.is_empty() {
-             return;
-        }
 
-        // Find available prison tiles
-        // We'll just look for ANY prison tile for now, ideally one that is empty
-        let mut available_prison_tiles = Vec::new();
-        for room in &self.room_manager.rooms {
-             if room.room_type == "prison" {
-                 for &tile_pos in &room.tiles {
-                      available_prison_tiles.push(tile_pos);
-                 }
-             }
-        }
-
-        if available_prison_tiles.is_empty() {
-             return; // No prison, they just die
-        }
-
-        // Shuffle tiles to avoid stacking all in one spot (if possible)
-        // For deterministic behavior in this tool we might skip shuffle or use a simple index
-        
-        for hero_id in heroes_to_capture {
-             // Just pick a random one for now
-             let random_idx = macroquad::rand::gen_range(0, available_prison_tiles.len());
-             let target_pos = available_prison_tiles[random_idx];
-
-             // Capture the hero
-             if let Some(entity) = self.entities.get_mut(hero_id) {
-                 // Move entity first to avoid borrow issues
-                 entity.pos = target_pos;
-                 entity.visual_pos = (target_pos.x as f32, target_pos.y as f32);
-                 
-                 if let Some(hero) = entity.as_hero_mut() {
-                     hero.is_captured = true;
-                     hero.conversion_progress = 0.0;
-                     // Revive slightly so they don't get cleaned up as "dead" immediately
-                     hero.health = 10.0; 
-                     
-                     eprintln!("Hero {} captured and teleported to prison at {:?}!", hero.hero_id, target_pos);
-                     self.notifications.success(format!("Hero captured!"));
-                 }
-             }
-        }
-    }
-
-    /// Progress prison (Skeleton) and torture (Conversion) logic
-    fn progress_prison_conversions(&mut self, game_data: &GameData, dt: f32) {
-        // Identify active Torture Chambers with working Succubi
-        let mut active_torture_rooms = std::collections::HashSet::new();
-        for (_, creature) in self.entities.creatures() {
-             if creature.creature_id == "succubus" {
-                 if let Some(crate::state::entities::Task::Work(room_id, _)) = creature.current_task {
-                      active_torture_rooms.insert(room_id);
-                 }
-             }
-        }
-
-        // Get conversion rates from config
-        let skeleton_rate = game_data.config.conversion.skeleton_rate;
-        let torture_base_rate = game_data.config.conversion.torture_rate;
-        
-        let mut conversions_to_process: Vec<(EntityId, String, bool)> = Vec::new(); // (Id, Type, IsTorture)
-
-        for (hero_id, hero) in self.entities.heroes() {
-            if hero.is_captured && !hero.is_converted {
-                if let Some(entity) = self.entities.get(hero_id) {
-                    // Check which room they are in
-                    if let Some(room) = self.room_manager.get_room_at(entity.pos) {
-                        if room.room_type == "prison" {
-                             conversions_to_process.push((hero_id, "skeleton".to_string(), false));
-                        } else if room.room_type == "torture_chamber" {
-                             if active_torture_rooms.contains(&room.id) {
-                                  conversions_to_process.push((hero_id, "conversion".to_string(), true));
-                             }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Apply progress
-        for (hero_id, action_type, is_torture) in conversions_to_process {
-             let mut completed = false;
-             let mut hero_name = "".to_string();
-             
-             if let Some(entity) = self.entities.get_mut(hero_id) {
-                 if let Some(hero) = entity.as_hero_mut() {
-                     hero_name = hero.hero_id.clone();
-                     let rate = if is_torture { torture_base_rate } else { skeleton_rate };
-                     hero.conversion_progress += rate * dt;
-                     
-                     if hero.conversion_progress >= 1.0 {
-                         completed = true;
-                     }
-                 }
-             }
-
-             if completed {
-                 if is_torture {
-                      // Retrieve Hero and convert
-                      if let Some(entity) = self.entities.get_mut(hero_id) {
-                          let pos = entity.pos;
-                          if let Some(hero) = entity.as_hero_mut() {
-                               hero.is_converted = true;
-                               hero.is_captured = false;
-                               hero.health = hero.max_health; // Heal them up
-                               // Reset goal to something safe
-                               hero.current_goal = crate::state::entities::HeroGoal::RestAtSpawn(pos);
-                               self.notifications.success(format!("{} converted to your side!", hero_name));
-                          }
-                      }
-                 } else {
-                      // Skeleton time
-                      // Remove hero, spawn skeleton
-                      let pos = if let Some(e) = self.entities.get(hero_id) { e.pos } else { TilePos::new(0,0) }; // Should be valid
-                      self.entities.remove(hero_id);
-                      
-                      if let Some(monster_data) = game_data.monsters.get("skeleton") {
-                            let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
-                            let creature_state = crate::state::entities::CreatureState::new(
-                                "skeleton".to_string(),
-                                1,
-                                monster_data.stats.health,
-                                monster_data.stats.mana,
-                                visual_seed,
-                            );
-                            self.entities.spawn_creature(pos, creature_state);
-                            self.notifications.success("Captured hero rotted into a Skeleton!");
-                      }
-                 }
-             }
-        }
-    }
 
     /// Process hero digging logic with flattened control flow
     /// Returns (carved_wall_pos, should_move)
-    fn process_hero_digging(&mut self, hero_id: EntityId, game_data: &GameData, dt: f32) -> (Option<TilePos>, bool) {
-        // First, gather the info we need without holding mutable borrows
-        let (next_pos, can_dig) = {
-            let entity = match self.entities.get(hero_id) {
-                Some(e) => e,
-                None => return (None, true),
-            };
-            let hero_state = match entity.as_hero() {
-                Some(h) => h,
-                None => return (None, true),
-            };
-            let path = match &hero_state.current_path {
-                Some(p) => p,
-                None => return (None, true),
-            };
-            let next_pos = match path.first() {
-                Some(&p) => p,
-                None => return (None, true),
-            };
-            (next_pos, hero_state.can_dig)
-        };
 
-        // Check tile properties without holding entity borrow
-        let is_wall = self.tile_blocks_movement(next_pos, game_data);
-        let is_hero_wall = self.dungeon.get_tile(next_pos).map(|t| t.tile_type == "hero_wall").unwrap_or(false);
-        
-        let is_diggable = self.dungeon.get_tile(next_pos)
-            .and_then(|t| game_data.tiles.get(&t.tile_type))
-            .map(|td| td.diggable)
-            .unwrap_or(false);
-
-        // Now apply changes with mutable borrow
-        let entity = match self.entities.get_mut(hero_id) {
-            Some(e) => e,
-            None => return (None, true),
-        };
-        let hero_state = match entity.as_hero_mut() {
-            Some(h) => h,
-            None => return (None, true),
-        };
-
-        if !is_wall {
-            hero_state.is_digging = false;
-            hero_state.dig_timer = 0.0;
-            return (None, true);
-        }
-
-        if !can_dig {
-            hero_state.current_path = None;
-            return (None, true);
-        }
-
-        // PREVENT DIGGING IF TILE IS NOT DIGGABLE (e.g. Dungeon Heart, Bedrock)
-        if !is_diggable || is_hero_wall {
-            hero_state.current_path = None;
-            hero_state.is_digging = false;
-            return (None, true);
-        }
-
-        hero_state.is_digging = true;
-        hero_state.dig_timer += dt;
-
-        if hero_state.dig_timer >= hero_state.max_dig_time {
-            hero_state.dig_timer = 0.0;
-            hero_state.is_digging = false;
-            return (Some(next_pos), false);
-        }
-
-        (None, false)
-    }
-
-    /// Check if a tile blocks movement
-    fn tile_blocks_movement(&self, pos: TilePos, game_data: &GameData) -> bool {
-        let tile = match self.dungeon.get_tile(pos) {
-            Some(t) => t,
-            None => return false,
-        };
-        game_data.tiles.get(&tile.tile_type).map(|td| td.blocks_movement).unwrap_or(false)
-    }
 
     /// Check for victory or defeat conditions
     pub fn check_game_over_conditions(&mut self) {

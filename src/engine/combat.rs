@@ -93,7 +93,7 @@ pub fn resolve_combat_tick(
     };
 
     // Generate status effects (simplified)
-    let status_effects = generate_status_effects(attacker, defender, game_data);
+    let status_effects = generate_status_effects();
     
     // Log combat using all stats for debug
     if actual_damage > 0.0 {
@@ -224,7 +224,8 @@ pub fn calculate_damage(attacker: &CombatStats, defender: &CombatStats, game_dat
     let resistance_multiplier = calculate_resistance_multiplier(attacker, defender);
     let final_damage = pre_resist_damage * resistance_multiplier;
 
-    final_damage.max(0.0)
+    // Ensure minimum damage of 1.0 so battles don't stalemate
+    final_damage.max(1.0)
 }
 
 /// Calculate resistance multiplier based on attack type and defender resistances
@@ -238,9 +239,6 @@ fn calculate_resistance_multiplier(attacker: &CombatStats, defender: &CombatStat
 
 /// Generate status effects from combat (simplified)
 fn generate_status_effects(
-    _attacker: &Entity,
-    _defender: &Entity,
-    _game_data: &GameData,
 ) -> Vec<StatusEffect> {
     // Simplified: no status effects for now
     // In full implementation, this would check abilities and generate effects
@@ -254,9 +252,13 @@ pub fn apply_combat_result(
     defender_id: EntityId,
     entities: &mut HashMap<EntityId, Entity>,
     game_data: &GameData,
+    current_time: f32,
 ) {
     // Apply damage to defender
     if let Some(defender) = entities.get_mut(&defender_id) {
+        if result.damage_dealt > 0.0 {
+            defender.last_damage_time = current_time;
+        }
         match &mut defender.entity_type {
             crate::state::entities::EntityType::Creature(state) => {
                 state.take_damage(result.damage_dealt);
@@ -342,12 +344,17 @@ pub fn apply_projectile_impact(
     impact: &crate::state::projectiles::Impact,
     entities: &mut crate::state::entities::EntityManager,
     game_data: &GameData,
+    current_time: f32,
 ) {
     // Apply damage to defender
     if let Some(defender) = entities.get_mut(impact.defender_id) {
         // Use apply_combat_result mechanics but simplified
         let damage = impact.damage;
         
+        if damage > 0.0 {
+            defender.last_damage_time = current_time;
+        }
+
          match &mut defender.entity_type {
             crate::state::entities::EntityType::Creature(state) => {
                 state.take_damage(damage);
@@ -435,7 +442,6 @@ pub fn at_preferred_range(
     game_data: &GameData,
 ) -> bool {
     let distance = calculate_manhattan_distance(attacker_pos, defender_pos);
-    let preferred = get_preferred_range(attack_type, game_data);
     let max_range = get_attack_range(attack_type, game_data);
 
     match attack_type {
@@ -552,7 +558,7 @@ pub fn get_detection_range(entity: &Entity, game_data: &GameData) -> i32 {
     }
 }
 
-/// Find potential combat targets for an entity within detection range, sorted by distance (closest first)
+/// Find potential combat targets for an entity within detection range, sorted by priority (heroes > buildings) then distance
 /// This uses DETECTION range (sight), not attack range - creatures will chase enemies they can see
 pub fn find_combat_targets(
     entity: &Entity,
@@ -560,7 +566,9 @@ pub fn find_combat_targets(
     dungeon: &crate::state::dungeon::Dungeon,
     game_data: &GameData,
 ) -> Vec<EntityId> {
-    let mut targets: Vec<(EntityId, i32)> = Vec::new();
+    // (EntityId, Distance, Priority)
+    // Priority: 0 = Hero/Creature (High), 1 = Structure (Low)
+    let mut targets: Vec<(EntityId, i32, u8)> = Vec::new();
 
     let detection_range = get_detection_range(entity, game_data);
 
@@ -581,16 +589,22 @@ pub fn find_combat_targets(
             if distance <= detection_range {
                 // Also check line of sight for ranged detection
                 if distance <= 1 || check_line_of_sight(entity.pos, other_entity.pos, &dungeon.grid, game_data) {
-                    targets.push((*other_id, distance));
+                    let priority = match other_entity.entity_type {
+                        crate::state::entities::EntityType::Structure(_) => 1,
+                        _ => 0,
+                    };
+                    targets.push((*other_id, distance, priority));
                 }
             }
         }
     }
 
-    // Sort by distance (closest first)
-    targets.sort_by_key(|(_, dist)| *dist);
+    // Sort by priority (asc) then distance (asc)
+    // This ensures Heroes/Creatures (0) are targeted before Structures (1)
+    // Within same priority, closest target is preferred
+    targets.sort_by_key(|(_, dist, priority)| (*priority, *dist));
 
-    targets.into_iter().map(|(id, _)| id).collect()
+    targets.into_iter().map(|(id, _, _)| id).collect()
 }
 
 /// Get the attack type for an entity

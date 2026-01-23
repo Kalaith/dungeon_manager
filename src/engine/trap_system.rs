@@ -174,26 +174,27 @@ fn trigger_trap(
 ) -> Option<TrapTriggerResult> {
     match trap_type {
         "door" => None,
-        "spike_trap" => trigger_spike_trap(pos, trap_data, triggering_entity, entities, dungeon, game_data),
-        "boulder_trap" => trigger_boulder_trap(pos, trap_data, entities, dungeon, game_data),
+        "spike_trap" => trigger_damage_trap(pos, trap_data, triggering_entity, entities, dungeon),
+        "blowgun_trap" => trigger_damage_trap(pos, trap_data, triggering_entity, entities, dungeon),
+        "boulder_trap" => trigger_boulder_trap(pos, trap_data, entities, dungeon),
         "alarm_trap" => { trigger_alarm_trap(pos, trap_data, entities, dungeon, game_data); None }
         _ => { eprintln!("Unknown trap type: {}", trap_type); None }
     }
 }
 
-fn trigger_spike_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, triggering_entity: EntityId, entities: &mut EntityManager, dungeon: &mut Dungeon, game_data: &GameData) -> Option<TrapTriggerResult> {
+fn trigger_damage_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, triggering_entity: EntityId, entities: &mut EntityManager, dungeon: &mut Dungeon) -> Option<TrapTriggerResult> {
     let damage = trap_data.effects.damage;
     let entity = entities.get_mut(triggering_entity)?;
-    let cooldown = game_data.config.traps.default_cooldown;
+    let cooldown = trap_data.effects.cooldown.unwrap_or(5.0);
 
     apply_trap_damage(entity, damage);
-    eprintln!("Spike trap triggered at {:?}! Dealt {} damage.", pos, damage);
+    eprintln!("{} triggered at {:?}! Dealt {} damage.", trap_data.name, pos, damage);
     set_trap_cooldown(dungeon, pos, cooldown);
 
-    Some(TrapTriggerResult { trap_pos: pos, trap_type: "spike_trap".to_string(), damage_dealt: damage, affected_entities: vec![triggering_entity] })
+    Some(TrapTriggerResult { trap_pos: pos, trap_type: trap_data.id.clone(), damage_dealt: damage, affected_entities: vec![triggering_entity] })
 }
 
-fn trigger_boulder_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, entities: &mut EntityManager, dungeon: &mut Dungeon, game_data: &GameData) -> Option<TrapTriggerResult> {
+fn trigger_boulder_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, entities: &mut EntityManager, dungeon: &mut Dungeon) -> Option<TrapTriggerResult> {
     let damage = trap_data.effects.damage;
     let radius = if trap_data.effects.area { 
         trap_data.effects.area_radius.unwrap_or(1.5) 

@@ -32,6 +32,8 @@ pub struct TrapEffects {
     #[serde(default)]
     pub cooldown_multiplier: Option<f32>,
     #[serde(default)]
+    pub cooldown: Option<f32>,
+    #[serde(default)]
     pub area_radius: Option<f32>,
     #[serde(default)]
     pub single_radius: Option<f32>,

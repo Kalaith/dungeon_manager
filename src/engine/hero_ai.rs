@@ -56,7 +56,7 @@ pub fn decide_hero_goal(
                 HeroGoal::DestroyHeart
             } else {
                 // Heart destroyed, switch to secondary goals
-                choose_secondary_goal(hero_state, hero_data, game_state)
+                choose_secondary_goal(hero_state, hero_data)
             }
         }
         "steal_gold" => {
@@ -64,7 +64,7 @@ pub fn decide_hero_goal(
             if hero_state.gold_stolen < target_gold {
                 HeroGoal::StealGold(target_gold)
             } else {
-                choose_secondary_goal(hero_state, hero_data, game_state)
+                choose_secondary_goal(hero_state, hero_data)
             }
         }
         "kill_creatures" => {
@@ -72,7 +72,7 @@ pub fn decide_hero_goal(
             if hero_state.kills < target_kills {
                 HeroGoal::KillCreatures(target_kills)
             } else {
-                choose_secondary_goal(hero_state, hero_data, game_state)
+                choose_secondary_goal(hero_state, hero_data)
             }
         }
         "explore" => HeroGoal::Explore,
@@ -83,8 +83,7 @@ pub fn decide_hero_goal(
 /// Choose a secondary goal when primary is complete
 fn choose_secondary_goal(
     hero_state: &HeroState,
-    hero_data: &HeroData,
-    game_state: &GameState,
+    hero_data: &HeroData
 ) -> HeroGoal {
     // Pick the highest priority secondary goal that's still viable
     for goal_name in &hero_data.ai.secondary_goals {
@@ -191,7 +190,7 @@ pub fn find_target_room(
         HeroGoal::SabotageRoom(room_id) => Some(*room_id),
         HeroGoal::Explore => {
             // Find unexplored areas (rooms with fog)
-            find_unexplored_room(hero_pos, hero_id, game_state, game_data)
+            find_unexplored_room(game_state)
         }
         HeroGoal::RestAtSpawn(_) => None, // Not a room target
         HeroGoal::Retreat => {
@@ -227,7 +226,7 @@ fn find_best_room_by_priority(
     for room in &game_state.room_manager.rooms {
         if room.room_type == room_type {
             let priority = hero_data.ai.room_priorities.get(&room.room_type).copied().unwrap_or(1.0);
-            let distance_factor = calculate_room_distance_factor(hero_pos, room, game_state);
+            let distance_factor = calculate_room_distance_factor(hero_pos, room);
 
             let total_priority = priority / distance_factor; // Closer rooms get higher priority
 
@@ -256,7 +255,7 @@ fn find_room_with_creatures(
         if room_types.contains(&room.room_type.as_str()) {
             // Score based on room size and distance
             let size_score = room.tiles.len() as f32;
-            let distance_factor = calculate_room_distance_factor(hero_pos, room, game_state);
+            let distance_factor = calculate_room_distance_factor(hero_pos, room);
             let score = size_score / distance_factor;
 
             if score > best_score {
@@ -270,12 +269,7 @@ fn find_room_with_creatures(
 }
 
 /// Find an unexplored room (with fog of war)
-fn find_unexplored_room(
-    hero_pos: TilePos,
-    hero_id: &str,
-    game_state: &GameState,
-    game_data: &GameData,
-) -> Option<usize> {
+fn find_unexplored_room(game_state: &GameState) -> Option<usize> {
     // Look for rooms that have fog-covered tiles
     for room in &game_state.room_manager.rooms {
         for &tile_pos in &room.tiles {
@@ -313,7 +307,7 @@ fn find_entrance_room(game_state: &GameState) -> Option<usize> {
 }
 
 /// Calculate distance factor for room priority (closer = higher priority)
-fn calculate_room_distance_factor(hero_pos: TilePos, room: &Room, game_state: &GameState) -> f32 {
+fn calculate_room_distance_factor(hero_pos: TilePos, room: &Room) -> f32 {
     // Find closest tile in room to hero
     let mut min_distance = f32::INFINITY;
 
@@ -388,8 +382,7 @@ pub fn update_hero_ai(
     hero_entity: &Entity,
     hero_state: &mut HeroState,
     game_state: &GameState,
-    game_data: &GameData,
-    dt: f32,
+    game_data: &GameData
 ) {
     // Defenders always stay at spawn - don't change their goal
     if hero_state.is_defender {

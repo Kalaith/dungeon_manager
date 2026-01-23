@@ -15,6 +15,7 @@
 #![allow(unused_imports)]
 
 pub mod core;
+pub mod primitives;
 pub mod tiles;
 pub mod monsters;
 pub mod heroes;
