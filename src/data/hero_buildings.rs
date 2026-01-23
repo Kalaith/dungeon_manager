@@ -42,11 +42,6 @@ pub struct BuildingVisual {
     pub tile: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct HeroBuildingsWrapper {
-    settings: Option<serde_json::Value>, // Optional settings if we add them later
-}
-
 pub fn load_hero_buildings() -> Result<HashMap<String, HeroBuildingData>, Box<dyn Error>> {
     let json_content = {
         #[cfg(target_arch = "wasm32")]

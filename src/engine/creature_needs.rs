@@ -1,8 +1,8 @@
 use crate::data::GameData;
 use crate::state::dungeon::Dungeon;
-use crate::state::entities::{EntityId, EntityManager};
+use crate::state::entities::EntityManager;
 use crate::state::room_manager::RoomManager;
-use crate::engine::creature_ai;
+
 
 /// Check for creatures with critical needs and make them desert
 pub fn handle_creature_desertion(

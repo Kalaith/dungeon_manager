@@ -114,22 +114,6 @@ impl PlayerState {
         }
     }
 
-    /// Check if player can afford the given cost
-    pub fn can_afford(&self, gold: i32, mana: i32) -> bool {
-        self.gold >= gold && self.mana >= mana
-    }
-
-    /// Spend resources, returns true if successful
-    pub fn spend(&mut self, gold: i32, mana: i32) -> bool {
-        if self.can_afford(gold, mana) {
-            self.gold -= gold;
-            self.mana -= mana;
-            true
-        } else {
-            false
-        }
-    }
-
     /// Add resources, respecting max limits
     pub fn add_resources(&mut self, gold: i32, mana: i32, food: i32, materials: i32) {
         self.gold = (self.gold + gold).min(self.max_gold);
@@ -165,11 +149,6 @@ impl PlayerState {
     /// Check if a room type is unlocked
     pub fn is_room_unlocked(&self, room_id: &str) -> bool {
         self.unlocked_rooms.contains(room_id)
-    }
-
-    /// Check if a creature type is unlocked
-    pub fn is_creature_unlocked(&self, creature_id: &str) -> bool {
-        self.unlocked_creatures.contains(creature_id)
     }
 
     /// Check if a spell is unlocked
@@ -249,34 +228,9 @@ impl PlayerState {
         }
     }
 
-    /// Record a kill
-    pub fn record_kill(&mut self, enemy_type: String) {
-        *self.kills.entry(enemy_type).or_insert(0) += 1;
-    }
-
-    /// Record a death
-    pub fn record_death(&mut self, creature_type: String) {
-        *self.deaths.entry(creature_type).or_insert(0) += 1;
-    }
-
     /// Record a spell cast
     pub fn record_spell_cast(&mut self, spell_id: String) {
         *self.spells_cast.entry(spell_id).or_insert(0) += 1;
-    }
-
-    /// Check if player has lost (dungeon heart destroyed)
-    pub fn is_defeated(&self) -> bool {
-        self.dungeon_heart_health <= 0.0
-    }
-
-    /// Check if player is at creature limit
-    pub fn is_at_creature_limit(&self) -> bool {
-        self.current_creature_count >= self.max_creatures
-    }
-
-    /// Update game time
-    pub fn update_time(&mut self, dt: f32) {
-        self.game_time += dt;
     }
 }
 

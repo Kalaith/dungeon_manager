@@ -31,14 +31,6 @@ impl Default for ColorVariation {
 }
 
 impl ColorVariation {
-    pub fn new(hue_shift: f32, saturation: f32, brightness: f32) -> Self {
-        Self {
-            hue_shift,
-            saturation,
-            brightness,
-        }
-    }
-
     /// Create a random variation from a seed
     pub fn from_seed(seed: u64, variation_strength: f32) -> Self {
         let mut rng = SimpleRng::new(seed);
@@ -53,8 +45,6 @@ impl ColorVariation {
 /// Defines which parts of a sprite can be varied
 #[derive(Debug, Clone)]
 pub struct SpriteVariationConfig {
-    /// Name of this config (e.g., "wizard", "knight")
-    pub name: String,
     /// Color regions that can be varied, with their target hue ranges
     pub color_regions: Vec<ColorRegion>,
     /// Overall variation strength (0.0 to 1.0)
@@ -104,8 +94,6 @@ impl ColorRegion {
 /// Visual variations for an individual entity
 #[derive(Debug, Clone, Default)]
 pub struct EntityVisualVariation {
-    /// Random seed for this entity's variations
-    pub seed: VariationSeed,
     /// Pre-computed color variations per region
     pub region_variations: HashMap<String, ColorVariation>,
 }
@@ -126,17 +114,8 @@ impl EntityVisualVariation {
         }
 
         Self {
-            seed,
             region_variations,
         }
-    }
-
-    /// Get variation for a specific region
-    pub fn get_region_variation(&self, region_name: &str) -> ColorVariation {
-        self.region_variations
-            .get(region_name)
-            .copied()
-            .unwrap_or_default()
     }
 }
 
@@ -164,7 +143,6 @@ impl SpriteVariationCache {
         self.configs.insert(
             "wizard".to_string(),
             SpriteVariationConfig {
-                name: "wizard".to_string(),
                 color_regions: vec![
                     ColorRegion::new("robe", 220.0, 280.0, 0.3, 1.0, 1.5),      // Blue/purple robes
                     ColorRegion::new("staff_gem", 0.0, 360.0, 0.5, 1.0, 2.0),   // Staff gem - high variation
@@ -177,7 +155,6 @@ impl SpriteVariationCache {
         self.configs.insert(
             "warlock".to_string(),
             SpriteVariationConfig {
-                name: "warlock".to_string(),
                 color_regions: vec![
                     ColorRegion::new("robe", 260.0, 320.0, 0.2, 1.0, 1.2),      // Purple/dark robes
                     ColorRegion::new("magic_glow", 0.0, 360.0, 0.4, 1.0, 2.0),  // Magic effects
@@ -191,7 +168,6 @@ impl SpriteVariationCache {
         self.configs.insert(
             "knight".to_string(),
             SpriteVariationConfig {
-                name: "knight".to_string(),
                 color_regions: vec![
                     ColorRegion::new("armor", 0.0, 360.0, 0.0, 0.3, 0.3),       // Metal armor (low sat)
                     ColorRegion::new("plume", 0.0, 360.0, 0.5, 1.0, 2.0),       // Helmet plume
@@ -205,7 +181,6 @@ impl SpriteVariationCache {
         self.configs.insert(
             "goblin".to_string(),
             SpriteVariationConfig {
-                name: "goblin".to_string(),
                 color_regions: vec![
                     ColorRegion::new("skin", 60.0, 150.0, 0.3, 0.8, 0.8),       // Green skin
                     ColorRegion::new("cloth", 0.0, 360.0, 0.3, 1.0, 1.5),       // Clothing
@@ -219,7 +194,6 @@ impl SpriteVariationCache {
         self.configs.insert(
             "orc".to_string(),
             SpriteVariationConfig {
-                name: "orc".to_string(),
                 color_regions: vec![
                     ColorRegion::new("skin", 60.0, 140.0, 0.3, 0.7, 0.6),       // Green/brown skin
                     ColorRegion::new("armor", 0.0, 60.0, 0.2, 0.8, 0.8),        // Leather/metal
@@ -233,7 +207,6 @@ impl SpriteVariationCache {
         self.configs.insert(
             "skeleton".to_string(),
             SpriteVariationConfig {
-                name: "skeleton".to_string(),
                 color_regions: vec![
                     ColorRegion::new("bone", 30.0, 60.0, 0.1, 0.4, 0.4),        // Bone color
                     ColorRegion::new("glow", 180.0, 240.0, 0.3, 1.0, 1.2),      // Soul glow
@@ -246,7 +219,6 @@ impl SpriteVariationCache {
         self.configs.insert(
             "imp".to_string(),
             SpriteVariationConfig {
-                name: "imp".to_string(),
                 color_regions: vec![
                     ColorRegion::new("skin", 340.0, 40.0, 0.15, 1.0, 1.2),      // Dark red/maroon skin (wraps around)
                     ColorRegion::new("wings", 340.0, 60.0, 0.1, 0.8, 0.8),      // Wing membrane
@@ -260,7 +232,6 @@ impl SpriteVariationCache {
         self.configs.insert(
             "troll".to_string(),
             SpriteVariationConfig {
-                name: "troll".to_string(),
                 color_regions: vec![
                     ColorRegion::new("skin", 80.0, 160.0, 0.2, 0.6, 0.7),       // Gray-green skin
                     ColorRegion::new("moss", 80.0, 140.0, 0.4, 0.9, 0.8),       // Moss/growth
@@ -273,7 +244,6 @@ impl SpriteVariationCache {
         self.configs.insert(
             "archer".to_string(),
             SpriteVariationConfig {
-                name: "archer".to_string(),
                 color_regions: vec![
                     ColorRegion::new("cloth", 60.0, 150.0, 0.3, 0.8, 1.0),      // Green clothing
                     ColorRegion::new("leather", 20.0, 50.0, 0.3, 0.7, 0.5),     // Brown leather
@@ -287,7 +257,6 @@ impl SpriteVariationCache {
         self.configs.insert(
             "vampire".to_string(),
             SpriteVariationConfig {
-                name: "vampire".to_string(),
                 color_regions: vec![
                     ColorRegion::new("cape", 0.0, 360.0, 0.3, 1.0, 1.2),        // Cape color
                     ColorRegion::new("skin", 0.0, 40.0, 0.0, 0.3, 0.3),         // Pale skin
@@ -301,7 +270,6 @@ impl SpriteVariationCache {
         self.configs.insert(
             "spider".to_string(),
             SpriteVariationConfig {
-                name: "spider".to_string(),
                 color_regions: vec![
                     ColorRegion::new("body", 0.0, 360.0, 0.1, 0.5, 0.6),        // Body color
                     ColorRegion::new("markings", 0.0, 60.0, 0.5, 1.0, 1.2),     // Pattern markings
@@ -314,7 +282,6 @@ impl SpriteVariationCache {
         self.configs.insert(
             "default".to_string(),
             SpriteVariationConfig {
-                name: "default".to_string(),
                 color_regions: vec![
                     ColorRegion::new("primary", 0.0, 360.0, 0.2, 1.0, 1.0),
                     ColorRegion::new("secondary", 0.0, 360.0, 0.2, 1.0, 0.8),
@@ -350,21 +317,6 @@ impl SpriteVariationCache {
 
         self.cache.insert(key, new_texture.clone());
         new_texture
-    }
-
-    /// Get the variation config for a sprite type
-    pub fn get_config(&self, sprite_id: &str) -> Option<&SpriteVariationConfig> {
-        self.configs.get(sprite_id).or_else(|| self.configs.get("default"))
-    }
-
-    /// Clear the cache (useful when base textures change)
-    pub fn clear(&mut self) {
-        self.cache.clear();
-    }
-
-    /// Get cache size for debugging
-    pub fn cache_size(&self) -> usize {
-        self.cache.len()
     }
 }
 
@@ -501,14 +453,6 @@ impl SimpleRng {
     }
 }
 
-/// Generate a variation seed from entity ID and spawn time
-pub fn generate_variation_seed(entity_id: usize, spawn_frame: u64) -> VariationSeed {
-    let mut seed = entity_id as u64;
-    seed = seed.wrapping_mul(0x517cc1b727220a95);
-    seed ^= spawn_frame;
-    seed = seed.wrapping_mul(0x2545F4914F6CDD1D);
-    seed
-}
 
 #[cfg(test)]
 mod tests {

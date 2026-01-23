@@ -255,13 +255,7 @@ impl Sidebar {
 
         None
     }
-    
-    fn get_room_cost(&self, room_id: &str, game_data: &crate::data::GameData) -> i32 {
-        game_data.rooms.get(room_id)
-            .map(|r| r.build.cost_per_tile)
-            .unwrap_or_else(|| panic!("Room type '{}' defined in UI but missing in rooms.json", room_id))
-    }
-    
+
     fn handle_magic_tab_click(&mut self, mouse_pos: (f32, f32), player: &PlayerState, spells: &HashMap<String, SpellData>) -> Option<InteractionMode> {
         let start_x = PADDING;
         let start_y = self.panel_y + PADDING;
@@ -475,24 +469,7 @@ impl Sidebar {
                 action_queue.push(crate::ui::actions::UiAction::LoadGame);
          }
     }
-    
-    fn interaction_modes_match(&self, m1: &InteractionMode, m2: &InteractionMode) -> bool {
-        match (m1, m2) {
-            (InteractionMode::None, InteractionMode::None) => true,
-            (InteractionMode::Dig, InteractionMode::Dig) => true,
-            (InteractionMode::PlaceSpawner, InteractionMode::PlaceSpawner) => true,
-            (InteractionMode::Pickup, InteractionMode::Pickup) => true,
-            (InteractionMode::Drop, InteractionMode::Drop) => true,
-            (InteractionMode::Sell, InteractionMode::Sell) => true,
-            (InteractionMode::Inspect, InteractionMode::Inspect) => true,
-            (InteractionMode::BuildRoom(a), InteractionMode::BuildRoom(b)) => a == b,
-            (InteractionMode::BuildTrap(a), InteractionMode::BuildTrap(b)) => a == b,
-            (InteractionMode::SaveGame, InteractionMode::SaveGame) => true,
-            // Mode doesn't really matter for Load as it overrides everything immediately
-            _ => false,
-        }
-    }
-    
+
     pub fn get_selected_spell(&self) -> Option<&String> {
         self.selected_spell.as_ref()
     }

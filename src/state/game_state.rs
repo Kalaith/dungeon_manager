@@ -556,11 +556,6 @@ impl GameState {
         self.dungeon.update_fog_of_war(&claimed_tiles, &creature_positions, game_data);
     }
 
-    /// Check if imps have work to do (dig marks exist)  
-    pub fn imps_have_work(&self) -> bool {
-        self.has_marked_tiles()
-    }
-
     pub fn get_tile(&self, pos: TilePos) -> Option<&crate::state::tile_state::TileState> {
         self.dungeon.get_tile(pos)
     }
@@ -668,27 +663,6 @@ impl GameState {
         }
     }
 
-    fn get_task_target_position(&self, task: &crate::state::entities::Task) -> Option<TilePos> {
-        use crate::state::entities::Task;
-
-        match task {
-            Task::Dig(pos) => Some(*pos),
-            Task::MoveTo(pos) => Some(*pos),
-            Task::Work(_, pos) => Some(*pos),
-            Task::Sleep(room_id) | Task::Eat(room_id) | Task::DepositGold(room_id)
-            | Task::Train(room_id) | Task::Research(room_id) | Task::CollectWages(room_id) => {
-                // Find room center
-                self.room_manager.rooms
-                    .iter()
-                    .find(|r| r.id == *room_id)
-                    .map(|room| {
-                        self.room_manager.calculate_room_center(room)
-                    })
-            }
-            _ => None,
-        }
-    }
-
     pub fn detect_and_update_rooms(&mut self, game_data: &GameData) {
         self.room_manager.detect_and_update_rooms(&mut self.dungeon, game_data);
         
@@ -742,7 +716,6 @@ impl GameState {
                             id: format!("{}_{}_{}", tile.tile_type, pos.x, pos.y),
                             building_type: tile.tile_type.clone(),
                             pos,
-                            current_hp: building_data.hp,
                             spawn_timers: building_data.spawn_triggers.iter().map(|t| crate::state::hero_base::SpawnTimer {
                                 hero_id: t.hero_id.clone(),
                                 time_until_spawn: 1.0, // Start almost immediately for feedback
@@ -804,16 +777,6 @@ impl GameState {
         );
     }
 
-    /// Count available (unclaimed) lair tiles
-    fn count_available_lair_tiles(&self) -> usize {
-        self.room_manager.count_available_lair_tiles(&self.dungeon)
-    }
-
-    /// Find an available lair tile and claim it for the given entity
-    fn find_and_claim_lair_tile(&mut self, entity_id: crate::state::entities::EntityId) -> Option<TilePos> {
-        self.room_manager.find_and_claim_lair_tile(&mut self.dungeon, entity_id)
-    }
-
     /// Release lair tile claimed by an entity (when creature dies/leaves)
     fn release_lair_tile(&mut self, entity_id: crate::state::entities::EntityId) {
         self.room_manager.release_lair_tile(&mut self.dungeon, entity_id);
@@ -842,18 +805,6 @@ impl GameState {
         None
     }
 
-    /// Check if any tiles are marked for digging
-    fn has_marked_tiles(&self) -> bool {
-        for row in &self.dungeon.grid {
-            for tile in row {
-                if tile.marked_for_dig {
-                    return true;
-                }
-            }
-        }
-        false
-    }
-
     /// Count how many imps are currently spawned
     pub fn count_imps(&self) -> usize {
         self.entities
@@ -869,14 +820,6 @@ impl GameState {
             .unwrap_or(10)
     }
 
-    /// Count how many non-imp monsters are currently spawned
-    pub fn count_monsters(&self) -> usize {
-        self.entities
-            .creatures()
-            .filter(|(_, creature)| creature.creature_id != "imp")
-            .count()
-    }
-
     /// Count only player-owned creatures (dungeon faction, excluding imps)
     pub fn count_player_creatures(&self, game_data: &GameData) -> usize {
         self.entities
@@ -889,15 +832,6 @@ impl GameState {
                 }
             })
             .count()
-    }
-
-    /// Check if a creature belongs to the player (dungeon faction)
-    pub fn is_player_creature(&self, creature_id: &str, game_data: &GameData) -> bool {
-        if let Some(monster_data) = game_data.monsters.get(creature_id) {
-            monster_data.faction == "dungeon"
-        } else {
-            false
-        }
     }
 
     /// Spawn starting imps at game initialization
@@ -1029,7 +963,7 @@ impl GameState {
         }
 
         // Check Victory: Hero Base destroyed (All buildings)
-        if self.hero_base.enabled && self.hero_base.is_defeated() {
+        if self.hero_base.enabled && self.hero_base.is_defeated(&self.entities) {
             self.game_over = true;
             self.victory = true;
             eprintln!("VICTORY! All Hero Buildings destroyed!");

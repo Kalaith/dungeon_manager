@@ -88,42 +88,8 @@ impl TileState {
         self
     }
 
-    pub fn is_walkable(&self, tile_data: &crate::data::TileData) -> bool {
-        !tile_data.blocks_movement
-    }
-
-    pub fn is_diggable(&self, tile_data: &crate::data::TileData) -> bool {
-        tile_data.diggable && !self.marked_for_dig
-    }
-
-    pub fn is_claimable(&self, tile_data: &crate::data::TileData) -> bool {
-        tile_data.claimable && self.ownership == Ownership::Unclaimed
-    }
-
     pub fn claim(&mut self) {
         self.ownership = Ownership::Player;
-        self.fog_state = FogState::Visible;
-    }
-
-    pub fn mark_for_dig(&mut self) {
-        self.marked_for_dig = true;
-    }
-
-    pub fn unmark_for_dig(&mut self) {
-        self.marked_for_dig = false;
-    }
-
-    pub fn set_room(&mut self, room_id: Option<usize>) {
-        self.room_id = room_id;
-    }
-
-    pub fn reveal(&mut self) {
-        if self.fog_state == FogState::Hidden {
-            self.fog_state = FogState::Revealed;
-        }
-    }
-
-    pub fn make_visible(&mut self) {
         self.fog_state = FogState::Visible;
     }
 }

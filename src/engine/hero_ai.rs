@@ -171,8 +171,6 @@ pub fn find_target_room(
     game_state: &GameState,
     game_data: &GameData,
 ) -> Option<usize> {
-    let hero_data = game_data.heroes.get(hero_id)?;
-
     match goal {
         HeroGoal::DestroyHeart => {
             // Find dungeon heart room
@@ -185,7 +183,7 @@ pub fn find_target_room(
         HeroGoal::KillCreatures(_) => {
             // Find rooms with creatures (lairs, training halls)
             let room_types = ["lair", "training_hall"];
-            find_room_with_creatures(hero_pos, hero_id, &room_types, game_state, game_data)
+            find_room_with_creatures(hero_pos, &room_types, game_state)
         }
         HeroGoal::SabotageRoom(room_id) => Some(*room_id),
         HeroGoal::Explore => {
@@ -243,10 +241,8 @@ fn find_best_room_by_priority(
 /// Find a room that likely contains creatures
 fn find_room_with_creatures(
     hero_pos: TilePos,
-    hero_id: &str,
     room_types: &[&str],
     game_state: &GameState,
-    game_data: &GameData,
 ) -> Option<usize> {
     let mut best_room = None;
     let mut best_score = 0.0;

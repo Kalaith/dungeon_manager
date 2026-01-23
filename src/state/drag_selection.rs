@@ -61,18 +61,4 @@ impl DragSelection {
         }
     }
 
-    /// Iterate over all tile positions in the current selection
-    pub fn iter_selected_tiles(&self) -> Vec<TilePos> {
-        if let Some((min, max)) = self.get_selection_rect() {
-            let mut tiles = Vec::new();
-            for y in min.y..=max.y {
-                for x in min.x..=max.x {
-                    tiles.push(TilePos::new(x, y));
-                }
-            }
-            tiles
-        } else {
-            Vec::new()
-        }
-    }
 }

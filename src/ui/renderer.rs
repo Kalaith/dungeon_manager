@@ -1,25 +1,12 @@
 use macroquad::prelude::*;
 use crate::state::game_state::GameState;
 use crate::state::{GamePhase, InteractionMode, Ownership, MapType, DragSelection};
+use crate::state::entities::EntityId;
 use crate::ui::resources::GraphicsCache;
 use crate::ui::sidebar::Sidebar;
 use crate::state::tile_state::{TilePos, FogState};
 use crate::data::GameData;
-use crate::state::entities::EntityId;
 use crate::engine::tile_types;
-
-/// Context struct to consolidate rendering parameters
-pub struct RenderContext<'a> {
-    pub state: &'a GameState,
-    pub game_data: &'a GameData,
-    pub interaction_mode: &'a InteractionMode,
-    pub hovered_tile: Option<TilePos>,
-    pub held_entity: Option<EntityId>,
-    pub selected_entity: Option<EntityId>,
-    pub selected_room: Option<usize>,
-    pub drag_selection: &'a DragSelection,
-}
-
 
 pub struct GameRenderer {
     pub graphics_cache: Option<GraphicsCache>,
@@ -744,31 +731,6 @@ impl GameRenderer {
                     );
                 }
             }
-        }
-    }
-
-    /// Check if a tile is valid for the current interaction mode (used for drag selection visualization)
-    fn is_valid_tile_for_mode(tile: &crate::state::tile_state::TileState, mode: &InteractionMode, game_data: &GameData) -> bool {
-        match mode {
-            InteractionMode::Dig => {
-                tile_types::is_diggable(&tile.tile_type, game_data) 
-                    && tile.ownership == Ownership::Unclaimed
-            }
-            InteractionMode::BuildRoom(_) => {
-                tile.ownership == Ownership::Player
-                    && tile.room_id.is_none()
-                    && tile_types::can_build_room(&tile.tile_type, game_data)
-            }
-            InteractionMode::BuildTrap(_) => {
-                tile.ownership == Ownership::Player
-                    && tile_types::can_build_room(&tile.tile_type, game_data)
-                    && tile.trap.is_none()
-            }
-            InteractionMode::PlaceSpawner => {
-                tile.ownership == Ownership::Player
-                    && tile_types::can_build_room(&tile.tile_type, game_data)
-            }
-            _ => false,
         }
     }
 

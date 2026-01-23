@@ -51,6 +51,11 @@ pub fn is_walkable(tile_type: &str, game_data: &GameData) -> bool {
         return true;
     }
     
+    // Hero buildings are walkable tiles (floor with building on top)
+    if game_data.hero_buildings.contains_key(tile_type) {
+        return true;
+    }
+    
     game_data.tiles.get(tile_type)
         .map(|t| !t.blocks_movement)
         .unwrap_or(false) // unknown tiles not walkable

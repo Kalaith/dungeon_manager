@@ -101,17 +101,4 @@ pub fn save_exists(slot_name: &str) -> bool {
     }
 }
 
-/// Get list of available save slots
-pub fn get_save_files() -> Vec<String> {
-    let known_slots = ["slot_1", "slot_2", "slot_3", "autosave"];
-    let mut saves = Vec::new();
-    
-    for slot in known_slots {
-        if save_exists(slot) {
-            saves.push(slot.to_string());
-        }
-    }
-    
-    saves
-}
 

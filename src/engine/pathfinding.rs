@@ -23,13 +23,6 @@ impl Pos {
         (self.x - other.x).abs() + (self.y - other.y).abs()
     }
 
-    /// Calculate Euclidean distance to another position
-    pub fn euclidean_distance(&self, other: &Pos) -> f32 {
-        let dx = (self.x - other.x) as f32;
-        let dy = (self.y - other.y) as f32;
-        (dx * dx + dy * dy).sqrt()
-    }
-
     /// Calculate squared Euclidean distance (faster than euclidean_distance)
     pub fn euclidean_distance_squared(&self, other: &Pos) -> f32 {
         let dx = (self.x - other.x) as f32;
@@ -119,40 +112,16 @@ impl PathfindingGrid {
 
 }
 
-/// A pathfinding result with waypoints and cost
+/// A pathfinding result with waypoints
 #[derive(Debug, Clone)]
 pub struct Path {
     pub waypoints: Vec<Pos>,
-    pub total_cost: f32,
 }
 
 impl Path {
     /// Create a new path
-    pub fn new(waypoints: Vec<Pos>, total_cost: f32) -> Self {
-        Self {
-            waypoints,
-            total_cost,
-        }
-    }
-
-    /// Get the length of the path (number of waypoints)
-    pub fn len(&self) -> usize {
-        self.waypoints.len()
-    }
-
-    /// Check if path is empty
-    pub fn is_empty(&self) -> bool {
-        self.waypoints.is_empty()
-    }
-
-    /// Get the first waypoint (start position)
-    pub fn start(&self) -> Option<Pos> {
-        self.waypoints.first().copied()
-    }
-
-    /// Get the last waypoint (goal position)
-    pub fn goal(&self) -> Option<Pos> {
-        self.waypoints.last().copied()
+    pub fn new(waypoints: Vec<Pos>) -> Self {
+        Self { waypoints }
     }
 }
 
@@ -191,14 +160,12 @@ impl PartialOrd for AStarNode {
 /// Heuristic function type
 pub enum Heuristic {
     Manhattan,
-    Euclidean,
 }
 
 impl Heuristic {
     fn estimate(&self, from: Pos, to: Pos) -> f32 {
         match self {
             Heuristic::Manhattan => from.manhattan_distance(&to) as f32,
-            Heuristic::Euclidean => from.euclidean_distance(&to),
         }
     }
 }
@@ -217,7 +184,7 @@ pub fn find_path(
     }
 
     if start == goal {
-        return Some(Path::new(vec![start], 0.0));
+        return Some(Path::new(vec![start]));
     }
 
     // A* data structures
@@ -239,7 +206,7 @@ pub fn find_path(
 
         // Goal reached
         if current == goal {
-            return Some(reconstruct_path(&came_from, current, current_node.g_score));
+            return Some(reconstruct_path(&came_from, current));
         }
 
         // Skip if already processed
@@ -301,7 +268,7 @@ pub fn find_path(
 }
 
 /// Reconstruct path from came_from map
-fn reconstruct_path(came_from: &HashMap<Pos, Pos>, mut current: Pos, total_cost: f32) -> Path {
+fn reconstruct_path(came_from: &HashMap<Pos, Pos>, mut current: Pos) -> Path {
     let mut path = vec![current];
 
     while let Some(&parent) = came_from.get(&current) {
@@ -310,7 +277,7 @@ fn reconstruct_path(came_from: &HashMap<Pos, Pos>, mut current: Pos, total_cost:
     }
 
     path.reverse();
-    Path::new(path, total_cost)
+    Path::new(path)
 }
 
 #[cfg(test)]
@@ -326,7 +293,7 @@ mod tests {
 
     #[test]
     fn test_straight_line_path() {
-        let mut grid = PathfindingGrid::new(10, 10);
+        let grid = PathfindingGrid::new(10, 10);
         let start = Pos::new(0, 0);
         let goal = Pos::new(5, 0);
 
@@ -334,9 +301,9 @@ mod tests {
         assert!(path.is_some());
 
         let path = path.unwrap();
-        assert_eq!(path.len(), 6); // 0,1,2,3,4,5
-        assert_eq!(path.start(), Some(start));
-        assert_eq!(path.goal(), Some(goal));
+        assert_eq!(path.waypoints.len(), 6); // 0,1,2,3,4,5
+        assert_eq!(path.waypoints.first().copied(), Some(start));
+        assert_eq!(path.waypoints.last().copied(), Some(goal));
     }
 
     #[test]
@@ -384,54 +351,13 @@ mod tests {
         let goal = Pos::new(5, 5);
 
         // With diagonals, should find shorter path
-        let path_diagonal = find_path(start, goal, &grid, Heuristic::Euclidean, true);
+        let path_diagonal = find_path(start, goal, &grid, Heuristic::Manhattan, true);
         let path_4way = find_path(start, goal, &grid, Heuristic::Manhattan, false);
 
         assert!(path_diagonal.is_some());
         assert!(path_4way.is_some());
 
         // Diagonal path should be shorter
-        assert!(path_diagonal.unwrap().len() < path_4way.unwrap().len());
-    }
-
-    #[test]
-    fn test_path_cache() {
-        let grid = PathfindingGrid::new(10, 10);
-        let mut cache = PathCache::new(100);
-
-        let start = Pos::new(0, 0);
-        let goal = Pos::new(5, 5);
-
-        // First call - cache miss
-        let path1 = cache.find_path_cached(start, goal, &grid, Heuristic::Manhattan, false);
-        assert!(path1.is_some());
-
-        // Second call - cache hit (should return same path)
-        let path2 = cache.find_path_cached(start, goal, &grid, Heuristic::Manhattan, false);
-        assert!(path2.is_some());
-
-        assert_eq!(path1.unwrap().len(), path2.unwrap().len());
-    }
-
-    #[test]
-    fn test_cache_invalidation() {
-        let grid = PathfindingGrid::new(10, 10);
-        let mut cache = PathCache::new(100);
-
-        let start = Pos::new(0, 0);
-        let goal = Pos::new(5, 0);
-
-        // Cache a path
-        let path1 = cache.find_path_cached(start, goal, &grid, Heuristic::Manhattan, false);
-        assert!(path1.is_some());
-
-        let stats = cache.stats();
-        assert_eq!(stats.cached_paths, 1);
-
-        // Invalidate a position on the path
-        cache.invalidate_positions(&[Pos::new(2, 0)]);
-
-        let stats = cache.stats();
-        assert_eq!(stats.cached_paths, 0); // Path should be removed
+        assert!(path_diagonal.unwrap().waypoints.len() < path_4way.unwrap().waypoints.len());
     }
 }

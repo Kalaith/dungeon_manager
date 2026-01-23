@@ -14,7 +14,6 @@ pub struct CombatResult {
     pub damage_dealt: f32,
     pub status_applied: Vec<StatusEffect>,
     pub defender_died: bool,
-    pub attacker_died: bool,
     pub projectile_spawned: Option<(String, f32)>, // (type, damage)
 }
 
@@ -22,13 +21,11 @@ pub struct CombatResult {
 #[derive(Debug, Clone)]
 pub struct CombatStats {
     pub health: f32,
-    pub max_health: f32,
     pub attack: f32,
     pub defense: f32,
     pub attack_type: String,
     pub damage_range: [f32; 2],
     pub attack_speed: f32,
-    pub armor_type: String,
     pub resistances: HashMap<String, f32>,
     pub level: u32,
 }
@@ -53,7 +50,6 @@ pub fn resolve_combat_tick(
             damage_dealt: 0.0,
             status_applied: Vec::new(),
             defender_died: false,
-            attacker_died: false,
             projectile_spawned: None,
         };
     }
@@ -67,34 +63,20 @@ pub fn resolve_combat_tick(
     
     if !is_melee && actual_damage > 0.0 {
         // Ranged/Magic attack - spawn projectile
-
-        
         return CombatResult {
             damage_dealt: 0.0, // Defer damage
             status_applied: Vec::new(),
             defender_died: false,
-            attacker_died: false,
             projectile_spawned: Some((attacker_stats.attack_type.clone(), actual_damage)),
         };
     }
 
     // Apply damage instantly (Melee)
     let defender_would_die = defender.is_alive() && (defender_stats.health - actual_damage) <= 0.0;
-    
-    // Check for counterattack death (use attacker_died field)
-    let attacker_would_die = if defender_would_die {
-        false // Dead defenders can't counterattack
-    } else {
-        // Small chance of counterattack death based on level difference
-        let level_diff = defender_stats.level as i32 - attacker_stats.level as i32;
-        let level_threshold = game_data.config.combat.counterattack_level_threshold;
-        let death_chance = game_data.config.combat.counterattack_death_chance;
-        level_diff > level_threshold && macroquad::rand::gen_range(0.0f32, 1.0) < death_chance
-    };
 
     // Generate status effects (simplified)
     let status_effects = generate_status_effects();
-    
+
     // Log combat using all stats for debug
     if actual_damage > 0.0 {
         eprintln!(
@@ -112,7 +94,6 @@ pub fn resolve_combat_tick(
         damage_dealt: actual_damage,
         status_applied: status_effects,
         defender_died: defender_would_die,
-        attacker_died: attacker_would_die,
         projectile_spawned: None,
     }
 }
@@ -135,17 +116,14 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
 
             // Calculate level bonuses
             let level_multiplier = 1.0 + (creature_state.level - 1) as f32 * game_data.config.combat.creature_level_multiplier;
-            let health_bonus = (creature_state.level - 1) as f32 * creature_data.progression.stat_growth_per_level.get("health").copied().unwrap_or(game_data.config.combat.creature_health_per_level);
 
             CombatStats {
                 health: creature_state.health,
-                max_health: creature_state.max_health + health_bonus,
                 attack: creature_data.stats.attack * level_multiplier,
                 defense: creature_data.stats.defense * level_multiplier,
                 attack_type: creature_data.combat.attack_type.clone(),
                 damage_range: creature_data.combat.damage_range,
                 attack_speed: creature_data.combat.attack_speed,
-                armor_type: creature_data.combat.armor_type.clone(),
                 resistances: creature_data.combat.resistances.clone(),
                 level: creature_state.level,
             }
@@ -156,46 +134,38 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
 
             // Calculate level bonuses
             let level_multiplier = 1.0 + (hero_state.level - 1) as f32 * game_data.config.combat.hero_level_multiplier;
-            let health_bonus = (hero_state.level - 1) as f32 * hero_data.progression.stat_growth_per_level.get("health").copied().unwrap_or(game_data.config.combat.hero_health_per_level);
 
             CombatStats {
                 health: hero_state.health,
-                max_health: hero_state.max_health + health_bonus,
                 attack: hero_data.stats.attack * level_multiplier,
                 defense: hero_data.stats.defense * level_multiplier,
                 attack_type: hero_data.combat.attack_type.clone(),
                 damage_range: hero_data.combat.damage_range,
                 attack_speed: hero_data.combat.attack_speed,
-                armor_type: hero_data.combat.armor_type.clone(),
                 resistances: hero_data.combat.resistances.clone(),
                 level: hero_state.level,
             }
-
         }
         crate::state::entities::EntityType::Structure(structure_state) => {
             CombatStats {
                 health: structure_state.health,
-                max_health: structure_state.max_health,
                 attack: 0.0,
                 defense: game_data.config.combat.building_base_defense,
                 attack_type: "none".to_string(),
                 damage_range: [0.0, 0.0],
                 attack_speed: game_data.config.combat.building_attack_speed,
-                armor_type: "stone".to_string(),
                 resistances: HashMap::new(),
                 level: 1,
             }
         }
         crate::state::entities::EntityType::ResourcePile(_) => {
-             CombatStats {
+            CombatStats {
                 health: 1.0,
-                max_health: 1.0,
                 attack: 0.0,
                 defense: 0.0,
                 attack_type: "none".to_string(),
                 damage_range: [0.0, 0.0],
                 attack_speed: 1.0,
-                armor_type: "none".to_string(),
                 resistances: HashMap::new(),
                 level: 1,
             }
@@ -420,47 +390,6 @@ pub fn get_attack_range(attack_type: &str, game_data: &GameData) -> i32 {
         "magic" => game_data.config.combat_ranges.magic,
         _ => game_data.config.combat_ranges.melee,
     }
-}
-
-/// Get the preferred combat range for an attack type
-/// Melee units want to be adjacent (distance 1)
-/// Ranged/Magic units want to be at max range to kite
-pub fn get_preferred_range(attack_type: &str, game_data: &GameData) -> i32 {
-    match attack_type {
-        "melee" => 1, // Melee wants to stay adjacent
-        "ranged" => game_data.config.combat_ranges.ranged, // Ranged wants max distance
-        "magic" => game_data.config.combat_ranges.magic,   // Magic wants max distance
-        _ => 1,
-    }
-}
-
-/// Check if an entity is at its preferred combat range
-pub fn at_preferred_range(
-    attacker_pos: TilePos,
-    defender_pos: TilePos,
-    attack_type: &str,
-    game_data: &GameData,
-) -> bool {
-    let distance = calculate_manhattan_distance(attacker_pos, defender_pos);
-    let max_range = get_attack_range(attack_type, game_data);
-
-    match attack_type {
-        "melee" => distance == 1, // Melee must be exactly adjacent
-        _ => distance >= 2 && distance <= max_range, // Ranged wants to be between 2 and max range
-    }
-}
-
-/// Check if an entity is too close for ranged combat (needs to kite)
-pub fn too_close_for_ranged(
-    attacker_pos: TilePos,
-    defender_pos: TilePos,
-    attack_type: &str,
-) -> bool {
-    if attack_type == "melee" {
-        return false; // Melee never needs to kite
-    }
-    let distance = calculate_manhattan_distance(attacker_pos, defender_pos);
-    distance <= 1 // If adjacent to a melee enemy, ranged should try to back off
 }
 
 /// Calculate Manhattan distance between two positions (public for use elsewhere)

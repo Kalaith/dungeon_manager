@@ -47,11 +47,6 @@ impl Room {
 
         TilePos::new(sum_x / count, sum_y / count)
     }
-
-    /// Get the number of tiles in this room
-    pub fn size(&self) -> usize {
-        self.tiles.len()
-    }
 }
 
 /// Calculate valid work slots for a room based on work station size

@@ -60,14 +60,6 @@ pub struct CombatData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AbilityData {
-    pub id: String,
-    pub cooldown: f32,
-    pub trigger: String,
-    pub effect: serde_json::Value,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProgressionData {
     pub xp_to_level: Vec<u32>,
     pub stat_growth_per_level: HashMap<String, f32>,

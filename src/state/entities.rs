@@ -286,26 +286,9 @@ impl CreatureState {
             .map(|(name, value)| (name.clone(), *value))
     }
 
-    /// Check if creature is at full health
-    pub fn is_full_health(&self) -> bool {
-        self.health >= self.max_health
-    }
-
-    /// Heal creature by amount
-    pub fn heal(&mut self, amount: f32) {
-        self.health = (self.health + amount).min(self.max_health);
-    }
-
     /// Damage creature by amount
     pub fn take_damage(&mut self, amount: f32) {
         self.health = (self.health - amount).max(0.0);
-    }
-
-    /// Check if creature has a specific trait
-    pub fn has_trait(&self, _trait_name: &str) -> bool {
-        // Would check against MonsterData traits
-        // Placeholder for now
-        false
     }
 }
 
@@ -424,11 +407,6 @@ impl HeroState {
         }
     }
 
-    /// Heal hero by amount
-    pub fn heal(&mut self, amount: f32) {
-        self.health = (self.health + amount).min(self.max_health);
-    }
-
     /// Damage hero by amount
     pub fn take_damage(&mut self, amount: f32) {
         self.health = (self.health - amount).max(0.0);
@@ -504,20 +482,6 @@ impl Task {
             Task::Flee => "flee",
             Task::ClaimTile(_) => "claim_tile",
             Task::PickupResource(_) => "pickup_resource",
-        }
-    }
-
-    /// Get the room ID if this task involves a room
-    pub fn room_id(&self) -> Option<usize> {
-        match self {
-            Task::Work(id, _)
-            | Task::Sleep(id)
-            | Task::Eat(id)
-            | Task::Train(id)
-            | Task::Research(id)
-            | Task::DepositGold(id)
-            | Task::CollectWages(id) => Some(*id),
-            _ => None,
         }
     }
 }
@@ -674,37 +638,6 @@ impl EntityManager {
     /// Get mutable entities at a specific position
     pub fn at_position_mut(&mut self, pos: TilePos) -> impl Iterator<Item = &mut Entity> {
         self.entities.values_mut().filter(move |e| e.pos == pos)
-    }
-
-    /// Count total entities
-    pub fn count(&self) -> usize {
-        self.entities.len()
-    }
-
-    /// Count creatures only
-    pub fn count_creatures(&self) -> usize {
-        self.creatures().count()
-    }
-
-    /// Count heroes only
-    pub fn count_heroes(&self) -> usize {
-        self.heroes().count()
-    }
-
-    /// Remove dead entities, returns count removed
-    pub fn remove_dead(&mut self) -> usize {
-        let dead_ids: Vec<EntityId> = self
-            .entities
-            .iter()
-            .filter(|(_, e)| !e.is_alive())
-            .map(|(id, _)| *id)
-            .collect();
-
-        let count = dead_ids.len();
-        for id in dead_ids {
-            self.entities.remove(&id);
-        }
-        count
     }
 }
 

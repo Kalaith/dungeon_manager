@@ -1,5 +1,5 @@
 use crate::state::tile_state::TilePos;
-use crate::data::hero_buildings::HeroBuildingData;
+use crate::state::entities::EntityManager;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -7,9 +7,33 @@ pub struct HeroBuilding {
     pub id: String, // Unique instance ID
     pub building_type: String, // Reference to HeroBuildingData.id
     pub pos: TilePos, // Top-left position
-    pub current_hp: i32,
     pub spawn_timers: Vec<SpawnTimer>,
     pub entity_id: Option<crate::state::entities::EntityId>,
+}
+
+impl HeroBuilding {
+    /// Check if this building is destroyed by reading health from entity system
+    pub fn is_destroyed(&self, entities: &EntityManager) -> bool {
+        if let Some(entity_id) = self.entity_id {
+            if let Some(entity) = entities.get(entity_id) {
+                return !entity.is_alive();
+            }
+        }
+        // No entity assigned - consider destroyed
+        true
+    }
+    
+    /// Get current health from entity system
+    pub fn get_health(&self, entities: &EntityManager) -> (f32, f32) {
+        if let Some(entity_id) = self.entity_id {
+            if let Some(entity) = entities.get(entity_id) {
+                if let crate::state::entities::EntityType::Structure(s) = &entity.entity_type {
+                    return (s.health, s.max_health);
+                }
+            }
+        }
+        (0.0, 0.0)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,30 +72,8 @@ impl HeroBase {
         }
     }
 
-    pub fn add_building(&mut self, building_type: &str, pos: TilePos, data: &HeroBuildingData) {
-        let mut spawn_timers = Vec::new();
-        for trigger in &data.spawn_triggers {
-            spawn_timers.push(SpawnTimer {
-                hero_id: trigger.hero_id.clone(),
-                time_until_spawn: trigger.spawn_rate_seconds,
-            });
-        }
-
-        self.buildings.push(HeroBuilding {
-            id: format!("{}_{}_{}", building_type, pos.x, pos.y),
-            building_type: building_type.to_string(),
-            pos,
-            current_hp: data.hp,
-            spawn_timers,
-            entity_id: None,
-        });
-    }
-
-    pub fn get_town_hall(&self) -> Option<&HeroBuilding> {
-        self.buildings.iter().find(|b| b.building_type == "town_hall")
-    }
-
-    pub fn is_defeated(&self) -> bool {
+    /// Check if all buildings are destroyed using entity health
+    pub fn is_defeated(&self, entities: &EntityManager) -> bool {
         // Victory condition: All buildings destroyed
         if !self.enabled { return false; }
         
@@ -79,6 +81,6 @@ impl HeroBase {
             return true;
         }
 
-        self.buildings.iter().all(|b| b.current_hp <= 0)
+        self.buildings.iter().all(|b| b.is_destroyed(entities))
     }
 }

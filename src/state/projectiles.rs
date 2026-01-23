@@ -115,15 +115,10 @@ impl Projectile {
         self.progress < 1.0
     }
 
-    /// Check if projectile has completed
-    pub fn is_complete(&self) -> bool {
-        self.progress >= 1.0
-    }
 }
 
 /// Event generated when projectile hits target
 pub struct Impact {
-    pub projectile_type: ProjectileType,
     pub attacker_id: EntityId,
     pub defender_id: EntityId,
     pub damage: f32,
@@ -182,7 +177,6 @@ impl ProjectileManager {
             let still_active = p.update(dt);
             if !still_active {
                 impacts.push(Impact {
-                    projectile_type: p.projectile_type.clone(),
                     attacker_id: p.attacker_id,
                     defender_id: p.defender_id,
                     damage: p.damage,
@@ -197,10 +191,5 @@ impl ProjectileManager {
     /// Get all active projectiles for rendering
     pub fn active_projectiles(&self) -> &[Projectile] {
         &self.projectiles
-    }
-
-    /// Clear all projectiles
-    pub fn clear(&mut self) {
-        self.projectiles.clear();
     }
 }

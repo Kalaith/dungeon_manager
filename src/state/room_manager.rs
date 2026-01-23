@@ -84,21 +84,6 @@ impl RoomManager {
         }
     }
 
-    pub fn calculate_room_center(&self, room: &Room) -> TilePos {
-        let mut sum_x = 0;
-        let mut sum_y = 0;
-        for pos in &room.tiles {
-            sum_x += pos.x;
-            sum_y += pos.y;
-        }
-        let count = room.tiles.len() as i32;
-        if count > 0 {
-            TilePos::new(sum_x / count, sum_y / count)
-        } else {
-            TilePos::new(0, 0)
-        }
-    }
-
     /// Generate food from hatcheries based on their size
     pub fn generate_food_from_hatcheries(&self, dt: f32) -> f32 {
         let mut total_food_generated = 0.0;

@@ -34,7 +34,6 @@ pub struct Game {
     selected_entity: Option<state::entities::EntityId>,
     selected_room: Option<usize>,
     held_entity: Option<state::entities::EntityId>,
-    spell_shop_open: bool,
     action_queue: ActionQueue,
     selected_spell: Option<String>,
     drag_selection: DragSelection,
@@ -52,7 +51,6 @@ impl Game {
             selected_entity: None,
             selected_room: None,
             held_entity: None,
-            spell_shop_open: false,
             action_queue: ActionQueue::new(),
             selected_spell: None,
             drag_selection: DragSelection::new(),
@@ -115,11 +113,7 @@ impl Game {
                 action_processor::process_actions(
                     &mut self.action_queue,
                     state,
-                    game_data,
                     &mut self.interaction_mode,
-                    &mut self.held_entity,
-                    &mut self.selected_entity,
-                    &mut self.selected_room,
                     &mut self.selected_spell,
                 );
             }

@@ -6,7 +6,7 @@ use crate::engine::creature_ai;
 use crate::state::entities::{EntityId, EntityManager, Task};
 use crate::state::player_state::PlayerState;
 use crate::state::room_manager::RoomManager;
-use crate::state::tile_state::{TilePos, TileState};
+use crate::state::tile_state::TilePos;
 
 /// Result of task execution that may require state updates
 pub struct TaskResult {

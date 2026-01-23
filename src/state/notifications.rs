@@ -114,13 +114,4 @@ impl NotificationManager {
         &self.notifications
     }
 
-    /// Check if there are any notifications
-    pub fn is_empty(&self) -> bool {
-        self.notifications.is_empty()
-    }
-
-    /// Clear all notifications
-    pub fn clear(&mut self) {
-        self.notifications.clear();
-    }
 }

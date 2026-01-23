@@ -104,10 +104,8 @@ fn progress_trap_construction(dungeon: &mut Dungeon, pos: TilePos, game_data: &G
 /// Result of a trap trigger
 #[derive(Debug)]
 pub struct TrapTriggerResult {
-    pub trap_pos: TilePos,
     pub trap_type: String,
     pub damage_dealt: f32,
-    pub affected_entities: Vec<EntityId>,
 }
 
 /// Process trap triggers when entities step on them
@@ -191,7 +189,7 @@ fn trigger_damage_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, t
     eprintln!("{} triggered at {:?}! Dealt {} damage.", trap_data.name, pos, damage);
     set_trap_cooldown(dungeon, pos, cooldown);
 
-    Some(TrapTriggerResult { trap_pos: pos, trap_type: trap_data.id.clone(), damage_dealt: damage, affected_entities: vec![triggering_entity] })
+    Some(TrapTriggerResult { trap_type: trap_data.id.clone(), damage_dealt: damage })
 }
 
 fn trigger_boulder_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, entities: &mut EntityManager, dungeon: &mut Dungeon) -> Option<TrapTriggerResult> {
@@ -223,7 +221,7 @@ fn trigger_boulder_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, 
     eprintln!("Boulder trap triggered at {:?}! Dealt {} damage to {} entities.", pos, damage, affected_entities.len());
     set_trap_disabled(dungeon, pos);
 
-    Some(TrapTriggerResult { trap_pos: pos, trap_type: "boulder_trap".to_string(), damage_dealt: total_damage, affected_entities })
+    Some(TrapTriggerResult { trap_type: "boulder_trap".to_string(), damage_dealt: total_damage })
 }
 
 fn trigger_alarm_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, entities: &EntityManager, dungeon: &mut Dungeon, game_data: &GameData) {
