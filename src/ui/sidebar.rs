@@ -66,6 +66,7 @@ pub struct Sidebar {
     // UI State
     pub selected_spell: Option<String>,
     pub cheat_state: CheatState,
+    pub cheats_visible: bool, // Toggled with F1
 }
 
 impl Sidebar {
@@ -76,6 +77,7 @@ impl Sidebar {
             panel_y: screen_height() - PANEL_HEIGHT,
             selected_spell: None,
             cheat_state: CheatState::default(),
+            cheats_visible: false,
         }
     }
 
@@ -105,6 +107,15 @@ impl Sidebar {
     ) -> Option<InteractionMode> {
         let mouse_pos = mouse_position();
         
+        // F1 toggles cheats menu visibility
+        if is_key_pressed(KeyCode::F1) {
+            self.cheats_visible = !self.cheats_visible;
+            // If hiding cheats and currently on cheats tab, switch to build
+            if !self.cheats_visible && self.current_tab == SidebarTab::Cheats {
+                self.current_tab = SidebarTab::Build;
+            }
+        }
+        
         // Handle Tab Switching
         if mouse_pos.1 >= self.panel_y - TAB_HEIGHT && mouse_pos.1 <= self.panel_y {
             if is_mouse_button_pressed(MouseButton::Left) {
@@ -129,7 +140,7 @@ impl Sidebar {
                 } else if mouse_pos.0 >= start_x + tab_width * 5.0 && mouse_pos.0 < start_x + tab_width * 6.0 {
                     self.current_tab = SidebarTab::Utils;
                     self.is_expanded = true;
-                } else if mouse_pos.0 >= start_x + tab_width * 6.0 && mouse_pos.0 < start_x + tab_width * 7.0 {
+                } else if self.cheats_visible && mouse_pos.0 >= start_x + tab_width * 6.0 && mouse_pos.0 < start_x + tab_width * 7.0 {
                     self.current_tab = SidebarTab::Cheats;
                     self.is_expanded = true;
                 } else if mouse_pos.0 >= screen_width() - RIGHT_MARGIN - 40.0 && mouse_pos.0 <= screen_width() - RIGHT_MARGIN {

@@ -330,8 +330,23 @@ impl GameRenderer {
                     FogState::Visible
                 };
 
+                // Skip rendering hidden tiles entirely (no black placeholder)
+                // BUT still draw dig markers so player can see queued digs
+                if fog_state == FogState::Hidden {
+                    // Draw dig marker wireframe on hidden tiles
+                    if tile.marked_for_dig {
+                        let marker_color = Color::new(1.0, 0.0, 0.0, 0.6); // Red dig marker
+                        draw_cube_wires(
+                            vec3(pos_x, 0.5, pos_z),
+                            vec3(1.0, 1.0, 1.0),
+                            marker_color
+                        );
+                    }
+                    continue;
+                }
+
                 let color = match fog_state {
-                    FogState::Hidden => crate::ui::core::colors::FOG_HIDDEN,
+                    FogState::Hidden => crate::ui::core::colors::FOG_HIDDEN, // Unreachable now
                     FogState::Revealed => crate::ui::core::colors::FOG_REVEALED,
                     FogState::Visible => crate::ui::core::colors::FOG_VISIBLE,
                 };

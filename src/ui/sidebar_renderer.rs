@@ -54,15 +54,19 @@ pub fn draw_sidebar(
 }
 
 fn draw_tabs(sidebar: &Sidebar) {
-    let tabs = vec![
+    let mut tabs: Vec<(SidebarTab, &str)> = vec![
         (SidebarTab::Build, "Build"),
         (SidebarTab::Magic, "Magic"),
         (SidebarTab::Minions, "Inspect"),
         (SidebarTab::Traps, "Traps"),
         (SidebarTab::Research, "Tech"),
         (SidebarTab::Utils, "Utils"),
-        (SidebarTab::Cheats, "Cheats"),
     ];
+    
+    // Only show Cheats tab if enabled (F1 to toggle)
+    if sidebar.cheats_visible {
+        tabs.push((SidebarTab::Cheats, "Cheats"));
+    }
 
     let tab_width = 100.0;
     let start_x = 20.0;

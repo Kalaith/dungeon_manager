@@ -59,9 +59,6 @@ pub fn draw_minimap(state: &GameState, game_data: &Option<GameData>) {
                 } else if tile.tile_type == "claimed_floor" {
                     if tile.ownership == Ownership::Player {
                         GREEN
-                    } else if tile.ownership == Ownership::Enemy {
-                         // Hero base floor
-                         Color::new(0.8, 0.2, 0.2, 1.0)
                     } else {
                         GRAY
                     }
@@ -119,11 +116,28 @@ pub fn draw_minimap(state: &GameState, game_data: &Option<GameData>) {
         WHITE
     );
 
-    // Draw Hero Base (approximate if known)
+    // Draw Hero Base (only if not under fog of war)
     if state.hero_base.enabled {
-         let base_pos = state.hero_base.position;
-         let bx = start_x + (base_pos.x as f32 / grid_w as f32) * map_width;
-         let by = start_y + (base_pos.y as f32 / grid_h as f32) * map_height;
-         draw_circle(bx, by, 3.0, RED);
+        let config_enabled = game_data.as_ref().map(|gd| gd.config.fog_of_war.enabled).unwrap_or(true);
+        let fog_enabled = config_enabled && state.cheat_fog_enabled;
+        
+        // Check if hero base area is revealed
+        let base_pos = state.hero_base.position;
+        let base_visible = if fog_enabled {
+            // Check if any tile near base is visible/revealed
+            if let Some(tile) = state.get_tile(base_pos) {
+                tile.fog_state != FogState::Hidden
+            } else {
+                false
+            }
+        } else {
+            true // No fog, always visible
+        };
+        
+        if base_visible {
+            let bx = start_x + (base_pos.x as f32 / grid_w as f32) * map_width;
+            let by = start_y + (base_pos.y as f32 / grid_h as f32) * map_height;
+            draw_circle(bx, by, 3.0, RED);
+        }
     }
 }

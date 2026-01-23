@@ -22,8 +22,8 @@
     "creature_spawn_max_interval": 30.0
   },
   "hero_waves": {
-    "initial_delay": 300.0,
-    "wave_interval": 180.0,
+    "initial_delay": 600.0,
+    "wave_interval": 300.0,
     "defender_ratio": 0.5,
     "wave_scaling_multiplier": 1.1,
     "spawn_rate_decay": 0.9,
@@ -60,7 +60,7 @@
     }
   },
   "fog_of_war": {
-    "enabled": false,
+    "enabled": true,
     "sight_radius": 50
   },
   "economy": {
