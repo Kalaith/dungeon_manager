@@ -1,25 +1,25 @@
-pub mod tiles;
-pub mod rooms;
-pub mod monsters;
-pub mod heroes;
-pub mod spells;
-pub mod traps;
-pub mod technologies;
-pub mod hero_buildings;
 pub mod game_config;
+pub mod hero_buildings;
+pub mod heroes;
+pub mod monsters;
+pub mod rooms;
+pub mod spells;
+pub mod technologies;
+pub mod tiles;
+pub mod traps;
 
 use std::collections::HashMap;
 use std::error::Error;
 
-pub use tiles::TileData;
-pub use rooms::RoomData;
-pub use monsters::MonsterData;
-pub use heroes::HeroData;
-pub use spells::SpellData;
-pub use traps::TrapData;
-pub use technologies::TechData;
-pub use hero_buildings::HeroBuildingData;
 pub use game_config::GameConfig;
+pub use hero_buildings::HeroBuildingData;
+pub use heroes::HeroData;
+pub use monsters::MonsterData;
+pub use rooms::RoomData;
+pub use spells::SpellData;
+pub use technologies::TechData;
+pub use tiles::TileData;
+pub use traps::TrapData;
 
 #[derive(Default)]
 pub struct GameData {

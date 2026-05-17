@@ -136,7 +136,7 @@ impl StructureState {
             max_health,
         }
     }
-    
+
     pub fn take_damage(&mut self, amount: f32) {
         self.health = (self.health - amount).max(0.0);
     }
@@ -226,14 +226,20 @@ pub struct CreatureState {
 
     /// Time accumulator for movement
     pub move_timer: f32,
-    
+
     /// Time accumulator for work production
     pub work_timer: f32,
 }
 
 impl CreatureState {
     /// Create a new creature state from data
-    pub fn new(creature_id: String, level: u32, max_health: f32, max_mana: f32, visual_seed: u64) -> Self {
+    pub fn new(
+        creature_id: String,
+        level: u32,
+        max_health: f32,
+        max_mana: f32,
+        visual_seed: u64,
+    ) -> Self {
         Self {
             creature_id,
             visual_seed,
@@ -366,14 +372,22 @@ pub struct HeroState {
     pub is_defender: bool,
     /// Which wave number this hero is assigned to (0 = not yet assigned)
     pub wave_assigned: u32,
-    
+
     /// Whether this hero has been converted to the dungeon faction
     pub is_converted: bool,
 }
 
 impl HeroState {
     /// Create a new hero state
-    pub fn new(hero_id: String, level: u32, max_health: f32, max_mana: f32, spawn_pos: TilePos, dig_time: f32, visual_seed: u64) -> Self {
+    pub fn new(
+        hero_id: String,
+        level: u32,
+        max_health: f32,
+        max_mana: f32,
+        spawn_pos: TilePos,
+        dig_time: f32,
+        visual_seed: u64,
+    ) -> Self {
         let can_dig = true; // Allow all heroes to try and breach walls if path is blocked
 
         Self {
@@ -385,7 +399,7 @@ impl HeroState {
             mana: max_mana,
             max_mana,
             current_goal: HeroGoal::RestAtSpawn(spawn_pos), // Start by resting/grouping up
-            target_pos: Some(spawn_pos), // Start with target at spawn
+            target_pos: Some(spawn_pos),                    // Start with target at spawn
             target_room_id: None,
             gold_stolen: 0,
             kills: 0,
@@ -596,6 +610,26 @@ impl EntityManager {
         self.entities.remove(&id)
     }
 
+    /// Count all tracked entities.
+    pub fn count(&self) -> usize {
+        self.entities.len()
+    }
+
+    /// Count all creature entities.
+    pub fn count_creatures(&self) -> usize {
+        self.entities
+            .values()
+            .filter(|entity| matches!(entity.entity_type, EntityType::Creature(_)))
+            .count()
+    }
+
+    /// Remove all entities whose health has reached zero.
+    pub fn remove_dead(&mut self) -> usize {
+        let before = self.entities.len();
+        self.entities.retain(|_, entity| entity.is_alive());
+        before - self.entities.len()
+    }
+
     /// Get all entities
     pub fn all(&self) -> impl Iterator<Item = &Entity> {
         self.entities.values()
@@ -618,16 +652,16 @@ impl EntityManager {
 
     /// Get all creatures
     pub fn creatures(&self) -> impl Iterator<Item = (EntityId, &CreatureState)> {
-        self.entities.iter().filter_map(|(id, entity)| {
-            entity.as_creature().map(|creature| (*id, creature))
-        })
+        self.entities
+            .iter()
+            .filter_map(|(id, entity)| entity.as_creature().map(|creature| (*id, creature)))
     }
 
     /// Get all heroes
     pub fn heroes(&self) -> impl Iterator<Item = (EntityId, &HeroState)> {
-        self.entities.iter().filter_map(|(id, entity)| {
-            entity.as_hero().map(|hero| (*id, hero))
-        })
+        self.entities
+            .iter()
+            .filter_map(|(id, entity)| entity.as_hero().map(|hero| (*id, hero)))
     }
 
     /// Get entities at a specific position

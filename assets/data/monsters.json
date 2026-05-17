@@ -1138,7 +1138,7 @@
       "mutations": []
     },
     "economy": {
-      "wage_per_minute": 6,
+      "wage_per_minute": 5,
       "steals_if_unpaid": true,
       "drops_gold_on_death": [
         30,
@@ -1254,7 +1254,7 @@
       "mutations": []
     },
     "economy": {
-      "wage_per_minute": 15,
+      "wage_per_minute": 5,
       "steals_if_unpaid": true,
       "drops_gold_on_death": [
         20,
@@ -1481,7 +1481,7 @@
       "mutations": []
     },
     "economy": {
-      "wage_per_minute": 20,
+      "wage_per_minute": 10,
       "steals_if_unpaid": false,
       "drops_gold_on_death": [
         10,

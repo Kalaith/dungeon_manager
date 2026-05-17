@@ -84,7 +84,7 @@ impl SpawnerSystem {
                 // eprintln!("Spawner at {:?} spawned {}", spawner.pos, spawner.monster_id);
             }
         }
-        
+
         // Remove destroyed spawners
         spawners.retain(|s| {
             let tile = &grid[s.pos.y as usize][s.pos.x as usize];

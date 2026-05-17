@@ -2,15 +2,17 @@
 //!
 //! Handles drawing the minimap in the corner of the screen.
 
-use macroquad::prelude::*;
-use crate::state::game_state::GameState;
-use crate::state::Ownership;
-use crate::state::tile_state::{TilePos, FogState};
 use crate::data::GameData;
+use crate::state::game_state::GameState;
+use crate::state::tile_state::{FogState, TilePos};
+use crate::state::Ownership;
+use macroquad::prelude::*;
 
 /// Draw the minimap showing the dungeon layout
 pub fn draw_minimap(state: &GameState, game_data: &Option<GameData>) {
-    if game_data.is_none() { return; }
+    if game_data.is_none() {
+        return;
+    }
 
     let map_width = 150.0;
     let map_height = 150.0;
@@ -19,12 +21,20 @@ pub fn draw_minimap(state: &GameState, game_data: &Option<GameData>) {
     let start_y = screen_height() - map_height - padding;
 
     // Background
-    draw_rectangle(start_x, start_y, map_width, map_height, Color::new(0.0, 0.0, 0.0, 0.8));
+    draw_rectangle(
+        start_x,
+        start_y,
+        map_width,
+        map_height,
+        Color::new(0.0, 0.0, 0.0, 0.8),
+    );
     draw_rectangle_lines(start_x, start_y, map_width, map_height, 2.0, WHITE);
 
     // Get grid dims
     let (grid_w, grid_h) = crate::engine::tile_grid::get_grid_dimensions(&state.dungeon.grid);
-    if grid_w == 0 || grid_h == 0 { return; }
+    if grid_w == 0 || grid_h == 0 {
+        return;
+    }
 
     let tile_w = map_width / grid_w as f32;
     let tile_h = map_height / grid_h as f32;
@@ -34,8 +44,11 @@ pub fn draw_minimap(state: &GameState, game_data: &Option<GameData>) {
         for x in 0..grid_w {
             let pos = TilePos::new(x as i32, y as i32);
             if let Some(tile) = state.get_tile(pos) {
-                 // Check Fog of War
-                let config_enabled = game_data.as_ref().map(|gd| gd.config.fog_of_war.enabled).unwrap_or(true);
+                // Check Fog of War
+                let config_enabled = game_data
+                    .as_ref()
+                    .map(|gd| gd.config.fog_of_war.enabled)
+                    .unwrap_or(true);
                 let fog_enabled = config_enabled && state.cheat_fog_enabled;
 
                 let fog_state = if fog_enabled {
@@ -62,8 +75,11 @@ pub fn draw_minimap(state: &GameState, game_data: &Option<GameData>) {
                     } else {
                         GRAY
                     }
-                } else if crate::engine::tile_types::is_wall(&tile.tile_type, game_data.as_ref().unwrap()) {
-                     Color::new(0.2, 0.2, 0.2, 1.0)
+                } else if crate::engine::tile_types::is_wall(
+                    &tile.tile_type,
+                    game_data.as_ref().unwrap(),
+                ) {
+                    Color::new(0.2, 0.2, 0.2, 1.0)
                 } else {
                     LIGHTGRAY
                 };
@@ -74,14 +90,14 @@ pub fn draw_minimap(state: &GameState, game_data: &Option<GameData>) {
                 }
 
                 if tile.tile_type == "dungeon_heart" {
-                     color = PURPLE;
+                    color = PURPLE;
                 }
 
                 if fog_state == FogState::Revealed {
-                     // Dim visited but currently unseen areas
-                     color.r *= 0.5;
-                     color.g *= 0.5;
-                     color.b *= 0.5;
+                    // Dim visited but currently unseen areas
+                    color.r *= 0.5;
+                    color.g *= 0.5;
+                    color.b *= 0.5;
                 }
 
                 draw_rectangle(
@@ -89,7 +105,7 @@ pub fn draw_minimap(state: &GameState, game_data: &Option<GameData>) {
                     start_y + y as f32 * tile_h,
                     tile_w,
                     tile_h,
-                    color
+                    color,
                 );
             }
         }
@@ -113,14 +129,17 @@ pub fn draw_minimap(state: &GameState, game_data: &Option<GameData>) {
         view_w,
         view_h,
         1.0,
-        WHITE
+        WHITE,
     );
 
     // Draw Hero Base (only if not under fog of war)
     if state.hero_base.enabled {
-        let config_enabled = game_data.as_ref().map(|gd| gd.config.fog_of_war.enabled).unwrap_or(true);
+        let config_enabled = game_data
+            .as_ref()
+            .map(|gd| gd.config.fog_of_war.enabled)
+            .unwrap_or(true);
         let fog_enabled = config_enabled && state.cheat_fog_enabled;
-        
+
         // Check if hero base area is revealed
         let base_pos = state.hero_base.position;
         let base_visible = if fog_enabled {
@@ -133,7 +152,7 @@ pub fn draw_minimap(state: &GameState, game_data: &Option<GameData>) {
         } else {
             true // No fog, always visible
         };
-        
+
         if base_visible {
             let bx = start_x + (base_pos.x as f32 / grid_w as f32) * map_width;
             let by = start_y + (base_pos.y as f32 / grid_h as f32) * map_height;

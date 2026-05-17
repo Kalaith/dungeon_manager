@@ -23,22 +23,28 @@ use crate::data::GameData;
 /// Check if a tile type is a wall/blocking tile
 pub fn is_wall(tile_type: &str, game_data: &GameData) -> bool {
     // Treat reinforced wall as wall, plus anything that blocks vision (rocks, earth, resources)
-    tile_type == types::REINFORCED_WALL || 
-    game_data.tiles.get(tile_type)
-        .map(|t| t.blocks_vision)
-        .unwrap_or(false)
+    tile_type == types::REINFORCED_WALL
+        || game_data
+            .tiles
+            .get(tile_type)
+            .map(|t| t.blocks_vision)
+            .unwrap_or(false)
 }
 
 /// Check if a tile type is diggable
 pub fn is_diggable(tile_type: &str, game_data: &GameData) -> bool {
-    game_data.tiles.get(tile_type)
+    game_data
+        .tiles
+        .get(tile_type)
         .map(|t| t.diggable)
         .unwrap_or(false)
 }
 
 /// Check if a tile type is claimable by the player
 pub fn is_claimable(tile_type: &str, game_data: &GameData) -> bool {
-    game_data.tiles.get(tile_type)
+    game_data
+        .tiles
+        .get(tile_type)
         .map(|t| t.claimable)
         .unwrap_or(false)
 }
@@ -50,13 +56,15 @@ pub fn is_walkable(tile_type: &str, game_data: &GameData) -> bool {
     if is_room(tile_type, game_data) {
         return true;
     }
-    
+
     // Hero buildings are walkable tiles (floor with building on top)
     if game_data.hero_buildings.contains_key(tile_type) {
         return true;
     }
-    
-    game_data.tiles.get(tile_type)
+
+    game_data
+        .tiles
+        .get(tile_type)
         .map(|t| !t.blocks_movement)
         .unwrap_or(false) // unknown tiles not walkable
 }
@@ -68,7 +76,9 @@ pub fn is_room(tile_type: &str, game_data: &GameData) -> bool {
 
 /// Check if a tile type can have a room built on it
 pub fn can_build_room(tile_type: &str, game_data: &GameData) -> bool {
-    game_data.tiles.get(tile_type)
+    game_data
+        .tiles
+        .get(tile_type)
         .map(|t| t.supports_rooms)
         .unwrap_or(false)
 }
@@ -79,17 +89,23 @@ pub fn is_secure(tile_type: &str, game_data: &GameData) -> bool {
     // Excluded resources.
     // We can check blocks_movement && !diggable? No, earth is diggable.
     // Secure means "solid wall".
-    if tile_type == types::REINFORCED_WALL { return true; }
-    
-    game_data.tiles.get(tile_type)
-        .map(|t| t.blocks_movement) // Simplification: if it blocks movement, it's secure enough? 
+    if tile_type == types::REINFORCED_WALL {
+        return true;
+    }
+
+    game_data
+        .tiles
+        .get(tile_type)
+        .map(|t| t.blocks_movement) // Simplification: if it blocks movement, it's secure enough?
         // Resources block movement too.
         .unwrap_or(false)
 }
 
 /// Check if a tile type blocks line of sight
 pub fn blocks_vision(tile_type: &str, game_data: &GameData) -> bool {
-    game_data.tiles.get(tile_type)
+    game_data
+        .tiles
+        .get(tile_type)
         .map(|t| t.blocks_vision)
         .unwrap_or(false)
 }

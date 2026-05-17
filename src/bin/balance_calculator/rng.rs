@@ -1,4 +1,3 @@
-
 pub struct SimpleRng {
     state: u64,
 }

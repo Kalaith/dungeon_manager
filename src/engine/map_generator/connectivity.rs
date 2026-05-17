@@ -51,7 +51,12 @@ fn find_disconnected_regions(grid: &Grid) -> Vec<Vec<TilePos>> {
 }
 
 /// Flood fill to find all tiles in a connected region
-fn flood_fill_region(grid: &Grid, start_x: usize, start_y: usize, visited: &mut Vec<Vec<bool>>) -> Vec<TilePos> {
+fn flood_fill_region(
+    grid: &Grid,
+    start_x: usize,
+    start_y: usize,
+    visited: &mut Vec<Vec<bool>>,
+) -> Vec<TilePos> {
     let height = grid.len();
     let width = grid[0].len();
     let mut region = Vec::new();

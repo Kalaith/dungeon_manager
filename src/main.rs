@@ -1,28 +1,25 @@
+#![allow(dead_code)]
 
 use macroquad::prelude::*;
 
+mod config;
 mod data;
+mod draw_utils;
 mod engine;
+mod sprite_variation;
 mod state;
 mod ui;
-mod config;
-mod draw_utils;
-mod sprite_variation;
 
 #[cfg(test)]
 mod combat_tests;
 
 use data::GameData;
-use state::MapType;
-use state::{GamePhase, InteractionMode, DragSelection};
-use ui::renderer::GameRenderer;
-use ui::actions::ActionQueue;
-use engine::input::InputHandler;
 use engine::action_processor;
-
-
-
-
+use engine::input::InputHandler;
+use state::MapType;
+use state::{DragSelection, GamePhase, InteractionMode};
+use ui::actions::ActionQueue;
+use ui::renderer::GameRenderer;
 
 pub struct Game {
     phase: GamePhase,
@@ -77,7 +74,7 @@ impl Game {
             eprintln!("Loading graphics...");
             self.renderer.load_resources(self.game_data.as_ref()).await;
             if self.renderer.graphics_cache.is_some() {
-                 self.phase = GamePhase::MainMenu;
+                self.phase = GamePhase::MainMenu;
             }
         }
     }
@@ -107,7 +104,7 @@ impl Game {
                     &mut state.player,
                     &mut state.pending_trap_builds,
                     game_data,
-                    dt
+                    dt,
                 );
 
                 action_processor::process_actions(
@@ -131,20 +128,20 @@ impl Game {
                         &self.interaction_mode,
                         self.hovered_tile,
                         data,
-                        &self.drag_selection
+                        &self.drag_selection,
                     );
                 }
                 self.renderer.draw_gui(
-                    state, 
-                    &mut self.interaction_mode, 
-                    self.hovered_tile, 
-                    self.held_entity, 
-                    self.selected_entity, 
-                    self.selected_room, 
+                    state,
+                    &mut self.interaction_mode,
+                    self.hovered_tile,
+                    self.held_entity,
+                    self.selected_entity,
+                    self.selected_room,
                     &self.game_data, // Helper takes Option
-                    &self.drag_selection
+                    &self.drag_selection,
                 );
-            },
+            }
             _ => {
                 self.renderer.draw(
                     &self.phase,

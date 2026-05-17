@@ -2,8 +2,8 @@
 //!
 //! Generates all ground tiles, room floors, and trap tiles.
 
-use image::{Rgba, RgbaImage};
 use super::core::*;
+use image::{Rgba, RgbaImage};
 
 // ============================================================================
 // NATURAL TILES
@@ -12,31 +12,31 @@ use super::core::*;
 pub fn create_solid_rock() -> RgbaImage {
     // Create a volumetric carved stone block wall
     let mut img = create_carved_block(
-        Rgba([55, 55, 60, 255]),    // Base stone color
-        16,                          // Block width
-        12,                          // Block height
-        Rgba([35, 35, 40, 255]),    // Dark mortar
-        1,                           // Mortar width
+        Rgba([55, 55, 60, 255]), // Base stone color
+        16,                      // Block width
+        12,                      // Block height
+        Rgba([35, 35, 40, 255]), // Dark mortar
+        1,                       // Mortar width
     );
-    
+
     // Add rock texture to both faces
     add_fbm_noise(&mut img, 12.0, 4, 15, 42);
-    
+
     // Add subtle crack patterns for weathering
     add_crack_pattern(&mut img, 0.3, Rgba([30, 30, 35, 180]), 123);
-    
+
     // Add color variation for natural look
     add_color_variation(&mut img, 6, 4, 77);
-    
+
     img
 }
 
 pub fn create_earth() -> RgbaImage {
     let mut img = create_tile_base(Rgba([95, 65, 35, 255]));
-    
+
     // Rich soil texture with FBM
     add_fbm_noise(&mut img, 10.0, 5, 25, 101);
-    
+
     // Add darker patches for depth
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
@@ -44,34 +44,38 @@ pub fn create_earth() -> RgbaImage {
             if noise > 0.3 {
                 let p = img.get_pixel(x, y);
                 let darken = ((noise - 0.3) * 40.0) as i32;
-                img.put_pixel(x, y, Rgba([
-                    (p[0] as i32 - darken).clamp(0, 255) as u8,
-                    (p[1] as i32 - darken).clamp(0, 255) as u8,
-                    (p[2] as i32 - darken / 2).clamp(0, 255) as u8,
-                    255
-                ]));
+                img.put_pixel(
+                    x,
+                    y,
+                    Rgba([
+                        (p[0] as i32 - darken).clamp(0, 255) as u8,
+                        (p[1] as i32 - darken).clamp(0, 255) as u8,
+                        (p[2] as i32 - darken / 2).clamp(0, 255) as u8,
+                        255,
+                    ]),
+                );
             }
         }
     }
-    
+
     // Add small rocks/pebbles
     add_crack_pattern(&mut img, 0.15, Rgba([70, 50, 25, 150]), 202);
-    
+
     // Color variation for organic feel
     add_color_variation(&mut img, 12, 8, 55);
-    
+
     // Subtle edge darkening
     add_edge_bevel(&mut img, 3, 20, 10);
-    
+
     img
 }
 
 pub fn create_claimed_floor() -> RgbaImage {
     let mut img = create_tile_base(Rgba([50, 48, 55, 255]));
-    
+
     // Add stone texture base
     add_fbm_noise(&mut img, 16.0, 3, 12, 333);
-    
+
     // Draw carved stone grid pattern
     for y in (0..TILE_HEIGHT).step_by(16) {
         for x in 0..TILE_WIDTH {
@@ -90,29 +94,29 @@ pub fn create_claimed_floor() -> RgbaImage {
             }
         }
     }
-    
+
     // Add subtle wear patterns
     add_crack_pattern(&mut img, 0.2, Rgba([40, 38, 45, 100]), 444);
-    
+
     // 3D beveled edges
     add_3d_border(&mut img, 2, Rgba([80, 78, 85, 50]), Rgba([20, 18, 25, 70]));
-    
+
     img
 }
 
 pub fn create_reinforced_wall() -> RgbaImage {
     // Create a volumetric wall with metal reinforcement
     let mut img = create_volumetric_wall(
-        Rgba([75, 75, 80, 255]),    // Stone base
-        Some(Rgba([90, 90, 95, 255])),   // Lighter top
-        Some(Rgba([60, 60, 65, 255])),   // Darker front
+        Rgba([75, 75, 80, 255]),       // Stone base
+        Some(Rgba([90, 90, 95, 255])), // Lighter top
+        Some(Rgba([60, 60, 65, 255])), // Darker front
     );
-    
+
     // Add stone texture
     add_fbm_noise(&mut img, 10.0, 3, 12, 555);
-    
+
     let top_height = (WALL_HEIGHT as f32 * 0.5) as u32;
-    
+
     // Draw metal reinforcement bands on front face
     for y in (top_height + 4..TILE_HEIGHT).step_by(12) {
         for x in 0..TILE_WIDTH {
@@ -127,7 +131,7 @@ pub fn create_reinforced_wall() -> RgbaImage {
             img.put_pixel(x, y, Rgba([160, 160, 170, 255]));
         }
     }
-    
+
     // Add metal bands on top face too
     for y in (2..top_height).step_by(6) {
         for x in 0..TILE_WIDTH {
@@ -135,10 +139,15 @@ pub fn create_reinforced_wall() -> RgbaImage {
             img.put_pixel(x, y, lighten_color(existing, 25));
         }
     }
-    
+
     // Add subtle highlight for depth
-    add_3d_border(&mut img, 1, Rgba([120, 120, 130, 40]), Rgba([30, 30, 35, 60]));
-    
+    add_3d_border(
+        &mut img,
+        1,
+        Rgba([120, 120, 130, 40]),
+        Rgba([30, 30, 35, 60]),
+    );
+
     img
 }
 
@@ -177,11 +186,12 @@ pub fn create_gold_pile() -> RgbaImage {
     let mut img = create_tile_base(Rgba([180, 140, 20, 255])); // Darker gold base
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            let hash = ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            let hash =
+                ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
             if hash % 5 < 2 {
-                 img.put_pixel(x, y, Rgba([255, 215, 0, 255])); // Shiny gold coins
+                img.put_pixel(x, y, Rgba([255, 215, 0, 255])); // Shiny gold coins
             } else if hash % 7 < 1 {
-                 img.put_pixel(x, y, Rgba([255, 255, 150, 255])); // Highlights
+                img.put_pixel(x, y, Rgba([255, 255, 150, 255])); // Highlights
             }
         }
     }
@@ -231,12 +241,12 @@ pub fn create_mana_crystal() -> RgbaImage {
 
 pub fn create_lava() -> RgbaImage {
     let mut img = create_tile_base(Rgba([200, 50, 0, 255]));
-    
+
     // Create flowing lava pattern with turbulence
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
             let turb = turbulence(x as f32 / 10.0, y as f32 / 10.0, 4);
-            
+
             // Hot spots (brighter)
             if turb > 0.5 {
                 let intensity = (turb - 0.5) * 2.0;
@@ -245,37 +255,47 @@ pub fn create_lava() -> RgbaImage {
                 let b = (intensity * 50.0) as u8;
                 img.put_pixel(x, y, Rgba([r, g, b, 255]));
             }
-            
+
             // Super hot core (yellow-white)
             if turb > 0.75 {
                 let intensity = (turb - 0.75) * 4.0;
-                img.put_pixel(x, y, Rgba([
-                    255,
-                    (200.0 + intensity * 55.0).min(255.0) as u8,
-                    (50.0 + intensity * 100.0).min(200.0) as u8,
-                    255
-                ]));
+                img.put_pixel(
+                    x,
+                    y,
+                    Rgba([
+                        255,
+                        (200.0 + intensity * 55.0).min(255.0) as u8,
+                        (50.0 + intensity * 100.0).min(200.0) as u8,
+                        255,
+                    ]),
+                );
             }
         }
     }
-    
+
     // Add subtle movement lines
     add_fbm_noise(&mut img, 6.0, 2, 15, 666);
-    
+
     // Glowing effect - brighter in center
-    add_gradient_overlay(&mut img, GradientDirection::Radial, 0, 40, Rgba([255, 200, 100, 40]));
-    
+    add_gradient_overlay(
+        &mut img,
+        GradientDirection::Radial,
+        0,
+        40,
+        Rgba([255, 200, 100, 40]),
+    );
+
     img
 }
 
 pub fn create_water() -> RgbaImage {
     let mut img = create_tile_base(Rgba([25, 50, 100, 255]));
-    
+
     // Create ripple pattern with turbulence
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
             let turb = turbulence(x as f32 / 12.0, y as f32 / 12.0, 3);
-            
+
             // Lighter ripple areas
             if turb > 0.4 {
                 let intensity = (turb - 0.4) / 0.6;
@@ -286,16 +306,16 @@ pub fn create_water() -> RgbaImage {
             }
         }
     }
-    
+
     // Add subtle FBM for organic look
     add_fbm_noise(&mut img, 8.0, 3, 10, 888);
-    
+
     // Specular highlights for wet surface
     add_specular_highlights(&mut img, 0.4, 0.3, 999);
-    
+
     // Slight edge darkening
     add_edge_bevel(&mut img, 2, 15, 8);
-    
+
     img
 }
 
@@ -356,9 +376,23 @@ pub fn create_wooden_floor() -> RgbaImage {
 pub fn create_carpet() -> RgbaImage {
     let mut img = create_tile_base(Rgba([150, 30, 30, 255]));
     draw_rect(&mut img, 0, 0, TILE_WIDTH, 4, Rgba([200, 180, 50, 255]));
-    draw_rect(&mut img, 0, TILE_HEIGHT - 4, TILE_WIDTH, 4, Rgba([200, 180, 50, 255]));
+    draw_rect(
+        &mut img,
+        0,
+        TILE_HEIGHT - 4,
+        TILE_WIDTH,
+        4,
+        Rgba([200, 180, 50, 255]),
+    );
     draw_rect(&mut img, 0, 0, 4, TILE_HEIGHT, Rgba([200, 180, 50, 255]));
-    draw_rect(&mut img, TILE_WIDTH - 4, 0, 4, TILE_HEIGHT, Rgba([200, 180, 50, 255]));
+    draw_rect(
+        &mut img,
+        TILE_WIDTH - 4,
+        0,
+        4,
+        TILE_HEIGHT,
+        Rgba([200, 180, 50, 255]),
+    );
     img
 }
 
@@ -378,10 +412,10 @@ pub fn create_bone_floor() -> RgbaImage {
 pub fn create_mosaic_floor() -> RgbaImage {
     let mut img = create_tile_base(Rgba([180, 170, 150, 255]));
     let colors = [
-        Rgba([200, 50, 50, 255]),   // Red
-        Rgba([50, 150, 200, 255]),  // Blue
-        Rgba([200, 180, 50, 255]),  // Gold
-        Rgba([50, 150, 50, 255]),   // Green
+        Rgba([200, 50, 50, 255]),  // Red
+        Rgba([50, 150, 200, 255]), // Blue
+        Rgba([200, 180, 50, 255]), // Gold
+        Rgba([50, 150, 50, 255]),  // Green
     ];
 
     for y in (0..TILE_HEIGHT).step_by(8) {
@@ -400,7 +434,8 @@ pub fn create_marble_floor() -> RgbaImage {
     // Add marble veins
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            let hash = ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            let hash =
+                ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
             if hash % 50 < 3 {
                 img.put_pixel(x, y, Rgba([180, 180, 190, 255]));
             }
@@ -415,7 +450,8 @@ pub fn create_grass() -> RgbaImage {
     let mut img = create_tile_base(Rgba([60, 120, 40, 255]));
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            let hash = ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            let hash =
+                ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
             if hash % 7 < 2 {
                 img.put_pixel(x, y, Rgba([80, 140, 50, 255]));
             } else if hash % 11 < 1 {
@@ -440,7 +476,8 @@ pub fn create_snow() -> RgbaImage {
     // Add subtle blue shadows
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            let hash = ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            let hash =
+                ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
             if hash % 20 < 2 {
                 img.put_pixel(x, y, Rgba([220, 230, 250, 255]));
             }
@@ -617,7 +654,8 @@ pub fn create_torture_chamber() -> RgbaImage {
     // Blood stains
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            let hash = ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            let hash =
+                ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
             if hash % 30 < 2 {
                 img.put_pixel(x, y, Rgba([100, 20, 20, 255]));
             }
@@ -633,7 +671,7 @@ pub fn create_torture_chamber() -> RgbaImage {
 /// Casino/gambling room - NEW
 pub fn create_casino() -> RgbaImage {
     let mut img = create_tile_base(Rgba([30, 80, 30, 255])); // Green felt
-    // Card/dice pattern
+                                                             // Card/dice pattern
     draw_rect(&mut img, 20, 20, 10, 14, Rgba([255, 255, 255, 255]));
     draw_rect(&mut img, 34, 30, 10, 14, Rgba([255, 255, 255, 255]));
     // Red diamonds on cards
@@ -672,15 +710,35 @@ pub fn create_temple() -> RgbaImage {
     }
 
     // Central altar symbol (stylized eye/diamond)
-    draw_rect(&mut img, center_x - 3, center_y - 6, 6, 12, Rgba([150, 100, 180, 255]));
-    draw_rect(&mut img, center_x - 6, center_y - 3, 12, 6, Rgba([150, 100, 180, 255]));
+    draw_rect(
+        &mut img,
+        center_x - 3,
+        center_y - 6,
+        6,
+        12,
+        Rgba([150, 100, 180, 255]),
+    );
+    draw_rect(
+        &mut img,
+        center_x - 6,
+        center_y - 3,
+        12,
+        6,
+        Rgba([150, 100, 180, 255]),
+    );
     img.put_pixel(center_x, center_y, Rgba([255, 200, 255, 255])); // Glowing center
 
     // Corner candle positions
     draw_circle(&mut img, 8, 8, 3, Rgba([200, 150, 50, 255]));
     draw_circle(&mut img, TILE_WIDTH - 8, 8, 3, Rgba([200, 150, 50, 255]));
     draw_circle(&mut img, 8, TILE_HEIGHT - 8, 3, Rgba([200, 150, 50, 255]));
-    draw_circle(&mut img, TILE_WIDTH - 8, TILE_HEIGHT - 8, 3, Rgba([200, 150, 50, 255]));
+    draw_circle(
+        &mut img,
+        TILE_WIDTH - 8,
+        TILE_HEIGHT - 8,
+        3,
+        Rgba([200, 150, 50, 255]),
+    );
 
     add_noise(&mut img, 5);
     img
@@ -698,10 +756,30 @@ pub fn create_door() -> RgbaImage {
         }
     }
     draw_rect(&mut img, 0, 0, TILE_WIDTH, 4, Rgba([60, 40, 20, 255]));
-    draw_rect(&mut img, 0, TILE_HEIGHT - 4, TILE_WIDTH, 4, Rgba([60, 40, 20, 255]));
+    draw_rect(
+        &mut img,
+        0,
+        TILE_HEIGHT - 4,
+        TILE_WIDTH,
+        4,
+        Rgba([60, 40, 20, 255]),
+    );
     draw_rect(&mut img, 0, 0, 4, TILE_HEIGHT, Rgba([60, 40, 20, 255]));
-    draw_rect(&mut img, TILE_WIDTH - 4, 0, 4, TILE_HEIGHT, Rgba([60, 40, 20, 255]));
-    draw_circle(&mut img, TILE_WIDTH - 10, TILE_HEIGHT / 2, 4, Rgba([200, 200, 200, 255]));
+    draw_rect(
+        &mut img,
+        TILE_WIDTH - 4,
+        0,
+        4,
+        TILE_HEIGHT,
+        Rgba([60, 40, 20, 255]),
+    );
+    draw_circle(
+        &mut img,
+        TILE_WIDTH - 10,
+        TILE_HEIGHT / 2,
+        4,
+        Rgba([200, 200, 200, 255]),
+    );
     img
 }
 
@@ -729,7 +807,14 @@ pub fn create_alarm_trap() -> RgbaImage {
     let mut img = create_solid_rock();
     let cx = TILE_WIDTH / 2;
     let cy = TILE_HEIGHT / 2;
-    draw_rect(&mut img, cx - 10, cy - 10, 20, 20, Rgba([150, 100, 50, 255]));
+    draw_rect(
+        &mut img,
+        cx - 10,
+        cy - 10,
+        20,
+        20,
+        Rgba([150, 100, 50, 255]),
+    );
     draw_circle(&mut img, cx, cy, 8, Rgba([200, 50, 50, 255]));
     draw_rect(&mut img, 0, cy, TILE_WIDTH, 2, Rgba([100, 100, 100, 255]));
     img
@@ -775,8 +860,20 @@ pub fn create_fire_trap() -> RgbaImage {
     for angle in 0..4 {
         let offset_x = (angle % 2) as i32 * 20 - 10;
         let offset_y = (angle / 2) as i32 * 20 - 10;
-        draw_circle(&mut img, (cx as i32 + offset_x) as u32, (cy as i32 + offset_y) as u32, 4, Rgba([100, 50, 30, 255]));
-        draw_circle(&mut img, (cx as i32 + offset_x) as u32, (cy as i32 + offset_y) as u32, 2, Rgba([255, 100, 0, 255]));
+        draw_circle(
+            &mut img,
+            (cx as i32 + offset_x) as u32,
+            (cy as i32 + offset_y) as u32,
+            4,
+            Rgba([100, 50, 30, 255]),
+        );
+        draw_circle(
+            &mut img,
+            (cx as i32 + offset_x) as u32,
+            (cy as i32 + offset_y) as u32,
+            2,
+            Rgba([255, 100, 0, 255]),
+        );
     }
     img
 }

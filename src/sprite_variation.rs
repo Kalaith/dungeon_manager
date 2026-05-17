@@ -67,7 +67,14 @@ pub struct ColorRegion {
 }
 
 impl ColorRegion {
-    pub fn new(name: &str, hue_min: f32, hue_max: f32, sat_min: f32, sat_max: f32, variation_scale: f32) -> Self {
+    pub fn new(
+        name: &str,
+        hue_min: f32,
+        hue_max: f32,
+        sat_min: f32,
+        sat_max: f32,
+        variation_scale: f32,
+    ) -> Self {
         Self {
             name: name.to_string(),
             hue_min,
@@ -110,12 +117,12 @@ impl EntityVisualVariation {
                 config.variation_strength * region.variation_scale,
             );
             region_variations.insert(region.name.clone(), variation);
-            region_seed = region_seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+            region_seed = region_seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1);
         }
 
-        Self {
-            region_variations,
-        }
+        Self { region_variations }
     }
 }
 
@@ -144,9 +151,9 @@ impl SpriteVariationCache {
             "wizard".to_string(),
             SpriteVariationConfig {
                 color_regions: vec![
-                    ColorRegion::new("robe", 220.0, 280.0, 0.3, 1.0, 1.5),      // Blue/purple robes
-                    ColorRegion::new("staff_gem", 0.0, 360.0, 0.5, 1.0, 2.0),   // Staff gem - high variation
-                    ColorRegion::new("trim", 30.0, 60.0, 0.3, 1.0, 1.0),        // Gold trim
+                    ColorRegion::new("robe", 220.0, 280.0, 0.3, 1.0, 1.5), // Blue/purple robes
+                    ColorRegion::new("staff_gem", 0.0, 360.0, 0.5, 1.0, 2.0), // Staff gem - high variation
+                    ColorRegion::new("trim", 30.0, 60.0, 0.3, 1.0, 1.0),      // Gold trim
                 ],
                 variation_strength: 0.8,
             },
@@ -156,9 +163,9 @@ impl SpriteVariationCache {
             "warlock".to_string(),
             SpriteVariationConfig {
                 color_regions: vec![
-                    ColorRegion::new("robe", 260.0, 320.0, 0.2, 1.0, 1.2),      // Purple/dark robes
-                    ColorRegion::new("magic_glow", 0.0, 360.0, 0.4, 1.0, 2.0),  // Magic effects
-                    ColorRegion::new("skin", 20.0, 50.0, 0.2, 0.6, 0.5),        // Skin tone
+                    ColorRegion::new("robe", 260.0, 320.0, 0.2, 1.0, 1.2), // Purple/dark robes
+                    ColorRegion::new("magic_glow", 0.0, 360.0, 0.4, 1.0, 2.0), // Magic effects
+                    ColorRegion::new("skin", 20.0, 50.0, 0.2, 0.6, 0.5),   // Skin tone
                 ],
                 variation_strength: 0.7,
             },
@@ -169,9 +176,9 @@ impl SpriteVariationCache {
             "knight".to_string(),
             SpriteVariationConfig {
                 color_regions: vec![
-                    ColorRegion::new("armor", 0.0, 360.0, 0.0, 0.3, 0.3),       // Metal armor (low sat)
-                    ColorRegion::new("plume", 0.0, 360.0, 0.5, 1.0, 2.0),       // Helmet plume
-                    ColorRegion::new("cloth", 0.0, 60.0, 0.4, 1.0, 1.0),        // Cloth/cape
+                    ColorRegion::new("armor", 0.0, 360.0, 0.0, 0.3, 0.3), // Metal armor (low sat)
+                    ColorRegion::new("plume", 0.0, 360.0, 0.5, 1.0, 2.0), // Helmet plume
+                    ColorRegion::new("cloth", 0.0, 60.0, 0.4, 1.0, 1.0),  // Cloth/cape
                 ],
                 variation_strength: 0.6,
             },
@@ -182,9 +189,9 @@ impl SpriteVariationCache {
             "goblin".to_string(),
             SpriteVariationConfig {
                 color_regions: vec![
-                    ColorRegion::new("skin", 60.0, 150.0, 0.3, 0.8, 0.8),       // Green skin
-                    ColorRegion::new("cloth", 0.0, 360.0, 0.3, 1.0, 1.5),       // Clothing
-                    ColorRegion::new("eyes", 0.0, 60.0, 0.5, 1.0, 1.0),         // Eye color
+                    ColorRegion::new("skin", 60.0, 150.0, 0.3, 0.8, 0.8), // Green skin
+                    ColorRegion::new("cloth", 0.0, 360.0, 0.3, 1.0, 1.5), // Clothing
+                    ColorRegion::new("eyes", 0.0, 60.0, 0.5, 1.0, 1.0),   // Eye color
                 ],
                 variation_strength: 0.7,
             },
@@ -195,9 +202,9 @@ impl SpriteVariationCache {
             "orc".to_string(),
             SpriteVariationConfig {
                 color_regions: vec![
-                    ColorRegion::new("skin", 60.0, 140.0, 0.3, 0.7, 0.6),       // Green/brown skin
-                    ColorRegion::new("armor", 0.0, 60.0, 0.2, 0.8, 0.8),        // Leather/metal
-                    ColorRegion::new("warpaint", 0.0, 360.0, 0.5, 1.0, 1.5),    // War paint
+                    ColorRegion::new("skin", 60.0, 140.0, 0.3, 0.7, 0.6), // Green/brown skin
+                    ColorRegion::new("armor", 0.0, 60.0, 0.2, 0.8, 0.8),  // Leather/metal
+                    ColorRegion::new("warpaint", 0.0, 360.0, 0.5, 1.0, 1.5), // War paint
                 ],
                 variation_strength: 0.6,
             },
@@ -208,8 +215,8 @@ impl SpriteVariationCache {
             "skeleton".to_string(),
             SpriteVariationConfig {
                 color_regions: vec![
-                    ColorRegion::new("bone", 30.0, 60.0, 0.1, 0.4, 0.4),        // Bone color
-                    ColorRegion::new("glow", 180.0, 240.0, 0.3, 1.0, 1.2),      // Soul glow
+                    ColorRegion::new("bone", 30.0, 60.0, 0.1, 0.4, 0.4), // Bone color
+                    ColorRegion::new("glow", 180.0, 240.0, 0.3, 1.0, 1.2), // Soul glow
                 ],
                 variation_strength: 0.5,
             },
@@ -220,9 +227,9 @@ impl SpriteVariationCache {
             "imp".to_string(),
             SpriteVariationConfig {
                 color_regions: vec![
-                    ColorRegion::new("skin", 340.0, 40.0, 0.15, 1.0, 1.2),      // Dark red/maroon skin (wraps around)
-                    ColorRegion::new("wings", 340.0, 60.0, 0.1, 0.8, 0.8),      // Wing membrane
-                    ColorRegion::new("horns", 0.0, 60.0, 0.05, 0.4, 0.6),       // Dark horns/features
+                    ColorRegion::new("skin", 340.0, 40.0, 0.15, 1.0, 1.2), // Dark red/maroon skin (wraps around)
+                    ColorRegion::new("wings", 340.0, 60.0, 0.1, 0.8, 0.8), // Wing membrane
+                    ColorRegion::new("horns", 0.0, 60.0, 0.05, 0.4, 0.6),  // Dark horns/features
                 ],
                 variation_strength: 0.8,
             },
@@ -233,8 +240,8 @@ impl SpriteVariationCache {
             "troll".to_string(),
             SpriteVariationConfig {
                 color_regions: vec![
-                    ColorRegion::new("skin", 80.0, 160.0, 0.2, 0.6, 0.7),       // Gray-green skin
-                    ColorRegion::new("moss", 80.0, 140.0, 0.4, 0.9, 0.8),       // Moss/growth
+                    ColorRegion::new("skin", 80.0, 160.0, 0.2, 0.6, 0.7), // Gray-green skin
+                    ColorRegion::new("moss", 80.0, 140.0, 0.4, 0.9, 0.8), // Moss/growth
                 ],
                 variation_strength: 0.5,
             },
@@ -245,9 +252,9 @@ impl SpriteVariationCache {
             "archer".to_string(),
             SpriteVariationConfig {
                 color_regions: vec![
-                    ColorRegion::new("cloth", 60.0, 150.0, 0.3, 0.8, 1.0),      // Green clothing
-                    ColorRegion::new("leather", 20.0, 50.0, 0.3, 0.7, 0.5),     // Brown leather
-                    ColorRegion::new("feather", 0.0, 360.0, 0.4, 1.0, 1.5),     // Arrow fletching
+                    ColorRegion::new("cloth", 60.0, 150.0, 0.3, 0.8, 1.0), // Green clothing
+                    ColorRegion::new("leather", 20.0, 50.0, 0.3, 0.7, 0.5), // Brown leather
+                    ColorRegion::new("feather", 0.0, 360.0, 0.4, 1.0, 1.5), // Arrow fletching
                 ],
                 variation_strength: 0.6,
             },
@@ -258,9 +265,9 @@ impl SpriteVariationCache {
             "vampire".to_string(),
             SpriteVariationConfig {
                 color_regions: vec![
-                    ColorRegion::new("cape", 0.0, 360.0, 0.3, 1.0, 1.2),        // Cape color
-                    ColorRegion::new("skin", 0.0, 40.0, 0.0, 0.3, 0.3),         // Pale skin
-                    ColorRegion::new("eyes", 0.0, 60.0, 0.6, 1.0, 1.5),         // Eye glow
+                    ColorRegion::new("cape", 0.0, 360.0, 0.3, 1.0, 1.2), // Cape color
+                    ColorRegion::new("skin", 0.0, 40.0, 0.0, 0.3, 0.3),  // Pale skin
+                    ColorRegion::new("eyes", 0.0, 60.0, 0.6, 1.0, 1.5),  // Eye glow
                 ],
                 variation_strength: 0.7,
             },
@@ -271,8 +278,8 @@ impl SpriteVariationCache {
             "spider".to_string(),
             SpriteVariationConfig {
                 color_regions: vec![
-                    ColorRegion::new("body", 0.0, 360.0, 0.1, 0.5, 0.6),        // Body color
-                    ColorRegion::new("markings", 0.0, 60.0, 0.5, 1.0, 1.2),     // Pattern markings
+                    ColorRegion::new("body", 0.0, 360.0, 0.1, 0.5, 0.6), // Body color
+                    ColorRegion::new("markings", 0.0, 60.0, 0.5, 1.0, 1.2), // Pattern markings
                 ],
                 variation_strength: 0.5,
             },
@@ -306,7 +313,8 @@ impl SpriteVariationCache {
         }
 
         // Generate new variation
-        let config = self.configs
+        let config = self
+            .configs
             .get(base_sprite_id)
             .or_else(|| self.configs.get("default"))
             .cloned()
@@ -335,7 +343,8 @@ fn apply_variation(
     let image = base_texture.get_texture_data();
     let width = image.width();
     let height = image.height();
-    let mut new_image = Image::gen_image_color(width as u16, height as u16, Color::new(0.0, 0.0, 0.0, 0.0));
+    let mut new_image =
+        Image::gen_image_color(width as u16, height as u16, Color::new(0.0, 0.0, 0.0, 0.0));
 
     for y in 0..height {
         for x in 0..width {
@@ -372,11 +381,7 @@ fn apply_variation(
                 (pixel.r, pixel.g, pixel.b)
             };
 
-            new_image.set_pixel(
-                x as u32,
-                y as u32,
-                Color::new(new_r, new_g, new_b, pixel.a),
-            );
+            new_image.set_pixel(x as u32, y as u32, Color::new(new_r, new_g, new_b, pixel.a));
         }
     }
 
@@ -436,11 +441,16 @@ struct SimpleRng {
 
 impl SimpleRng {
     fn new(seed: u64) -> Self {
-        Self { state: seed.wrapping_add(1) }
+        Self {
+            state: seed.wrapping_add(1),
+        }
     }
 
     fn next_u64(&mut self) -> u64 {
-        self.state = self.state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.state = self
+            .state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         self.state
     }
 
@@ -452,7 +462,6 @@ impl SimpleRng {
         min + self.next_f32() * (max - min)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -475,10 +484,10 @@ mod tests {
     #[test]
     fn test_rgb_hsv_roundtrip() {
         let test_colors = [
-            (1.0, 0.0, 0.0), // Red
-            (0.0, 1.0, 0.0), // Green
-            (0.0, 0.0, 1.0), // Blue
-            (0.5, 0.5, 0.5), // Gray
+            (1.0, 0.0, 0.0),  // Red
+            (0.0, 1.0, 0.0),  // Green
+            (0.0, 0.0, 1.0),  // Blue
+            (0.5, 0.5, 0.5),  // Gray
             (1.0, 0.5, 0.25), // Orange-ish
         ];
 
@@ -495,9 +504,9 @@ mod tests {
     fn test_color_region_matching() {
         let region = ColorRegion::new("test", 350.0, 10.0, 0.5, 1.0, 1.0); // Red, wraps around
 
-        assert!(region.matches(0.0, 0.7));   // Red at hue 0
+        assert!(region.matches(0.0, 0.7)); // Red at hue 0
         assert!(region.matches(355.0, 0.7)); // Red at hue 355
         assert!(!region.matches(180.0, 0.7)); // Blue, shouldn't match
-        assert!(!region.matches(0.0, 0.3));  // Red but low saturation
+        assert!(!region.matches(0.0, 0.3)); // Red but low saturation
     }
 }

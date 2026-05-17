@@ -1,10 +1,12 @@
+#![allow(dead_code)]
+
+mod analysis;
 mod data;
 mod rng;
 mod sim;
-mod analysis;
 
-use std::env;
 use analysis::TestSeverity;
+use std::env;
 
 fn print_usage() {
     println!("Usage: balance_calculator [MODE] [OPTIONS]");
@@ -41,27 +43,48 @@ fn main() {
             print_usage();
         }
         "simulate" => {
-            println!("\n{}", "╔══════════════════════════════════════════════════════════════════════╗");
+            println!(
+                "\n{}",
+                "╔══════════════════════════════════════════════════════════════════════╗"
+            );
             println!("║           DUNGEON MANAGER - COMBAT SIMULATION                        ║");
             println!("╚══════════════════════════════════════════════════════════════════════╝");
             println!("\nLoading game data...");
-            println!("  Loaded {} creatures, {} heroes", monsters.len(), heroes.len());
+            println!(
+                "  Loaded {} creatures, {} heroes",
+                monsters.len(),
+                heroes.len()
+            );
             analysis::run_simulation_mode(&monsters, &heroes, &config);
         }
         "waves" => {
-            println!("\n{}", "╔══════════════════════════════════════════════════════════════════════╗");
+            println!(
+                "\n{}",
+                "╔══════════════════════════════════════════════════════════════════════╗"
+            );
             println!("║           DUNGEON MANAGER - WAVE SIMULATION                          ║");
             println!("╚══════════════════════════════════════════════════════════════════════╝");
             println!("\nLoading game data...");
-            println!("  Loaded {} creatures, {} heroes", monsters.len(), heroes.len());
+            println!(
+                "  Loaded {} creatures, {} heroes",
+                monsters.len(),
+                heroes.len()
+            );
             analysis::run_wave_mode(&monsters, &heroes, &config);
         }
         "economy" => {
-            println!("\n{}", "╔══════════════════════════════════════════════════════════════════════╗");
+            println!(
+                "\n{}",
+                "╔══════════════════════════════════════════════════════════════════════╗"
+            );
             println!("║           DUNGEON MANAGER - ECONOMY SIMULATION                       ║");
             println!("╚══════════════════════════════════════════════════════════════════════╝");
             println!("\nLoading game data...");
-            println!("  Loaded {} creatures, {} rooms", monsters.len(), rooms.len());
+            println!(
+                "  Loaded {} creatures, {} rooms",
+                monsters.len(),
+                rooms.len()
+            );
             analysis::run_economy_mode(&monsters, &rooms, &config);
         }
         "test" => {
@@ -69,7 +92,8 @@ fn main() {
             analysis::print_test_results(&results);
 
             // Exit with error code if any critical tests failed
-            let critical_failures = results.iter()
+            let critical_failures = results
+                .iter()
                 .filter(|r| !r.passed && matches!(r.severity, TestSeverity::Critical))
                 .count();
             if critical_failures > 0 {
@@ -80,7 +104,8 @@ fn main() {
             let results = analysis::run_balance_tests(&monsters, &heroes, &rooms, &config);
             analysis::output_json_results(&results);
 
-            let critical_failures = results.iter()
+            let critical_failures = results
+                .iter()
                 .filter(|r| !r.passed && matches!(r.severity, TestSeverity::Critical))
                 .count();
             if critical_failures > 0 {
@@ -88,7 +113,10 @@ fn main() {
             }
         }
         "" => {
-            println!("\n{}", "╔══════════════════════════════════════════════════════════════════════╗");
+            println!(
+                "\n{}",
+                "╔══════════════════════════════════════════════════════════════════════╗"
+            );
             println!("║           DUNGEON MANAGER - BALANCE CALCULATOR v1.0                   ║");
             println!("╚══════════════════════════════════════════════════════════════════════╝");
 

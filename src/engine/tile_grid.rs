@@ -1,12 +1,25 @@
 //! Tile grid operations and coordinate conversion
 //! Stateless functions for coordinate conversion and neighbor detection.
 
-use crate::state::tile_state::{TilePos, TileState, FogState};
 use crate::data::GameData;
 use crate::engine::tile_types;
+use crate::state::tile_state::{FogState, TilePos, TileState};
+#[allow(unused_imports)]
+pub use macroquad_toolkit::grid::{iso_to_world, world_to_iso};
 use std::collections::HashSet;
 
 pub type Grid = Vec<Vec<TileState>>;
+
+/// Create a rectangular tile grid filled with earth tiles.
+pub fn create_grid(width: usize, height: usize, _game_data: &GameData) -> Grid {
+    (0..height)
+        .map(|y| {
+            (0..width)
+                .map(|x| TileState::new("earth".to_string(), TilePos::new(x as i32, y as i32)))
+                .collect()
+        })
+        .collect()
+}
 
 /// Convert screen position to tile position using 3D raycasting with optional grid collision
 pub fn screen_to_tile(
@@ -24,9 +37,9 @@ pub fn screen_to_tile(
 
     // 2. Calculate Ray in View Space
     // Access fovy from camera (assuming 45 degrees as set in CameraState)
-    let fov_rad = 45.0f32.to_radians(); 
+    let fov_rad = 45.0f32.to_radians();
     let aspect = macroquad::window::screen_width() / macroquad::window::screen_height();
-    
+
     let scale_y = (fov_rad * 0.5).tan();
     let scale_x = scale_y * aspect;
 
@@ -41,24 +54,30 @@ pub fn screen_to_tile(
     let cam_up = cam_right.cross(cam_fwd).normalize();
 
     // Transform direction: WorldDir = Right * View.x + Up * View.y + (-Forward) * View.z
-    let ray_world_dir = (cam_right * ray_view_dir.x + cam_up * ray_view_dir.y + (-cam_fwd) * ray_view_dir.z).normalize();
+    let ray_world_dir =
+        (cam_right * ray_view_dir.x + cam_up * ray_view_dir.y + (-cam_fwd) * ray_view_dir.z)
+            .normalize();
     let ray_start = camera.position;
 
     // Function to intersect ray with a horizontal plane at y = height
     let intersect_plane = |height: f32| -> Option<TilePos> {
-        if ray_world_dir.y.abs() < 0.0001 { return None; }
-        
+        if ray_world_dir.y.abs() < 0.0001 {
+            return None;
+        }
+
         let t = (height - ray_start.y) / ray_world_dir.y;
-        
-        if t < 0.0 { return None; } // Hit is behind camera
-        
+
+        if t < 0.0 {
+            return None;
+        } // Hit is behind camera
+
         let p = ray_start + ray_world_dir * t;
         Some(TilePos::new(p.x.round() as i32, p.z.round() as i32))
     };
 
     // 4. Check intersection with walls first (y = 0.5)
     if let Some(grid) = grid {
-        if let Some(wall_hit) = intersect_plane(0.5) { 
+        if let Some(wall_hit) = intersect_plane(0.5) {
             // Check if there is actually a wall at this position
             if let Some(tile) = get_tile(grid, wall_hit) {
                 if tile_types::is_wall(&tile.tile_type, game_data) {
@@ -109,11 +128,30 @@ pub fn get_cardinal_neighbors(grid: &Grid, pos: TilePos) -> Vec<TilePos> {
     neighbors
 }
 
+/// Get all 8 neighboring positions, including diagonals.
+pub fn get_neighbors(grid: &Grid, pos: TilePos) -> Vec<TilePos> {
+    let offsets = [
+        (0, -1),
+        (1, -1),
+        (1, 0),
+        (1, 1),
+        (0, 1),
+        (-1, 1),
+        (-1, 0),
+        (-1, -1),
+    ];
+
+    offsets
+        .iter()
+        .filter_map(|(dx, dy)| {
+            let neighbor_pos = TilePos::new(pos.x + dx, pos.y + dy);
+            get_tile(grid, neighbor_pos).map(|_| neighbor_pos)
+        })
+        .collect()
+}
+
 /// Calculate fog state for a tile based on player vision
-pub fn calculate_fog_state(
-    tile: &TileState,
-    player_vision: &HashSet<TilePos>,
-) -> FogState {
+pub fn calculate_fog_state(tile: &TileState, player_vision: &HashSet<TilePos>) -> FogState {
     if player_vision.contains(&tile.pos) {
         FogState::Visible
     } else if tile.fog_state == FogState::Visible {
@@ -148,15 +186,15 @@ pub fn update_fog_of_war(
     // Reveal adjacent walls for claimed tiles (radius 1.5)
     for claimed_pos in claimed_tiles {
         visible_tiles.insert(*claimed_pos);
-        
+
         let radius = 1.5f32;
         let r_ceil = radius.ceil() as i32;
-        
+
         for dy in -r_ceil..=r_ceil {
             for dx in -r_ceil..=r_ceil {
                 let distance = (dx * dx + dy * dy) as f32;
                 if distance <= (radius * radius) {
-                   let tile_pos = TilePos::new(claimed_pos.x + dx, claimed_pos.y + dy);
+                    let tile_pos = TilePos::new(claimed_pos.x + dx, claimed_pos.y + dy);
                     visible_tiles.insert(tile_pos);
                 }
             }
@@ -170,7 +208,7 @@ pub fn update_fog_of_war(
                 let distance = (dx * dx + dy * dy) as f32;
                 if distance <= (sight_radius * sight_radius) as f32 {
                     let tile_pos = TilePos::new(creature_pos.x + dx, creature_pos.y + dy);
-                    
+
                     // Check line of sight using the snapshot
                     if has_line_of_sight_snapshot(&tile_types, *creature_pos, tile_pos, game_data) {
                         visible_tiles.insert(tile_pos);
@@ -189,7 +227,12 @@ pub fn update_fog_of_war(
 }
 
 /// Check line of sight using a snapshot of tile types (to avoid borrow issues)
-fn has_line_of_sight_snapshot(tile_types: &[Vec<String>], from: TilePos, to: TilePos, game_data: &GameData) -> bool {
+fn has_line_of_sight_snapshot(
+    tile_types: &[Vec<String>],
+    from: TilePos,
+    to: TilePos,
+    game_data: &GameData,
+) -> bool {
     let mut x0 = from.x;
     let mut y0 = from.y;
     let x1 = to.x;
@@ -262,7 +305,6 @@ mod tests {
     #[test]
     fn test_neighbor_detection() {
         use crate::data::GameData;
-        use std::collections::HashMap;
 
         let game_data = GameData::default();
 

@@ -2,9 +2,9 @@
 //!
 //! Handles drawing in-game notifications for events.
 
-use macroquad::prelude::*;
 use crate::state::game_state::GameState;
-use crate::state::notifications::NotificationType;
+use macroquad::prelude::*;
+use macroquad_toolkit::notifications::{draw_notification, NotificationRenderConfig};
 
 /// Draw active notifications on screen
 pub fn draw_notifications(state: &GameState) {
@@ -13,44 +13,18 @@ pub fn draw_notifications(state: &GameState) {
         return;
     }
 
-    let notification_width = 300.0;
-    let notification_height = 40.0;
-    let padding = 10.0;
-    let start_x = screen_width() - notification_width - 20.0;
+    let config = NotificationRenderConfig {
+        width: 300.0,
+        row_height: 40.0,
+        spacing: 10.0,
+        font_size: 18.0,
+        ..Default::default()
+    };
+    let start_x = screen_width() - config.width - 20.0;
     let start_y = crate::ui::core::HUD_HEIGHT + 20.0;
 
     for (i, notification) in notifications.iter().enumerate() {
-        let y = start_y + (notification_height + padding) * i as f32;
-        let opacity = notification.opacity();
-
-        // Background color based on type
-        let bg_color = match notification.notification_type {
-            NotificationType::Success => Color::new(0.1, 0.5, 0.1, 0.9 * opacity),
-            NotificationType::Info => Color::new(0.2, 0.3, 0.5, 0.9 * opacity),
-            NotificationType::Warning => Color::new(0.6, 0.5, 0.1, 0.9 * opacity),
-            NotificationType::Danger => Color::new(0.6, 0.1, 0.1, 0.9 * opacity),
-        };
-
-        // Border color
-        let border_color = match notification.notification_type {
-            NotificationType::Success => Color::new(0.2, 0.8, 0.2, opacity),
-            NotificationType::Info => Color::new(0.3, 0.5, 0.8, opacity),
-            NotificationType::Warning => Color::new(0.9, 0.7, 0.1, opacity),
-            NotificationType::Danger => Color::new(0.9, 0.2, 0.2, opacity),
-        };
-
-        // Draw background
-        draw_rectangle(start_x, y, notification_width, notification_height, bg_color);
-        draw_rectangle_lines(start_x, y, notification_width, notification_height, 2.0, border_color);
-
-        // Draw text
-        let text_color = Color::new(1.0, 1.0, 1.0, opacity);
-        draw_text(
-            &notification.message,
-            start_x + 10.0,
-            y + 26.0,
-            18.0,
-            text_color,
-        );
+        let y = start_y + (config.row_height + config.spacing) * i as f32;
+        draw_notification(notification, start_x, y, &config);
     }
 }

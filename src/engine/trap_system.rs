@@ -10,7 +10,8 @@ use std::collections::HashSet;
 
 /// Get the material cost for a trap type from game data
 pub fn get_trap_cost(trap_type: &str, game_data: &GameData) -> i32 {
-    game_data.traps
+    game_data
+        .traps
         .get(trap_type)
         .map(|data| data.cost)
         .unwrap_or(50) // Default fallback
@@ -18,7 +19,8 @@ pub fn get_trap_cost(trap_type: &str, game_data: &GameData) -> i32 {
 
 /// Get the build time for a trap type in seconds from game data
 pub fn get_trap_build_time(trap_type: &str, game_data: &GameData) -> f32 {
-    game_data.traps
+    game_data
+        .traps
         .get(trap_type)
         .map(|data| data.build_time)
         .unwrap_or(5.0) // Default fallback
@@ -39,7 +41,8 @@ pub fn process_trap_construction(
         try_fund_trap(dungeon, player, *pos, game_data);
     }
 
-    let completed_traps: Vec<TilePos> = pending.into_iter()
+    let completed_traps: Vec<TilePos> = pending
+        .into_iter()
         .filter(|pos| progress_trap_construction(dungeon, *pos, game_data, dt))
         .collect();
 
@@ -51,7 +54,12 @@ pub fn process_trap_construction(
 }
 
 /// Try to fund a trap at the given position
-fn try_fund_trap(dungeon: &mut Dungeon, player: &mut PlayerState, pos: TilePos, game_data: &GameData) {
+fn try_fund_trap(
+    dungeon: &mut Dungeon,
+    player: &mut PlayerState,
+    pos: TilePos,
+    game_data: &GameData,
+) {
     let tile = match dungeon.get_tile_mut(pos) {
         Some(t) => t,
         None => return,
@@ -74,7 +82,12 @@ fn try_fund_trap(dungeon: &mut Dungeon, player: &mut PlayerState, pos: TilePos, 
 }
 
 /// Progress trap construction, returns true if completed
-fn progress_trap_construction(dungeon: &mut Dungeon, pos: TilePos, game_data: &GameData, dt: f32) -> bool {
+fn progress_trap_construction(
+    dungeon: &mut Dungeon,
+    pos: TilePos,
+    game_data: &GameData,
+    dt: f32,
+) -> bool {
     let tile = match dungeon.get_tile_mut(pos) {
         Some(t) => t,
         None => return false,
@@ -118,18 +131,23 @@ pub fn process_trap_triggers(
 ) -> Vec<TrapTriggerResult> {
     update_trap_cooldowns(dungeon, dt);
 
-    let hero_positions: Vec<(EntityId, TilePos)> = entities.heroes()
+    let hero_positions: Vec<(EntityId, TilePos)> = entities
+        .heroes()
         .filter_map(|(id, _)| entities.get(id).map(|e| (id, e.pos)))
         .collect();
 
-    let traps_to_trigger: Vec<(TilePos, String, EntityId)> = hero_positions.into_iter()
+    let traps_to_trigger: Vec<(TilePos, String, EntityId)> = hero_positions
+        .into_iter()
         .filter_map(|(hero_id, hero_pos)| get_triggerable_trap(dungeon, hero_pos, hero_id))
         .collect();
 
-    traps_to_trigger.into_iter()
+    traps_to_trigger
+        .into_iter()
         .filter_map(|(pos, trap_type, hero_id)| {
             let trap_data = game_data.traps.get(&trap_type)?;
-            trigger_trap(pos, &trap_type, trap_data, hero_id, entities, dungeon, game_data)
+            trigger_trap(
+                pos, &trap_type, trap_data, hero_id, entities, dungeon, game_data,
+            )
         })
         .collect()
 }
@@ -149,7 +167,11 @@ fn update_trap_cooldowns(dungeon: &mut Dungeon, dt: f32) {
 }
 
 /// Check if a trap at the given position is triggerable and return its info
-fn get_triggerable_trap(dungeon: &Dungeon, pos: TilePos, hero_id: EntityId) -> Option<(TilePos, String, EntityId)> {
+fn get_triggerable_trap(
+    dungeon: &Dungeon,
+    pos: TilePos,
+    hero_id: EntityId,
+) -> Option<(TilePos, String, EntityId)> {
     let tile = dungeon.get_tile(pos)?;
     let trap = tile.trap.as_ref()?;
 
@@ -175,32 +197,56 @@ fn trigger_trap(
         "spike_trap" => trigger_damage_trap(pos, trap_data, triggering_entity, entities, dungeon),
         "blowgun_trap" => trigger_damage_trap(pos, trap_data, triggering_entity, entities, dungeon),
         "boulder_trap" => trigger_boulder_trap(pos, trap_data, entities, dungeon),
-        "alarm_trap" => { trigger_alarm_trap(pos, trap_data, entities, dungeon, game_data); None }
-        _ => { eprintln!("Unknown trap type: {}", trap_type); None }
+        "alarm_trap" => {
+            trigger_alarm_trap(pos, trap_data, entities, dungeon, game_data);
+            None
+        }
+        _ => {
+            eprintln!("Unknown trap type: {}", trap_type);
+            None
+        }
     }
 }
 
-fn trigger_damage_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, triggering_entity: EntityId, entities: &mut EntityManager, dungeon: &mut Dungeon) -> Option<TrapTriggerResult> {
+fn trigger_damage_trap(
+    pos: TilePos,
+    trap_data: &crate::data::traps::TrapData,
+    triggering_entity: EntityId,
+    entities: &mut EntityManager,
+    dungeon: &mut Dungeon,
+) -> Option<TrapTriggerResult> {
     let damage = trap_data.effects.damage;
     let entity = entities.get_mut(triggering_entity)?;
     let cooldown = trap_data.effects.cooldown.unwrap_or(5.0);
 
     apply_trap_damage(entity, damage);
-    eprintln!("{} triggered at {:?}! Dealt {} damage.", trap_data.name, pos, damage);
+    eprintln!(
+        "{} triggered at {:?}! Dealt {} damage.",
+        trap_data.name, pos, damage
+    );
     set_trap_cooldown(dungeon, pos, cooldown);
 
-    Some(TrapTriggerResult { trap_type: trap_data.id.clone(), damage_dealt: damage })
+    Some(TrapTriggerResult {
+        trap_type: trap_data.id.clone(),
+        damage_dealt: damage,
+    })
 }
 
-fn trigger_boulder_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, entities: &mut EntityManager, dungeon: &mut Dungeon) -> Option<TrapTriggerResult> {
+fn trigger_boulder_trap(
+    pos: TilePos,
+    trap_data: &crate::data::traps::TrapData,
+    entities: &mut EntityManager,
+    dungeon: &mut Dungeon,
+) -> Option<TrapTriggerResult> {
     let damage = trap_data.effects.damage;
-    let radius = if trap_data.effects.area { 
-        trap_data.effects.area_radius.unwrap_or(1.5) 
-    } else { 
-        trap_data.effects.single_radius.unwrap_or(0.5) 
+    let radius = if trap_data.effects.area {
+        trap_data.effects.area_radius.unwrap_or(1.5)
+    } else {
+        trap_data.effects.single_radius.unwrap_or(0.5)
     };
 
-    let affected_entities: Vec<EntityId> = entities.heroes()
+    let affected_entities: Vec<EntityId> = entities
+        .heroes()
         .filter_map(|(id, _)| entities.get(id).map(|e| (id, e.pos)))
         .filter(|(_, e_pos)| pos.distance_to(e_pos) <= radius)
         .map(|(id, _)| id)
@@ -218,21 +264,39 @@ fn trigger_boulder_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, 
         }
     }
 
-    eprintln!("Boulder trap triggered at {:?}! Dealt {} damage to {} entities.", pos, damage, affected_entities.len());
+    eprintln!(
+        "Boulder trap triggered at {:?}! Dealt {} damage to {} entities.",
+        pos,
+        damage,
+        affected_entities.len()
+    );
     set_trap_disabled(dungeon, pos);
 
-    Some(TrapTriggerResult { trap_type: "boulder_trap".to_string(), damage_dealt: total_damage })
+    Some(TrapTriggerResult {
+        trap_type: "boulder_trap".to_string(),
+        damage_dealt: total_damage,
+    })
 }
 
-fn trigger_alarm_trap(pos: TilePos, trap_data: &crate::data::traps::TrapData, entities: &EntityManager, dungeon: &mut Dungeon, game_data: &GameData) {
+fn trigger_alarm_trap(
+    pos: TilePos,
+    trap_data: &crate::data::traps::TrapData,
+    entities: &EntityManager,
+    dungeon: &mut Dungeon,
+    game_data: &GameData,
+) {
     let alert_radius = trap_data.effects.alert_radius;
 
-    let alerted_count = entities.creatures()
+    let alerted_count = entities
+        .creatures()
         .filter_map(|(id, _)| entities.get(id).map(|e| e.pos))
         .filter(|e_pos| pos.distance_to(e_pos) <= alert_radius)
         .count();
 
-    eprintln!("Alarm trap triggered at {:?}! Alerted {} creatures.", pos, alerted_count);
+    eprintln!(
+        "Alarm trap triggered at {:?}! Alerted {} creatures.",
+        pos, alerted_count
+    );
     let cooldown = game_data.config.traps.default_cooldown;
     let cooldown_multiplier = trap_data.effects.cooldown_multiplier.unwrap_or(2.0);
     set_trap_cooldown(dungeon, pos, cooldown * cooldown_multiplier);
@@ -260,13 +324,17 @@ fn apply_trap_damage(entity: &mut crate::state::entities::Entity, damage: f32) {
     match &mut entity.entity_type {
         EntityType::Hero(hero) => {
             hero.health = (hero.health - damage).max(0.0);
-            eprintln!("Hero {} took {} trap damage (HP: {}/{})",
-                hero.hero_id, damage, hero.health, hero.max_health);
+            eprintln!(
+                "Hero {} took {} trap damage (HP: {}/{})",
+                hero.hero_id, damage, hero.health, hero.max_health
+            );
         }
         EntityType::Creature(creature) => {
             creature.health = (creature.health - damage).max(0.0);
-            eprintln!("Creature {} took {} trap damage (HP: {}/{})",
-                creature.creature_id, damage, creature.health, creature.max_health);
+            eprintln!(
+                "Creature {} took {} trap damage (HP: {}/{})",
+                creature.creature_id, damage, creature.health, creature.max_health
+            );
         }
         EntityType::Structure(_) => {
             // Structures don't take trap damage
@@ -274,4 +342,3 @@ fn apply_trap_damage(entity: &mut crate::state::entities::Entity, damage: f32) {
         EntityType::ResourcePile(_) => {} // Piles don't take trap damage
     }
 }
-

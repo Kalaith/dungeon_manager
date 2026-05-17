@@ -1,6 +1,6 @@
 use crate::data::GameData;
 use crate::state::dungeon::Dungeon;
-use crate::state::entities::{EntityManager, CreatureState};
+use crate::state::entities::{CreatureState, EntityManager};
 use crate::state::tile_state::{TilePos, TileState};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -26,28 +26,41 @@ pub struct MapEntity {
 }
 
 pub fn load_map(
-    path: &str, 
-    game_data: &GameData, 
-    entities: &mut EntityManager
+    path: &str,
+    game_data: &GameData,
+    entities: &mut EntityManager,
 ) -> Result<Dungeon, Box<dyn Error>> {
     let json_content = std::fs::read_to_string(path)?;
     let map_data: MapFile = serde_json::from_str(&json_content)?;
 
     // Validate dimensions
     if map_data.tiles.len() != map_data.height {
-        return Err(format!("Map height mismatch. Expected {}, got {}", map_data.height, map_data.tiles.len()).into());
+        return Err(format!(
+            "Map height mismatch. Expected {}, got {}",
+            map_data.height,
+            map_data.tiles.len()
+        )
+        .into());
     }
 
     let mut grid = Vec::with_capacity(map_data.height);
 
     for (y, row_str) in map_data.tiles.iter().enumerate() {
         if row_str.len() != map_data.width {
-            return Err(format!("Map width mismatch on row {}. Expected {}, got {}", y, map_data.width, row_str.len()).into());
+            return Err(format!(
+                "Map width mismatch on row {}. Expected {}, got {}",
+                y,
+                map_data.width,
+                row_str.len()
+            )
+            .into());
         }
 
         let mut row = Vec::with_capacity(map_data.width);
         for (x, char) in row_str.chars().enumerate() {
-            let tile_type = map_data.legend.get(&char)
+            let tile_type = map_data
+                .legend
+                .get(&char)
                 .ok_or_else(|| format!("Unknown tile character '{}' at ({}, {})", char, x, y))?;
 
             let pos = TilePos::new(x as i32, y as i32);
@@ -56,13 +69,13 @@ pub fn load_map(
             // Set resources if applicable
             if let Some(tile_data) = game_data.tiles.get(tile_type) {
                 if let Some(resources) = &tile_data.resources {
-                     if resources.amount > 0 {
+                    if resources.amount > 0 {
                         tile = tile.with_resources(resources.amount as u32);
-                     }
+                    }
                 }
             }
             // Logic for specific tile types (e.g. gold veins default amount override if needed)
-             if tile_type == "gold_vein" {
+            if tile_type == "gold_vein" {
                 tile = tile.with_resources(100);
             }
 
@@ -70,7 +83,7 @@ pub fn load_map(
         }
         grid.push(row);
     }
-    
+
     // Create Dungeon instance
     let mut dungeon = Dungeon {
         grid,
@@ -81,7 +94,7 @@ pub fn load_map(
     // Spawn entities
     for entity_def in map_data.entities {
         let pos = TilePos::new(entity_def.x, entity_def.y);
-        
+
         // Check if it's a monster/creature
         if let Some(monster_data) = game_data.monsters.get(&entity_def.id) {
             let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
@@ -95,20 +108,20 @@ pub fn load_map(
             entities.spawn_creature(pos, creature_state);
         }
         // Could handle other entity types here (traps, items, etc.)
-        
+
         // If it's the dungeon heart, claim the area around it
         if let Some(tile) = dungeon.get_tile(pos) {
-             if tile.tile_type == "dungeon_heart" {
-                 // Claim 3x3 area around heart
-                 for dy in -1..=1 {
-                     for dx in -1..=1 {
-                         let claim_pos = TilePos::new(pos.x + dx, pos.y + dy);
-                         if let Some(t) = dungeon.get_tile_mut(claim_pos) {
-                             t.claim();
-                         }
-                     }
-                 }
-             }
+            if tile.tile_type == "dungeon_heart" {
+                // Claim 3x3 area around heart
+                for dy in -1..=1 {
+                    for dx in -1..=1 {
+                        let claim_pos = TilePos::new(pos.x + dx, pos.y + dy);
+                        if let Some(t) = dungeon.get_tile_mut(claim_pos) {
+                            t.claim();
+                        }
+                    }
+                }
+            }
         }
     }
 

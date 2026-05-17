@@ -1,10 +1,10 @@
 use crate::data::GameData;
-use crate::state::dungeon::Dungeon;
-use crate::state::entities::{EntityManager, CreatureState};
-use crate::state::room_manager::RoomManager;
-use crate::state::tile_state::{Ownership, TilePos};
 use crate::engine::pathfinding::{find_path, Heuristic, PathfindingGrid, Pos};
 use crate::engine::tile_types::types as tt;
+use crate::state::dungeon::Dungeon;
+use crate::state::entities::{CreatureState, EntityManager};
+use crate::state::room_manager::RoomManager;
+use crate::state::tile_state::{Ownership, TilePos};
 
 pub struct SpawnSystem;
 
@@ -13,7 +13,7 @@ impl SpawnSystem {
         dungeon: &mut Dungeon,
         room_manager: &RoomManager,
         entities: &mut EntityManager,
-        game_data: &GameData
+        game_data: &GameData,
     ) {
         // Find the dungeon heart position
         let heart_pos = dungeon.find_dungeon_heart();
@@ -98,7 +98,8 @@ impl SpawnSystem {
         }
 
         // Filter out creature IDs that don't exist in game_data
-        let valid_creatures: Vec<&str> = potential_creatures.into_iter()
+        let valid_creatures: Vec<&str> = potential_creatures
+            .into_iter()
             .filter(|id| game_data.monsters.contains_key(*id))
             .collect();
 
@@ -107,7 +108,9 @@ impl SpawnSystem {
             return;
         }
 
-        if let Some(&creature_id) = valid_creatures.get(macroquad::rand::gen_range(0, valid_creatures.len())) {
+        if let Some(&creature_id) =
+            valid_creatures.get(macroquad::rand::gen_range(0, valid_creatures.len()))
+        {
             if let Some(monster_data) = game_data.monsters.get(creature_id) {
                 // Generate visual variation seed
                 let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
@@ -124,7 +127,10 @@ impl SpawnSystem {
                 creature_state.set_need("food".to_string(), 100.0);
 
                 let entity_id = entities.spawn_creature(spawn_pos, creature_state);
-                eprintln!("Spawned creature {} at spawner {:?}", creature_id, spawn_pos);
+                eprintln!(
+                    "Spawned creature {} at spawner {:?}",
+                    creature_id, spawn_pos
+                );
 
                 // Claim a lair tile for this creature
                 room_manager.find_and_claim_lair_tile(dungeon, entity_id);

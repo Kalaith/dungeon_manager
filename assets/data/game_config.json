@@ -1,13 +1,13 @@
 {
   "player_starting_resources": {
-    "gold": 500,
+    "gold": 2000,
     "mana": 100,
     "food": 100,
     "materials": 100
   },
   "player_initial_capacity": {
-    "max_gold": 0,
-    "max_mana": 0,
+    "max_gold": 2000,
+    "max_mana": 500,
     "max_food": 500,
     "max_materials": 100
   },

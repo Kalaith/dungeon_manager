@@ -48,7 +48,10 @@ pub struct MapSizeConfig {
 
 impl Default for MapSizeConfig {
     fn default() -> Self {
-        Self { width: 50, height: 50 }
+        Self {
+            width: 50,
+            height: 50,
+        }
     }
 }
 
@@ -96,7 +99,7 @@ pub struct MoodPenaltiesConfig {
     pub angry_penalty: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskDesirabilityConfig {
     pub base: f32,
     pub gold_deposit: f32,
@@ -106,6 +109,21 @@ pub struct TaskDesirabilityConfig {
     pub wage_collection: f32,
     pub satisfaction_threshold: f32,
     pub need_modifier: f32,
+}
+
+impl Default for TaskDesirabilityConfig {
+    fn default() -> Self {
+        Self {
+            base: 1.0,
+            gold_deposit: 1.5,
+            skip_deposit: 0.1,
+            training_high_satisfaction: 1.5,
+            training_low_satisfaction: 0.5,
+            wage_collection: 2.0,
+            satisfaction_threshold: 60.0,
+            need_modifier: 0.6,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

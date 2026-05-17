@@ -57,4 +57,3 @@ pub fn get_tile_color(tile_type: &str) -> Color {
         _ => Color::new(0.5, 0.5, 0.5, 1.0),
     }
 }
-

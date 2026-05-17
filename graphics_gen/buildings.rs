@@ -2,8 +2,8 @@
 //!
 //! Generates hero faction buildings that spawn heroes.
 
-use image::RgbaImage;
 use super::core::*;
+use image::RgbaImage;
 
 // ============================================================================
 // MAIN BUILDINGS
@@ -24,8 +24,27 @@ pub fn create_town_hall() -> RgbaImage {
     draw_cylinder_3d(&mut img, &mut depth, cx, 20.0, 50.0, 5.0, 20.0, &stone_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 10.0, 30.0, 0.0, 8.0, &stone_mat);
     draw_cone_3d(&mut img, &mut depth, cx, -5.0, 10.0, 0.0, 10.0, &gold_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 12.0, 15.0, 40.0, 15.0, 2.0, &wood_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx + 16.0, 20.0, 15.0, 5.0, 8.0, 2.0, &banner_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 12.0,
+        15.0,
+        40.0,
+        15.0,
+        2.0,
+        &wood_mat,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 16.0,
+        20.0,
+        15.0,
+        5.0,
+        8.0,
+        2.0,
+        &banner_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx - 8.0, 30.0, 24.0, 3.0, &light_mat);
     draw_sphere_3d(&mut img, &mut depth, cx + 8.0, 30.0, 24.0, 3.0, &light_mat);
 
@@ -45,10 +64,39 @@ pub fn create_barracks() -> RgbaImage {
 
     draw_shadow(&mut img, cx, 52.0, 20.0, 8.0);
     draw_cylinder_3d(&mut img, &mut depth, cx, 20.0, 50.0, 5.0, 18.0, &wood_mat);
-    draw_cone_3d(&mut img, &mut depth, cx, 5.0, 20.0, 5.0, 22.0, &dark_wood_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx - 12.0, 40.0, 22.0, 4.0, 6.0, 2.0, &shield_mat);
+    draw_cone_3d(
+        &mut img,
+        &mut depth,
+        cx,
+        5.0,
+        20.0,
+        5.0,
+        22.0,
+        &dark_wood_mat,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx - 12.0,
+        40.0,
+        22.0,
+        4.0,
+        6.0,
+        2.0,
+        &shield_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx - 12.0, 40.0, 24.0, 2.0, &red_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx + 12.0, 40.0, 22.0, 4.0, 6.0, 2.0, &shield_mat);
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 12.0,
+        40.0,
+        22.0,
+        4.0,
+        6.0,
+        2.0,
+        &shield_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx + 12.0, 40.0, 24.0, 2.0, &red_mat);
 
     add_noise(&mut img, 10);
@@ -72,14 +120,72 @@ pub fn create_archery_range() -> RgbaImage {
     }
     draw_cylinder_3d(&mut img, &mut depth, cx, 42.0, 44.0, 20.0, 25.0, &wood_mat);
 
-    draw_cylinder_3d(&mut img, &mut depth, cx - 10.0, 30.0, 45.0, 10.0, 2.0, &wood_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx - 10.0, 25.0, 8.0, 5.0, 5.0, 2.0, &hay_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx - 10.0, 25.0, 6.0, 4.0, 4.0, 2.0, &target_white);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 10.0,
+        30.0,
+        45.0,
+        10.0,
+        2.0,
+        &wood_mat,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx - 10.0,
+        25.0,
+        8.0,
+        5.0,
+        5.0,
+        2.0,
+        &hay_mat,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx - 10.0,
+        25.0,
+        6.0,
+        4.0,
+        4.0,
+        2.0,
+        &target_white,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx - 10.0, 25.0, 5.0, 1.5, &target_red);
 
-    draw_cylinder_3d(&mut img, &mut depth, cx + 15.0, 35.0, 50.0, 5.0, 2.0, &wood_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx + 15.0, 30.0, 3.0, 5.0, 5.0, 2.0, &hay_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx + 15.0, 30.0, 2.0, 4.0, 4.0, 2.0, &target_white);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 15.0,
+        35.0,
+        50.0,
+        5.0,
+        2.0,
+        &wood_mat,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 15.0,
+        30.0,
+        3.0,
+        5.0,
+        5.0,
+        2.0,
+        &hay_mat,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 15.0,
+        30.0,
+        2.0,
+        4.0,
+        4.0,
+        2.0,
+        &target_white,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx + 15.0, 30.0, 1.0, 1.5, &target_red);
 
     add_noise(&mut img, 15);
@@ -101,8 +207,12 @@ pub fn create_church() -> RgbaImage {
     draw_cylinder_3d(&mut img, &mut depth, cx, 5.0, 25.0, 0.0, 6.0, &stone_mat);
     draw_cone_3d(&mut img, &mut depth, cx, -15.0, 5.0, 0.0, 7.0, &roof_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, -22.0, -15.0, 0.0, 1.0, &gold_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, -19.0, 0.0, 4.0, 1.0, 1.0, &gold_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 35.0, 22.0, 6.0, 8.0, 2.0, &glass_mat);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, -19.0, 0.0, 4.0, 1.0, 1.0, &gold_mat,
+    );
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 35.0, 22.0, 6.0, 8.0, 2.0, &glass_mat,
+    );
 
     add_noise(&mut img, 5);
     img
@@ -121,10 +231,28 @@ pub fn create_mage_tower() -> RgbaImage {
     draw_shadow(&mut img, cx, 56.0, 14.0, 6.0);
     draw_cylinder_3d(&mut img, &mut depth, cx, 10.0, 55.0, 5.0, 10.0, &stone_mat);
     draw_cone_3d(&mut img, &mut depth, cx, -15.0, 10.0, 5.0, 12.0, &roof_mat);
-    draw_sphere_3d(&mut img, &mut depth, cx - 12.0, 20.0, 15.0, 3.0, &crystal_mat);
-    draw_sphere_3d(&mut img, &mut depth, cx + 12.0, 30.0, 10.0, 4.0, &crystal_mat);
+    draw_sphere_3d(
+        &mut img,
+        &mut depth,
+        cx - 12.0,
+        20.0,
+        15.0,
+        3.0,
+        &crystal_mat,
+    );
+    draw_sphere_3d(
+        &mut img,
+        &mut depth,
+        cx + 12.0,
+        30.0,
+        10.0,
+        4.0,
+        &crystal_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx, 5.0, 20.0, 3.0, &crystal_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 50.0, 5.0, 15.0, 3.0, 15.0, &aura_mat);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 50.0, 5.0, 15.0, 3.0, 15.0, &aura_mat,
+    );
 
     add_noise(&mut img, 8);
     img
@@ -141,9 +269,29 @@ pub fn create_stable() -> RgbaImage {
 
     draw_shadow(&mut img, cx, 52.0, 22.0, 8.0);
     draw_cylinder_3d(&mut img, &mut depth, cx, 25.0, 50.0, 5.0, 20.0, &wood_mat);
-    draw_cone_3d(&mut img, &mut depth, cx, 10.0, 25.0, 5.0, 22.0, &dark_wood_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 20.0, 10.0, 10.0, 5.0, &hay_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx - 15.0, 45.0, 50.0, 15.0, 3.0, &dark_wood_mat);
+    draw_cone_3d(
+        &mut img,
+        &mut depth,
+        cx,
+        10.0,
+        25.0,
+        5.0,
+        22.0,
+        &dark_wood_mat,
+    );
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 40.0, 20.0, 10.0, 10.0, 5.0, &hay_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 15.0,
+        45.0,
+        50.0,
+        15.0,
+        3.0,
+        &dark_wood_mat,
+    );
 
     add_noise(&mut img, 12);
     img
@@ -162,9 +310,26 @@ pub fn create_armory() -> RgbaImage {
     draw_cylinder_3d(&mut img, &mut depth, cx, 20.0, 50.0, 5.0, 22.0, &stone_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 25.0, 30.0, 4.0, 23.0, &iron_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 40.0, 45.0, 4.0, 23.0, &iron_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 15.0, 20.0, 50.0, 10.0, 4.0, &stone_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 15.0,
+        20.0,
+        50.0,
+        10.0,
+        4.0,
+        &stone_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx + 15.0, 18.0, 10.0, 3.0, &fire_mat);
-    draw_sphere_3d(&mut img, &mut depth, cx + 16.0, 12.0, 12.0, 4.0, &Material::matte(200, 200, 200));
+    draw_sphere_3d(
+        &mut img,
+        &mut depth,
+        cx + 16.0,
+        12.0,
+        12.0,
+        4.0,
+        &Material::matte(200, 200, 200),
+    );
 
     add_noise(&mut img, 10);
     img
@@ -183,9 +348,27 @@ pub fn create_hero_wall() -> RgbaImage {
 
     draw_shadow(&mut img, cx, 56.0, 26.0, 6.0);
     draw_cylinder_3d(&mut img, &mut depth, cx, 15.0, 55.0, 0.0, 25.0, &stone_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx - 15.0, 5.0, 15.0, 0.0, 6.0, &stone_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 15.0,
+        5.0,
+        15.0,
+        0.0,
+        6.0,
+        &stone_mat,
+    );
     draw_cylinder_3d(&mut img, &mut depth, cx, 5.0, 15.0, 0.0, 6.0, &stone_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 15.0, 5.0, 15.0, 0.0, 6.0, &stone_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 15.0,
+        5.0,
+        15.0,
+        0.0,
+        6.0,
+        &stone_mat,
+    );
 
     add_noise(&mut img, 5);
     img
@@ -201,8 +384,26 @@ pub fn create_hero_gate() -> RgbaImage {
     let torch_mat = Material::glowing(255, 180, 50);
 
     draw_shadow(&mut img, cx, 56.0, 24.0, 8.0);
-    draw_cylinder_3d(&mut img, &mut depth, cx - 20.0, 5.0, 55.0, 0.0, 6.0, &wood_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 20.0, 5.0, 55.0, 0.0, 6.0, &wood_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 20.0,
+        5.0,
+        55.0,
+        0.0,
+        6.0,
+        &wood_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 20.0,
+        5.0,
+        55.0,
+        0.0,
+        6.0,
+        &wood_mat,
+    );
     draw_cylinder_3d(&mut img, &mut depth, cx, 10.0, 50.0, 5.0, 20.0, &wood_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 15.0, 20.0, 4.0, 21.0, &iron_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 40.0, 45.0, 4.0, 21.0, &iron_mat);
@@ -231,8 +432,26 @@ pub fn create_guard_tower() -> RgbaImage {
     // Roof platform
     draw_cylinder_3d(&mut img, &mut depth, cx, 5.0, 10.0, 5.0, 14.0, &wood_mat);
     // Crenellations
-    draw_cylinder_3d(&mut img, &mut depth, cx - 10.0, 0.0, 8.0, 5.0, 4.0, &stone_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 10.0, 0.0, 8.0, 5.0, 4.0, &stone_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 10.0,
+        0.0,
+        8.0,
+        5.0,
+        4.0,
+        &stone_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 10.0,
+        0.0,
+        8.0,
+        5.0,
+        4.0,
+        &stone_mat,
+    );
     // Torches
     draw_sphere_3d(&mut img, &mut depth, cx - 12.0, 20.0, 16.0, 2.0, &torch_mat);
     draw_sphere_3d(&mut img, &mut depth, cx + 12.0, 20.0, 16.0, 2.0, &torch_mat);
@@ -256,15 +475,44 @@ pub fn create_blacksmith() -> RgbaImage {
     // Main structure
     draw_cylinder_3d(&mut img, &mut depth, cx, 25.0, 55.0, 5.0, 18.0, &stone_mat);
     // Forge opening
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 38.0, 20.0, 8.0, 8.0, 4.0, &Material::shadow());
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx,
+        38.0,
+        20.0,
+        8.0,
+        8.0,
+        4.0,
+        &Material::shadow(),
+    );
     draw_sphere_3d(&mut img, &mut depth, cx, 40.0, 18.0, 4.0, &fire_mat);
     // Chimney
-    draw_cylinder_3d(&mut img, &mut depth, cx + 10.0, 10.0, 30.0, 5.0, 5.0, &stone_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 10.0,
+        10.0,
+        30.0,
+        5.0,
+        5.0,
+        &stone_mat,
+    );
     // Smoke
     draw_sphere_3d(&mut img, &mut depth, cx + 10.0, 5.0, 8.0, 4.0, &smoke_mat);
     draw_sphere_3d(&mut img, &mut depth, cx + 12.0, 0.0, 10.0, 3.0, &smoke_mat);
     // Anvil outside
-    draw_ellipsoid_3d(&mut img, &mut depth, cx - 14.0, 50.0, 15.0, 4.0, 3.0, 3.0, &metal_mat);
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx - 14.0,
+        50.0,
+        15.0,
+        4.0,
+        3.0,
+        3.0,
+        &metal_mat,
+    );
 
     add_noise(&mut img, 8);
     img
@@ -290,8 +538,27 @@ pub fn create_tavern() -> RgbaImage {
     draw_sphere_3d(&mut img, &mut depth, cx - 8.0, 35.0, 24.0, 4.0, &light_mat);
     draw_sphere_3d(&mut img, &mut depth, cx + 8.0, 35.0, 24.0, 4.0, &light_mat);
     // Sign
-    draw_cylinder_3d(&mut img, &mut depth, cx + 18.0, 30.0, 35.0, 20.0, 1.0, &sign_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx + 22.0, 28.0, 20.0, 5.0, 4.0, 1.0, &sign_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 18.0,
+        30.0,
+        35.0,
+        20.0,
+        1.0,
+        &sign_mat,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 22.0,
+        28.0,
+        20.0,
+        5.0,
+        4.0,
+        1.0,
+        &sign_mat,
+    );
 
     add_noise(&mut img, 10);
     img

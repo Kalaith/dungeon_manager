@@ -1,9 +1,9 @@
 //! Projectile system for visual attack effects
-//! 
+//!
 //! Manages short-lived visual projectiles that travel from attacker to defender
 
-use crate::state::tile_state::TilePos;
 use crate::state::entities::EntityId;
+use crate::state::tile_state::TilePos;
 use serde::{Deserialize, Serialize};
 
 /// Type of projectile based on attack type
@@ -39,9 +39,9 @@ impl ProjectileType {
     /// Get the duration of this projectile in seconds
     pub fn duration(&self) -> f32 {
         match self {
-            ProjectileType::Melee => 0.15,  // Very quick slash
-            ProjectileType::Arrow => 0.3,   // Fast arrow
-            ProjectileType::Magic => 0.4,   // Slower magic orb
+            ProjectileType::Melee => 0.15, // Very quick slash
+            ProjectileType::Arrow => 0.3,  // Fast arrow
+            ProjectileType::Magic => 0.4,  // Slower magic orb
         }
     }
 }
@@ -114,7 +114,6 @@ impl Projectile {
         self.progress = (self.elapsed / self.duration).min(1.0);
         self.progress < 1.0
     }
-
 }
 
 /// Event generated when projectile hits target
@@ -149,7 +148,14 @@ impl ProjectileManager {
         damage: f32,
     ) {
         let projectile_type = ProjectileType::from_attack_type(attack_type);
-        let projectile = Projectile::new(start_pos, end_pos, projectile_type, attacker_id, defender_id, damage);
+        let projectile = Projectile::new(
+            start_pos,
+            end_pos,
+            projectile_type,
+            attacker_id,
+            defender_id,
+            damage,
+        );
         self.projectiles.push(projectile);
     }
 
@@ -165,14 +171,21 @@ impl ProjectileManager {
         let projectile_type = ProjectileType::from_attack_type(attack_type);
         let end_pos = (target_pos.x as f32, target_pos.y as f32);
         // Use attacker_id as both since there's no defender entity
-        let projectile = Projectile::new(start_pos, end_pos, projectile_type, attacker_id, attacker_id, damage);
+        let projectile = Projectile::new(
+            start_pos,
+            end_pos,
+            projectile_type,
+            attacker_id,
+            attacker_id,
+            damage,
+        );
         self.projectiles.push(projectile);
     }
 
     /// Update all projectiles, removing completed ones and returning impacts
     pub fn update(&mut self, dt: f32) -> Vec<Impact> {
         let mut impacts = Vec::new();
-        
+
         self.projectiles.retain_mut(|p| {
             let still_active = p.update(dt);
             if !still_active {
@@ -184,7 +197,7 @@ impl ProjectileManager {
             }
             still_active
         });
-        
+
         impacts
     }
 

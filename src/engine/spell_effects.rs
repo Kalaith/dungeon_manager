@@ -50,11 +50,15 @@ pub fn can_cast_spell(
             return CastResult::MaxCapReached;
         }
         // Dynamic cost: base + per-imp cost (read from monster data)
-        let (base_cost, per_imp_cost) = game_data.monsters.get("imp")
-            .map(|m| (
-                m.spawn.summon_base_cost.unwrap_or(10),
-                m.spawn.summon_cost_per_existing.unwrap_or(5)
-            ))
+        let (base_cost, per_imp_cost) = game_data
+            .monsters
+            .get("imp")
+            .map(|m| {
+                (
+                    m.spawn.summon_base_cost.unwrap_or(10),
+                    m.spawn.summon_cost_per_existing.unwrap_or(5),
+                )
+            })
             .unwrap_or((10, 5));
         let dynamic_cost = base_cost + (current_imps as i32 * per_imp_cost);
         if game_state.player.mana < dynamic_cost {
@@ -72,13 +76,17 @@ pub fn can_cast_spell(
             // Start check
             if let Some(pos) = target_pos {
                 // Must be claimed by player
-                let tile_owned = game_state.get_tile(pos).map(|t| t.ownership == Ownership::Player).unwrap_or(false);
+                let tile_owned = game_state
+                    .get_tile(pos)
+                    .map(|t| t.ownership == Ownership::Player)
+                    .unwrap_or(false);
                 if !tile_owned {
                     return CastResult::InvalidTarget;
                 }
 
                 if let Some(heart_pos) = game_state.find_dungeon_heart_position() {
-                    let distance = ((pos.x - heart_pos.x).abs() + (pos.y - heart_pos.y).abs()) as u32;
+                    let distance =
+                        ((pos.x - heart_pos.x).abs() + (pos.y - heart_pos.y).abs()) as u32;
                     if spell.targeting.range > 0 && distance > spell.targeting.range {
                         return CastResult::OutOfRange;
                     }
@@ -126,7 +134,10 @@ pub fn cast_spell(
     // Deduct costs from spell data
     game_state.player.mana -= spell.cost.mana;
     game_state.player.gold -= spell.cost.gold;
-    eprintln!("Cast spell: {} (mana: {}, gold: {})", spell.name, spell.cost.mana, spell.cost.gold);
+    eprintln!(
+        "Cast spell: {} (mana: {}, gold: {})",
+        spell.name, spell.cost.mana, spell.cost.gold
+    );
 
     // Apply effects
     for effect in &spell.effects {
@@ -239,7 +250,6 @@ fn apply_damage_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &m
             }
             crate::state::entities::EntityType::ResourcePile(_) => {}
         }
-
     }
 }
 
@@ -297,26 +307,33 @@ fn apply_status_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &m
     if let Some(entity) = game_state.entities.get_mut(entity_id) {
         if let Some(status) = &effect.status {
             let duration = effect.duration.unwrap_or(10.0);
-            let strength = if effect.amount > 0.0 { effect.amount } else { 1.0 };
+            let strength = if effect.amount > 0.0 {
+                effect.amount
+            } else {
+                1.0
+            };
 
             match &mut entity.entity_type {
                 crate::state::entities::EntityType::Creature(creature) => {
-                    creature.status_effects.push(crate::state::entities::StatusEffect {
-                        effect_type: status.clone(),
-                        duration,
-                        strength,
-                    });
+                    creature
+                        .status_effects
+                        .push(crate::state::entities::StatusEffect {
+                            effect_type: status.clone(),
+                            duration,
+                            strength,
+                        });
                     eprintln!(
                         "Status applied: {} gained '{}' for {} seconds",
                         creature.creature_id, status, duration
                     );
                 }
                 crate::state::entities::EntityType::Hero(hero) => {
-                    hero.status_effects.push(crate::state::entities::StatusEffect {
-                        effect_type: status.clone(),
-                        duration,
-                        strength,
-                    });
+                    hero.status_effects
+                        .push(crate::state::entities::StatusEffect {
+                            effect_type: status.clone(),
+                            duration,
+                            strength,
+                        });
                     eprintln!(
                         "Status applied: {} gained '{}' for {} seconds",
                         hero.hero_id, status, duration
@@ -330,7 +347,12 @@ fn apply_status_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &m
 }
 
 /// Transform tile type
-fn apply_tile_transform(pos: TilePos, effect: &SpellEffect, game_state: &mut GameState, game_data: &GameData) {
+fn apply_tile_transform(
+    pos: TilePos,
+    effect: &SpellEffect,
+    game_state: &mut GameState,
+    game_data: &GameData,
+) {
     let area_radius = effect.radius.unwrap_or(0); // Default to single tile if not specified
 
     for dy in -(area_radius as i32)..=(area_radius as i32) {
@@ -348,7 +370,7 @@ fn apply_tile_transform(pos: TilePos, effect: &SpellEffect, game_state: &mut Gam
                 // Transform to 'to' type
                 if let Some(to_type) = &effect.to_tile {
                     tile.tile_type = to_type.clone();
-                    
+
                     // If the new tile type is not claimable (e.g. earth, rock), reset ownership
                     // This ensures player-owned floor transformed to earth becomes neutral/diggable
                     if !crate::engine::tile_types::is_claimable(to_type, game_data) {
@@ -356,7 +378,7 @@ fn apply_tile_transform(pos: TilePos, effect: &SpellEffect, game_state: &mut Gam
                         tile.room_id = None;
                         tile.marked_for_dig = false;
                     }
-                    
+
                     eprintln!("Tile transformed at {:?} to {}", target_pos, to_type);
                 }
             }
@@ -392,7 +414,11 @@ fn spawn_entity_effect(
 
                 game_state.entities.spawn_creature(pos, creature_state);
 
-                eprintln!("Spell summoned imp at {:?} (total imps: {})", pos, game_state.count_imps());
+                eprintln!(
+                    "Spell summoned imp at {:?} (total imps: {})",
+                    pos,
+                    game_state.count_imps()
+                );
             }
         }
     }

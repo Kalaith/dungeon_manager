@@ -151,9 +151,21 @@ pub fn create_magic_orb() -> RgbaImage {
     }
 
     // White highlight sparkle
-    img.put_pixel((cx - 2.0) as u32, (cy - 2.0) as u32, Rgba([255, 255, 255, 255]));
-    img.put_pixel((cx - 1.0) as u32, (cy - 2.0) as u32, Rgba([255, 255, 255, 200]));
-    img.put_pixel((cx - 2.0) as u32, (cy - 1.0) as u32, Rgba([255, 255, 255, 200]));
+    img.put_pixel(
+        (cx - 2.0) as u32,
+        (cy - 2.0) as u32,
+        Rgba([255, 255, 255, 255]),
+    );
+    img.put_pixel(
+        (cx - 1.0) as u32,
+        (cy - 2.0) as u32,
+        Rgba([255, 255, 255, 200]),
+    );
+    img.put_pixel(
+        (cx - 2.0) as u32,
+        (cy - 1.0) as u32,
+        Rgba([255, 255, 255, 200]),
+    );
 
     img
 }
@@ -282,8 +294,16 @@ pub fn create_ice_shard() -> RgbaImage {
     }
 
     // Crystal highlight
-    img.put_pixel((cx - 2.0) as u32, (cy - 1.0) as u32, Rgba([255, 255, 255, 255]));
-    img.put_pixel((cx - 1.0) as u32, (cy - 2.0) as u32, Rgba([255, 255, 255, 200]));
+    img.put_pixel(
+        (cx - 2.0) as u32,
+        (cy - 1.0) as u32,
+        Rgba([255, 255, 255, 255]),
+    );
+    img.put_pixel(
+        (cx - 1.0) as u32,
+        (cy - 2.0) as u32,
+        Rgba([255, 255, 255, 200]),
+    );
 
     img
 }
@@ -346,7 +366,11 @@ pub fn create_poison_bolt() -> RgbaImage {
     }
 
     // Bright highlight (toxic gleam)
-    img.put_pixel((cx - 1.0) as u32, (cy - 2.0) as u32, Rgba([180, 255, 100, 255]));
+    img.put_pixel(
+        (cx - 1.0) as u32,
+        (cy - 2.0) as u32,
+        Rgba([180, 255, 100, 255]),
+    );
 
     img
 }
@@ -491,8 +515,16 @@ pub fn create_shadow_bolt() -> RgbaImage {
     }
 
     // Purple highlight (dark gleam)
-    img.put_pixel((cx - 2.0) as u32, (cy - 2.0) as u32, Rgba([150, 100, 180, 200]));
-    img.put_pixel((cx - 1.0) as u32, (cy - 1.0) as u32, Rgba([120, 80, 150, 150]));
+    img.put_pixel(
+        (cx - 2.0) as u32,
+        (cy - 2.0) as u32,
+        Rgba([150, 100, 180, 200]),
+    );
+    img.put_pixel(
+        (cx - 1.0) as u32,
+        (cy - 1.0) as u32,
+        Rgba([120, 80, 150, 150]),
+    );
 
     img
 }
@@ -518,7 +550,8 @@ pub fn create_holy_bolt() -> RgbaImage {
             let ry = cy + angle.sin() * dist;
             let alpha = (200.0 - i as f32 * 12.0).max(0.0) as u8;
 
-            if rx >= 0.0 && rx < PROJECTILE_SIZE as f32 && ry >= 0.0 && ry < PROJECTILE_SIZE as f32 {
+            if rx >= 0.0 && rx < PROJECTILE_SIZE as f32 && ry >= 0.0 && ry < PROJECTILE_SIZE as f32
+            {
                 let current = img.get_pixel(rx as u32, ry as u32);
                 if current[3] < alpha {
                     img.put_pixel(rx as u32, ry as u32, Rgba([255, 240, 180, alpha]));

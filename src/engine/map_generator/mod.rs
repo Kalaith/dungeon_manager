@@ -10,11 +10,11 @@ mod biomes;
 mod config;
 mod connectivity;
 mod features;
+mod hero_base_gen;
 mod resources;
 mod starting_area;
 mod terrain;
 mod utils;
-mod hero_base_gen;
 
 // Re-export public types
 pub use config::{Grid, MapConfig, StartingPosition};
@@ -67,7 +67,8 @@ pub fn generate_map(config: &MapConfig, game_data: &GameData) -> Grid {
 
     // Step 8: Apply biome features
     if config.enable_biomes {
-        let biome_map = biomes::generate_biome_map(config.width, config.height, config.num_biome_regions);
+        let biome_map =
+            biomes::generate_biome_map(config.width, config.height, config.num_biome_regions);
         biomes::apply_biome_features(&mut grid, &biome_map);
     }
 
@@ -104,7 +105,7 @@ pub fn generate_test_map(width: usize, height: usize, game_data: &GameData) -> G
         water_frequency: 0.2,
         lava_frequency: 0.1,
         starting_area_size: 3,
-        use_noise_terrain: false,  // Flat solid terrain
+        use_noise_terrain: false, // Flat solid terrain
         enable_biomes: false,
         ..Default::default()
     };
@@ -123,7 +124,7 @@ pub fn generate_rich_map(width: usize, height: usize, game_data: &GameData) -> G
         water_frequency: 0.05,
         lava_frequency: 0.02,
         starting_area_size: 3,
-        use_noise_terrain: false,  // Flat solid terrain
+        use_noise_terrain: false, // Flat solid terrain
         enable_biomes: false,
         ..Default::default()
     };
@@ -142,7 +143,7 @@ pub fn generate_hazardous_map(width: usize, height: usize, game_data: &GameData)
         water_frequency: 0.0,
         lava_frequency: 0.3,
         starting_area_size: 3,
-        use_noise_terrain: false,  // Flat solid terrain
+        use_noise_terrain: false, // Flat solid terrain
         enable_biomes: false,
         num_hero_portals: 4,
         ..Default::default()

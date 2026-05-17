@@ -77,7 +77,6 @@ impl PlayerState {
         unlocked_spells.insert("speed_boost".to_string());
         // unlocked_spells.insert("create_food".to_string()); // Removed as it wasn't in json
 
-
         Self {
             gold: game_data.config.player_starting_resources.gold,
             mana: game_data.config.player_starting_resources.mana,
@@ -88,7 +87,7 @@ impl PlayerState {
             max_food: game_data.config.player_initial_capacity.max_food,
             materials: game_data.config.player_starting_resources.materials,
             max_materials: game_data.config.player_initial_capacity.max_materials,
-            
+
             accumulators: ResourceAccumulator::default(),
 
             unlocked_rooms,
@@ -120,6 +119,22 @@ impl PlayerState {
         self.mana = (self.mana + mana).min(self.max_mana);
         self.food = (self.food + food).min(self.max_food);
         self.materials = (self.materials + materials).min(self.max_materials);
+    }
+
+    /// Check whether the player has enough gold and mana for a purchase.
+    pub fn can_afford(&self, gold: i32, mana: i32) -> bool {
+        self.gold >= gold && self.mana >= mana
+    }
+
+    /// Spend gold and mana if available.
+    pub fn spend(&mut self, gold: i32, mana: i32) -> bool {
+        if !self.can_afford(gold, mana) {
+            return false;
+        }
+
+        self.gold -= gold;
+        self.mana -= mana;
+        true
     }
 
     /// Add resources with precision, accumulating fractional amounts
@@ -189,7 +204,12 @@ impl PlayerState {
     }
 
     /// Update research progress
-    pub fn update_research(&mut self, research_rate: f32, tech_cost: f32, dt: f32) -> Option<String> {
+    pub fn update_research(
+        &mut self,
+        research_rate: f32,
+        tech_cost: f32,
+        dt: f32,
+    ) -> Option<String> {
         if let Some(ref research_id) = self.active_research {
             self.research_progress += research_rate * dt;
 
@@ -211,17 +231,17 @@ impl PlayerState {
     /// Complete a research and unlock rewards
     pub fn complete_research(&mut self, tech: &crate::data::TechData) {
         self.completed_technologies.insert(tech.id.clone());
-        
+
         // Unlock rooms
         for room in &tech.unlocks.rooms {
             self.unlock_room(room.clone());
         }
-        
+
         // Unlock spells
         for spell in &tech.unlocks.spells {
             self.unlock_spell(spell.clone());
         }
-        
+
         // Unlock creatures
         for creature in &tech.unlocks.creatures {
             self.unlock_creature(creature.clone());
@@ -234,8 +254,6 @@ impl PlayerState {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,17 +262,34 @@ mod tests {
     fn test_spend_resources() {
         // manually construct player state to avoid needing GameData for simple unit tests
         let mut player = PlayerState {
-            gold: 200, mana: 1000, food: 100, max_gold: 10000, max_mana: 5000, max_food: 1000,
-            materials: 100, max_materials: 500,
+            gold: 200,
+            mana: 1000,
+            food: 100,
+            max_gold: 10000,
+            max_mana: 5000,
+            max_food: 1000,
+            materials: 100,
+            max_materials: 500,
             accumulators: ResourceAccumulator::default(),
-            unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
+            unlocked_rooms: HashSet::new(),
+            unlocked_creatures: HashSet::new(),
+            unlocked_spells: HashSet::new(),
             completed_technologies: HashSet::new(),
-            research_points: 0, active_research: None, research_progress: 0.0,
-            dungeon_heart_health: 100.0, max_creatures: 20, current_creature_count: 0,
-            claimed_tile_count: 0, spell_cooldowns: HashMap::new(),
-            kills: HashMap::new(), deaths: HashMap::new(), gold_mined: 0, spells_cast: HashMap::new(), game_time: 0.0,
+            research_points: 0,
+            active_research: None,
+            research_progress: 0.0,
+            dungeon_heart_health: 100.0,
+            max_creatures: 20,
+            current_creature_count: 0,
+            claimed_tile_count: 0,
+            spell_cooldowns: HashMap::new(),
+            kills: HashMap::new(),
+            deaths: HashMap::new(),
+            gold_mined: 0,
+            spells_cast: HashMap::new(),
+            game_time: 0.0,
         };
-        
+
         // Assert initial state matches what test expects
         assert!(player.can_afford(100, 50));
         assert!(player.spend(100, 50));
@@ -265,15 +300,32 @@ mod tests {
     #[test]
     fn test_resource_accumulation() {
         let mut player = PlayerState {
-            gold: 0, mana: 0, food: 0, max_gold: 100, max_mana: 100, max_food: 100,
-            materials: 0, max_materials: 100,
+            gold: 0,
+            mana: 0,
+            food: 0,
+            max_gold: 100,
+            max_mana: 100,
+            max_food: 100,
+            materials: 0,
+            max_materials: 100,
             accumulators: ResourceAccumulator::default(),
-            unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
+            unlocked_rooms: HashSet::new(),
+            unlocked_creatures: HashSet::new(),
+            unlocked_spells: HashSet::new(),
             completed_technologies: HashSet::new(),
-            research_points: 0, active_research: None, research_progress: 0.0,
-            dungeon_heart_health: 100.0, max_creatures: 20, current_creature_count: 0,
-            claimed_tile_count: 0, spell_cooldowns: HashMap::new(),
-            kills: HashMap::new(), deaths: HashMap::new(), gold_mined: 0, spells_cast: HashMap::new(), game_time: 0.0,
+            research_points: 0,
+            active_research: None,
+            research_progress: 0.0,
+            dungeon_heart_health: 100.0,
+            max_creatures: 20,
+            current_creature_count: 0,
+            claimed_tile_count: 0,
+            spell_cooldowns: HashMap::new(),
+            kills: HashMap::new(),
+            deaths: HashMap::new(),
+            gold_mined: 0,
+            spells_cast: HashMap::new(),
+            game_time: 0.0,
         };
 
         // Add small fractional amount 10 times
@@ -298,17 +350,34 @@ mod tests {
     #[test]
     fn test_cannot_overspend() {
         let mut player = PlayerState {
-            gold: 200, mana: 1000, food: 100, max_gold: 10000, max_mana: 5000, max_food: 1000,
-            materials: 100, max_materials: 500,
+            gold: 200,
+            mana: 1000,
+            food: 100,
+            max_gold: 10000,
+            max_mana: 5000,
+            max_food: 1000,
+            materials: 100,
+            max_materials: 500,
             accumulators: ResourceAccumulator::default(),
-            unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
+            unlocked_rooms: HashSet::new(),
+            unlocked_creatures: HashSet::new(),
+            unlocked_spells: HashSet::new(),
             completed_technologies: HashSet::new(),
-            research_points: 0, active_research: None, research_progress: 0.0,
-            dungeon_heart_health: 100.0, max_creatures: 20, current_creature_count: 0,
-            claimed_tile_count: 0, spell_cooldowns: HashMap::new(),
-            kills: HashMap::new(), deaths: HashMap::new(), gold_mined: 0, spells_cast: HashMap::new(), game_time: 0.0,
+            research_points: 0,
+            active_research: None,
+            research_progress: 0.0,
+            dungeon_heart_health: 100.0,
+            max_creatures: 20,
+            current_creature_count: 0,
+            claimed_tile_count: 0,
+            spell_cooldowns: HashMap::new(),
+            kills: HashMap::new(),
+            deaths: HashMap::new(),
+            gold_mined: 0,
+            spells_cast: HashMap::new(),
+            game_time: 0.0,
         };
-        
+
         assert!(!player.can_afford(10000, 0));
         assert!(!player.spend(10000, 0));
         assert_eq!(player.gold, 200); // Unchanged
@@ -317,17 +386,34 @@ mod tests {
     #[test]
     fn test_resource_caps() {
         let mut player = PlayerState {
-            gold: 200, mana: 1000, food: 100, max_gold: 10000, max_mana: 5000, max_food: 1000,
-            materials: 100, max_materials: 500,
+            gold: 200,
+            mana: 1000,
+            food: 100,
+            max_gold: 10000,
+            max_mana: 5000,
+            max_food: 1000,
+            materials: 100,
+            max_materials: 500,
             accumulators: ResourceAccumulator::default(),
-            unlocked_rooms: HashSet::new(), unlocked_creatures: HashSet::new(), unlocked_spells: HashSet::new(),
+            unlocked_rooms: HashSet::new(),
+            unlocked_creatures: HashSet::new(),
+            unlocked_spells: HashSet::new(),
             completed_technologies: HashSet::new(),
-            research_points: 0, active_research: None, research_progress: 0.0,
-            dungeon_heart_health: 100.0, max_creatures: 20, current_creature_count: 0,
-            claimed_tile_count: 0, spell_cooldowns: HashMap::new(),
-            kills: HashMap::new(), deaths: HashMap::new(), gold_mined: 0, spells_cast: HashMap::new(), game_time: 0.0,
+            research_points: 0,
+            active_research: None,
+            research_progress: 0.0,
+            dungeon_heart_health: 100.0,
+            max_creatures: 20,
+            current_creature_count: 0,
+            claimed_tile_count: 0,
+            spell_cooldowns: HashMap::new(),
+            kills: HashMap::new(),
+            deaths: HashMap::new(),
+            gold_mined: 0,
+            spells_cast: HashMap::new(),
+            game_time: 0.0,
         };
-        
+
         player.add_resources(0, 20000, 1000, 1000);
         assert_eq!(player.mana, player.max_mana);
         assert_eq!(player.food, player.max_food);

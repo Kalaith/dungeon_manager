@@ -42,7 +42,15 @@ pub struct Material {
 
 impl Material {
     /// Create a custom material with full control
-    pub fn new(r: u8, g: u8, b: u8, ambient: f32, diffuse: f32, specular: f32, shininess: f32) -> Self {
+    pub fn new(
+        r: u8,
+        g: u8,
+        b: u8,
+        ambient: f32,
+        diffuse: f32,
+        specular: f32,
+        shininess: f32,
+    ) -> Self {
         Material {
             base_color: [r, g, b],
             ambient,
@@ -275,14 +283,12 @@ pub fn shade_color(normal: (f32, f32, f32), mat: &Material, _view_z: f32) -> Rgb
 // 3D PRIMITIVE DRAWING
 // ============================================================================
 
-
 // ============================================================================
 // 3D PRIMITIVE DRAWING
 // ============================================================================
 
 // Re-export primitives moved to separate module
 pub use crate::graphics_gen::primitives::*;
-
 
 // ============================================================================
 // HELPER DRAWING FUNCTIONS
@@ -324,7 +330,8 @@ pub fn create_tile_base(color: Rgba<u8>) -> RgbaImage {
 pub fn add_noise(img: &mut RgbaImage, amount: i32) {
     for (x, y, p) in img.enumerate_pixels_mut() {
         if p[3] > 0 {
-            let hash = ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            let hash =
+                ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
             let noise = (hash % (amount * 2 + 1)) - amount;
             for i in 0..3 {
                 let val = p[i] as i32 + noise;
@@ -445,13 +452,13 @@ pub fn create_volumetric_wall(
     front_color: Option<Rgba<u8>>,
 ) -> RgbaImage {
     let mut img = RgbaImage::new(TILE_WIDTH, TILE_HEIGHT);
-    
+
     let top = top_color.unwrap_or(lighten_color(base_color, 40));
     let front = front_color.unwrap_or(darken_color(base_color, 30));
-    
+
     // Calculate the visible top height based on isometric projection
     let top_visible_height = (WALL_HEIGHT as f32 * TILT) as u32;
-    
+
     // Draw the top face (visible due to isometric view)
     for y in 0..top_visible_height.min(TILE_HEIGHT) {
         for x in 0..TILE_WIDTH {
@@ -463,19 +470,20 @@ pub fn create_volumetric_wall(
             img.put_pixel(x, y, Rgba([r, g, b, 255]));
         }
     }
-    
+
     // Draw the front face (the main wall surface)
     for y in top_visible_height..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
             // Add vertical gradient for depth
-            let gradient = (y - top_visible_height) as f32 / (TILE_HEIGHT - top_visible_height) as f32;
+            let gradient =
+                (y - top_visible_height) as f32 / (TILE_HEIGHT - top_visible_height) as f32;
             let r = (front[0] as f32 * (1.0 - gradient * 0.2)) as u8;
             let g = (front[1] as f32 * (1.0 - gradient * 0.2)) as u8;
             let b = (front[2] as f32 * (1.0 - gradient * 0.2)) as u8;
             img.put_pixel(x, y, Rgba([r, g, b, 255]));
         }
     }
-    
+
     // Draw a highlight line at the edge between top and front
     if top_visible_height > 0 && top_visible_height < TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
@@ -483,7 +491,7 @@ pub fn create_volumetric_wall(
             img.put_pixel(x, top_visible_height - 1, highlight);
         }
     }
-    
+
     img
 }
 
@@ -496,40 +504,40 @@ pub fn create_carved_block(
     mortar_width: u32,
 ) -> RgbaImage {
     let mut img = create_volumetric_wall(base_color, None, None);
-    
+
     let top_visible_height = (WALL_HEIGHT as f32 * TILT) as u32;
-    
+
     // Add block pattern to the front face
     for y in top_visible_height..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
             let local_y = y - top_visible_height;
-            
+
             // Offset every other row for brick pattern
             let row = local_y / block_height;
             let offset = if row % 2 == 1 { block_width / 2 } else { 0 };
             let local_x = (x + offset) % block_width;
-            
+
             // Draw mortar lines
             if local_x < mortar_width || local_y % block_height < mortar_width {
                 img.put_pixel(x, y, mortar_color);
             }
         }
     }
-    
+
     // Add mortar lines to top face too
     for y in 0..top_visible_height.min(TILE_HEIGHT) {
         for x in 0..TILE_WIDTH {
             let row = y / (block_height / 2).max(1);
             let offset = if row % 2 == 1 { block_width / 2 } else { 0 };
             let local_x = (x + offset) % block_width;
-            
+
             if local_x < mortar_width || y % (block_height / 2).max(1) < mortar_width {
                 let top_mortar = darken_color(mortar_color, 10);
                 img.put_pixel(x, y, top_mortar);
             }
         }
     }
-    
+
     img
 }
 
@@ -543,7 +551,7 @@ pub fn draw_raised_platform(
     let width = img.width();
     let height = img.height();
     let top_offset = (platform_height as f32 * TILT) as u32;
-    
+
     // Draw platform top
     let top_color = lighten_color(platform_color, 25);
     for y in margin..height.saturating_sub(margin + top_offset) {
@@ -551,7 +559,7 @@ pub fn draw_raised_platform(
             img.put_pixel(x, y, top_color);
         }
     }
-    
+
     // Draw front edge
     let edge_color = darken_color(platform_color, 15);
     for y in height.saturating_sub(margin + top_offset)..height.saturating_sub(margin) {
@@ -559,7 +567,7 @@ pub fn draw_raised_platform(
             img.put_pixel(x, y, edge_color);
         }
     }
-    
+
     // Add highlight on front edge top
     for x in margin..width.saturating_sub(margin) {
         let y = height.saturating_sub(margin + top_offset);
@@ -570,12 +578,7 @@ pub fn draw_raised_platform(
 }
 
 /// Add carved details/insets to a wall
-pub fn add_carved_inset(
-    img: &mut RgbaImage,
-    x: u32, y: u32,
-    width: u32, height: u32,
-    depth: i32,
-) {
+pub fn add_carved_inset(img: &mut RgbaImage, x: u32, y: u32, width: u32, height: u32, depth: i32) {
     let inset_color = if depth > 0 {
         // Recessed - darker
         Rgba([0, 0, 0, (depth.min(50) * 3) as u8])
@@ -583,7 +586,7 @@ pub fn add_carved_inset(
         // Raised - lighter
         Rgba([255, 255, 255, ((-depth).min(30) * 2) as u8])
     };
-    
+
     for dy in 0..height {
         for dx in 0..width {
             let px = x + dx;
@@ -594,7 +597,7 @@ pub fn add_carved_inset(
             }
         }
     }
-    
+
     // Add edge highlights/shadows for 3D effect
     if depth > 0 {
         // Top and left edges are shadowed (light blocked)
@@ -635,7 +638,6 @@ pub fn darken_color(color: Rgba<u8>, amount: i32) -> Rgba<u8> {
     ])
 }
 
-
 /// Blend two colors with alpha
 pub fn blend_colors(base: Rgba<u8>, overlay: Rgba<u8>) -> Rgba<u8> {
     let alpha = overlay[3] as f32 / 255.0;
@@ -654,7 +656,9 @@ pub fn blend_colors(base: Rgba<u8>, overlay: Rgba<u8>) -> Rgba<u8> {
 
 /// Hash function for procedural noise (returns 0.0 to 1.0)
 fn hash2d(x: i32, y: i32) -> f32 {
-    let n = x.wrapping_mul(374761393).wrapping_add(y.wrapping_mul(668265263));
+    let n = x
+        .wrapping_mul(374761393)
+        .wrapping_add(y.wrapping_mul(668265263));
     let n = (n ^ (n >> 13)).wrapping_mul(1274126177);
     ((n ^ (n >> 16)) as u32) as f32 / u32::MAX as f32
 }
@@ -681,7 +685,7 @@ pub fn value_noise(x: f32, y: f32) -> f32 {
 
     let a = c00 + (c10 - c00) * tx;
     let b = c01 + (c11 - c01) * tx;
-    
+
     (a + (b - a) * ty) * 2.0 - 1.0
 }
 
@@ -745,7 +749,7 @@ pub fn add_color_variation(img: &mut RgbaImage, hue_range: i32, sat_range: i32, 
             let noise = value_noise((x as f32 + offset) / 16.0, (y as f32 + offset) / 16.0);
             let hue_shift = (noise * hue_range as f32) as i32;
             let sat_shift = (noise * sat_range as f32) as i32;
-            
+
             // Simple RGB shift to approximate hue/sat change
             p[0] = (p[0] as i32 + hue_shift).clamp(0, 255) as u8;
             p[1] = (p[1] as i32 + sat_shift).clamp(0, 255) as u8;
@@ -755,25 +759,32 @@ pub fn add_color_variation(img: &mut RgbaImage, hue_range: i32, sat_range: i32, 
 }
 
 /// Add edge darkening/bevel effect to tile borders
-pub fn add_edge_bevel(img: &mut RgbaImage, bevel_size: u32, darken_amount: i32, lighten_amount: i32) {
+pub fn add_edge_bevel(
+    img: &mut RgbaImage,
+    bevel_size: u32,
+    darken_amount: i32,
+    lighten_amount: i32,
+) {
     let width = img.width();
     let height = img.height();
-    
+
     for y in 0..height {
         for x in 0..width {
             let p = img.get_pixel(x, y);
-            if p[3] == 0 { continue; }
-            
+            if p[3] == 0 {
+                continue;
+            }
+
             // Distance from edges
             let dist_left = x;
             let dist_right = width - 1 - x;
             let dist_top = y;
             let dist_bottom = height - 1 - y;
             let min_dist = dist_left.min(dist_right).min(dist_top).min(dist_bottom);
-            
+
             if min_dist < bevel_size {
                 let factor = min_dist as f32 / bevel_size as f32;
-                
+
                 // Top/left edges get lighter (highlight)
                 // Bottom/right edges get darker (shadow)
                 let is_top_left = x < bevel_size || y < bevel_size;
@@ -782,7 +793,7 @@ pub fn add_edge_bevel(img: &mut RgbaImage, bevel_size: u32, darken_amount: i32, 
                 } else {
                     -((1.0 - factor) * darken_amount as f32) as i32
                 };
-                
+
                 let mut new_pixel = *p;
                 for i in 0..3 {
                     new_pixel[i] = (p[i] as i32 + adjustment).clamp(0, 255) as u8;
@@ -798,17 +809,19 @@ pub fn add_crack_pattern(img: &mut RgbaImage, density: f32, crack_color: Rgba<u8
     let width = img.width();
     let height = img.height();
     let offset = seed as f32 * 100.0;
-    
+
     for y in 0..height {
         for x in 0..width {
             let p = img.get_pixel(x, y);
-            if p[3] == 0 { continue; }
-            
+            if p[3] == 0 {
+                continue;
+            }
+
             // Use turbulence for crack pattern
             let nx = (x as f32 + offset) / 8.0;
             let ny = (y as f32 + offset) / 8.0;
             let turb = turbulence(nx, ny, 4);
-            
+
             // Create thin lines where turbulence crosses threshold
             if turb > 0.6 && turb < 0.65 && hash2d(x as i32, y as i32) < density {
                 img.put_pixel(x, y, blend_colors(*p, crack_color));
@@ -818,19 +831,29 @@ pub fn add_crack_pattern(img: &mut RgbaImage, density: f32, crack_color: Rgba<u8
 }
 
 /// Create a gradient overlay (useful for lighting effects)
-pub fn add_gradient_overlay(img: &mut RgbaImage, direction: GradientDirection, start_alpha: u8, end_alpha: u8, color: Rgba<u8>) {
+pub fn add_gradient_overlay(
+    img: &mut RgbaImage,
+    direction: GradientDirection,
+    start_alpha: u8,
+    end_alpha: u8,
+    color: Rgba<u8>,
+) {
     let width = img.width();
     let height = img.height();
-    
+
     for y in 0..height {
         for x in 0..width {
             let p = img.get_pixel(x, y);
-            if p[3] == 0 { continue; }
-            
+            if p[3] == 0 {
+                continue;
+            }
+
             let t = match direction {
                 GradientDirection::TopToBottom => y as f32 / height as f32,
                 GradientDirection::LeftToRight => x as f32 / width as f32,
-                GradientDirection::TopLeftToBottomRight => (x as f32 + y as f32) / (width + height) as f32,
+                GradientDirection::TopLeftToBottomRight => {
+                    (x as f32 + y as f32) / (width + height) as f32
+                }
                 GradientDirection::Radial => {
                     let cx = width as f32 / 2.0;
                     let cy = height as f32 / 2.0;
@@ -839,8 +862,9 @@ pub fn add_gradient_overlay(img: &mut RgbaImage, direction: GradientDirection, s
                     (dx * dx + dy * dy).sqrt() / (cx.max(cy))
                 }
             };
-            
-            let alpha = (start_alpha as f32 + (end_alpha as f32 - start_alpha as f32) * t.min(1.0)) as u8;
+
+            let alpha =
+                (start_alpha as f32 + (end_alpha as f32 - start_alpha as f32) * t.min(1.0)) as u8;
             let overlay = Rgba([color[0], color[1], color[2], alpha]);
             img.put_pixel(x, y, blend_colors(*p, overlay));
         }
@@ -857,16 +881,21 @@ pub enum GradientDirection {
 }
 
 /// Draw a 3D beveled border around the tile for depth
-pub fn add_3d_border(img: &mut RgbaImage, border_width: u32, light_color: Rgba<u8>, shadow_color: Rgba<u8>) {
+pub fn add_3d_border(
+    img: &mut RgbaImage,
+    border_width: u32,
+    light_color: Rgba<u8>,
+    shadow_color: Rgba<u8>,
+) {
     let width = img.width();
     let height = img.height();
-    
+
     // Top and left edges (lighter - facing light)
     for i in 0..border_width {
         let intensity = 1.0 - (i as f32 / border_width as f32);
         let alpha = (intensity * light_color[3] as f32) as u8;
         let overlay = Rgba([light_color[0], light_color[1], light_color[2], alpha]);
-        
+
         // Top edge
         for x in i..(width - i) {
             let p = img.get_pixel(x, i);
@@ -878,13 +907,13 @@ pub fn add_3d_border(img: &mut RgbaImage, border_width: u32, light_color: Rgba<u
             img.put_pixel(i, y, blend_colors(*p, overlay));
         }
     }
-    
+
     // Bottom and right edges (darker - in shadow)
     for i in 0..border_width {
         let intensity = 1.0 - (i as f32 / border_width as f32);
         let alpha = (intensity * shadow_color[3] as f32) as u8;
         let overlay = Rgba([shadow_color[0], shadow_color[1], shadow_color[2], alpha]);
-        
+
         // Bottom edge
         for x in i..(width - i) {
             let p = img.get_pixel(x, height - 1 - i);
@@ -903,16 +932,18 @@ pub fn add_specular_highlights(img: &mut RgbaImage, intensity: f32, spread: f32,
     let width = img.width();
     let height = img.height();
     let offset = seed as f32 * 100.0;
-    
+
     for y in 0..height {
         for x in 0..width {
             let p = img.get_pixel(x, y);
-            if p[3] == 0 { continue; }
-            
+            if p[3] == 0 {
+                continue;
+            }
+
             let nx = (x as f32 + offset) / (spread * TILE_SIZE as f32);
             let ny = (y as f32 + offset) / (spread * TILE_SIZE as f32);
             let noise = value_noise(nx, ny);
-            
+
             if noise > 0.7 {
                 let highlight = ((noise - 0.7) / 0.3 * intensity * 255.0) as u8;
                 let overlay = Rgba([255, 255, 255, highlight]);

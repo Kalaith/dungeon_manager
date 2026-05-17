@@ -14,29 +14,55 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
-pub mod core;
-pub mod primitives;
-pub mod tiles;
-pub mod monsters;
-pub mod heroes;
 pub mod buildings;
+pub mod core;
+pub mod heroes;
+pub mod monsters;
+pub mod primitives;
 pub mod projectiles;
+pub mod tiles;
 
 // Re-export commonly used items from core for external use
 pub use core::{
-    Material, DepthBuffer, GradientDirection,
-    draw_sphere_3d, draw_ellipsoid_3d, draw_cylinder_3d, draw_cone_3d,
-    draw_torus_3d, draw_box_3d, draw_wedge_3d,
-    draw_shadow, create_tile_base, add_noise, add_outline,
-    draw_rect, draw_circle, draw_line, blend_colors,
-    // Texture functions
-    value_noise, fbm_noise, turbulence,
-    add_fbm_noise, add_color_variation, add_edge_bevel,
-    add_crack_pattern, add_gradient_overlay, add_3d_border, add_specular_highlights,
+    add_3d_border,
+    add_carved_inset,
+    add_color_variation,
+    add_crack_pattern,
+    add_edge_bevel,
+    add_fbm_noise,
+    add_gradient_overlay,
+    add_noise,
+    add_outline,
+    add_specular_highlights,
+    blend_colors,
+    create_carved_block,
+    create_tile_base,
     // Volumetric wall functions
-    create_volumetric_wall, create_carved_block, draw_raised_platform,
-    add_carved_inset, lighten_color, darken_color, WALL_HEIGHT,
-    SPRITE_SIZE, TILE_SIZE,
+    create_volumetric_wall,
+    darken_color,
+    draw_box_3d,
+    draw_circle,
+    draw_cone_3d,
+    draw_cylinder_3d,
+    draw_ellipsoid_3d,
+    draw_line,
+    draw_raised_platform,
+    draw_rect,
+    draw_shadow,
+    draw_sphere_3d,
+    draw_torus_3d,
+    draw_wedge_3d,
+    fbm_noise,
+    lighten_color,
+    turbulence,
+    // Texture functions
+    value_noise,
+    DepthBuffer,
+    GradientDirection,
+    Material,
+    SPRITE_SIZE,
+    TILE_SIZE,
+    WALL_HEIGHT,
 };
 
 /// Generate all game graphics
@@ -131,8 +157,16 @@ fn generate_monster_sprites() {
     monsters::save_sprite("monsters", "ghost", monsters::create_ghost_sprite());
 
     // Demons
-    monsters::save_sprite("monsters", "demon_spawn", monsters::create_demon_spawn_sprite());
-    monsters::save_sprite("monsters", "bile_demon", monsters::create_bile_demon_sprite());
+    monsters::save_sprite(
+        "monsters",
+        "demon_spawn",
+        monsters::create_demon_spawn_sprite(),
+    );
+    monsters::save_sprite(
+        "monsters",
+        "bile_demon",
+        monsters::create_bile_demon_sprite(),
+    );
     monsters::save_sprite("monsters", "succubus", monsters::create_succubus_sprite());
     monsters::save_sprite("monsters", "hellhound", monsters::create_hellhound_sprite());
 
@@ -154,7 +188,11 @@ fn generate_hero_sprites() {
     // Tier 2 - Common
     heroes::save_sprite("heroes", "knight", heroes::create_knight_sprite());
     heroes::save_sprite("heroes", "archer", heroes::create_archer_sprite());
-    heroes::save_sprite("heroes", "battle_cleric", heroes::create_battle_cleric_sprite());
+    heroes::save_sprite(
+        "heroes",
+        "battle_cleric",
+        heroes::create_battle_cleric_sprite(),
+    );
     heroes::save_sprite("heroes", "rogue", heroes::create_rogue_sprite());
 
     // Tier 3 - Uncommon
@@ -166,13 +204,21 @@ fn generate_hero_sprites() {
     // Tier 4 - Elite
     heroes::save_sprite("heroes", "inquisitor", heroes::create_inquisitor_sprite());
     heroes::save_sprite("heroes", "geomancer", heroes::create_geomancer_sprite());
-    heroes::save_sprite("heroes", "knight_commander", heroes::create_knight_commander_sprite());
+    heroes::save_sprite(
+        "heroes",
+        "knight_commander",
+        heroes::create_knight_commander_sprite(),
+    );
     heroes::save_sprite("heroes", "high_priest", heroes::create_high_priest_sprite());
     heroes::save_sprite("heroes", "archmage", heroes::create_archmage_sprite());
     heroes::save_sprite("heroes", "champion", heroes::create_champion_sprite());
 
     // Tier 5 - Legendary/Boss
-    heroes::save_sprite("heroes", "dragon_knight", heroes::create_dragon_knight_sprite());
+    heroes::save_sprite(
+        "heroes",
+        "dragon_knight",
+        heroes::create_dragon_knight_sprite(),
+    );
 }
 
 fn generate_building_sprites() {

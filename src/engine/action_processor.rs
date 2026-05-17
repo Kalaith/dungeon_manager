@@ -25,11 +25,7 @@ pub fn process_actions(
     selected_spell: &mut Option<String>,
 ) {
     for action in actions.drain() {
-        let result = process_single_action(
-            action,
-            game_state,
-            selected_spell,
-        );
+        let result = process_single_action(action, game_state, selected_spell);
 
         // Apply results
         if let Some(mode) = result.new_mode {
@@ -70,7 +66,9 @@ fn process_single_action(
         UiAction::SaveGame => {
             if let Err(e) = crate::state::save_system::save_game(game_state, "slot_1") {
                 eprintln!("Failed to save game: {}", e);
-                game_state.notifications.danger(format!("Save Failed: {}", e));
+                game_state
+                    .notifications
+                    .danger(format!("Save Failed: {}", e));
             } else {
                 game_state.notifications.success("Game Saved!");
             }
@@ -88,7 +86,9 @@ fn process_single_action(
                     }
                     Err(e) => {
                         eprintln!("Failed to load game: {}", e);
-                        game_state.notifications.danger(format!("Load Failed: {}", e));
+                        game_state
+                            .notifications
+                            .danger(format!("Load Failed: {}", e));
                     }
                 }
             } else {
@@ -98,7 +98,9 @@ fn process_single_action(
 
         UiAction::CheatAddGold(amount) => {
             game_state.player.gold += amount;
-            game_state.notifications.success(format!("Added {} Gold", amount));
+            game_state
+                .notifications
+                .success(format!("Added {} Gold", amount));
         }
 
         UiAction::CheatToggleFog => {
@@ -106,7 +108,9 @@ fn process_single_action(
             if game_state.cheat_fog_enabled {
                 game_state.notifications.info("Fog Enabled");
             } else {
-                game_state.notifications.warning("Fog Disabled (Map Revealed)");
+                game_state
+                    .notifications
+                    .warning("Fog Disabled (Map Revealed)");
             }
         }
 

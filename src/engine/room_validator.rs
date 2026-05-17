@@ -23,7 +23,12 @@ pub struct Room {
 
 impl Room {
     /// Create a new room instance
-    pub fn new(id: usize, room_type: String, tiles: HashSet<TilePos>, work_slots: Vec<TilePos>) -> Self {
+    pub fn new(
+        id: usize,
+        room_type: String,
+        tiles: HashSet<TilePos>,
+        work_slots: Vec<TilePos>,
+    ) -> Self {
         Self {
             id,
             room_type,
@@ -93,7 +98,9 @@ pub fn calculate_work_slots(tiles: &HashSet<TilePos>, work_size: [u32; 2]) -> Ve
                 // Logic already implies tiles are part of the room, so they are floor.
                 slot_tiles.push(check_pos);
             }
-            if !fits { break; }
+            if !fits {
+                break;
+            }
         }
 
         if fits {
@@ -191,12 +198,13 @@ pub fn calculate_efficiency(room: &Room, grid: &Grid, game_data: &GameData) -> f
 
 /// Check if a perimeter position is secured (by wall, door, or map edge)
 fn is_perimeter_secured(pos: TilePos, grid: &Grid, game_data: &GameData) -> bool {
-    if pos.x < 0 || pos.y < 0 || (pos.y as usize) >= grid.len() || (pos.x as usize) >= grid[0].len() {
+    if pos.x < 0 || pos.y < 0 || (pos.y as usize) >= grid.len() || (pos.x as usize) >= grid[0].len()
+    {
         return true; // Map edge counts as secured
     }
 
     let tile = &grid[pos.y as usize][pos.x as usize];
-    
+
     // Check for walls
     if tile_types::is_secure(&tile.tile_type, game_data) {
         return true;
@@ -217,7 +225,12 @@ fn is_perimeter_secured(pos: TilePos, grid: &Grid, game_data: &GameData) -> bool
 }
 
 /// Flood fill algorithm to find all contiguous tiles from a starting position
-fn flood_fill(grid: &Grid, start: TilePos, target_type: &str, visited: &mut HashSet<TilePos>) -> HashSet<TilePos> {
+fn flood_fill(
+    grid: &Grid,
+    start: TilePos,
+    target_type: &str,
+    visited: &mut HashSet<TilePos>,
+) -> HashSet<TilePos> {
     let mut result = HashSet::new();
     let mut queue = VecDeque::new();
     queue.push_back(start);
@@ -259,10 +272,7 @@ fn flood_fill(grid: &Grid, start: TilePos, target_type: &str, visited: &mut Hash
 }
 
 /// Validate that a set of tiles meets the requirements for a room type
-pub fn validate_room_shape(
-    tiles: &HashSet<TilePos>,
-    room_data: &RoomData,
-) -> Result<(), String> {
+pub fn validate_room_shape(tiles: &HashSet<TilePos>, room_data: &RoomData) -> Result<(), String> {
     let size = tiles.len() as u32;
 
     // Check minimum size

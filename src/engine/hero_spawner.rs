@@ -3,8 +3,8 @@
 //! and attack waves launch periodically.
 
 use crate::data::GameData;
+use crate::state::entities::{HeroGoal, HeroState};
 use crate::state::game_state::GameState;
-use crate::state::entities::{HeroState, HeroGoal};
 use crate::state::tile_state::TilePos;
 
 /// Main update function for hero spawning and wave management
@@ -23,25 +23,28 @@ pub fn update_hero_spawning(state: &mut GameState, game_data: &GameData, dt: f32
 /// Update the wave attack system - countdown timer and launch logic
 fn update_wave_system(state: &mut GameState, game_data: &GameData, dt: f32) {
     // Count currently alive attackers to track wave status
-    let alive_attackers = state.entities.heroes()
+    let alive_attackers = state
+        .entities
+        .heroes()
         .filter(|(_, hero)| !hero.is_defender && hero.wave_assigned > 0 && hero.health > 0.0)
         .count() as u32;
-    
+
     state.hero_base.active_attackers = alive_attackers;
-    
+
     // If wave was in progress but all attackers died, mark wave as complete
     if state.hero_base.wave_in_progress && alive_attackers == 0 {
         state.hero_base.wave_in_progress = false;
         state.hero_base.time_until_next_wave = game_data.config.hero_waves.wave_interval;
-        eprintln!("Wave {} defeated! Next wave in {:.0} seconds.", 
-            state.hero_base.current_wave_number, 
-            state.hero_base.time_until_next_wave);
+        eprintln!(
+            "Wave {} defeated! Next wave in {:.0} seconds.",
+            state.hero_base.current_wave_number, state.hero_base.time_until_next_wave
+        );
     }
 
     // Countdown to next wave
     if !state.hero_base.wave_in_progress {
         state.hero_base.time_until_next_wave -= dt;
-        
+
         if state.hero_base.time_until_next_wave <= 0.0 {
             // Launch the next wave!
             launch_attack_wave(state, game_data);
@@ -53,16 +56,18 @@ fn update_wave_system(state: &mut GameState, game_data: &GameData, dt: f32) {
 fn launch_attack_wave(state: &mut GameState, _game_data: &GameData) {
     state.hero_base.current_wave_number += 1;
     state.hero_base.wave_in_progress = true;
-    
+
     let wave_number = state.hero_base.current_wave_number;
     let mut attackers_launched = 0;
-    
+
     // Collect hero IDs to update (can't mutate while iterating)
-    let attacker_ids: Vec<_> = state.entities.heroes()
+    let attacker_ids: Vec<_> = state
+        .entities
+        .heroes()
         .filter(|(_, hero)| !hero.is_defender && !hero.is_captured)
         .map(|(id, _)| id)
         .collect();
-    
+
     for hero_id in attacker_ids {
         if let Some(entity) = state.entities.get_mut(hero_id) {
             if let Some(hero_state) = entity.as_hero_mut() {
@@ -76,11 +81,13 @@ fn launch_attack_wave(state: &mut GameState, _game_data: &GameData) {
             }
         }
     }
-    
+
     state.hero_base.active_attackers = attackers_launched;
-    
-    eprintln!("Wave {} launched! {} heroes attacking the dungeon!", 
-        wave_number, attackers_launched);
+
+    eprintln!(
+        "Wave {} launched! {} heroes attacking the dungeon!",
+        wave_number, attackers_launched
+    );
 }
 
 /// Spawn heroes from buildings, respecting max_active limits
@@ -88,7 +95,8 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
     let mut heroes_to_spawn = Vec::new();
 
     // First, count current heroes by type
-    let mut hero_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    let mut hero_counts: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
     for (_, hero) in state.entities.heroes() {
         *hero_counts.entry(hero.hero_id.clone()).or_insert(0) += 1;
     }
@@ -99,7 +107,7 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
         let is_alive = if let Some(eid) = building.entity_id {
             state.entities.get(eid).is_some()
         } else {
-            false 
+            false
         };
 
         if !is_alive {
@@ -115,31 +123,35 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
 
                 // Calculate scaling factors based on wave number
                 let wave = state.hero_base.current_wave_number.max(0) as f32;
-                
+
                 // Scale max_active linearly with waves: +1 slot per 2 waves, plus a small base multiplier
-                let max_active_base = if let Some(bd) = game_data.hero_buildings.get(&building.building_type) {
-                    bd.spawn_triggers.iter()
-                        .find(|t| t.hero_id == timer.hero_id)
-                        .map(|t| t.max_active)
-                        .unwrap_or(10)
-                } else {
-                    10
-                };
-                
+                let max_active_base =
+                    if let Some(bd) = game_data.hero_buildings.get(&building.building_type) {
+                        bd.spawn_triggers
+                            .iter()
+                            .find(|t| t.hero_id == timer.hero_id)
+                            .map(|t| t.max_active)
+                            .unwrap_or(10)
+                    } else {
+                        10
+                    };
+
                 // Formula: Base + Wave * scaling. Example: Wave 5 with base 10 -> 10 + 7.5 = 17 heroes
                 let wave_scaling = game_data.config.hero_waves.wave_scaling_multiplier;
                 let scaled_max_active = (max_active_base as f32 + (wave * wave_scaling)) as usize;
 
                 // Scale spawn rate: reduce by 10% per wave, capped at minimum 5s
-                let spawn_rate_base = if let Some(bd) = game_data.hero_buildings.get(&building.building_type) {
-                    bd.spawn_triggers.iter()
-                        .find(|t| t.hero_id == timer.hero_id)
-                        .map(|t| t.spawn_rate_seconds)
-                        .unwrap_or(60.0)
-                } else {
-                    60.0
-                };
-                
+                let spawn_rate_base =
+                    if let Some(bd) = game_data.hero_buildings.get(&building.building_type) {
+                        bd.spawn_triggers
+                            .iter()
+                            .find(|t| t.hero_id == timer.hero_id)
+                            .map(|t| t.spawn_rate_seconds)
+                            .unwrap_or(60.0)
+                    } else {
+                        60.0
+                    };
+
                 // Formula: Rate * decay^Wave. Example: Wave 5 with 60s -> 60 * 0.59 = 35s
                 let decay = game_data.config.hero_waves.spawn_rate_decay;
                 let min_rate = game_data.config.hero_waves.min_spawn_rate;
@@ -164,7 +176,12 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
     }
 }
 
-fn spawn_hero_at(state: &mut GameState, hero_id: &str, building_pos: TilePos, game_data: &GameData) {
+fn spawn_hero_at(
+    state: &mut GameState,
+    hero_id: &str,
+    building_pos: TilePos,
+    game_data: &GameData,
+) {
     if let Some(hero_data) = game_data.heroes.get(hero_id) {
         let spawn_pos = find_spawn_pos(state, building_pos, game_data);
 
@@ -179,24 +196,32 @@ fn spawn_hero_at(state: &mut GameState, hero_id: &str, building_pos: TilePos, ga
             hero_data.stats.dig_time,
             visual_seed,
         );
-        
+
         // Determine if this hero should be a defender based on current ratio
         let (defender_count, attacker_count) = count_defender_attacker_ratio(state);
         let total_heroes = defender_count + attacker_count;
-        
+
         // Assign as defender if we need more defenders to maintain ratio
         if total_heroes == 0 {
             // First hero is a defender
             hero_state.is_defender = true;
         } else {
             let current_defender_ratio = defender_count as f32 / total_heroes as f32;
-            hero_state.is_defender = current_defender_ratio < game_data.config.hero_waves.defender_ratio;
+            hero_state.is_defender =
+                current_defender_ratio < game_data.config.hero_waves.defender_ratio;
         }
-        
+
         state.entities.spawn_hero(spawn_pos, hero_state.clone());
-        eprintln!("Spawned {} at {:?} ({})", 
-            hero_id, spawn_pos, 
-            if hero_state.is_defender { "defender" } else { "attacker" });
+        eprintln!(
+            "Spawned {} at {:?} ({})",
+            hero_id,
+            spawn_pos,
+            if hero_state.is_defender {
+                "defender"
+            } else {
+                "attacker"
+            }
+        );
     }
 }
 
@@ -204,7 +229,7 @@ fn spawn_hero_at(state: &mut GameState, hero_id: &str, building_pos: TilePos, ga
 fn count_defender_attacker_ratio(state: &GameState) -> (usize, usize) {
     let mut defenders = 0;
     let mut attackers = 0;
-    
+
     for (_, hero) in state.entities.heroes() {
         if hero.is_defender {
             defenders += 1;
@@ -212,7 +237,7 @@ fn count_defender_attacker_ratio(state: &GameState) -> (usize, usize) {
             attackers += 1;
         }
     }
-    
+
     (defenders, attackers)
 }
 
@@ -233,7 +258,16 @@ fn find_spawn_pos(state: &GameState, center: TilePos, game_data: &GameData) -> T
     center
 }
 
-fn try_spawn_position(state: &GameState, game_data: &GameData, center: TilePos, dx: i32, dy: i32, r: i32, w: usize, h: usize) -> Option<TilePos> {
+fn try_spawn_position(
+    state: &GameState,
+    game_data: &GameData,
+    center: TilePos,
+    dx: i32,
+    dy: i32,
+    r: i32,
+    w: usize,
+    h: usize,
+) -> Option<TilePos> {
     if dx * dx + dy * dy > r * r {
         return None;
     }
@@ -260,7 +294,11 @@ fn is_valid_spawn_tile(state: &GameState, game_data: &GameData, pos: TilePos) ->
         None => return false,
     };
 
-    let blocks = game_data.tiles.get(&tile.tile_type).map(|td| td.blocks_movement).unwrap_or(false);
+    let blocks = game_data
+        .tiles
+        .get(&tile.tile_type)
+        .map(|td| td.blocks_movement)
+        .unwrap_or(false);
 
     !blocks && state.entities.at_position(pos).count() == 0
 }
