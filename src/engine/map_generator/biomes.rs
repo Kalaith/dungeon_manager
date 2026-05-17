@@ -13,40 +13,43 @@ use super::config::{Biome, Grid};
 pub fn generate_biome_map(width: usize, height: usize, num_regions: usize) -> Vec<Vec<Biome>> {
     let center_x = width / 2;
     let center_y = height / 2;
-    
+
     let mut biome_centers: Vec<(usize, usize, Biome)> = Vec::new();
     biome_centers.push((center_x, center_y, Biome::Standard));
-    
+
     for _ in 0..num_regions {
         let x = rand::gen_range(5, width - 5);
         let y = rand::gen_range(5, height - 5);
-        
+
         let dx = (x as i32 - center_x as i32).abs();
         let dy = (y as i32 - center_y as i32).abs();
-        if dx < 15 && dy < 15 { continue; }
-        
+        if dx < 15 && dy < 15 {
+            continue;
+        }
+
         biome_centers.push((x, y, random_biome()));
     }
-    
+
     let mut biome_map = vec![vec![Biome::Standard; width]; height];
-    
+
     for y in 0..height {
         for x in 0..width {
             let mut nearest_biome = Biome::Standard;
             let mut min_dist = f32::INFINITY;
-            
+
             for (cx, cy, biome) in &biome_centers {
-                let dist = ((x as f32 - *cx as f32).powi(2) + (y as f32 - *cy as f32).powi(2)).sqrt();
+                let dist =
+                    ((x as f32 - *cx as f32).powi(2) + (y as f32 - *cy as f32).powi(2)).sqrt();
                 if dist < min_dist {
                     min_dist = dist;
                     nearest_biome = *biome;
                 }
             }
-            
+
             biome_map[y][x] = nearest_biome;
         }
     }
-    
+
     biome_map
 }
 
@@ -64,14 +67,16 @@ fn random_biome() -> Biome {
 pub fn apply_biome_features(grid: &mut Grid, biome_map: &[Vec<Biome>]) {
     let height = grid.len();
     let width = grid[0].len();
-    
+
     for y in 1..height - 1 {
         for x in 1..width - 1 {
             let biome = biome_map[y][x];
             let tile = &mut grid[y][x];
-            
-            if tile.ownership == Ownership::Player { continue; }
-            
+
+            if tile.ownership == Ownership::Player {
+                continue;
+            }
+
             match biome {
                 Biome::Standard => {}
                 Biome::Volcanic => {

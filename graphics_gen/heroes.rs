@@ -2,8 +2,8 @@
 //!
 //! Generates all hero character sprites using 3D shading.
 
-use image::RgbaImage;
 use super::core::*;
+use image::RgbaImage;
 
 // ============================================================================
 // TIER 1 HEROES - Basic Units
@@ -20,12 +20,50 @@ pub fn create_peasant_sprite() -> RgbaImage {
     let metal_mat = Material::metallic(169, 169, 169);
 
     draw_shadow(&mut img, cx, 58.0, 10.0, 4.0);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 42.0, 5.0, 9.0, 12.0, 8.0, &cloth_mat);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 42.0, 5.0, 9.0, 12.0, 8.0, &cloth_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx, 26.0, 8.0, 7.0, &skin_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 14.0, 14.0, 50.0, 4.0, 2.0, &wood_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 10.0, 10.0, 18.0, 5.0, 1.0, &metal_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 14.0, 10.0, 18.0, 5.0, 1.0, &metal_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 18.0, 10.0, 18.0, 5.0, 1.0, &metal_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 14.0,
+        14.0,
+        50.0,
+        4.0,
+        2.0,
+        &wood_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 10.0,
+        10.0,
+        18.0,
+        5.0,
+        1.0,
+        &metal_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 14.0,
+        10.0,
+        18.0,
+        5.0,
+        1.0,
+        &metal_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 18.0,
+        10.0,
+        18.0,
+        5.0,
+        1.0,
+        &metal_mat,
+    );
 
     img
 }
@@ -40,10 +78,29 @@ pub fn create_scout_sprite() -> RgbaImage {
     let wood_mat = Material::matte(139, 90, 43);
 
     draw_shadow(&mut img, cx, 56.0, 9.0, 4.0);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 5.0, 9.0, 13.0, 7.0, &leather_mat);
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx,
+        40.0,
+        5.0,
+        9.0,
+        13.0,
+        7.0,
+        &leather_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx, 24.0, 8.0, 7.0, &skin_mat);
     draw_sphere_3d(&mut img, &mut depth, cx, 22.0, 6.0, 8.0, &leather_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx - 14.0, 18.0, 48.0, 4.0, 2.0, &wood_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 14.0,
+        18.0,
+        48.0,
+        4.0,
+        2.0,
+        &wood_mat,
+    );
 
     img
 }
@@ -61,7 +118,9 @@ pub fn create_acolyte_sprite() -> RgbaImage {
     draw_cylinder_3d(&mut img, &mut depth, cx, 34.0, 56.0, 5.0, 11.0, &robe_mat);
     draw_sphere_3d(&mut img, &mut depth, cx, 26.0, 8.0, 7.0, &skin_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 38.0, 52.0, 8.0, 2.0, &gold_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 42.0, 9.0, 5.0, 2.0, 2.0, &gold_mat);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 42.0, 9.0, 5.0, 2.0, 2.0, &gold_mat,
+    );
 
     img
 }
@@ -81,11 +140,32 @@ pub fn create_knight_sprite() -> RgbaImage {
     let sword_mat = Material::metallic(220, 220, 220);
 
     draw_shadow(&mut img, cx, 58.0, 12.0, 5.0);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 6.0, 11.0, 15.0, 10.0, &armor_mat);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 40.0, 6.0, 11.0, 15.0, 10.0, &armor_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx, 22.0, 9.0, 9.0, &armor_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 8.0, 20.0, 8.0, 3.0, &plume_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx - 16.0, 38.0, 10.0, 7.0, 10.0, 5.0, &shield_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 16.0, 14.0, 48.0, 8.0, 2.0, &sword_mat);
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx - 16.0,
+        38.0,
+        10.0,
+        7.0,
+        10.0,
+        5.0,
+        &shield_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 16.0,
+        14.0,
+        48.0,
+        8.0,
+        2.0,
+        &sword_mat,
+    );
 
     img
 }
@@ -101,11 +181,48 @@ pub fn create_archer_sprite() -> RgbaImage {
     let metal_mat = Material::metallic(169, 169, 169);
 
     draw_shadow(&mut img, cx, 56.0, 10.0, 4.0);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 5.0, 9.0, 13.0, 8.0, &leather_mat);
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx,
+        40.0,
+        5.0,
+        9.0,
+        13.0,
+        8.0,
+        &leather_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx, 24.0, 8.0, 7.0, &skin_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx - 16.0, 14.0, 50.0, 4.0, 2.0, &wood_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx - 10.0, 28.0, 30.0, 6.0, 1.0, &wood_mat);
-    draw_cone_3d(&mut img, &mut depth, cx - 4.0, 27.0, 30.0, 7.0, 2.0, &metal_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 16.0,
+        14.0,
+        50.0,
+        4.0,
+        2.0,
+        &wood_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 10.0,
+        28.0,
+        30.0,
+        6.0,
+        1.0,
+        &wood_mat,
+    );
+    draw_cone_3d(
+        &mut img,
+        &mut depth,
+        cx - 4.0,
+        27.0,
+        30.0,
+        7.0,
+        2.0,
+        &metal_mat,
+    );
 
     img
 }
@@ -122,11 +239,24 @@ pub fn create_battle_cleric_sprite() -> RgbaImage {
     let mace_mat = Material::metallic(150, 150, 150);
 
     draw_shadow(&mut img, cx, 58.0, 11.0, 5.0);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 6.0, 11.0, 14.0, 9.0, &armor_mat);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 40.0, 6.0, 11.0, 14.0, 9.0, &armor_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx, 24.0, 8.0, 7.0, &skin_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 36.0, 48.0, 8.0, 2.0, &gold_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 9.0, 5.0, 2.0, 2.0, &gold_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 18.0, 26.0, 50.0, 5.0, 2.0, &wood_mat);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 40.0, 9.0, 5.0, 2.0, 2.0, &gold_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 18.0,
+        26.0,
+        50.0,
+        5.0,
+        2.0,
+        &wood_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx + 18.0, 22.0, 8.0, 5.0, &mace_mat);
 
     img
@@ -143,12 +273,32 @@ pub fn create_rogue_sprite() -> RgbaImage {
     let dagger_mat = Material::metallic(192, 192, 192);
 
     draw_shadow(&mut img, cx, 56.0, 9.0, 4.0);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 40.0, 5.0, 9.0, 13.0, 7.0, &cloak_mat);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 40.0, 5.0, 9.0, 13.0, 7.0, &cloak_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx, 26.0, 7.0, 8.0, &hood_mat);
     draw_sphere_3d(&mut img, &mut depth, cx - 3.0, 24.0, 10.0, 2.0, &eye_mat);
     draw_sphere_3d(&mut img, &mut depth, cx + 3.0, 24.0, 10.0, 2.0, &eye_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx - 14.0, 32.0, 48.0, 5.0, 1.0, &dagger_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 14.0, 32.0, 48.0, 5.0, 1.0, &dagger_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 14.0,
+        32.0,
+        48.0,
+        5.0,
+        1.0,
+        &dagger_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 14.0,
+        32.0,
+        48.0,
+        5.0,
+        1.0,
+        &dagger_mat,
+    );
 
     img
 }
@@ -171,10 +321,31 @@ pub fn create_barbarian_sprite() -> RgbaImage {
     // Head
     draw_sphere_3d(&mut img, &mut depth, cx, 18.0, 10.0, 8.0, &skin);
     // Wild hair
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 14.0, 8.0, 10.0, 6.0, 8.0, &hair_mat);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 14.0, 8.0, 10.0, 6.0, 8.0, &hair_mat,
+    );
     // Huge axe on back
-    draw_cylinder_3d(&mut img, &mut depth, cx + 10.0, 10.0, 52.0, 5.0, 2.0, &leather);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx + 14.0, 16.0, 8.0, 5.0, 10.0, 2.0, &metal);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 10.0,
+        10.0,
+        52.0,
+        5.0,
+        2.0,
+        &leather,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 14.0,
+        16.0,
+        8.0,
+        5.0,
+        10.0,
+        2.0,
+        &metal,
+    );
 
     img
 }
@@ -194,11 +365,30 @@ pub fn create_alchemist_sprite() -> RgbaImage {
     // Head
     draw_sphere_3d(&mut img, &mut depth, cx, 22.0, 8.0, 7.0, &skin_mat);
     // Goggles
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 20.0, 10.0, 8.0, 3.0, 4.0, &Material::metallic(100, 80, 60));
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx,
+        20.0,
+        10.0,
+        8.0,
+        3.0,
+        4.0,
+        &Material::metallic(100, 80, 60),
+    );
     // Flask in hand
     draw_sphere_3d(&mut img, &mut depth, cx + 12.0, 36.0, 10.0, 4.0, &glass);
     // Belt with vials
-    draw_cylinder_3d(&mut img, &mut depth, cx, 42.0, 46.0, 7.0, 11.0, &Material::leather(80, 60, 40));
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx,
+        42.0,
+        46.0,
+        7.0,
+        11.0,
+        &Material::leather(80, 60, 40),
+    );
 
     img
 }
@@ -219,12 +409,42 @@ pub fn create_paladin_sprite() -> RgbaImage {
     let gold_mat = Material::metallic(255, 215, 0);
 
     draw_shadow(&mut img, cx, 58.0, 13.0, 5.0);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 38.0, 7.0, 12.0, 16.0, 11.0, &armor_mat);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 38.0, 7.0, 12.0, 16.0, 11.0, &armor_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx, 20.0, 10.0, 10.0, &armor_mat);
     draw_sphere_3d(&mut img, &mut depth, cx, 34.0, -5.0, 18.0, &glow_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 18.0, 10.0, 48.0, 9.0, 2.0, &sword_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx - 18.0, 36.0, 10.0, 8.0, 11.0, 6.0, &shield_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx - 18.0, 30.0, 42.0, 12.0, 1.0, &gold_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 18.0,
+        10.0,
+        48.0,
+        9.0,
+        2.0,
+        &sword_mat,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx - 18.0,
+        36.0,
+        10.0,
+        8.0,
+        11.0,
+        6.0,
+        &shield_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 18.0,
+        30.0,
+        42.0,
+        12.0,
+        1.0,
+        &gold_mat,
+    );
 
     img
 }
@@ -247,7 +467,16 @@ pub fn create_wizard_sprite() -> RgbaImage {
     draw_sphere_3d(&mut img, &mut depth, cx, 28.0, 8.0, 6.0, &skin_mat);
     draw_sphere_3d(&mut img, &mut depth, cx - 4.0, 44.0, 8.0, 2.0, &star_mat);
     draw_sphere_3d(&mut img, &mut depth, cx + 4.0, 48.0, 8.0, 2.0, &star_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx - 14.0, 10.0, 54.0, 4.0, 2.0, &wood_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 14.0,
+        10.0,
+        54.0,
+        4.0,
+        2.0,
+        &wood_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx - 14.0, 8.0, 8.0, 6.0, &orb_mat);
 
     img
@@ -269,7 +498,16 @@ pub fn create_inquisitor_sprite() -> RgbaImage {
     draw_sphere_3d(&mut img, &mut depth, cx, 26.0, 7.0, 8.0, &hood_mat);
     draw_sphere_3d(&mut img, &mut depth, cx - 3.0, 24.0, 11.0, 2.0, &eye_mat);
     draw_sphere_3d(&mut img, &mut depth, cx + 3.0, 24.0, 11.0, 2.0, &eye_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 16.0, 14.0, 48.0, 8.0, 2.0, &sword_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 16.0,
+        14.0,
+        48.0,
+        8.0,
+        2.0,
+        &sword_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx + 16.0, 12.0, 10.0, 5.0, &fire_mat);
 
     img
@@ -285,10 +523,36 @@ pub fn create_geomancer_sprite() -> RgbaImage {
 
     draw_shadow(&mut img, cx, 58.0, 12.0, 5.0);
     // Bulky Rock Armor Body
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 38.0, 8.0, 12.0, 16.0, 10.0, &rock_armor);
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx,
+        38.0,
+        8.0,
+        12.0,
+        16.0,
+        10.0,
+        &rock_armor,
+    );
     // Shoulders
-    draw_sphere_3d(&mut img, &mut depth, cx - 10.0, 30.0, 12.0, 5.0, &rock_armor);
-    draw_sphere_3d(&mut img, &mut depth, cx + 10.0, 30.0, 12.0, 5.0, &rock_armor);
+    draw_sphere_3d(
+        &mut img,
+        &mut depth,
+        cx - 10.0,
+        30.0,
+        12.0,
+        5.0,
+        &rock_armor,
+    );
+    draw_sphere_3d(
+        &mut img,
+        &mut depth,
+        cx + 10.0,
+        30.0,
+        12.0,
+        5.0,
+        &rock_armor,
+    );
     // Head
     draw_sphere_3d(&mut img, &mut depth, cx, 18.0, 10.0, 7.0, &rock_armor);
     // Floating crystals
@@ -315,12 +579,42 @@ pub fn create_knight_commander_sprite() -> RgbaImage {
     let banner_mat = Material::metallic(255, 215, 0);
 
     draw_shadow(&mut img, cx, 58.0, 13.0, 5.0);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 38.0, 7.0, 12.0, 16.0, 11.0, &armor_mat);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 38.0, 7.0, 12.0, 16.0, 11.0, &armor_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx, 20.0, 10.0, 10.0, &armor_mat);
     draw_cylinder_3d(&mut img, &mut depth, cx, 4.0, 18.0, 9.0, 4.0, &plume_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx - 10.0, 32.0, 56.0, -2.0, 8.0, &cape_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 16.0, 6.0, 52.0, 5.0, 2.0, &wood_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx + 22.0, 12.0, 6.0, 8.0, 6.0, 3.0, &banner_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 10.0,
+        32.0,
+        56.0,
+        -2.0,
+        8.0,
+        &cape_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 16.0,
+        6.0,
+        52.0,
+        5.0,
+        2.0,
+        &wood_mat,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 22.0,
+        12.0,
+        6.0,
+        8.0,
+        6.0,
+        3.0,
+        &banner_mat,
+    );
 
     img
 }
@@ -337,9 +631,20 @@ pub fn create_high_priest_sprite() -> RgbaImage {
 
     draw_shadow(&mut img, cx, 58.0, 12.0, 5.0);
     draw_cylinder_3d(&mut img, &mut depth, cx, 34.0, 56.0, 5.0, 12.0, &robe_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 16.0, 8.0, 12.0, 5.0, 6.0, &gold_mat);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 16.0, 8.0, 12.0, 5.0, 6.0, &gold_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx, 26.0, 9.0, 6.0, &skin_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx - 16.0, 8.0, 54.0, 5.0, 2.0, &gold_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 16.0,
+        8.0,
+        54.0,
+        5.0,
+        2.0,
+        &gold_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx - 16.0, 6.0, 9.0, 7.0, &orb_mat);
 
     img
@@ -361,7 +666,16 @@ pub fn create_archmage_sprite() -> RgbaImage {
     draw_shadow(&mut img, cx, 58.0, 12.0, 5.0);
     draw_cylinder_3d(&mut img, &mut depth, cx, 34.0, 54.0, 5.0, 12.0, &robe_mat);
     draw_cone_3d(&mut img, &mut depth, cx, 4.0, 28.0, 6.0, 9.0, &hat_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx - 18.0, 6.0, 54.0, 4.0, 2.0, &wood_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 18.0,
+        6.0,
+        54.0,
+        4.0,
+        2.0,
+        &wood_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx - 18.0, 4.0, 10.0, 9.0, &energy_mat);
 
     img
@@ -385,13 +699,53 @@ pub fn create_champion_sprite() -> RgbaImage {
     draw_sphere_3d(&mut img, &mut depth, cx, 32.0, -10.0, 24.0, &divine_mat);
 
     draw_shadow(&mut img, cx, 60.0, 14.0, 6.0);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 36.0, 8.0, 14.0, 18.0, 12.0, &armor_mat);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 36.0, 8.0, 14.0, 18.0, 12.0, &armor_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx, 16.0, 11.0, 11.0, &armor_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 6.0, 10.0, 10.0, 2.0, 8.0, &divine_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx + 20.0, 6.0, 52.0, 10.0, 3.0, &sword_mat);
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx,
+        6.0,
+        10.0,
+        10.0,
+        2.0,
+        8.0,
+        &divine_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 20.0,
+        6.0,
+        52.0,
+        10.0,
+        3.0,
+        &sword_mat,
+    );
     draw_sphere_3d(&mut img, &mut depth, cx + 20.0, 4.0, 12.0, 7.0, &divine_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx - 20.0, 34.0, 12.0, 9.0, 12.0, 7.0, &shield_mat);
-    draw_cylinder_3d(&mut img, &mut depth, cx - 20.0, 28.0, 42.0, 14.0, 2.0, &gold_mat);
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx - 20.0,
+        34.0,
+        12.0,
+        9.0,
+        12.0,
+        7.0,
+        &shield_mat,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 20.0,
+        28.0,
+        42.0,
+        14.0,
+        2.0,
+        &gold_mat,
+    );
 
     img
 }
@@ -409,20 +763,67 @@ pub fn create_dragon_knight_sprite() -> RgbaImage {
 
     draw_shadow(&mut img, cx, 60.0, 14.0, 6.0);
     // Massive scaled body
-    draw_ellipsoid_3d(&mut img, &mut depth, cx, 38.0, 8.0, 14.0, 18.0, 12.0, &scale_armor);
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx,
+        38.0,
+        8.0,
+        14.0,
+        18.0,
+        12.0,
+        &scale_armor,
+    );
     // Dragon helm
     draw_sphere_3d(&mut img, &mut depth, cx, 18.0, 11.0, 10.0, &scale_armor);
     // Horns
-    draw_cone_3d(&mut img, &mut depth, cx - 8.0, 6.0, 16.0, 10.0, 3.0, &scale_armor);
-    draw_cone_3d(&mut img, &mut depth, cx + 8.0, 6.0, 16.0, 10.0, 3.0, &scale_armor);
+    draw_cone_3d(
+        &mut img,
+        &mut depth,
+        cx - 8.0,
+        6.0,
+        16.0,
+        10.0,
+        3.0,
+        &scale_armor,
+    );
+    draw_cone_3d(
+        &mut img,
+        &mut depth,
+        cx + 8.0,
+        6.0,
+        16.0,
+        10.0,
+        3.0,
+        &scale_armor,
+    );
     // Glowing eyes
     draw_sphere_3d(&mut img, &mut depth, cx - 3.0, 16.0, 16.0, 2.0, &eye_mat);
     draw_sphere_3d(&mut img, &mut depth, cx + 3.0, 16.0, 16.0, 2.0, &eye_mat);
     // Flame breath
     draw_sphere_3d(&mut img, &mut depth, cx, 24.0, 18.0, 4.0, &fire_mat);
     // Massive sword
-    draw_cylinder_3d(&mut img, &mut depth, cx + 20.0, 4.0, 54.0, 10.0, 3.0, &sword_mat);
-    draw_ellipsoid_3d(&mut img, &mut depth, cx + 20.0, 2.0, 12.0, 6.0, 4.0, 3.0, &fire_mat);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 20.0,
+        4.0,
+        54.0,
+        10.0,
+        3.0,
+        &sword_mat,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 20.0,
+        2.0,
+        12.0,
+        6.0,
+        4.0,
+        3.0,
+        &fire_mat,
+    );
 
     img
 }

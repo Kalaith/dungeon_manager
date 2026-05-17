@@ -50,7 +50,9 @@ impl SimpleNoise {
 
 /// Create terrain using Perlin noise for natural cave systems
 pub fn create_noise_terrain(config: &MapConfig) -> Grid {
-    let seed = config.seed.unwrap_or_else(|| rand::gen_range(0u64, u64::MAX));
+    let seed = config
+        .seed
+        .unwrap_or_else(|| rand::gen_range(0u64, u64::MAX));
     let noise = SimpleNoise::new(seed);
     let mut grid = Vec::new();
 
@@ -104,7 +106,10 @@ pub fn create_base_terrain(width: usize, height: usize) -> Grid {
 
 /// Check if a tile type is considered solid (blocks movement until mined)
 pub fn is_solid_tile(tile_type: &str) -> bool {
-    matches!(tile_type, "solid_rock" | "earth" | "gold_vein" | "gem_seam" | "mana_crystal" | "reinforced_wall")
+    matches!(
+        tile_type,
+        "solid_rock" | "earth" | "gold_vein" | "gem_seam" | "mana_crystal" | "reinforced_wall"
+    )
 }
 
 // ============================================================================
@@ -119,8 +124,8 @@ pub fn smooth_caves_cellular_automata(grid: &mut Grid, iterations: usize) {
     for _ in 0..iterations {
         let mut next_grid = grid.clone();
 
-        for y in 1..height-1 {
-            for x in 1..width-1 {
+        for y in 1..height - 1 {
+            for x in 1..width - 1 {
                 let solid_neighbors = count_solid_neighbors(grid, x, y);
 
                 if solid_neighbors >= 5 {
@@ -140,7 +145,9 @@ fn count_solid_neighbors(grid: &Grid, x: usize, y: usize) -> usize {
     let mut count = 0;
     for dy in -1..=1 {
         for dx in -1..=1 {
-            if dx == 0 && dy == 0 { continue; }
+            if dx == 0 && dy == 0 {
+                continue;
+            }
             let nx = (x as i32 + dx) as usize;
             let ny = (y as i32 + dy) as usize;
             if is_solid_tile(&grid[ny][nx].tile_type) {

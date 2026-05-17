@@ -1,13 +1,9 @@
 //! Hero base generation for the hero faction
 
-use crate::engine::map_generator::config::{MapConfig, Grid};
-use crate::state::tile_state::{TilePos, Ownership};
+use crate::engine::map_generator::config::{Grid, MapConfig};
+use crate::state::tile_state::{Ownership, TilePos};
 
-pub fn place_hero_base(
-    grid: &mut Grid, 
-    start_pos: TilePos, 
-    config: &MapConfig, 
-) {
+pub fn place_hero_base(grid: &mut Grid, start_pos: TilePos, config: &MapConfig) {
     if !config.hero_base_enabled {
         return;
     }
@@ -29,11 +25,11 @@ pub fn place_hero_base(
             if x >= 0 && x < width as i32 && y >= 0 && y < height as i32 {
                 if let Some(tile) = get_tile_mut(grid, x as usize, y as usize) {
                     // Make it claimed floor (enemy territory)
-                    tile.tile_type = "claimed_floor".to_string(); 
-                    tile.ownership = Ownership::Enemy; // Enemy floor 
-                    // Then make it specific floor type if we want, or just "earth" for now
-                    // Ideally "hero_ground" or similar, but "earth" works.
-                    // We'll set the building tiles specifically.
+                    tile.tile_type = "claimed_floor".to_string();
+                    tile.ownership = Ownership::Enemy; // Enemy floor
+                                                       // Then make it specific floor type if we want, or just "earth" for now
+                                                       // Ideally "hero_ground" or similar, but "earth" works.
+                                                       // We'll set the building tiles specifically.
                 }
             }
         }
@@ -50,16 +46,16 @@ pub fn place_hero_base(
     // [W][W][W][W][W][W][W]
 
     let buildings = vec![
-        ("town_hall", 0, 0),         // Center
-        ("barracks", -4, -2),        // Left Top
-        ("church", 4, -2),           // Right Top
-        ("mage_tower", 0, -4),       // Top Center (behind town hall relative to entrance?)
-                                     // Let's orient based on where the dungeon is.
-                                     // For simplicity, layout is fixed relative to map bounds?
-                                     // Or assume standardized 7x7 layout.
-        ("archery_range", -4, 2),    // Left Bottom
-        ("stable", 4, 2),            // Right Bottom
-        ("armory", 0, 4),            // Bottom Center
+        ("town_hall", 0, 0),   // Center
+        ("barracks", -4, -2),  // Left Top
+        ("church", 4, -2),     // Right Top
+        ("mage_tower", 0, -4), // Top Center (behind town hall relative to entrance?)
+        // Let's orient based on where the dungeon is.
+        // For simplicity, layout is fixed relative to map bounds?
+        // Or assume standardized 7x7 layout.
+        ("archery_range", -4, 2), // Left Bottom
+        ("stable", 4, 2),         // Right Bottom
+        ("armory", 0, 4),         // Bottom Center
     ];
 
     for (id, dx, dy) in buildings {
@@ -67,17 +63,45 @@ pub fn place_hero_base(
         let by = base_center.y + dy;
         place_building_tile(grid, bx, by, id, width, height);
     }
-    
+
     // 4. Place Walls & Gates
     // Simple box around the radius 6
     let wall_radius = 6;
     for d in -wall_radius..=wall_radius {
         // Top & Bottom
-        place_building_tile(grid, base_center.x + d, base_center.y - wall_radius, "hero_wall", width, height);
-        place_building_tile(grid, base_center.x + d, base_center.y + wall_radius, "hero_wall", width, height);
+        place_building_tile(
+            grid,
+            base_center.x + d,
+            base_center.y - wall_radius,
+            "hero_wall",
+            width,
+            height,
+        );
+        place_building_tile(
+            grid,
+            base_center.x + d,
+            base_center.y + wall_radius,
+            "hero_wall",
+            width,
+            height,
+        );
         // Left & Right
-        place_building_tile(grid, base_center.x - wall_radius, base_center.y + d, "hero_wall", width, height);
-        place_building_tile(grid, base_center.x + wall_radius, base_center.y + d, "hero_wall", width, height);
+        place_building_tile(
+            grid,
+            base_center.x - wall_radius,
+            base_center.y + d,
+            "hero_wall",
+            width,
+            height,
+        );
+        place_building_tile(
+            grid,
+            base_center.x + wall_radius,
+            base_center.y + d,
+            "hero_wall",
+            width,
+            height,
+        );
     }
 
     // 5. Carve Gate and Path
@@ -116,7 +140,7 @@ pub fn place_hero_base(
 fn find_opposite_corner(start_pos: TilePos, width: usize, height: usize) -> TilePos {
     // If start is Top-Left (low x, low y), Base is Bottom-Right
     // If start is Center, Base is random corner.
-    
+
     let w = width as i32;
     let h = height as i32;
     let margin = 10;
@@ -147,13 +171,17 @@ fn place_building_tile(grid: &mut Grid, x: i32, y: i32, id: &str, width: usize, 
         if let Some(tile) = get_tile_mut(grid, x as usize, y as usize) {
             tile.tile_type = id.to_string();
             tile.ownership = Ownership::Enemy; // Mark as enemy owned? Or Neutral?
-            // "Enemy" ownership might prevent player from digging?
-            // Let's use ownership to indicate it's not player territory.
+                                               // "Enemy" ownership might prevent player from digging?
+                                               // Let's use ownership to indicate it's not player territory.
         }
     }
 }
 
-fn get_tile_mut(grid: &mut Grid, x: usize, y: usize) -> Option<&mut crate::state::tile_state::TileState> {
+fn get_tile_mut(
+    grid: &mut Grid,
+    x: usize,
+    y: usize,
+) -> Option<&mut crate::state::tile_state::TileState> {
     if y < grid.len() && x < grid[y].len() {
         Some(&mut grid[y][x])
     } else {

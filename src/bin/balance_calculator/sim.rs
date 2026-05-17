@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use super::data;
 use super::rng::SimpleRng;
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct CombatUnit {
@@ -16,11 +16,15 @@ pub struct CombatUnit {
 
 impl CombatUnit {
     pub fn from_monster(m: &data::MonsterData) -> Self {
-        let (damage_min, damage_max) = m.combat.as_ref()
+        let (damage_min, damage_max) = m
+            .combat
+            .as_ref()
             .and_then(|c| c.damage_range)
             .map(|r| (r[0], r[1]))
             .unwrap_or((5.0, 10.0));
-        let attack_speed = m.combat.as_ref()
+        let attack_speed = m
+            .combat
+            .as_ref()
             .and_then(|c| c.attack_speed)
             .unwrap_or(1.0);
         Self {
@@ -36,11 +40,15 @@ impl CombatUnit {
     }
 
     pub fn from_hero(h: &data::HeroData) -> Self {
-        let (damage_min, damage_max) = h.combat.as_ref()
+        let (damage_min, damage_max) = h
+            .combat
+            .as_ref()
             .and_then(|c| c.damage_range)
             .map(|r| (r[0], r[1]))
             .unwrap_or((5.0, 10.0));
-        let attack_speed = h.combat.as_ref()
+        let attack_speed = h
+            .combat
+            .as_ref()
             .and_then(|c| c.attack_speed)
             .unwrap_or(1.0);
         Self {
@@ -55,7 +63,12 @@ impl CombatUnit {
         }
     }
 
-    pub fn calculate_damage(&self, target: &CombatUnit, attack_mult: f32, defense_mult: f32) -> f32 {
+    pub fn calculate_damage(
+        &self,
+        target: &CombatUnit,
+        attack_mult: f32,
+        defense_mult: f32,
+    ) -> f32 {
         let base_damage = (self.damage_min + self.damage_max) / 2.0;
         let attack_damage = base_damage + (self.attack * attack_mult);
         let defense_reduction = target.defense * defense_mult;
@@ -206,7 +219,8 @@ pub fn run_mass_battles(
     for _ in 0..num_battles {
         let attacker = attacker_template.clone();
         let defender = defender_template.clone();
-        let result = simulate_combat_random(attacker, defender, attack_mult, defense_mult, &mut rng);
+        let result =
+            simulate_combat_random(attacker, defender, attack_mult, defense_mult, &mut rng);
 
         total_duration += result.duration_secs;
         stats.min_duration = stats.min_duration.min(result.duration_secs);
@@ -301,7 +315,11 @@ pub fn simulate_army_battle(
     }
 
     ArmyBattleResult {
-        winner: if attackers.is_empty() { "defender".to_string() } else { "attacker".to_string() },
+        winner: if attackers.is_empty() {
+            "defender".to_string()
+        } else {
+            "attacker".to_string()
+        },
         survivors_attacker: attackers.len() as u32,
         survivors_defender: defenders.len() as u32,
         duration_secs: time,
@@ -342,9 +360,18 @@ pub fn simulate_wave_survival(
     let mut waves_survived = 0u32;
 
     // Hero pool by tier
-    let tier1: Vec<_> = heroes.values().filter(|h| h.tier.unwrap_or(1) == 1).collect();
-    let tier2: Vec<_> = heroes.values().filter(|h| h.tier.unwrap_or(1) == 2).collect();
-    let tier3: Vec<_> = heroes.values().filter(|h| h.tier.unwrap_or(1) == 3).collect();
+    let tier1: Vec<_> = heroes
+        .values()
+        .filter(|h| h.tier.unwrap_or(1) == 1)
+        .collect();
+    let tier2: Vec<_> = heroes
+        .values()
+        .filter(|h| h.tier.unwrap_or(1) == 2)
+        .collect();
+    let tier3: Vec<_> = heroes
+        .values()
+        .filter(|h| h.tier.unwrap_or(1) == 3)
+        .collect();
 
     for wave in 1..=num_waves {
         if army.is_empty() {
@@ -376,7 +403,13 @@ pub fn simulate_wave_survival(
 
         // Simulate battle
         let heroes_in_wave = wave_heroes.len() as u32;
-        let result = simulate_army_battle(army.clone(), wave_heroes, attack_mult, defense_mult, &mut rng);
+        let result = simulate_army_battle(
+            army.clone(),
+            wave_heroes,
+            attack_mult,
+            defense_mult,
+            &mut rng,
+        );
 
         if result.winner == "attacker" {
             waves_survived = wave;
@@ -394,7 +427,11 @@ pub fn simulate_wave_survival(
         // Wage costs (simplified: 1 minute per wave)
         for (monster_id, count) in &initial_army {
             if let Some(monster) = monsters.get(*monster_id) {
-                let wage = monster.economy.as_ref().and_then(|e| e.wage_per_minute).unwrap_or(0.0);
+                let wage = monster
+                    .economy
+                    .as_ref()
+                    .and_then(|e| e.wage_per_minute)
+                    .unwrap_or(0.0);
                 gold -= (wage * *count as f32) as i32;
             }
         }

@@ -1,7 +1,6 @@
 //! UI Action system
 //! Decouples UI events from game state mutations
 
-
 /// Represents a player action from the UI
 #[derive(Debug, Clone)]
 pub enum UiAction {
@@ -10,7 +9,7 @@ pub enum UiAction {
     SaveGame,
     LoadGame,
     TogglePause,
-    
+
     // Cheats
     CheatAddGold(i32),
     CheatToggleFog,
@@ -26,7 +25,9 @@ pub struct ActionQueue {
 
 impl ActionQueue {
     pub fn new() -> Self {
-        Self { actions: Vec::new() }
+        Self {
+            actions: Vec::new(),
+        }
     }
 
     /// Add an action to the queue

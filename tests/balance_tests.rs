@@ -1,4 +1,5 @@
 //! Balance Integration Tests
+#![allow(dead_code)]
 //!
 //! These tests verify that game balance values are within acceptable ranges.
 //! Run with: cargo test --test balance_tests
@@ -157,7 +158,8 @@ mod data {
 
     pub fn load_monsters() -> HashMap<String, MonsterData> {
         let json = include_str!("../assets/data/monsters.json");
-        let list: Vec<MonsterData> = serde_json::from_str(json).expect("Failed to parse monsters.json");
+        let list: Vec<MonsterData> =
+            serde_json::from_str(json).expect("Failed to parse monsters.json");
         list.into_iter().map(|m| (m.id.clone(), m)).collect()
     }
 
@@ -203,11 +205,15 @@ struct CombatUnit {
 
 impl CombatUnit {
     fn from_monster(m: &data::MonsterData) -> Self {
-        let (damage_min, damage_max) = m.combat.as_ref()
+        let (damage_min, damage_max) = m
+            .combat
+            .as_ref()
             .and_then(|c| c.damage_range)
             .map(|r| (r[0], r[1]))
             .unwrap_or((5.0, 10.0));
-        let attack_speed = m.combat.as_ref()
+        let attack_speed = m
+            .combat
+            .as_ref()
             .and_then(|c| c.attack_speed)
             .unwrap_or(1.0);
         Self {
@@ -223,11 +229,15 @@ impl CombatUnit {
     }
 
     fn from_hero(h: &data::HeroData) -> Self {
-        let (damage_min, damage_max) = h.combat.as_ref()
+        let (damage_min, damage_max) = h
+            .combat
+            .as_ref()
             .and_then(|c| c.damage_range)
             .map(|r| (r[0], r[1]))
             .unwrap_or((5.0, 10.0));
-        let attack_speed = h.combat.as_ref()
+        let attack_speed = h
+            .combat
+            .as_ref()
             .and_then(|c| c.attack_speed)
             .unwrap_or(1.0);
         Self {
@@ -309,15 +319,18 @@ fn test_starting_gold_allows_basic_dungeon() {
     let rooms = data::load_rooms();
 
     // Calculate minimum dungeon cost: Lair (9 tiles) + Hatchery (9 tiles) + Treasury (4 tiles)
-    let lair_cost = rooms.get("lair")
+    let lair_cost = rooms
+        .get("lair")
         .and_then(|r| r.build.as_ref())
         .map(|b| b.cost_per_tile * 9)
         .unwrap_or(450);
-    let hatchery_cost = rooms.get("hatchery")
+    let hatchery_cost = rooms
+        .get("hatchery")
         .and_then(|r| r.build.as_ref())
         .map(|b| b.cost_per_tile * 9)
         .unwrap_or(675);
-    let treasury_cost = rooms.get("treasury")
+    let treasury_cost = rooms
+        .get("treasury")
         .and_then(|r| r.build.as_ref())
         .map(|b| b.cost_per_tile * 4)
         .unwrap_or(400);
@@ -327,7 +340,8 @@ fn test_starting_gold_allows_basic_dungeon() {
     assert!(
         config.player_starting_resources.gold >= min_cost,
         "Starting gold ({}) should be >= minimum dungeon cost ({})",
-        config.player_starting_resources.gold, min_cost
+        config.player_starting_resources.gold,
+        min_cost
     );
 }
 
@@ -420,7 +434,8 @@ fn test_all_creatures_have_positive_health() {
         assert!(
             monster.stats.health > 0.0,
             "Creature {} has non-positive health: {}",
-            monster.name, monster.stats.health
+            monster.name,
+            monster.stats.health
         );
     }
 }
@@ -432,7 +447,8 @@ fn test_all_heroes_have_positive_health() {
         assert!(
             hero.stats.health > 0.0,
             "Hero {} has non-positive health: {}",
-            hero.name, hero.stats.health
+            hero.name,
+            hero.stats.health
         );
     }
 }
@@ -443,7 +459,11 @@ fn test_creature_wage_efficiency_variance() {
 
     let mut efficiencies: Vec<(String, f32)> = Vec::new();
     for monster in monsters.values() {
-        let wage = monster.economy.as_ref().and_then(|e| e.wage_per_minute).unwrap_or(0.0);
+        let wage = monster
+            .economy
+            .as_ref()
+            .and_then(|e| e.wage_per_minute)
+            .unwrap_or(0.0);
         if wage > 0.0 {
             let efficiency = monster.stats.health / wage;
             efficiencies.push((monster.name.clone(), efficiency));
@@ -452,14 +472,19 @@ fn test_creature_wage_efficiency_variance() {
 
     if efficiencies.len() >= 2 {
         let max_eff = efficiencies.iter().map(|(_, e)| *e).fold(0.0f32, f32::max);
-        let min_eff = efficiencies.iter().map(|(_, e)| *e).fold(f32::MAX, f32::min);
+        let min_eff = efficiencies
+            .iter()
+            .map(|(_, e)| *e)
+            .fold(f32::MAX, f32::min);
         let ratio = max_eff / min_eff;
 
         // Efficiency variance shouldn't exceed 5x (some variance is expected)
         assert!(
             ratio < 5.0,
             "Creature wage efficiency variance ({:.1}x) is too high. Max: {:.1}, Min: {:.1}",
-            ratio, max_eff, min_eff
+            ratio,
+            max_eff,
+            min_eff
         );
     }
 }
@@ -469,16 +494,26 @@ fn test_imps_have_lowest_wage() {
     let monsters = data::load_monsters();
 
     if let Some(imp) = monsters.get("imp") {
-        let imp_wage = imp.economy.as_ref().and_then(|e| e.wage_per_minute).unwrap_or(f32::MAX);
+        let imp_wage = imp
+            .economy
+            .as_ref()
+            .and_then(|e| e.wage_per_minute)
+            .unwrap_or(f32::MAX);
 
         for monster in monsters.values() {
             if monster.id != "imp" {
-                let wage = monster.economy.as_ref().and_then(|e| e.wage_per_minute).unwrap_or(0.0);
+                let wage = monster
+                    .economy
+                    .as_ref()
+                    .and_then(|e| e.wage_per_minute)
+                    .unwrap_or(0.0);
                 if wage > 0.0 {
                     assert!(
                         imp_wage <= wage,
                         "Imp wage ({}) should be lowest, but {} has wage {}",
-                        imp_wage, monster.name, wage
+                        imp_wage,
+                        monster.name,
+                        wage
                     );
                 }
             }
@@ -545,7 +580,8 @@ fn test_demon_spawn_competitive_with_paladin() {
     assert!(
         hp_pct < 90.0,
         "Demon Spawn vs Paladin should be a close fight. {} won with {:.0}% HP",
-        result.winner, hp_pct
+        result.winner,
+        hp_pct
     );
 }
 
@@ -577,7 +613,9 @@ fn test_combat_does_not_time_out() {
             assert!(
                 result.duration_secs < 300.0,
                 "Combat {} vs {} took too long: {:.0}s (max 300s)",
-                monster.name, hero.name, result.duration_secs
+                monster.name,
+                hero.name,
+                result.duration_secs
             );
         }
     }
@@ -612,7 +650,9 @@ fn test_hatchery_generates_food() {
     let rooms = data::load_rooms();
 
     if let Some(hatchery) = rooms.get("hatchery") {
-        let food_gen = hatchery.effects.as_ref()
+        let food_gen = hatchery
+            .effects
+            .as_ref()
             .and_then(|e| e.food_generation_per_second)
             .unwrap_or(0.0);
 
@@ -629,7 +669,9 @@ fn test_treasury_stores_gold() {
     let rooms = data::load_rooms();
 
     if let Some(treasury) = rooms.get("treasury") {
-        let gold_cap = treasury.effects.as_ref()
+        let gold_cap = treasury
+            .effects
+            .as_ref()
             .and_then(|e| e.gold_storage_capacity)
             .unwrap_or(0);
 
@@ -652,7 +694,8 @@ fn test_room_costs_positive() {
                 assert!(
                     build.cost_per_tile >= 0,
                     "Room {} has negative cost: {}",
-                    room.name, build.cost_per_tile
+                    room.name,
+                    build.cost_per_tile
                 );
             }
         }
@@ -671,7 +714,8 @@ fn test_traps_have_positive_cost() {
         assert!(
             trap.cost >= 0,
             "Trap {} has negative cost: {}",
-            trap.name, trap.cost
+            trap.name,
+            trap.cost
         );
     }
 }
@@ -688,7 +732,8 @@ fn test_damage_traps_do_damage() {
             assert!(
                 damage > 0.0,
                 "Damage trap {} should deal damage (current: {:.0})",
-                trap.name, damage
+                trap.name,
+                damage
             );
         }
     }
@@ -733,7 +778,8 @@ fn test_higher_tier_heroes_stronger() {
     }
 
     // Calculate averages
-    let tier_avgs: Vec<(u32, f32)> = tier_power.iter()
+    let tier_avgs: Vec<(u32, f32)> = tier_power
+        .iter()
         .map(|(tier, (total, count))| (*tier, total / *count as f32))
         .collect();
 
@@ -747,7 +793,10 @@ fn test_higher_tier_heroes_stronger() {
                 assert!(
                     avg_b >= avg_a * 0.8,
                     "Tier {} (avg power {:.0}) should be stronger than tier {} (avg power {:.0})",
-                    tier_b, avg_b, tier_a, avg_a
+                    tier_b,
+                    avg_b,
+                    tier_a,
+                    avg_a
                 );
             }
         }

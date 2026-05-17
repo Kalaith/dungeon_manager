@@ -101,7 +101,9 @@ fn create_collapsed_chamber(grid: &mut Grid, cx: usize, cy: usize, size: usize) 
     let max_tiles = size * size;
 
     while let Some((x, y)) = queue.pop_front() {
-        if tiles_placed >= max_tiles { break; }
+        if tiles_placed >= max_tiles {
+            break;
+        }
 
         if grid[y][x].tile_type == "solid_rock" {
             grid[y][x].tile_type = "earth".to_string();
@@ -149,7 +151,9 @@ pub fn add_monster_lairs(grid: &mut Grid, start_pos: TilePos, _config: &MapConfi
     while lairs_placed < 2 && fallback_attempts < 200 {
         fallback_attempts += 1;
         min_distance *= 0.8; // Reduce distance requirement
-        if min_distance < 10.0 { min_distance = 10.0; } // Hard limit
+        if min_distance < 10.0 {
+            min_distance = 10.0;
+        } // Hard limit
 
         if try_place_lair(grid, width, height, start_pos, min_distance) {
             lairs_placed += 1;
@@ -157,7 +161,13 @@ pub fn add_monster_lairs(grid: &mut Grid, start_pos: TilePos, _config: &MapConfi
     }
 }
 
-fn try_place_lair(grid: &mut Grid, width: usize, height: usize, start_pos: TilePos, min_dist: f32) -> bool {
+fn try_place_lair(
+    grid: &mut Grid,
+    width: usize,
+    height: usize,
+    start_pos: TilePos,
+    min_dist: f32,
+) -> bool {
     let cx = rand::gen_range(10, width - 10);
     let cy = rand::gen_range(10, height - 10);
     let pos = TilePos::new(cx as i32, cy as i32);
@@ -187,7 +197,7 @@ fn create_monster_lair(grid: &mut Grid, cx: usize, cy: usize) {
             if dx * dx + dy * dy <= radius * radius {
                 let x = (cx as i32 + dx).max(1).min(width as i32 - 2) as usize;
                 let y = (cy as i32 + dy).max(1).min(height as i32 - 2) as usize;
-                
+
                 // Use corrupted floor for monster lairs
                 grid[y][x].tile_type = "corrupted_floor".to_string();
                 grid[y][x].ownership = Ownership::Enemy;
@@ -199,14 +209,14 @@ fn create_monster_lair(grid: &mut Grid, cx: usize, cy: usize) {
     // Place spawner in center
     grid[cy][cx].tile_type = "monster_spawner".to_string();
     grid[cy][cx].ownership = Ownership::Enemy;
-    
+
     // Add some random gold/treasure around
     for _ in 0..3 {
         let dx = rand::gen_range(-radius, radius + 1);
         let dy = rand::gen_range(-radius, radius + 1);
         let x = (cx as i32 + dx).max(1).min(width as i32 - 2) as usize;
         let y = (cy as i32 + dy).max(1).min(height as i32 - 2) as usize;
-        
+
         if grid[y][x].tile_type == "corrupted_floor" && (dx != 0 || dy != 0) {
             if rand::gen_range(0.0f32, 1.0) < 0.3 {
                 grid[y][x].tile_type = "gold_vein".to_string();
@@ -222,7 +232,9 @@ pub fn place_hero_portals(grid: &mut Grid, start_pos: TilePos, config: &MapConfi
     let mut portal_positions: Vec<TilePos> = Vec::new();
 
     let candidates = find_portal_candidates(grid, start_pos, config.min_portal_distance);
-    if candidates.is_empty() { return; }
+    if candidates.is_empty() {
+        return;
+    }
 
     for _ in 0..config.num_hero_portals {
         if let Some(pos) = select_best_portal_location(&candidates, &portal_positions) {
@@ -244,9 +256,15 @@ fn find_portal_candidates(grid: &Grid, start_pos: TilePos, min_distance: f32) ->
     for y in 5..height - 5 {
         for x in 5..width - 5 {
             let pos = TilePos::new(x as i32, y as i32);
-            if distance_f32(pos, start_pos) < min_distance { continue; }
-            if !is_open_area(grid, pos, 2) { continue; }
-            if is_solid_tile(&grid[y][x].tile_type) { continue; }
+            if distance_f32(pos, start_pos) < min_distance {
+                continue;
+            }
+            if !is_open_area(grid, pos, 2) {
+                continue;
+            }
+            if is_solid_tile(&grid[y][x].tile_type) {
+                continue;
+            }
             candidates.push(pos);
         }
     }
@@ -254,8 +272,13 @@ fn find_portal_candidates(grid: &Grid, start_pos: TilePos, min_distance: f32) ->
     candidates
 }
 
-fn select_best_portal_location(candidates: &[TilePos], existing_portals: &[TilePos]) -> Option<TilePos> {
-    if candidates.is_empty() { return None; }
+fn select_best_portal_location(
+    candidates: &[TilePos],
+    existing_portals: &[TilePos],
+) -> Option<TilePos> {
+    if candidates.is_empty() {
+        return None;
+    }
     if existing_portals.is_empty() {
         return Some(candidates[rand::gen_range(0, candidates.len())]);
     }
@@ -271,7 +294,9 @@ fn select_best_portal_location(candidates: &[TilePos], existing_portals: &[TileP
                 break;
             }
         }
-        if far_enough { best_candidates.push(*candidate); }
+        if far_enough {
+            best_candidates.push(*candidate);
+        }
     }
 
     if best_candidates.is_empty() {

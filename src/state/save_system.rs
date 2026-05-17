@@ -1,5 +1,5 @@
 use crate::state::game_state::GameState;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs;
@@ -37,8 +37,8 @@ pub fn save_game(game_state: &GameState, slot_name: &str) -> Result<(), String> 
         version: "0.1.0".to_string(),
     };
 
-    let serialized = serde_json::to_string(&wrapper)
-        .map_err(|e| format!("Serialization error: {}", e))?;
+    let serialized =
+        serde_json::to_string(&wrapper).map_err(|e| format!("Serialization error: {}", e))?;
 
     let key = format!("save_{}", slot_name);
 
@@ -52,8 +52,7 @@ pub fn save_game(game_state: &GameState, slot_name: &str) -> Result<(), String> 
     #[cfg(not(target_arch = "wasm32"))]
     {
         let filename = format!("{}.json", key);
-        fs::write(&filename, serialized)
-            .map_err(|e| format!("File write error: {}", e))?;
+        fs::write(&filename, serialized).map_err(|e| format!("File write error: {}", e))?;
         eprintln!("Game saved to file: {}", filename);
         Ok(())
     }
@@ -73,13 +72,12 @@ pub fn load_game(slot_name: &str) -> Result<GameState, String> {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let filename = format!("{}.json", key);
-            fs::read_to_string(&filename)
-                .map_err(|e| format!("File read error: {}", e))?
+            fs::read_to_string(&filename).map_err(|e| format!("File read error: {}", e))?
         }
     };
 
-    let wrapper: GameLoadWrapper = serde_json::from_str(&content)
-        .map_err(|e| format!("Deserialization error: {}", e))?;
+    let wrapper: GameLoadWrapper =
+        serde_json::from_str(&content).map_err(|e| format!("Deserialization error: {}", e))?;
 
     eprintln!("Game loaded from {}", slot_name);
     Ok(wrapper.game_state)
@@ -100,5 +98,3 @@ pub fn save_exists(slot_name: &str) -> bool {
         Path::new(&filename).exists()
     }
 }
-
-

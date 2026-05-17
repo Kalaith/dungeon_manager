@@ -18,7 +18,6 @@ pub fn update_imp_digging(
     game_data: &GameData,
     dt: f32,
 ) {
-
     // Get all imp IDs
     let mut imp_ids: Vec<EntityId> = entities
         .creatures()
@@ -48,21 +47,25 @@ pub fn update_imp_digging(
 
         // Remove THIS imp's targets from the exclusion set so it can 'find' its own job
         if let Some(entity) = entities.get(imp_id) {
-             if let Some(creature) = entity.as_creature() {
-                   if let Some(task) = &creature.current_task {
-                        match task {
-                            crate::state::entities::Task::Dig(pos) => { targeted_tiles.remove(pos); },
-                            crate::state::entities::Task::ClaimTile(pos) => { targeted_tiles.remove(pos); },
-                            _ => {}
+            if let Some(creature) = entity.as_creature() {
+                if let Some(task) = &creature.current_task {
+                    match task {
+                        crate::state::entities::Task::Dig(pos) => {
+                            targeted_tiles.remove(pos);
                         }
-                   }
-                  if let Some(path) = &creature.current_path {
-                       if let Some(last_pos) = path.last() {
-                            targeted_tiles.remove(last_pos);
-                       }
-                  }
-             }
-             targeted_tiles.remove(&imp_pos);
+                        crate::state::entities::Task::ClaimTile(pos) => {
+                            targeted_tiles.remove(pos);
+                        }
+                        _ => {}
+                    }
+                }
+                if let Some(path) = &creature.current_path {
+                    if let Some(last_pos) = path.last() {
+                        targeted_tiles.remove(last_pos);
+                    }
+                }
+            }
+            targeted_tiles.remove(&imp_pos);
         }
 
         // If imp has no path, find nearest marked tile
@@ -96,7 +99,11 @@ fn collect_targeted_tiles(entities: &EntityManager, imp_ids: &[EntityId]) -> Has
     targeted_tiles
 }
 
-fn add_imp_targets(entities: &EntityManager, imp_id: EntityId, targeted_tiles: &mut HashSet<TilePos>) {
+fn add_imp_targets(
+    entities: &EntityManager,
+    imp_id: EntityId,
+    targeted_tiles: &mut HashSet<TilePos>,
+) {
     let entity = match entities.get(imp_id) {
         Some(e) => e,
         None => return,
@@ -108,8 +115,12 @@ fn add_imp_targets(entities: &EntityManager, imp_id: EntityId, targeted_tiles: &
 
     if let Some(task) = &creature.current_task {
         match task {
-            crate::state::entities::Task::Dig(pos) => { targeted_tiles.insert(*pos); },
-            crate::state::entities::Task::ClaimTile(pos) => { targeted_tiles.insert(*pos); },
+            crate::state::entities::Task::Dig(pos) => {
+                targeted_tiles.insert(*pos);
+            }
+            crate::state::entities::Task::ClaimTile(pos) => {
+                targeted_tiles.insert(*pos);
+            }
             _ => {}
         }
     }
@@ -158,32 +169,32 @@ fn process_idle_imp(
     // 1. Check existing task first
     let mut current_task = None;
     if let Some(entity) = entities.get(imp_id) {
-         if let Some(creature) = entity.as_creature() {
-             current_task = creature.current_task.clone();
-         }
+        if let Some(creature) = entity.as_creature() {
+            current_task = creature.current_task.clone();
+        }
     }
 
     if let Some(task) = current_task {
         match task {
             crate::state::entities::Task::PickupResource(id) => {
-                 process_pickup(dungeon, entities, player, imp_id, id);
-                 return;
-            },
+                process_pickup(dungeon, entities, player, imp_id, id);
+                return;
+            }
             crate::state::entities::Task::ClaimTile(pos) => {
-                 if imp_pos == pos {
-                      process_claiming(dungeon, entities, player, imp_id, pos, dt, game_data);
-                 } else {
-                      pathfind_to_target(dungeon, entities, imp_id, imp_pos, pos, false);
-                 }
-                 return;
-            },
-             _ => {}
+                if imp_pos == pos {
+                    process_claiming(dungeon, entities, player, imp_id, pos, dt, game_data);
+                } else {
+                    pathfind_to_target(dungeon, entities, imp_id, imp_pos, pos, false);
+                }
+                return;
+            }
+            _ => {}
         }
     }
 
     // 2. Priority 1: Pickup Gold (if space)
     if let Some(pile_id) = find_nearest_resource_pile(entities, imp_pos, player) {
-         if let Some(entity) = entities.get_mut(imp_id) {
+        if let Some(entity) = entities.get_mut(imp_id) {
             if let Some(creature) = entity.as_creature_mut() {
                 creature.current_task = Some(crate::state::entities::Task::PickupResource(pile_id));
             }
@@ -194,7 +205,8 @@ fn process_idle_imp(
 
     // 3. Priority 2: Work (Digging or Claiming - closest first)
     let nearest_dig = find_nearest_marked_tile(dungeon, imp_pos, targeted_tiles, player, game_data);
-    let nearest_claim = find_nearest_claimable_tile(dungeon, imp_pos, targeted_tiles, player, game_data);
+    let nearest_claim =
+        find_nearest_claimable_tile(dungeon, imp_pos, targeted_tiles, player, game_data);
 
     let chosen_work = match (nearest_dig, nearest_claim) {
         (Some(dig_pos), Some(claim_pos)) => {
@@ -205,7 +217,7 @@ fn process_idle_imp(
             } else {
                 Some((claim_pos, false)) // false = claim
             }
-        },
+        }
         (Some(dig_pos), None) => Some((dig_pos, true)),
         (None, Some(claim_pos)) => Some((claim_pos, false)),
         (None, None) => None,
@@ -222,11 +234,14 @@ fn process_idle_imp(
             if imp_pos.manhattan_distance(&target_pos) <= 1 {
                 process_digging(dungeon, entities, player, imp_id, target_pos, dt, game_data);
             } else {
-                 if let Some(entity) = entities.get_mut(imp_id) {
-                    if let Some(creature) = entity.as_creature_mut() { creature.task_time = 0.0; }
+                if let Some(entity) = entities.get_mut(imp_id) {
+                    if let Some(creature) = entity.as_creature_mut() {
+                        creature.task_time = 0.0;
+                    }
                 }
                 // Determine best standing spot
-                let neighbors = crate::engine::tile_grid::get_cardinal_neighbors(&dungeon.grid, target_pos);
+                let neighbors =
+                    crate::engine::tile_grid::get_cardinal_neighbors(&dungeon.grid, target_pos);
                 let mut best_target = None;
                 let mut min_dist = f32::MAX;
                 for target in neighbors {
@@ -244,26 +259,31 @@ fn process_idle_imp(
                     pathfind_to_target(dungeon, entities, imp_id, imp_pos, move_target, false);
                 } else {
                     // accessible spot not found, try to path directly to it (maybe adjacent is not walkable but we are next to it?)
-                     if let Some(entity) = entities.get_mut(imp_id) {
-                         if let Some(creature) = entity.as_creature_mut() { creature.current_task = None; }
-                     }
+                    if let Some(entity) = entities.get_mut(imp_id) {
+                        if let Some(creature) = entity.as_creature_mut() {
+                            creature.current_task = None;
+                        }
+                    }
                     wander_randomly(dungeon, entities, imp_id, imp_pos, game_data);
                 }
             }
         } else {
-             // Process Claiming
+            // Process Claiming
             if let Some(entity) = entities.get_mut(imp_id) {
                 if let Some(creature) = entity.as_creature_mut() {
-                    creature.current_task = Some(crate::state::entities::Task::ClaimTile(target_pos));
+                    creature.current_task =
+                        Some(crate::state::entities::Task::ClaimTile(target_pos));
                 }
             }
             if imp_pos == target_pos {
-                 process_claiming(dungeon, entities, player, imp_id, target_pos, dt, game_data);
+                process_claiming(dungeon, entities, player, imp_id, target_pos, dt, game_data);
             } else {
-                 if let Some(entity) = entities.get_mut(imp_id) {
-                     if let Some(creature) = entity.as_creature_mut() { creature.task_time = 0.0; }
-                 }
-                 pathfind_to_target(dungeon, entities, imp_id, imp_pos, target_pos, false);
+                if let Some(entity) = entities.get_mut(imp_id) {
+                    if let Some(creature) = entity.as_creature_mut() {
+                        creature.task_time = 0.0;
+                    }
+                }
+                pathfind_to_target(dungeon, entities, imp_id, imp_pos, target_pos, false);
             }
         }
         return;
@@ -282,25 +302,25 @@ fn process_pickup(
 ) {
     // Check if target exists
     let pile_pos = if let Some(entity) = entities.get(target_id) {
-         if let crate::state::entities::EntityType::ResourcePile(_) = entity.entity_type {
-             entity.pos
-         } else {
-             // Invalid target (not a pile)
-             if let Some(imp_entity) = entities.get_mut(imp_id) {
-                 if let Some(creature) = imp_entity.as_creature_mut() {
-                     creature.current_task = None;
-                 }
-             }
-             return;
-         }
+        if let crate::state::entities::EntityType::ResourcePile(_) = entity.entity_type {
+            entity.pos
+        } else {
+            // Invalid target (not a pile)
+            if let Some(imp_entity) = entities.get_mut(imp_id) {
+                if let Some(creature) = imp_entity.as_creature_mut() {
+                    creature.current_task = None;
+                }
+            }
+            return;
+        }
     } else {
-         // Pile gone
-         if let Some(imp_entity) = entities.get_mut(imp_id) {
-             if let Some(creature) = imp_entity.as_creature_mut() {
-                 creature.current_task = None;
-             }
-         }
-         return;
+        // Pile gone
+        if let Some(imp_entity) = entities.get_mut(imp_id) {
+            if let Some(creature) = imp_entity.as_creature_mut() {
+                creature.current_task = None;
+            }
+        }
+        return;
     };
 
     let imp_pos = entities.get(imp_id).map(|e| e.pos).unwrap();
@@ -308,13 +328,19 @@ fn process_pickup(
     if imp_pos == pile_pos {
         // Collect
         let amount_collected = if let Some(entity) = entities.get_mut(target_id) {
-             if let crate::state::entities::EntityType::ResourcePile(ref mut state) = &mut entity.entity_type {
-                 let space = player.max_gold - player.gold;
-                 let to_take = state.amount.min(space);
-                 state.amount -= to_take;
-                 to_take
-             } else { 0 }
-        } else { 0 };
+            if let crate::state::entities::EntityType::ResourcePile(ref mut state) =
+                &mut entity.entity_type
+            {
+                let space = player.max_gold - player.gold;
+                let to_take = state.amount.min(space);
+                state.amount -= to_take;
+                to_take
+            } else {
+                0
+            }
+        } else {
+            0
+        };
 
         if amount_collected > 0 {
             player.add_resources(amount_collected, 0, 0, 0);
@@ -323,20 +349,24 @@ fn process_pickup(
 
         // Check if pile empty
         let remove = if let Some(entity) = entities.get(target_id) {
-             if let crate::state::entities::EntityType::ResourcePile(state) = &entity.entity_type {
-                 state.amount <= 0
-             } else { false }
-        } else { false };
+            if let crate::state::entities::EntityType::ResourcePile(state) = &entity.entity_type {
+                state.amount <= 0
+            } else {
+                false
+            }
+        } else {
+            false
+        };
 
         if remove {
             entities.remove(target_id);
         }
-        
+
         // Task done
         if let Some(imp_entity) = entities.get_mut(imp_id) {
-             if let Some(creature) = imp_entity.as_creature_mut() {
-                 creature.current_task = None;
-             }
+            if let Some(creature) = imp_entity.as_creature_mut() {
+                creature.current_task = None;
+            }
         }
     } else {
         // Move to it
@@ -371,9 +401,6 @@ fn find_nearest_resource_pile(
     nearest
 }
 
-
-
-
 /// Find the nearest marked tile not targeted by other imps
 fn find_nearest_marked_tile(
     dungeon: &Dungeon,
@@ -388,7 +415,9 @@ fn find_nearest_marked_tile(
     for y in 0..dungeon.height {
         for x in 0..dungeon.width {
             let pos = TilePos::new(x as i32, y as i32);
-            if let Some(dist) = evaluate_dig_target(dungeon, pos, imp_pos, targeted_tiles, player, game_data) {
+            if let Some(dist) =
+                evaluate_dig_target(dungeon, pos, imp_pos, targeted_tiles, player, game_data)
+            {
                 if dist < min_dist {
                     min_dist = dist;
                     nearest_marked = Some(pos);
@@ -400,7 +429,14 @@ fn find_nearest_marked_tile(
 }
 
 /// Evaluate a potential dig target, returns distance score if valid
-fn evaluate_dig_target(dungeon: &Dungeon, pos: TilePos, imp_pos: TilePos, targeted_tiles: &HashSet<TilePos>, player: &PlayerState, game_data: &GameData) -> Option<f32> {
+fn evaluate_dig_target(
+    dungeon: &Dungeon,
+    pos: TilePos,
+    imp_pos: TilePos,
+    targeted_tiles: &HashSet<TilePos>,
+    player: &PlayerState,
+    game_data: &GameData,
+) -> Option<f32> {
     if pos != imp_pos && targeted_tiles.contains(&pos) {
         return None;
     }
@@ -410,7 +446,8 @@ fn evaluate_dig_target(dungeon: &Dungeon, pos: TilePos, imp_pos: TilePos, target
         return None;
     }
 
-    let dist_sq = Pos::new(pos.x, pos.y).euclidean_distance_squared(&Pos::new(imp_pos.x, imp_pos.y));
+    let dist_sq =
+        Pos::new(pos.x, pos.y).euclidean_distance_squared(&Pos::new(imp_pos.x, imp_pos.y));
 
     if tile.tile_type == tt::GEM_SEAM {
         if player.gold >= player.max_gold {
@@ -460,7 +497,13 @@ fn process_digging(
 }
 
 /// Complete digging a tile and award resources
-fn complete_dig(dungeon: &mut Dungeon, entities: Option<&mut EntityManager>, player: &mut PlayerState, marked_pos: TilePos, game_data: &GameData) {
+fn complete_dig(
+    dungeon: &mut Dungeon,
+    entities: Option<&mut EntityManager>,
+    player: &mut PlayerState,
+    marked_pos: TilePos,
+    game_data: &GameData,
+) {
     if let Some(tile) = dungeon.get_tile_mut(marked_pos) {
         if !tile.marked_for_dig {
             return;
@@ -473,12 +516,16 @@ fn complete_dig(dungeon: &mut Dungeon, entities: Option<&mut EntityManager>, pla
         // Check if tile has resources
         let (gold_gained, mana_gained, is_gem_seam) = match tile.tile_type.as_str() {
             x if x == tt::GOLD_VEIN => {
-                let gold = tile.resources_remaining.map_or(gold_vein_reward, |r| gold_vein_reward.min(r as i32));
+                let gold = tile
+                    .resources_remaining
+                    .map_or(gold_vein_reward, |r| gold_vein_reward.min(r as i32));
                 (gold, 0, false)
             }
             x if x == tt::GEM_SEAM => (gem_seam_reward, 0, true),
             x if x == tt::MANA_CRYSTAL => {
-                let mana = tile.resources_remaining.map_or(mana_crystal_reward, |r| mana_crystal_reward.min(r as i32));
+                let mana = tile
+                    .resources_remaining
+                    .map_or(mana_crystal_reward, |r| mana_crystal_reward.min(r as i32));
                 (0, mana, false)
             }
             _ => (0, 0, false),
@@ -494,10 +541,10 @@ fn complete_dig(dungeon: &mut Dungeon, entities: Option<&mut EntityManager>, pla
             );
             return; // Exit early to preserve tile state
         }
-        
+
         // Safety check: if gem seam and gold full, do nothing (should be handled by target selection but good for safety)
         if is_gem_seam && player.gold >= player.max_gold {
-             return;
+            return;
         }
 
         // For non-infinite resources:
@@ -506,7 +553,7 @@ fn complete_dig(dungeon: &mut Dungeon, entities: Option<&mut EntityManager>, pla
         tile.ownership = Ownership::Unclaimed;
         tile.marked_for_dig = false;
         tile.resources_remaining = None;
-        tile.room_id = None; 
+        tile.room_id = None;
         // Tile is now unclaimed floor, imps must claim it separately
 
         // Give resources to player
@@ -517,15 +564,19 @@ fn complete_dig(dungeon: &mut Dungeon, entities: Option<&mut EntityManager>, pla
                 if space > 0 {
                     player.add_resources(space, 0, 0, 0);
                 }
-                
+
                 // Spawn pile for excess
                 let excess = gold_gained - space;
                 if let Some(entities_mgr) = entities {
-                    let pile_state = crate::state::entities::ResourcePileState::new("gold".to_string(), excess);
+                    let pile_state =
+                        crate::state::entities::ResourcePileState::new("gold".to_string(), excess);
                     entities_mgr.spawn_resource_pile(marked_pos, pile_state);
                     eprintln!("Treasury full! Spilled {} gold at {:?}", excess, marked_pos);
                 } else {
-                    eprintln!("Warning: No EntityManager passed to complete_dig, lost {} gold", excess);
+                    eprintln!(
+                        "Warning: No EntityManager passed to complete_dig, lost {} gold",
+                        excess
+                    );
                 }
             } else {
                 player.add_resources(gold_gained, 0, 0, 0);
@@ -561,9 +612,12 @@ fn pathfind_to_target(
             let tile_pos = TilePos::new(x as i32, y as i32);
             if let Some(tile) = dungeon.get_tile(tile_pos) {
                 let walkable = if include_marked {
-                    tile.ownership == Ownership::Player || tile.marked_for_dig || (tile.ownership == Ownership::Unclaimed && tile.tile_type == tt::FLOOR)
+                    tile.ownership == Ownership::Player
+                        || tile.marked_for_dig
+                        || (tile.ownership == Ownership::Unclaimed && tile.tile_type == tt::FLOOR)
                 } else {
-                    tile.ownership == Ownership::Player || (tile.ownership == Ownership::Unclaimed && tile.tile_type == tt::FLOOR)
+                    tile.ownership == Ownership::Player
+                        || (tile.ownership == Ownership::Unclaimed && tile.tile_type == tt::FLOOR)
                 };
                 let pf_pos = Pos::new(x as i32, y as i32);
                 pf_grid.set_walkable(pf_pos, walkable);
@@ -623,7 +677,6 @@ fn wander_randomly(
     }
 }
 
-
 // process_imp_movement removed in favor of shared movement::process_entity_movement
 
 /// Process claiming an unclaimed tile
@@ -642,7 +695,7 @@ fn process_claiming(
     if let Some(entity) = entities.get_mut(imp_id) {
         if let Some(creature) = entity.as_creature_mut() {
             // Ensure task is set
-             if creature.current_task.is_none() {
+            if creature.current_task.is_none() {
                 creature.current_task = Some(crate::state::entities::Task::ClaimTile(target_pos));
             }
 
@@ -657,13 +710,13 @@ fn process_claiming(
 
     if task_complete {
         if let Some(tile) = dungeon.get_tile_mut(target_pos) {
-             // Verify it differs from current ownership
-             if tile.ownership == Ownership::Unclaimed {
-                  tile.ownership = Ownership::Player;
-                  tile.tile_type = tt::CLAIMED_FLOOR.to_string();
-                  player.claimed_tile_count += 1;
-                  eprintln!("Imp claimed tile at {:?}", target_pos);
-             }
+            // Verify it differs from current ownership
+            if tile.ownership == Ownership::Unclaimed {
+                tile.ownership = Ownership::Player;
+                tile.tile_type = tt::CLAIMED_FLOOR.to_string();
+                player.claimed_tile_count += 1;
+                eprintln!("Imp claimed tile at {:?}", target_pos);
+            }
         }
     }
 }
@@ -681,10 +734,12 @@ fn find_nearest_claimable_tile(
     for y in 0..dungeon.height {
         for x in 0..dungeon.width {
             let pos = TilePos::new(x as i32, y as i32);
-            if let Some(dist) = evaluate_claim_target(dungeon, pos, imp_pos, targeted_tiles, player, game_data) {
+            if let Some(dist) =
+                evaluate_claim_target(dungeon, pos, imp_pos, targeted_tiles, player, game_data)
+            {
                 if dist < min_dist {
-                     min_dist = dist;
-                     nearest = Some(pos);
+                    min_dist = dist;
+                    nearest = Some(pos);
                 }
             }
         }
@@ -700,31 +755,35 @@ fn evaluate_claim_target(
     _player: &PlayerState,
     game_data: &GameData,
 ) -> Option<f32> {
-     if pos != imp_pos && targeted_tiles.contains(&pos) {
-         return None;
-     }
+    if pos != imp_pos && targeted_tiles.contains(&pos) {
+        return None;
+    }
 
-     let tile = dungeon.get_tile(pos)?;
-     
-     // Must be Unclaimed floor
-     if tile.ownership != Ownership::Unclaimed {
-         return None;
-     }
+    let tile = dungeon.get_tile(pos)?;
 
-     if tile.tile_type != tt::FLOOR && !tile_types::is_claimable(&tile.tile_type, game_data) {
-          return None;
-     }
+    // Must be Unclaimed floor
+    if tile.ownership != Ownership::Unclaimed {
+        return None;
+    }
 
-     // Must be adjacent to Player owned tile (flood fill style expansion)
-     let neighbors = crate::engine::tile_grid::get_cardinal_neighbors(&dungeon.grid, pos);
-     let is_adjacent_to_owned = neighbors.iter().any(|n| {
-          dungeon.get_tile(*n).map(|t| t.ownership == Ownership::Player).unwrap_or(false)
-     });
-     
-     if !is_adjacent_to_owned {
-          return None;
-     }
+    if tile.tile_type != tt::FLOOR && !tile_types::is_claimable(&tile.tile_type, game_data) {
+        return None;
+    }
 
-     let dist_sq = Pos::new(pos.x, pos.y).euclidean_distance_squared(&Pos::new(imp_pos.x, imp_pos.y));
-     Some(dist_sq)
+    // Must be adjacent to Player owned tile (flood fill style expansion)
+    let neighbors = crate::engine::tile_grid::get_cardinal_neighbors(&dungeon.grid, pos);
+    let is_adjacent_to_owned = neighbors.iter().any(|n| {
+        dungeon
+            .get_tile(*n)
+            .map(|t| t.ownership == Ownership::Player)
+            .unwrap_or(false)
+    });
+
+    if !is_adjacent_to_owned {
+        return None;
+    }
+
+    let dist_sq =
+        Pos::new(pos.x, pos.y).euclidean_distance_squared(&Pos::new(imp_pos.x, imp_pos.y));
+    Some(dist_sq)
 }

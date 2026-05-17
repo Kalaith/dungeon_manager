@@ -60,7 +60,7 @@ pub fn resolve_combat_tick(
 
     // Determine if we should spawn a projectile or apply instant damage
     let is_melee = attacker_stats.attack_type == "melee";
-    
+
     if !is_melee && actual_damage > 0.0 {
         // Ranged/Magic attack - spawn projectile
         return CombatResult {
@@ -111,11 +111,15 @@ fn get_type_name(entity_type: &crate::state::entities::EntityType) -> String {
 pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStats {
     match &entity.entity_type {
         crate::state::entities::EntityType::Creature(creature_state) => {
-            let creature_data = game_data.monsters.get(&creature_state.creature_id)
+            let creature_data = game_data
+                .monsters
+                .get(&creature_state.creature_id)
                 .expect("Creature data not found");
 
             // Calculate level bonuses
-            let level_multiplier = 1.0 + (creature_state.level - 1) as f32 * game_data.config.combat.creature_level_multiplier;
+            let level_multiplier = 1.0
+                + (creature_state.level - 1) as f32
+                    * game_data.config.combat.creature_level_multiplier;
 
             CombatStats {
                 health: creature_state.health,
@@ -129,11 +133,14 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
             }
         }
         crate::state::entities::EntityType::Hero(hero_state) => {
-            let hero_data = game_data.heroes.get(&hero_state.hero_id)
+            let hero_data = game_data
+                .heroes
+                .get(&hero_state.hero_id)
                 .expect("Hero data not found");
 
             // Calculate level bonuses
-            let level_multiplier = 1.0 + (hero_state.level - 1) as f32 * game_data.config.combat.hero_level_multiplier;
+            let level_multiplier =
+                1.0 + (hero_state.level - 1) as f32 * game_data.config.combat.hero_level_multiplier;
 
             CombatStats {
                 health: hero_state.health,
@@ -146,35 +153,35 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
                 level: hero_state.level,
             }
         }
-        crate::state::entities::EntityType::Structure(structure_state) => {
-            CombatStats {
-                health: structure_state.health,
-                attack: 0.0,
-                defense: game_data.config.combat.building_base_defense,
-                attack_type: "none".to_string(),
-                damage_range: [0.0, 0.0],
-                attack_speed: game_data.config.combat.building_attack_speed,
-                resistances: HashMap::new(),
-                level: 1,
-            }
-        }
-        crate::state::entities::EntityType::ResourcePile(_) => {
-            CombatStats {
-                health: 1.0,
-                attack: 0.0,
-                defense: 0.0,
-                attack_type: "none".to_string(),
-                damage_range: [0.0, 0.0],
-                attack_speed: 1.0,
-                resistances: HashMap::new(),
-                level: 1,
-            }
-        }
+        crate::state::entities::EntityType::Structure(structure_state) => CombatStats {
+            health: structure_state.health,
+            attack: 0.0,
+            defense: game_data.config.combat.building_base_defense,
+            attack_type: "none".to_string(),
+            damage_range: [0.0, 0.0],
+            attack_speed: game_data.config.combat.building_attack_speed,
+            resistances: HashMap::new(),
+            level: 1,
+        },
+        crate::state::entities::EntityType::ResourcePile(_) => CombatStats {
+            health: 1.0,
+            attack: 0.0,
+            defense: 0.0,
+            attack_type: "none".to_string(),
+            damage_range: [0.0, 0.0],
+            attack_speed: 1.0,
+            resistances: HashMap::new(),
+            level: 1,
+        },
     }
 }
 
 /// Calculate damage from attacker to defender
-pub fn calculate_damage(attacker: &CombatStats, defender: &CombatStats, game_data: &GameData) -> f32 {
+pub fn calculate_damage(
+    attacker: &CombatStats,
+    defender: &CombatStats,
+    game_data: &GameData,
+) -> f32 {
     // Base damage from attacker's range
     let base_damage = if attacker.damage_range[1] > attacker.damage_range[0] {
         let range = attacker.damage_range[1] - attacker.damage_range[0];
@@ -200,7 +207,11 @@ pub fn calculate_damage(attacker: &CombatStats, defender: &CombatStats, game_dat
 
 /// Calculate resistance multiplier based on attack type and defender resistances
 fn calculate_resistance_multiplier(attacker: &CombatStats, defender: &CombatStats) -> f32 {
-    let base_resistance = defender.resistances.get(&attacker.attack_type).copied().unwrap_or(0.0);
+    let base_resistance = defender
+        .resistances
+        .get(&attacker.attack_type)
+        .copied()
+        .unwrap_or(0.0);
 
     // Convert resistance percentage to multiplier
     // Positive resistance reduces damage, negative increases
@@ -208,8 +219,7 @@ fn calculate_resistance_multiplier(attacker: &CombatStats, defender: &CombatStat
 }
 
 /// Generate status effects from combat (simplified)
-fn generate_status_effects(
-) -> Vec<StatusEffect> {
+fn generate_status_effects() -> Vec<StatusEffect> {
     // Simplified: no status effects for now
     // In full implementation, this would check abilities and generate effects
     Vec::new()
@@ -268,7 +278,9 @@ pub fn apply_combat_result(
             match &defender.entity_type {
                 crate::state::entities::EntityType::Creature(state) => state.level,
                 crate::state::entities::EntityType::Hero(_) => 0, // Heroes don't give XP
-                crate::state::entities::EntityType::Structure(_) => game_data.config.combat.building_xp_reward as u32,
+                crate::state::entities::EntityType::Structure(_) => {
+                    game_data.config.combat.building_xp_reward as u32
+                }
                 crate::state::entities::EntityType::ResourcePile(_) => 0,
             }
         } else {
@@ -320,12 +332,12 @@ pub fn apply_projectile_impact(
     if let Some(defender) = entities.get_mut(impact.defender_id) {
         // Use apply_combat_result mechanics but simplified
         let damage = impact.damage;
-        
+
         if damage > 0.0 {
             defender.last_damage_time = current_time;
         }
 
-         match &mut defender.entity_type {
+        match &mut defender.entity_type {
             crate::state::entities::EntityType::Creature(state) => {
                 state.take_damage(damage);
             }
@@ -338,16 +350,18 @@ pub fn apply_projectile_impact(
             crate::state::entities::EntityType::ResourcePile(_) => {}
         }
     }
-    
+
     // XP Awarding needs to happen safely.
     // Check if defender died
     let defender_dead_and_level = if let Some(defender) = entities.get(impact.defender_id) {
         if !defender.is_alive() {
-             match &defender.entity_type {
-                 crate::state::entities::EntityType::Creature(state) => Some(state.level),
-                 crate::state::entities::EntityType::Structure(_) => Some(game_data.config.combat.building_xp_reward as u32),
-                 _ => None,
-             }
+            match &defender.entity_type {
+                crate::state::entities::EntityType::Creature(state) => Some(state.level),
+                crate::state::entities::EntityType::Structure(_) => {
+                    Some(game_data.config.combat.building_xp_reward as u32)
+                }
+                _ => None,
+            }
         } else {
             None
         }
@@ -357,7 +371,7 @@ pub fn apply_projectile_impact(
 
     if let Some(level) = defender_dead_and_level {
         if let Some(attacker) = entities.get_mut(impact.attacker_id) {
-             award_experience(attacker, level, game_data);
+            award_experience(attacker, level, game_data);
         }
     }
 }
@@ -381,7 +395,6 @@ fn level_up_creature(state: &mut crate::state::entities::CreatureState, game_dat
 
 // Placeholder - will act validation in next step
 
-
 /// Get the attack range for a given attack type
 pub fn get_attack_range(attack_type: &str, game_data: &GameData) -> i32 {
     match attack_type {
@@ -403,7 +416,7 @@ pub fn in_combat_range(
     defender_pos: TilePos,
     attack_type: &str,
     dungeon_grid: &Vec<Vec<crate::state::tile_state::TileState>>,
-    game_data: &GameData
+    game_data: &GameData,
 ) -> bool {
     let distance = calculate_manhattan_distance(attacker_pos, defender_pos);
     let max_range = get_attack_range(attack_type, game_data);
@@ -427,7 +440,12 @@ fn calculate_manhattan_distance(a: TilePos, b: TilePos) -> i32 {
 }
 
 /// Simple line of sight check using Bresenham's algorithm
-fn check_line_of_sight(start: TilePos, end: TilePos, grid: &Vec<Vec<crate::state::tile_state::TileState>>, game_data: &GameData) -> bool {
+fn check_line_of_sight(
+    start: TilePos,
+    end: TilePos,
+    grid: &Vec<Vec<crate::state::tile_state::TileState>>,
+    game_data: &GameData,
+) -> bool {
     let (x0, y0, x1, y1) = (start.x, start.y, end.x, end.y);
     let dx = (x1 - x0).abs();
     let dy = -(y1 - y0).abs();
@@ -458,7 +476,12 @@ fn check_line_of_sight(start: TilePos, end: TilePos, grid: &Vec<Vec<crate::state
 }
 
 /// Check if a tile at the given coordinates blocks vision
-fn tile_blocks_vision(x: i32, y: i32, grid: &Vec<Vec<crate::state::tile_state::TileState>>, game_data: &GameData) -> bool {
+fn tile_blocks_vision(
+    x: i32,
+    y: i32,
+    grid: &Vec<Vec<crate::state::tile_state::TileState>>,
+    game_data: &GameData,
+) -> bool {
     let row = match grid.get(y as usize) {
         Some(r) => r,
         None => return false,
@@ -467,22 +490,26 @@ fn tile_blocks_vision(x: i32, y: i32, grid: &Vec<Vec<crate::state::tile_state::T
         Some(t) => t,
         None => return false,
     };
-    game_data.tiles.get(&tile.tile_type).map(|td| td.blocks_vision).unwrap_or(false)
+    game_data
+        .tiles
+        .get(&tile.tile_type)
+        .map(|td| td.blocks_vision)
+        .unwrap_or(false)
 }
 
 /// Get detection range for an entity (how far they can see enemies to engage)
 pub fn get_detection_range(entity: &Entity, game_data: &GameData) -> i32 {
     match &entity.entity_type {
-        crate::state::entities::EntityType::Creature(state) => {
-            game_data.monsters.get(&state.creature_id)
-                .map(|data| data.stats.sight_radius as i32)
-                .unwrap_or(8)
-        }
-        crate::state::entities::EntityType::Hero(state) => {
-            game_data.heroes.get(&state.hero_id)
-                .map(|data| data.stats.sight_radius as i32)
-                .unwrap_or(8)
-        }
+        crate::state::entities::EntityType::Creature(state) => game_data
+            .monsters
+            .get(&state.creature_id)
+            .map(|data| data.stats.sight_radius as i32)
+            .unwrap_or(8),
+        crate::state::entities::EntityType::Hero(state) => game_data
+            .heroes
+            .get(&state.hero_id)
+            .map(|data| data.stats.sight_radius as i32)
+            .unwrap_or(8),
         _ => 8,
     }
 }
@@ -517,7 +544,9 @@ pub fn find_combat_targets(
             // Check if within detection range (sight range)
             if distance <= detection_range {
                 // Also check line of sight for ranged detection
-                if distance <= 1 || check_line_of_sight(entity.pos, other_entity.pos, &dungeon.grid, game_data) {
+                if distance <= 1
+                    || check_line_of_sight(entity.pos, other_entity.pos, &dungeon.grid, game_data)
+                {
                     let priority = match other_entity.entity_type {
                         crate::state::entities::EntityType::Structure(_) => 1,
                         _ => 0,
@@ -539,16 +568,16 @@ pub fn find_combat_targets(
 /// Get the attack type for an entity
 pub fn get_entity_attack_type(entity: &Entity, game_data: &GameData) -> String {
     match &entity.entity_type {
-        crate::state::entities::EntityType::Creature(state) => {
-            game_data.monsters.get(&state.creature_id)
-                .map(|data| data.combat.attack_type.clone())
-                .unwrap_or_else(|| "melee".to_string())
-        }
-        crate::state::entities::EntityType::Hero(state) => {
-            game_data.heroes.get(&state.hero_id)
-                .map(|data| data.combat.attack_type.clone())
-                .unwrap_or_else(|| "melee".to_string())
-        }
+        crate::state::entities::EntityType::Creature(state) => game_data
+            .monsters
+            .get(&state.creature_id)
+            .map(|data| data.combat.attack_type.clone())
+            .unwrap_or_else(|| "melee".to_string()),
+        crate::state::entities::EntityType::Hero(state) => game_data
+            .heroes
+            .get(&state.hero_id)
+            .map(|data| data.combat.attack_type.clone())
+            .unwrap_or_else(|| "melee".to_string()),
         crate::state::entities::EntityType::Structure(_) => "none".to_string(),
         crate::state::entities::EntityType::ResourcePile(_) => "none".to_string(),
     }
@@ -563,11 +592,11 @@ fn are_hostile(entity_a: &Entity, entity_b: &Entity, game_data: &GameData) -> bo
         ("resource", _) | (_, "resource") => false, // Resources are neutral
         ("dungeon", "hero") => true,
         ("hero", "dungeon") => true,
-        ("wild", "wild") => false,   // Wild creatures don't attack each other
+        ("wild", "wild") => false, // Wild creatures don't attack each other
         ("wild", "dungeon") => true, // Wild attacks dungeon creatures
-        ("wild", "hero") => true,    // Wild attacks heroes
+        ("wild", "hero") => true,  // Wild attacks heroes
         ("dungeon", "wild") => true, // Dungeon creatures attack wild
-        ("hero", "wild") => true,    // Heroes attack wild
+        ("hero", "wild") => true,  // Heroes attack wild
         ("hero", "hero") => false,
         ("dungeon", "dungeon") => false, // Friendly fire off
         _ => false,
@@ -576,11 +605,11 @@ fn are_hostile(entity_a: &Entity, entity_b: &Entity, game_data: &GameData) -> bo
 
 fn get_faction(entity: &Entity, game_data: &GameData) -> String {
     match &entity.entity_type {
-        crate::state::entities::EntityType::Creature(c) => {
-            game_data.monsters.get(&c.creature_id)
-                .map(|m| m.faction.clone())
-                .unwrap_or("dungeon".to_string())
-        },
+        crate::state::entities::EntityType::Creature(c) => game_data
+            .monsters
+            .get(&c.creature_id)
+            .map(|m| m.faction.clone())
+            .unwrap_or("dungeon".to_string()),
 
         crate::state::entities::EntityType::Hero(h) => {
             if h.is_converted {
@@ -588,7 +617,7 @@ fn get_faction(entity: &Entity, game_data: &GameData) -> String {
             } else {
                 "hero".to_string()
             }
-        },
+        }
         crate::state::entities::EntityType::Structure(_) => "hero".to_string(), // Structures belong to hero faction
         crate::state::entities::EntityType::ResourcePile(_) => "resource".to_string(),
     }

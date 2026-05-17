@@ -2,13 +2,13 @@
 //!
 //! Handles drawing tooltips for tiles, entities, and drag selections.
 
-use macroquad::prelude::*;
-use crate::state::game_state::GameState;
-use crate::state::{InteractionMode, Ownership, DragSelection};
-use crate::state::tile_state::TilePos;
 use crate::data::GameData;
 use crate::engine::tile_types;
+use crate::state::game_state::GameState;
+use crate::state::tile_state::TilePos;
+use crate::state::{DragSelection, InteractionMode, Ownership};
 use crate::ui::sidebar::Sidebar;
+use macroquad::prelude::*;
 
 /// Draw tooltips for hovered tiles and entities
 pub fn draw_tooltips(
@@ -22,7 +22,13 @@ pub fn draw_tooltips(
 ) {
     if drag_selection.active {
         if let Some(data) = game_data {
-            draw_drag_tooltip(state, data, interaction_mode, drag_selection, &get_room_cost);
+            draw_drag_tooltip(
+                state,
+                data,
+                interaction_mode,
+                drag_selection,
+                &get_room_cost,
+            );
         }
         return;
     }
@@ -35,7 +41,10 @@ pub fn draw_tooltips(
 
         if let Some(tile) = state.get_tile(pos) {
             // Determine visible color based on Fog of War settings
-            let fog_enabled = game_data.as_ref().map(|gd| gd.config.fog_of_war.enabled).unwrap_or(true);
+            let fog_enabled = game_data
+                .as_ref()
+                .map(|gd| gd.config.fog_of_war.enabled)
+                .unwrap_or(true);
             let fog_state = if fog_enabled {
                 tile.fog_state
             } else {
@@ -50,7 +59,10 @@ pub fn draw_tooltips(
 
             // Tile Name
             let tile_name = if let Some(data) = game_data {
-                 data.tiles.get(&tile.tile_type).map(|t| t.name.clone()).unwrap_or(tile.tile_type.clone())
+                data.tiles
+                    .get(&tile.tile_type)
+                    .map(|t| t.name.clone())
+                    .unwrap_or(tile.tile_type.clone())
             } else {
                 tile.tile_type.clone()
             };
@@ -58,9 +70,9 @@ pub fn draw_tooltips(
 
             // Room info
             if let Some(room_id) = tile.room_id {
-                 if let Some(room) = state.room_manager.rooms.iter().find(|r| r.id == room_id) {
-                     lines.push(format!("Room: {}", room.room_type));
-                 }
+                if let Some(room) = state.room_manager.rooms.iter().find(|r| r.id == room_id) {
+                    lines.push(format!("Room: {}", room.room_type));
+                }
             }
 
             // Ownership
@@ -72,13 +84,21 @@ pub fn draw_tooltips(
 
             // Trap/Object
             if let Some(trap) = &tile.trap {
-                 let status = if trap.constructed { "Active" } else { "Building..." };
-                 if let Some(data) = game_data {
-                     let trap_name = data.traps.get(&trap.trap_type).map(|t| t.name.clone()).unwrap_or(trap.trap_type.clone());
-                     lines.push(format!("{} ({})", trap_name, status));
-                 } else {
-                     lines.push(format!("{} ({})", trap.trap_type, status));
-                 }
+                let status = if trap.constructed {
+                    "Active"
+                } else {
+                    "Building..."
+                };
+                if let Some(data) = game_data {
+                    let trap_name = data
+                        .traps
+                        .get(&trap.trap_type)
+                        .map(|t| t.name.clone())
+                        .unwrap_or(trap.trap_type.clone());
+                    lines.push(format!("{} ({})", trap_name, status));
+                } else {
+                    lines.push(format!("{} ({})", trap.trap_type, status));
+                }
             }
 
             // Entities on tile
@@ -86,33 +106,43 @@ pub fn draw_tooltips(
             for entity in entities {
                 match &entity.entity_type {
                     crate::state::entities::EntityType::Creature(c) => {
-                         let name = if let Some(data) = game_data {
-                             data.monsters.get(&c.creature_id).map(|m| m.name.clone()).unwrap_or(c.creature_id.clone())
-                         } else {
-                             c.creature_id.clone()
-                         };
-                         lines.push(format!("{} (HP: {:.0})", name, c.health));
+                        let name = if let Some(data) = game_data {
+                            data.monsters
+                                .get(&c.creature_id)
+                                .map(|m| m.name.clone())
+                                .unwrap_or(c.creature_id.clone())
+                        } else {
+                            c.creature_id.clone()
+                        };
+                        lines.push(format!("{} (HP: {:.0})", name, c.health));
                     }
                     crate::state::entities::EntityType::Hero(h) => {
-                         let name = if let Some(data) = game_data {
-                             data.heroes.get(&h.hero_id).map(|m| m.name.clone()).unwrap_or(h.hero_id.clone())
-                         } else {
-                             h.hero_id.clone()
-                         };
+                        let name = if let Some(data) = game_data {
+                            data.heroes
+                                .get(&h.hero_id)
+                                .map(|m| m.name.clone())
+                                .unwrap_or(h.hero_id.clone())
+                        } else {
+                            h.hero_id.clone()
+                        };
 
-                         if h.is_converted {
-                             lines.push(format!("Minion: {} (Lvl {})", name, h.level));
-                         } else if h.is_captured {
-                             lines.push(format!("CAPTURED: {} ({:.0}%)", name, h.conversion_progress * 100.0));
-                         } else {
-                             lines.push(format!("Hero: {} (Lvl {})", name, h.level));
-                         }
+                        if h.is_converted {
+                            lines.push(format!("Minion: {} (Lvl {})", name, h.level));
+                        } else if h.is_captured {
+                            lines.push(format!(
+                                "CAPTURED: {} ({:.0}%)",
+                                name,
+                                h.conversion_progress * 100.0
+                            ));
+                        } else {
+                            lines.push(format!("Hero: {} (Lvl {})", name, h.level));
+                        }
                     }
                     crate::state::entities::EntityType::Structure(s) => {
-                         lines.push(format!("Structure: {:.0} HP", s.health));
+                        lines.push(format!("Structure: {:.0} HP", s.health));
                     }
                     crate::state::entities::EntityType::ResourcePile(p) => {
-                         lines.push(format!("Pile: {} (Amount: {})", p.resource_type, p.amount));
+                        lines.push(format!("Pile: {} (Amount: {})", p.resource_type, p.amount));
                     }
                 }
             }
@@ -144,12 +174,18 @@ pub fn draw_tooltips(
             };
 
             let draw_y = if tooltip_y + box_height > screen_height() {
-                 tooltip_y - box_height - 30.0
+                tooltip_y - box_height - 30.0
             } else {
                 tooltip_y
             };
 
-            draw_rectangle(draw_x, draw_y, box_width, box_height, Color::new(0.1, 0.1, 0.1, 0.9));
+            draw_rectangle(
+                draw_x,
+                draw_y,
+                box_width,
+                box_height,
+                Color::new(0.1, 0.1, 0.1, 0.9),
+            );
             draw_rectangle_lines(draw_x, draw_y, box_width, box_height, 1.0, WHITE);
 
             for (i, line) in lines.iter().enumerate() {
@@ -158,7 +194,7 @@ pub fn draw_tooltips(
                     draw_x + padding,
                     draw_y + padding + (i as f32 * (font_size + 4.0)) + font_size - 4.0,
                     font_size,
-                    WHITE
+                    WHITE,
                 );
             }
         }
@@ -192,55 +228,73 @@ pub fn draw_drag_tooltip(
             match mode {
                 InteractionMode::Dig => {
                     // Count diggable tiles (claimed or unclaimed)
-                     if tile_types::is_diggable(&tile.tile_type, game_data) {
-                         tile_count += 1;
-                     }
+                    if tile_types::is_diggable(&tile.tile_type, game_data) {
+                        tile_count += 1;
+                    }
                 }
                 InteractionMode::BuildRoom(room_type) => {
                     if tile.ownership == Ownership::Player
                         && tile.room_id.is_none()
                         && tile_types::can_build_room(&tile.tile_type, game_data)
                     {
-                        let lookup_id = if room_type == "training_room" { "training_hall" } else { room_type };
+                        let lookup_id = if room_type == "training_room" {
+                            "training_hall"
+                        } else {
+                            room_type
+                        };
                         let cost = get_room_cost(lookup_id, Some(game_data));
                         total_cost += cost;
                         tile_count += 1;
                     }
                 }
                 InteractionMode::BuildTrap(trap_type) => {
-                     if tile.ownership == Ownership::Player
+                    if tile.ownership == Ownership::Player
                         && tile_types::can_build_room(&tile.tile_type, game_data)
                         && tile.trap.is_none()
                     {
-                         let cost = game_data.traps.get(trap_type).map(|t| t.cost).unwrap_or(0);
-                         total_cost += cost;
-                         tile_count += 1;
-                    }
-                }
-                InteractionMode::PlaceSpawner => {
-                     if tile.ownership == Ownership::Player
-                        && tile_types::can_build_room(&tile.tile_type, game_data)
-                    {
-                        let cost = game_data.tiles.get("monster_spawner").and_then(|t| t.cost).unwrap_or(50);
+                        let cost = game_data.traps.get(trap_type).map(|t| t.cost).unwrap_or(0);
                         total_cost += cost;
                         tile_count += 1;
                     }
                 }
-                 InteractionMode::Sell => {
+                InteractionMode::PlaceSpawner => {
+                    if tile.ownership == Ownership::Player
+                        && tile_types::can_build_room(&tile.tile_type, game_data)
+                    {
+                        let cost = game_data
+                            .tiles
+                            .get("monster_spawner")
+                            .and_then(|t| t.cost)
+                            .unwrap_or(50);
+                        total_cost += cost;
+                        tile_count += 1;
+                    }
+                }
+                InteractionMode::Sell => {
                     // Selling rooms gives partial refund
                     if let Some(room_id) = tile.room_id {
-                         if let Some(room) = state.room_manager.rooms.iter().find(|r| r.id == room_id) {
-                              let lookup_id = if room.room_type == "training_room" { "training_hall" } else { &room.room_type };
-                              let cost = get_room_cost(lookup_id, Some(game_data));
-                              total_cost -= cost / 2; // Negative cost = Gain
-                              tile_count += 1;
-                         }
+                        if let Some(room) =
+                            state.room_manager.rooms.iter().find(|r| r.id == room_id)
+                        {
+                            let lookup_id = if room.room_type == "training_room" {
+                                "training_hall"
+                            } else {
+                                &room.room_type
+                            };
+                            let cost = get_room_cost(lookup_id, Some(game_data));
+                            total_cost -= cost / 2; // Negative cost = Gain
+                            tile_count += 1;
+                        }
                     }
                     // Selling traps
                     if let Some(trap) = &tile.trap {
-                         let cost = game_data.traps.get(&trap.trap_type).map(|t| t.cost).unwrap_or(0);
-                         total_cost -= cost / 2;
-                         tile_count += 1;
+                        let cost = game_data
+                            .traps
+                            .get(&trap.trap_type)
+                            .map(|t| t.cost)
+                            .unwrap_or(0);
+                        total_cost -= cost / 2;
+                        tile_count += 1;
                     }
                 }
                 _ => {}
@@ -251,27 +305,27 @@ pub fn draw_drag_tooltip(
     // Determine Text and Color
     let (text, color) = if matches!(mode, InteractionMode::Sell) {
         let gain = (-total_cost).max(0);
-         if gain > 0 {
+        if gain > 0 {
             (format!("+{}g", gain), GREEN)
-         } else {
-             return;
-         }
+        } else {
+            return;
+        }
     } else {
-         if total_cost > 0 {
-             let affordable = state.player.gold >= total_cost;
-             let color = if affordable { GREEN } else { RED };
-             (format!("-{}g", total_cost), color)
-         } else {
-             if tile_count > 0 {
-                 // For non-cost actions like Dig, just show count
-                 match mode {
-                     InteractionMode::Dig => (format!("Dig {} tiles", tile_count), WHITE),
-                     _ => return,
-                 }
-             } else {
-                 return;
-             }
-         }
+        if total_cost > 0 {
+            let affordable = state.player.gold >= total_cost;
+            let color = if affordable { GREEN } else { RED };
+            (format!("-{}g", total_cost), color)
+        } else {
+            if tile_count > 0 {
+                // For non-cost actions like Dig, just show count
+                match mode {
+                    InteractionMode::Dig => (format!("Dig {} tiles", tile_count), WHITE),
+                    _ => return,
+                }
+            } else {
+                return;
+            }
+        }
     };
 
     // Draw Tooltip
@@ -287,13 +341,28 @@ pub fn draw_drag_tooltip(
     let box_h = dims.height + padding * 2.0;
 
     // Ensure it stays on screen
-    let box_x = if box_x + box_w > screen_width() { box_x - box_w - 40.0 } else { box_x };
-    let box_y = if box_y + box_h > screen_height() { box_y - box_h - 40.0 } else { box_y };
+    let box_x = if box_x + box_w > screen_width() {
+        box_x - box_w - 40.0
+    } else {
+        box_x
+    };
+    let box_y = if box_y + box_h > screen_height() {
+        box_y - box_h - 40.0
+    } else {
+        box_y
+    };
 
-    draw_rectangle(box_x, box_y, box_w, box_h, Color::new(0.0, 0.0, 0.0, 0.9));
-    draw_rectangle_lines(box_x, box_y, box_w, box_h, 1.0, color);
+    let surface = macroquad_toolkit::ui::SurfaceStyle::new(Color::new(0.0, 0.0, 0.0, 0.9))
+        .with_border(1.0, color);
+    macroquad_toolkit::ui::draw_surface(Rect::new(box_x, box_y, box_w, box_h), &surface);
 
     // Center text vertically
     let text_y_offset = (box_h - dims.height) / 2.0 + dims.height - 2.0;
-    draw_text(&text, box_x + padding, box_y + text_y_offset, font_size, color);
+    draw_text(
+        &text,
+        box_x + padding,
+        box_y + text_y_offset,
+        font_size,
+        color,
+    );
 }

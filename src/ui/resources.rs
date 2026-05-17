@@ -1,7 +1,7 @@
+use crate::sprite_variation::SpriteVariationCache;
 use macroquad::prelude::*;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use crate::sprite_variation::SpriteVariationCache;
 
 pub struct GraphicsCache {
     pub tile_textures: HashMap<String, Texture2D>,
@@ -37,7 +37,11 @@ impl GraphicsCache {
         let base_texture = self.monster_textures.get(creature_id)?;
 
         // Get or create varied texture (borrow RefCell mutably)
-        Some(self.variation_cache.borrow_mut().get_or_create(creature_id, visual_seed, base_texture))
+        Some(self.variation_cache.borrow_mut().get_or_create(
+            creature_id,
+            visual_seed,
+            base_texture,
+        ))
     }
 
     /// Get a varied texture for a hero, generating it if needed
@@ -52,7 +56,11 @@ impl GraphicsCache {
         let base_texture = self.hero_textures.get(hero_id)?;
 
         // Get or create varied texture (borrow RefCell mutably)
-        Some(self.variation_cache.borrow_mut().get_or_create(hero_id, visual_seed, base_texture))
+        Some(
+            self.variation_cache
+                .borrow_mut()
+                .get_or_create(hero_id, visual_seed, base_texture),
+        )
     }
 
     pub async fn load_all(game_data: Option<&crate::data::GameData>) -> Result<Self, String> {
@@ -60,18 +68,42 @@ impl GraphicsCache {
 
         // Load tile textures
         let tile_types = vec![
-            "solid_rock", "earth", "claimed_floor", "reinforced_wall",
-            "gold_vein", "gem_seam", "mana_crystal",
-            "lava", "water", "bridge",
-            "corrupted_floor", "ancient_rune_floor",
-            "dungeon_heart", "lair", "hatchery", "treasury", "workshop",
-            "training_room", "library", "prison", "guard_post", "ritual_circle", "monster_spawner",
+            "solid_rock",
+            "earth",
+            "claimed_floor",
+            "reinforced_wall",
+            "gold_vein",
+            "gem_seam",
+            "mana_crystal",
+            "lava",
+            "water",
+            "bridge",
+            "corrupted_floor",
+            "ancient_rune_floor",
+            "dungeon_heart",
+            "lair",
+            "hatchery",
+            "treasury",
+            "workshop",
+            "training_room",
+            "library",
+            "prison",
+            "guard_post",
+            "ritual_circle",
+            "monster_spawner",
             "spike_trap",
         ];
-        
+
         let hero_building_tiles = vec![
-            "town_hall", "barracks", "archery_range", "church", "mage_tower", 
-            "stable", "armory", "hero_wall", "hero_gate"
+            "town_hall",
+            "barracks",
+            "archery_range",
+            "church",
+            "mage_tower",
+            "stable",
+            "armory",
+            "hero_wall",
+            "hero_gate",
         ];
 
         for tile_type in tile_types {
@@ -98,15 +130,22 @@ impl GraphicsCache {
                     cache.tile_textures.insert(tile_type.to_string(), tex);
                 }
                 Err(e) => {
-                     println!("Failed to load hero building texture {}: {}", path, e);
+                    println!("Failed to load hero building texture {}: {}", path, e);
                 }
             }
         }
 
         // Load unit textures (creatures)
         let creatures = vec![
-            "imp", "goblin", "orc", "warlock", "troll", "skeleton", "demon_spawn",
-            "spider", "lizard"  // Wild/neutral monsters
+            "imp",
+            "goblin",
+            "orc",
+            "warlock",
+            "troll",
+            "skeleton",
+            "demon_spawn",
+            "spider",
+            "lizard", // Wild/neutral monsters
         ];
         for creature in creatures {
             let path = format!("assets/sprites/monsters/{}.png", creature);
@@ -118,12 +157,23 @@ impl GraphicsCache {
                 Err(e) => println!("Failed to load texture {}: {}", path, e),
             }
         }
-        
+
         // Load hero textures
         let heroes = vec![
-            "peasant_militia", "scout", "acolyte", "knight", "archer", "battle_cleric", 
-            "rogue", "paladin", "wizard", "inquisitor", "knight_commander", 
-            "high_priest", "archmage", "champion_of_light"
+            "peasant_militia",
+            "scout",
+            "acolyte",
+            "knight",
+            "archer",
+            "battle_cleric",
+            "rogue",
+            "paladin",
+            "wizard",
+            "inquisitor",
+            "knight_commander",
+            "high_priest",
+            "archmage",
+            "champion_of_light",
         ];
         for hero in heroes {
             let path = format!("assets/sprites/heroes/{}.png", hero);
@@ -140,7 +190,7 @@ impl GraphicsCache {
         let ui_textures = vec!["main_menu_bg"];
         for tex_name in ui_textures {
             let path = format!("assets/ui/{}.png", tex_name);
-             match load_texture(&path).await {
+            match load_texture(&path).await {
                 Ok(tex) => {
                     tex.set_filter(FilterMode::Linear); // UI usually looks better with Linear
                     cache.ui_textures.insert(tex_name.to_string(), tex);
@@ -151,8 +201,12 @@ impl GraphicsCache {
 
         // Load Spell Icons dynamically from GameData
         // Only load icons that are known to exist to avoid panics from missing files
-        let known_spell_icons = ["icons/spells/heal.png", "icons/spells/lightning.png",
-                                  "icons/spells/speed.png", "icons/spells/summon.png"];
+        let known_spell_icons = [
+            "icons/spells/heal.png",
+            "icons/spells/lightning.png",
+            "icons/spells/speed.png",
+            "icons/spells/summon.png",
+        ];
         if let Some(data) = game_data {
             for spell in data.spells.values() {
                 let icon_path = &spell.visual.icon;
@@ -177,7 +231,9 @@ impl GraphicsCache {
             match load_texture(&path).await {
                 Ok(tex) => {
                     tex.set_filter(FilterMode::Nearest);
-                    cache.projectile_textures.insert(projectile.to_string(), tex);
+                    cache
+                        .projectile_textures
+                        .insert(projectile.to_string(), tex);
                 }
                 Err(e) => println!("Failed to load projectile texture {}: {}", path, e),
             }

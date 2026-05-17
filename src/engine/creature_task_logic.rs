@@ -10,7 +10,7 @@ pub fn try_satisfy_critical_need(
     creature_pos: TilePos,
     room_manager: &RoomManager,
     monster_data: &MonsterData,
-    game_data: &GameData
+    game_data: &GameData,
 ) -> Option<Task> {
     let (need_name, need_value) = creature.get_most_urgent_need()?;
 
@@ -22,7 +22,8 @@ pub fn try_satisfy_critical_need(
 
     for room_type in &need_data.satisfied_by {
         use crate::engine::room_validator;
-        let (room_id, _) = room_validator::find_nearest_room(&room_manager.rooms, room_type, creature_pos, 0.0)?;
+        let (room_id, _) =
+            room_validator::find_nearest_room(&room_manager.rooms, room_type, creature_pos, 0.0)?;
 
         return match need_name.as_str() {
             "sleep" => Some(Task::Sleep(room_id)),
@@ -113,7 +114,7 @@ mod tests {
         };
         needs.insert("sleep".to_string(), sleep_need);
 
-        let ai = MonsterAIData {
+        let _ai = MonsterAIData {
             base_mood: 70.0,
             anger_threshold: 30.0,
             desertion_threshold: 20.0,
@@ -158,94 +159,14 @@ mod tests {
         let monster_data = create_test_monster_data();
         let game_data = GameData::default();
         let mut creature = CreatureState::new("test_creature".to_string(), 1, 100.0, 0.0, 0);
-
-        // Low sleep need = low desirability for sleep task
-        creature.set_need("sleep".to_string(), 90.0);
         let task = Task::Sleep(0);
-        // Base is 1.0 (default config) * 1.0 (preference) * (1 + 0.9) = 1.9 ???
-        // Need to check default config logic. 
-        // With default GameData, task_desirability base is 1.0 ?
-        // Let's assume the test logic is roughly correct or similar to before.
-        // Actually I should verify the test values but "test_task_desirability" was copied from existing code.
-        
-        let desirability = calculate_task_desirability(&task, &creature, &monster_data, &game_data);
-        // assert!(desirability < 1.5); // 0.1 need -> 1 + 0.1 = 1.1?
-        // Wait, Need: 90.0 (high need value means LOW satisfaction).
-        // 100 - 90 = 10 satisfaction.
-        // Formula: 1.0 * (1.0 + 10/100) = 1.1. 1.1 < 1.5. Correct.
 
-        // High sleep need = high desirability for sleep task
-        creature.set_need("sleep".to_string(), 10.0); // 10.0 need value? No, 10.0 is LOW need value?
-        // Wait, "need" usually means "how much I need it" (0=satisfied, 100=starving).
-        // BUT `get_need` implementation: check usage.
-        // lines 902-904 in creature_ai.rs: increase = rate * dt. set_need(current + increase).
-        // So 100 = starving/critical. 0 = satisfied.
-        
-        // Code: `let sleep_need = 100.0 - creature.get_need("sleep");`
-        // If need is 90 (starving), sleep_need (satisfaction) is 10.
-        // multiplier = 1 + 0.1 = 1.1.
-        
-        // If need is 10 (satisfied), sleep_need (satisfaction) is 90.
-        // multiplier = 1 + 0.9 = 1.9.
-        
-        // Wait, that means LOW need (10) gives HIGH multiplier (1.9)?
-        // That means specialized task logic says "Sleep task is DESIRABLE when I am well rested?"
-        // That contradicts logic.
-        // Let's check `creature_ai.rs` logic again.
-        // `match task { Task::Sleep(_) => { let sleep_need = 100.0 - creature.get_need("sleep"); desirability *= 1.0 + (sleep_need / 100.0); } }`
-        
-        // Use `view_file` again to double check context in line 857.
-        // Step 626 view:
-        // 857:            let sleep_need = 100.0 - creature.get_need("sleep");
-        // 858:            desirability *= 1.0 + (sleep_need / 100.0);
-        
-        // If `get_need("sleep")` returns 90 (very sleepy), then `sleep_need` = 10.
-        // Desirability *= 1.1.
-        // If `get_need("sleep")` returns 10 (not sleepy), `sleep_need` = 90.
-        // Desirability *= 1.9.
-        
-        // This logic seems reversed for "Task: Sleep". Why would I want to sleep more if I'm not sleepy?
-        // Maybe `calculate_task_desirability` assumes `task` is "Sleeping" (already doing it) and calculates "how much I want to *continue*"?
-        // Or maybe my understanding of `get_need` is inverted (100 = satisfied)?
-        // `try_satisfy_critical_need`: `if need_value >= critical_threshold { return None; }` (line 697).
-        // If critical_threshold is 80, and I have 90. 90 >= 80 -> None?
-        // That means 90 is GOOD (satisfied) if it returns None?
-        // No, `try_satisfy_critical_need` tries to find a task to FIX the need.
-        // If I am fully satisfied (90?), do I need to fix it? No.
-        // So 90 is good. 0 is bad.
-        // Check `update_needs` (line 900+): `current + increase`.
-        // Needs usually increase over time (Hunger increases).
-        // So 100 = very hungry.
-        // Then `try_satisfy_critical_need` logic: `if need_value >= threshold`.
-        // If 90 >= 80 (critical). Then return None?
-        // That means if I am very hungry (90), I DO NOT look for food?
-        // That seems wrong.
-        // Let's re-read line 697 carefully.
-        // `if need_value >= game_data.config.creature_ai.need_critical_threshold { return None; }`
-        // Usually critical threshold is low for "decreasing resource" (Health) or high for "increasing penalty" (Hunger).
-        // If Hunger increases, then Critical Threshold should be HIGH (e.g. 80).
-        // If I am at 90 (very hungry), 90 >= 80 -> True. Return None.
-        // So I don't eat when very hungry?
-        // This implies `need` is "Satisfaction" (decreases over time).
-        // Let's check `update_needs` again.
-        // `let increase = rate * dt; creature.set_need(..., current + increase);`
-        // It INCREASES.
-        // Maybe `rate` is negative? `decay_per_minute` in JSON is 1.0 (positive).
-        // Maybe `Satisfied` is 100 and it decays?
-        // If it decays, we subtract.
-        // `creature_ai.rs` line 903: `let increase = rate * dt;`
-        // If rate is from JSON `decay_per_minute`, it should be negative if it's decaying.
-        // Or the code subtracts?
-        // I need to check `update_needs` implementation.
-        
-        // I'll assume the code in `creature_ai.rs` IS CORRECT regarding logic direction, even if I don't fully grasp the variable naming conventions right now.
-        // I will copy it exactly as is.
-        // `calculate_task_desirability` logic in `creature_ai.rs` IS what I should use.
-        
+        // High satisfaction means a sleep task is not urgent.
+        creature.set_need("sleep".to_string(), 90.0);
         let desirability = calculate_task_desirability(&task, &creature, &monster_data, &game_data);
         assert!(desirability < 1.5);
 
-        // High sleep need = high desirability for sleep task
+        // Low satisfaction makes sleep more desirable.
         creature.set_need("sleep".to_string(), 10.0);
         let desirability = calculate_task_desirability(&task, &creature, &monster_data, &game_data);
         assert!(desirability > 1.5);

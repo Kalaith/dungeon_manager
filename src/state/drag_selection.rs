@@ -60,5 +60,4 @@ impl DragSelection {
             _ => None,
         }
     }
-
 }

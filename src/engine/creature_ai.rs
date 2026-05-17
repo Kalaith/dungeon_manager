@@ -23,7 +23,8 @@ pub fn update_creatures(
     defend_marker: Option<TilePos>,
     get_task_target: impl Fn(&Task, &RoomManager, &EntityManager) -> Option<TilePos>,
 ) {
-    let creature_ids: Vec<EntityId> = entities.creatures()
+    let creature_ids: Vec<EntityId> = entities
+        .creatures()
         .filter(|(_, c)| c.creature_id != "imp") // Imps have their own AI (digging)
         .map(|(id, _)| id)
         .collect();
@@ -69,11 +70,18 @@ fn update_single_creature(
 
         let needs_new_task = creature.current_path.is_none() && creature.current_task.is_none();
 
-        (entity.pos, needs_new_task, creature.current_task.clone(), creature.creature_id.clone())
+        (
+            entity.pos,
+            needs_new_task,
+            creature.current_task.clone(),
+            creature.creature_id.clone(),
+        )
     };
 
     // Check if this is a wild/neutral creature
-    let is_wild = game_data.monsters.get(&creature_type)
+    let is_wild = game_data
+        .monsters
+        .get(&creature_type)
         .map(|m| m.faction != "dungeon")
         .unwrap_or(false);
 
@@ -91,13 +99,8 @@ fn update_single_creature(
 
     // COMBAT INTERRUPT: If not already attacking, check for nearby enemies
     // This ensures creatures always respond to threats regardless of current task
-    let current_task = check_combat_interrupt(
-        creature_id,
-        current_task,
-        entities,
-        dungeon,
-        game_data,
-    );
+    let current_task =
+        check_combat_interrupt(creature_id, current_task, entities, dungeon, game_data);
 
     // Special handling for Attack tasks - combat engagement logic
     if let Some(Task::Attack(target_id)) = &current_task {
@@ -130,8 +133,12 @@ fn update_single_creature(
                                 } else {
                                     false // No path, will be calculated below
                                 }
-                            } else { false }
-                        } else { false }
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        }
                     };
 
                     if path_is_stale {
@@ -177,7 +184,16 @@ fn update_single_creature(
                 }
             }
         } else {
-            decide_and_assign_task(creature_id, current_pos, entities, dungeon, room_manager, game_data, attack_marker, defend_marker);
+            decide_and_assign_task(
+                creature_id,
+                current_pos,
+                entities,
+                dungeon,
+                room_manager,
+                game_data,
+                attack_marker,
+                defend_marker,
+            );
         }
     }
 
@@ -198,7 +214,10 @@ fn update_single_creature(
         let task_target = {
             let entity = entities.get(creature_id).unwrap();
             let creature = entity.as_creature().unwrap();
-            creature.current_task.as_ref().and_then(|task| get_task_target(task, room_manager, entities))
+            creature
+                .current_task
+                .as_ref()
+                .and_then(|task| get_task_target(task, room_manager, entities))
         };
 
         pathfind_to_target(
@@ -316,7 +335,13 @@ fn handle_combat_movement(
     }
 
     // Check if in attack range
-    let in_range = combat::in_combat_range(current_pos, target_pos, &attack_type, &dungeon.grid, game_data);
+    let in_range = combat::in_combat_range(
+        current_pos,
+        target_pos,
+        &attack_type,
+        &dungeon.grid,
+        game_data,
+    );
 
     match attack_type.as_str() {
         "melee" => {
@@ -337,7 +362,9 @@ fn handle_combat_movement(
         "ranged" | "magic" => {
             if distance <= 1 {
                 // Too close! Try to kite
-                if let Some(kite_pos) = find_kite_position(current_pos, target_pos, dungeon, game_data) {
+                if let Some(kite_pos) =
+                    find_kite_position(current_pos, target_pos, dungeon, game_data)
+                {
                     CombatMovementResult::Kite(kite_pos)
                 } else {
                     // Can't kite, just fight from here
@@ -437,8 +464,6 @@ fn find_kite_position(
     None
 }
 
-
-
 // process_creature_movement removed in favor of shared movement::process_entity_movement
 
 /// Decide and assign a new task to a creature
@@ -467,7 +492,17 @@ fn decide_and_assign_task(
         // For now, we'll pass room_manager directly since that's what decide_task needs
         // Create a temporary GameState-like access for decide_task
         // For now, we'll pass room_manager directly since that's what decide_task needs
-        decide_task_from_rooms(creature, entity, entities, dungeon, current_pos, room_manager, game_data, attack_marker, defend_marker)
+        decide_task_from_rooms(
+            creature,
+            entity,
+            entities,
+            dungeon,
+            current_pos,
+            room_manager,
+            game_data,
+            attack_marker,
+            defend_marker,
+        )
     };
 
     // Apply the new task
@@ -507,7 +542,7 @@ fn decide_task_from_rooms(
 
         // If not at marker, move there
         if dist > marker_dist_threshold {
-             return Some(Task::MoveTo(marker));
+            return Some(Task::MoveTo(marker));
         }
     }
 
@@ -515,14 +550,19 @@ fn decide_task_from_rooms(
     if let Some(marker) = defend_marker {
         let dist = (creature_pos.x - marker.x).abs() + (creature_pos.y - marker.y).abs();
         if dist > marker_dist_threshold {
-             return Some(Task::MoveTo(marker));
+            return Some(Task::MoveTo(marker));
         }
     }
 
     // Priority 2: Combat - Look for enemies
     // Only attack if not fleeing
     if !creature.is_deserting {
-        let targets = crate::engine::combat::find_combat_targets(entity, entities.entities(), dungeon, game_data);
+        let targets = crate::engine::combat::find_combat_targets(
+            entity,
+            entities.entities(),
+            dungeon,
+            game_data,
+        );
         if let Some(target_id) = targets.first() {
             // Found a target!
             return Some(Task::Attack(*target_id));
@@ -537,13 +577,21 @@ fn decide_task_from_rooms(
     // If carrying gold, prioritize depositing
     if creature.gold_carried > game_data.config.creature_ai.gold_carrying_threshold {
         use crate::engine::room_validator;
-        if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, "treasury", creature_pos, 0.0) {
+        if let Some((room_id, _)) =
+            room_validator::find_nearest_room(&room_manager.rooms, "treasury", creature_pos, 0.0)
+        {
             return Some(Task::DepositGold(room_id));
         }
     }
 
     // Check most urgent need
-    if let Some(task) = crate::engine::creature_task_logic::try_satisfy_critical_need(creature, creature_pos, room_manager, monster_data, game_data) {
+    if let Some(task) = crate::engine::creature_task_logic::try_satisfy_critical_need(
+        creature,
+        creature_pos,
+        room_manager,
+        monster_data,
+        game_data,
+    ) {
         return Some(task);
     }
 
@@ -552,12 +600,20 @@ fn decide_task_from_rooms(
 
     for (room_type, desire) in &monster_data.ai.room_desires {
         use crate::engine::room_validator;
-        if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, room_type, creature_pos, 0.0) {
+        if let Some((room_id, _)) =
+            room_validator::find_nearest_room(&room_manager.rooms, room_type, creature_pos, 0.0)
+        {
             // Find valid slot
             if let Some(room) = room_manager.rooms.iter().find(|r| r.id == room_id) {
                 if let Some(slot_pos) = find_available_work_slot(room, entities) {
                     let task = Task::Work(room_id, slot_pos);
-                    let desirability = crate::engine::creature_task_logic::calculate_task_desirability(&task, creature, monster_data, game_data) * desire;
+                    let desirability =
+                        crate::engine::creature_task_logic::calculate_task_desirability(
+                            &task,
+                            creature,
+                            monster_data,
+                            game_data,
+                        ) * desire;
                     candidate_tasks.push((task, desirability));
                 }
             }
@@ -565,20 +621,39 @@ fn decide_task_from_rooms(
     }
 
     // Add training if available
-    if creature.mood > game_data.config.creature_ai.training_mood_threshold && creature.level < game_data.config.combat.max_creature_level {
+    if creature.mood > game_data.config.creature_ai.training_mood_threshold
+        && creature.level < game_data.config.combat.max_creature_level
+    {
         use crate::engine::room_validator;
-        if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, "training_room", creature_pos, 0.0) {
+        if let Some((room_id, _)) = room_validator::find_nearest_room(
+            &room_manager.rooms,
+            "training_room",
+            creature_pos,
+            0.0,
+        ) {
             let task = Task::Train(room_id);
-            let desirability = crate::engine::creature_task_logic::calculate_task_desirability(&task, creature, monster_data, game_data);
+            let desirability = crate::engine::creature_task_logic::calculate_task_desirability(
+                &task,
+                creature,
+                monster_data,
+                game_data,
+            );
             candidate_tasks.push((task, desirability));
         }
     }
 
     // Add research
     use crate::engine::room_validator;
-    if let Some((room_id, _)) = room_validator::find_nearest_room(&room_manager.rooms, "library", creature_pos, 0.0) {
+    if let Some((room_id, _)) =
+        room_validator::find_nearest_room(&room_manager.rooms, "library", creature_pos, 0.0)
+    {
         let task = Task::Research(room_id);
-        let desirability = crate::engine::creature_task_logic::calculate_task_desirability(&task, creature, monster_data, game_data) * game_data.config.creature_ai.research_desirability;
+        let desirability = crate::engine::creature_task_logic::calculate_task_desirability(
+            &task,
+            creature,
+            monster_data,
+            game_data,
+        ) * game_data.config.creature_ai.research_desirability;
         candidate_tasks.push((task, desirability));
     }
 
@@ -650,12 +725,12 @@ fn pathfind_to_target(
 
     let mut path_result = find_path(start, goal, &pf_grid, Heuristic::Manhattan, false);
 
-    // Fallback: If path to goal failed and goal is unwalkable (e.g. wall/building), 
+    // Fallback: If path to goal failed and goal is unwalkable (e.g. wall/building),
     // try to path to an adjacent walkable tile.
     if path_result.is_none() && !pf_grid.is_walkable(goal) {
         let directions = [(0, 1), (0, -1), (1, 0), (-1, 0)];
         let mut neighbors = Vec::new();
-        
+
         for (dx, dy) in directions.iter() {
             let n = Pos::new(target.x + dx, target.y + dy);
             // Check bounds
@@ -693,9 +768,12 @@ fn pathfind_to_target(
 
 /// Try to satisfy a critical need by finding an appropriate room
 
-
 /// Pick a random walkable tile for wandering
-fn pick_wander_position(dungeon: &Dungeon, current_pos: TilePos, game_data: &GameData) -> Option<TilePos> {
+fn pick_wander_position(
+    dungeon: &Dungeon,
+    current_pos: TilePos,
+    game_data: &GameData,
+) -> Option<TilePos> {
     let wander_radius = game_data.config.creature_ai.wander_radius;
     let wander_attempts = game_data.config.creature_ai.wander_attempts;
     let mut attempts = 0;
@@ -723,7 +801,7 @@ fn find_available_work_slot(
 ) -> Option<TilePos> {
     // Collect occupied slots
     let mut occupied_slots = std::collections::HashSet::new();
-    
+
     // Check all creatures for Work tasks targeting this room
     for (_, creature) in entities.creatures() {
         if let Some(Task::Work(target_room_id, target_pos)) = &creature.current_task {
@@ -732,7 +810,7 @@ fn find_available_work_slot(
             }
         }
     }
-    
+
     // Return first slot that isn't occupied
     // We prefer slots closer to center? Or random? Or just first available.
     // room.work_slots are likely sorted or deterministic.
@@ -741,7 +819,7 @@ fn find_available_work_slot(
             return Some(*slot);
         }
     }
-    
+
     None
 }
 
@@ -758,7 +836,11 @@ pub fn update_needs(creature: &mut CreatureState, dt: f32, monster_data: &Monste
 }
 
 /// Calculate creature mood based on needs satisfaction
-pub fn calculate_mood(creature: &CreatureState, monster_data: &MonsterData, game_data: &GameData) -> f32 {
+pub fn calculate_mood(
+    creature: &CreatureState,
+    monster_data: &MonsterData,
+    game_data: &GameData,
+) -> f32 {
     let base_mood = monster_data.ai.base_mood as f32;
     let mood_penalties = &game_data.config.creature_ai.mood_penalties;
 
@@ -773,7 +855,8 @@ pub fn calculate_mood(creature: &CreatureState, monster_data: &MonsterData, game
 
         // Needs contribute ±30 points to mood
         // 100% satisfied = +30, 0% satisfied = -30
-        let need_modifier = (average_satisfaction - 50.0) * game_data.config.creature_ai.task_desirability.need_modifier;
+        let need_modifier = (average_satisfaction - 50.0)
+            * game_data.config.creature_ai.task_desirability.need_modifier;
         mood += need_modifier;
     }
 
@@ -807,31 +890,19 @@ pub fn update_mood(creature: &mut CreatureState, monster_data: &MonsterData, gam
 
 /// Check if creature should desert the dungeon
 
-
 /// Find the best room of a specific type for a creature
-
 
 /// Calculate desirability of a task for a creature
 
-
 /// Satisfy a need when creature is in appropriate room
-pub fn satisfy_need(
-    creature: &mut CreatureState,
-    need_name: &str,
-    rate: f32,
-    dt: f32,
-) {
+pub fn satisfy_need(creature: &mut CreatureState, need_name: &str, rate: f32, dt: f32) {
     let current = creature.get_need(need_name);
     let increase = rate * dt;
     creature.set_need(need_name.to_string(), current + increase);
 }
 
 /// Handle slapping a creature (discipline)
-pub fn apply_slap(
-    creature: &mut CreatureState,
-    monster_data: &MonsterData,
-    game_time: f32,
-) {
+pub fn apply_slap(creature: &mut CreatureState, monster_data: &MonsterData, game_time: f32) {
     // Prevent slap spamming (minimum 5 second cooldown)
     if game_time - creature.last_slapped < 5.0 {
         return;
@@ -866,5 +937,3 @@ pub fn calculate_work_efficiency(creature: &CreatureState, _monster_data: &Monst
 
     base_efficiency * mood_multiplier * health_multiplier
 }
-
-

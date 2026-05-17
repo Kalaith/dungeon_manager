@@ -6,19 +6,23 @@ use crate::engine::combat::{resolve_combat_tick, update_status_effects};
 use crate::engine::tile_grid;
 use crate::state::entities::{EntityId, EntityManager, EntityType};
 use crate::state::player_state::PlayerState;
-use crate::state::tile_state::{Ownership, TilePos};
-use crate::state::room_manager::RoomManager;
 use crate::state::projectiles::ProjectileManager;
-use std::collections::HashSet;
+use crate::state::room_manager::RoomManager;
+use crate::state::tile_state::{Ownership, TilePos};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 /// Extract attack type from an entity type for combat calculations
 fn get_entity_attack_type(entity_type: &EntityType, game_data: &GameData) -> String {
     match entity_type {
-        EntityType::Creature(state) => game_data.monsters.get(&state.creature_id)
+        EntityType::Creature(state) => game_data
+            .monsters
+            .get(&state.creature_id)
             .map(|d| d.combat.attack_type.clone())
             .unwrap_or_else(|| "melee".to_string()),
-        EntityType::Hero(state) => game_data.heroes.get(&state.hero_id)
+        EntityType::Hero(state) => game_data
+            .heroes
+            .get(&state.hero_id)
             .map(|d| d.combat.attack_type.clone())
             .unwrap_or_else(|| "melee".to_string()),
         EntityType::Structure(_) => "none".to_string(),
@@ -28,10 +32,10 @@ fn get_entity_attack_type(entity_type: &EntityType, game_data: &GameData) -> Str
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MapType {
-    Standard,   // Balanced resources and hazards
-    Rich,       // Lots of gold and gems, few hazards
-    Hazardous,  // Many water/lava pools, less resources
-    Test,       // Fixed seed for testing
+    Standard,     // Balanced resources and hazards
+    Rich,         // Lots of gold and gems, few hazards
+    Hazardous,    // Many water/lava pools, less resources
+    Test,         // Fixed seed for testing
     File(String), // Load from specific JSON file
 }
 
@@ -71,7 +75,7 @@ pub struct GameState {
 
     /// In-game cheat menu state
     pub cheat_menu: crate::ui::cheat_menu::CheatMenuState,
-    
+
     /// Cheat toggles
     pub cheat_fog_enabled: bool,
     pub cheat_immortal_heart: bool,
@@ -82,26 +86,40 @@ impl GameState {
         Self::new_with_map_type(width, height, game_data, MapType::Standard)
     }
 
-    pub fn new_with_map_type(width: usize, height: usize, game_data: &GameData, map_type: MapType) -> Self {
+    pub fn new_with_map_type(
+        width: usize,
+        height: usize,
+        game_data: &GameData,
+        map_type: MapType,
+    ) -> Self {
         let mut entities = EntityManager::new();
         let mut dungeon;
-        
+
         match &map_type {
             MapType::File(path) => {
                 println!("Loading map from: {}", path);
                 dungeon = crate::state::map_loader::load_map(path, game_data, &mut entities)
                     .unwrap_or_else(|e| {
-                        eprintln!("Failed to load map: {}. Falling back to standard generation.", e);
-                         crate::state::dungeon::Dungeon::new(width, height, game_data, MapType::Standard)
+                        eprintln!(
+                            "Failed to load map: {}. Falling back to standard generation.",
+                            e
+                        );
+                        crate::state::dungeon::Dungeon::new(
+                            width,
+                            height,
+                            game_data,
+                            MapType::Standard,
+                        )
                     });
-            },
+            }
             _ => {
-                dungeon = crate::state::dungeon::Dungeon::new(width, height, game_data, map_type.clone());
+                dungeon =
+                    crate::state::dungeon::Dungeon::new(width, height, game_data, map_type.clone());
             }
         }
 
         let mut room_manager = RoomManager::new();
-        
+
         // Detect and register starting rooms (either generated or loaded)
         room_manager.detect_and_update_rooms(&mut dungeon, game_data);
 
@@ -114,11 +132,15 @@ impl GameState {
                 if let Some(tile) = tile_grid::get_tile(&dungeon.grid, pos) {
                     if tile.tile_type == "monster_spawner" {
                         // Randomly pick Spider or Lizard
-                        let monster_id = if macroquad::rand::gen_range(0.0f32, 1.0) < 0.5 { "spider" } else { "lizard" };
+                        let monster_id = if macroquad::rand::gen_range(0.0f32, 1.0) < 0.5 {
+                            "spider"
+                        } else {
+                            "lizard"
+                        };
                         spawners.push(crate::engine::spawner_logic::MonsterSpawner::new(
                             pos,
                             monster_id.to_string(),
-                            game_data.config.spawning.max_monsters_per_spawner
+                            game_data.config.spawning.max_monsters_per_spawner,
                         ));
                     }
                 }
@@ -130,14 +152,17 @@ impl GameState {
             room_manager,
             time_elapsed: 0.0,
             tick_accumulator: 0.0,
-            camera: crate::state::camera_state::CameraState::new(width as f32, height as f32),
+            camera: crate::state::camera_state::CameraState::new(
+                width as f32 / 2.0,
+                height as f32 / 2.0,
+            ),
             pending_trap_builds: HashSet::new(),
 
             entities,
             player: PlayerState::new(game_data),
             next_hero_spawn_time: 0.0,
             next_creature_spawn_time: 0.0,
-            pay_day_timer: 0.0, 
+            pay_day_timer: 0.0,
             spawners,
             paused: false,
             hero_base: crate::state::hero_base::HeroBase::new(game_data),
@@ -157,11 +182,13 @@ impl GameState {
         state.detect_and_update_rooms(game_data);
 
         // Spawn starting imps only if none exist (loaded map might have them)
-        let imp_count = state.entities.all()
+        let imp_count = state
+            .entities
+            .all()
             .filter_map(|e| e.as_creature())
             .filter(|c| c.creature_id == "imp")
             .count();
-            
+
         if imp_count == 0 {
             state.spawn_starting_imps(game_data, game_data.config.dungeon.initial_imp_count);
         }
@@ -174,37 +201,37 @@ impl GameState {
         self.tick_accumulator += dt;
         self.camera.update(dt); // Update smooth camera zoom
         self.notifications.update(dt); // Update notification display timers
-        
+
         // Update attack projectiles and resolve impacts
         let impacts = self.projectiles.update(dt);
         for impact in impacts {
-             // Resolve deferred combat impact
-             crate::engine::combat::apply_projectile_impact(
-                 &impact, 
-                 &mut self.entities, 
-                 game_data,
-                 self.time_elapsed
-             );
+            // Resolve deferred combat impact
+            crate::engine::combat::apply_projectile_impact(
+                &impact,
+                &mut self.entities,
+                game_data,
+                self.time_elapsed,
+            );
         }
 
         // Smooth movement interpolation
         for entity in self.entities.all_mut() {
-             let target_x = entity.pos.x as f32;
-             let target_z = entity.pos.y as f32;
+            let target_x = entity.pos.x as f32;
+            let target_z = entity.pos.y as f32;
 
-             let dx = target_x - entity.visual_pos.0;
-             let dz = target_z - entity.visual_pos.1;
+            let dx = target_x - entity.visual_pos.0;
+            let dz = target_z - entity.visual_pos.1;
 
-             // Simple lerp
-             let speed = crate::config::MOVEMENT_LERP_SPEED * dt;
-             entity.visual_pos.0 += dx * speed;
-             entity.visual_pos.1 += dz * speed;
-             
-             // Snap if close
-             if dx.abs() < 0.01 && dz.abs() < 0.01 {
-                  entity.visual_pos.0 = target_x;
-                  entity.visual_pos.1 = target_z;
-             }
+            // Simple lerp
+            let speed = crate::config::MOVEMENT_LERP_SPEED * dt;
+            entity.visual_pos.0 += dx * speed;
+            entity.visual_pos.1 += dz * speed;
+
+            // Snap if close
+            if dx.abs() < 0.01 && dz.abs() < 0.01 {
+                entity.visual_pos.0 = target_x;
+                entity.visual_pos.1 = target_z;
+            }
         }
 
         // Fixed timestep simulation (10 ticks per second)
@@ -233,7 +260,8 @@ impl GameState {
         self.update_creature_ai_and_movement(game_data, dt);
 
         // Execute creature tasks (Work, Eat, Sleep, etc.)
-        let creature_ids: Vec<crate::state::entities::EntityId> = self.entities.creatures().map(|(id, _)| id).collect();
+        let creature_ids: Vec<crate::state::entities::EntityId> =
+            self.entities.creatures().map(|(id, _)| id).collect();
         for id in creature_ids {
             self.perform_creature_task(id, game_data, dt);
         }
@@ -247,15 +275,17 @@ impl GameState {
             &self.dungeon.grid,
             &mut self.entities,
             game_data,
-            dt
+            dt,
         );
 
         // Creature spawning
         self.next_creature_spawn_time -= dt;
         if self.next_creature_spawn_time <= 0.0 {
             self.spawn_random_creature(game_data);
-            let spawn_range = game_data.config.timing.creature_spawn_max_interval - game_data.config.timing.creature_spawn_min_interval;
-            self.next_creature_spawn_time = game_data.config.timing.creature_spawn_min_interval + macroquad::rand::gen_range(0.0f32, 1.0) * spawn_range;
+            let spawn_range = game_data.config.timing.creature_spawn_max_interval
+                - game_data.config.timing.creature_spawn_min_interval;
+            self.next_creature_spawn_time = game_data.config.timing.creature_spawn_min_interval
+                + macroquad::rand::gen_range(0.0f32, 1.0) * spawn_range;
         }
 
         // Pay Day Logic
@@ -269,7 +299,7 @@ impl GameState {
         let hero_entities: Vec<EntityId> = self.entities.heroes().map(|(id, _)| id).collect();
 
         if self.hero_base.enabled {
-             crate::engine::hero_spawner::update_hero_spawning(self, game_data, dt);
+            crate::engine::hero_spawner::update_hero_spawning(self, game_data, dt);
         }
 
         // Dungeon Heart Attack Logic
@@ -281,18 +311,20 @@ impl GameState {
             // Check for heroes in range with DestroyHeart goal
             for entity in self.entities.all() {
                 if let Some(hero) = entity.as_hero() {
-                    if matches!(hero.current_goal, crate::state::entities::HeroGoal::DestroyHeart) {
+                    if matches!(
+                        hero.current_goal,
+                        crate::state::entities::HeroGoal::DestroyHeart
+                    ) {
                         // Get the hero's attack type and stats
                         let hero_data = game_data.heroes.get(&hero.hero_id);
                         let attack_type = hero_data
                             .map(|d| d.combat.attack_type.clone())
                             .unwrap_or_else(|| "melee".to_string());
-                        let attack_speed = hero_data
-                            .map(|d| d.combat.attack_speed)
-                            .unwrap_or(1.0);
+                        let attack_speed = hero_data.map(|d| d.combat.attack_speed).unwrap_or(1.0);
 
                         // Calculate Manhattan distance for range check
-                        let manhattan_dist = (entity.pos.x - target_pos.x).abs() + (entity.pos.y - target_pos.y).abs();
+                        let manhattan_dist = (entity.pos.x - target_pos.x).abs()
+                            + (entity.pos.y - target_pos.y).abs();
 
                         // Determine attack range based on attack type
                         let attack_range = match attack_type.as_str() {
@@ -309,7 +341,10 @@ impl GameState {
                                 // Calculate damage based on hero stats
                                 let base_damage = hero_data
                                     .map(|d| {
-                                        let (min, max) = (d.combat.damage_range[0] as f32, d.combat.damage_range[1] as f32);
+                                        let (min, max) = (
+                                            d.combat.damage_range[0] as f32,
+                                            d.combat.damage_range[1] as f32,
+                                        );
                                         macroquad::rand::gen_range(min, max)
                                     })
                                     .unwrap_or(5.0);
@@ -326,15 +361,26 @@ impl GameState {
 
             // Spawn projectiles for each attacker that landed an attack
             for (attacker_id, visual_pos, attack_type) in attackers {
-                self.projectiles.spawn_at_position(visual_pos, target_pos, &attack_type, attacker_id, 0.0);
+                self.projectiles.spawn_at_position(
+                    visual_pos,
+                    target_pos,
+                    &attack_type,
+                    attacker_id,
+                    0.0,
+                );
             }
 
             if total_damage > 0.0 && !self.cheat_immortal_heart {
                 self.dungeon_heart_health -= total_damage;
-                eprintln!("Heart taking damage! Health: {:.1} -> {:.1}", self.dungeon_heart_health + total_damage, self.dungeon_heart_health);
+                eprintln!(
+                    "Heart taking damage! Health: {:.1} -> {:.1}",
+                    self.dungeon_heart_health + total_damage,
+                    self.dungeon_heart_health
+                );
                 if self.dungeon_heart_health <= 0.0 && !self.game_over {
                     self.game_over = true;
-                    self.notifications.danger("DUNGEON HEART DESTROYED! GAME OVER");
+                    self.notifications
+                        .danger("DUNGEON HEART DESTROYED! GAME OVER");
                 }
             }
         }
@@ -348,8 +394,13 @@ impl GameState {
                     }
 
                     let mut hero_state_clone = hero_state.clone();
-                    crate::engine::hero_ai::update_hero_ai(entity, &mut hero_state_clone, self, game_data);
-                    
+                    crate::engine::hero_ai::update_hero_ai(
+                        entity,
+                        &mut hero_state_clone,
+                        self,
+                        game_data,
+                    );
+
                     // HANDLE GOLD PICKUP
                     // If hero is on a tile with a gold pile, pick it up
                     // This is done here because we need mutable access to entities (to remove the pile)
@@ -358,20 +409,27 @@ impl GameState {
                     let mut pile_to_remove = None;
 
                     // Scan for pile at hero position
-                    // We can't iterate self.entities mutably while iterating hero_ids easily, 
+                    // We can't iterate self.entities mutably while iterating hero_ids easily,
                     // but we can query by position if we had a spatial map, or just scan all (slow but safe for now)
                     // Or better: scan all piles? Piles are entities.
                     // Doing a full scan inside a loop is O(N*M). Optimization: Only do this if hero goal is StealGold?
                     // Let's do it if hero_state_clone.current_goal is StealGold or Explore
-                    
-                    let can_pickup = matches!(hero_state_clone.current_goal, 
-                        crate::state::entities::HeroGoal::StealGold(_) | crate::state::entities::HeroGoal::Explore);
-                        
+
+                    let can_pickup = matches!(
+                        hero_state_clone.current_goal,
+                        crate::state::entities::HeroGoal::StealGold(_)
+                            | crate::state::entities::HeroGoal::Explore
+                    );
+
                     if can_pickup {
-                         for (other_id, other) in self.entities.entities() {
-                            if *other_id == hero_id { continue; }
+                        for (other_id, other) in self.entities.entities() {
+                            if *other_id == hero_id {
+                                continue;
+                            }
                             if other.pos == hero_pos {
-                                if let crate::state::entities::EntityType::ResourcePile(pile) = &other.entity_type {
+                                if let crate::state::entities::EntityType::ResourcePile(pile) =
+                                    &other.entity_type
+                                {
                                     if pile.resource_type == "gold" {
                                         picked_up_value = pile.amount;
                                         pile_to_remove = Some(*other_id);
@@ -385,10 +443,10 @@ impl GameState {
                     if let Some(pile_id) = pile_to_remove {
                         self.entities.remove(pile_id);
                         hero_state_clone.gold_stolen += picked_up_value;
-                         eprintln!("Hero {} stole gold pile worth {}", hero_id, picked_up_value);
+                        eprintln!("Hero {} stole gold pile worth {}", hero_id, picked_up_value);
                     }
 
-                     // Update the entity with the new hero state
+                    // Update the entity with the new hero state
                     if let Some(entity_mut) = self.entities.get_mut(hero_id) {
                         if let Some(hero_state_mut) = entity_mut.as_hero_mut() {
                             *hero_state_mut = hero_state_clone;
@@ -399,7 +457,13 @@ impl GameState {
 
             // Handle hero digging logic
             // Handle hero digging logic
-            let (carved_wall, should_move) = crate::engine::hero_digging::process_hero_digging(&mut self.entities, &self.dungeon, game_data, hero_id, dt);
+            let (carved_wall, should_move) = crate::engine::hero_digging::process_hero_digging(
+                &mut self.entities,
+                &self.dungeon,
+                game_data,
+                hero_id,
+                dt,
+            );
 
             if let Some(pos) = carved_wall {
                 if let Some(tile) = self.dungeon.get_tile_mut(pos) {
@@ -429,16 +493,33 @@ impl GameState {
         self.generate_food_from_hatcheries(dt);
 
         // Check for starving creatures that need to desert
-        crate::engine::creature_needs::handle_creature_desertion(&mut self.entities, &self.room_manager, &mut self.dungeon, game_data);
+        crate::engine::creature_needs::handle_creature_desertion(
+            &mut self.entities,
+            &self.room_manager,
+            &mut self.dungeon,
+            game_data,
+        );
 
         // Handle dead heroes - check for prison capture
-        crate::engine::prison_system::handle_prison_captures(&mut self.entities, &self.room_manager, &mut self.notifications);
+        crate::engine::prison_system::handle_prison_captures(
+            &mut self.entities,
+            &self.room_manager,
+            &mut self.notifications,
+        );
 
         // Progress prison conversions
-        crate::engine::prison_system::progress_prison_conversions(&mut self.entities, &self.room_manager, &mut self.notifications, game_data, dt);
+        crate::engine::prison_system::progress_prison_conversions(
+            &mut self.entities,
+            &self.room_manager,
+            &mut self.notifications,
+            game_data,
+            dt,
+        );
 
         // Remove dead entities and release their lair space (but not captured heroes)
-        let dead_ids: Vec<EntityId> = self.entities.all()
+        let dead_ids: Vec<EntityId> = self
+            .entities
+            .all()
             .filter(|e| {
                 if !e.is_alive() {
                     // Don't remove captured heroes
@@ -468,14 +549,16 @@ impl GameState {
             if let Some(pos) = structure_pos {
                 if let Some(tile) = self.dungeon.get_tile_mut(pos) {
                     // Turn into rubble or floor
-                     eprintln!("Structure at {:?} destroyed!", pos);
+                    eprintln!("Structure at {:?} destroyed!", pos);
                     tile.tile_type = "claimed_floor".to_string(); // Or specific rubble tile if exists
-                    tile.ownership = Ownership::Unclaimed; // Reset ownership? Or keep Player/Hero? 
-                    // Usually destroying enemy room makes it neutral or effectively 'floor'
+                    tile.ownership = Ownership::Unclaimed; // Reset ownership? Or keep Player/Hero?
+                                                           // Usually destroying enemy room makes it neutral or effectively 'floor'
                 }
-                
+
                 // Also remove from hero_base list
-                if let Some(building_idx) = self.hero_base.buildings.iter().position(|b| b.pos == pos) {
+                if let Some(building_idx) =
+                    self.hero_base.buildings.iter().position(|b| b.pos == pos)
+                {
                     self.hero_base.buildings.remove(building_idx);
                 }
             }
@@ -483,7 +566,7 @@ impl GameState {
 
         // Update fog of war based on claimed tiles and creature positions
         self.update_fog_of_war_system(game_data);
-        
+
         // Update trap construction
         crate::engine::trap_system::process_trap_construction(
             &mut self.dungeon,
@@ -503,11 +586,15 @@ impl GameState {
 
         // Notify about trap triggers
         for result in trap_results {
-            self.notifications.info(format!("{} triggered! ({:.0} damage)", result.trap_type, result.damage_dealt));
+            self.notifications.info(format!(
+                "{} triggered! ({:.0} damage)",
+                result.trap_type, result.damage_dealt
+            ));
         }
 
         // Update creature count (only player creatures, excluding imps and wild monsters)
-        self.player.current_creature_count = self.count_player_creatures(game_data) - self.count_imps();
+        self.player.current_creature_count =
+            self.count_player_creatures(game_data) - self.count_imps();
 
         // Check for Game Over
         self.check_game_over_conditions();
@@ -516,12 +603,12 @@ impl GameState {
     /// Update fog of war using the tile_grid system
     fn update_fog_of_war_system(&mut self, game_data: &GameData) {
         use std::collections::HashSet;
-        
+
         // Collect claimed tiles
         let mut claimed_tiles = HashSet::new();
         // Access grid via dungeon
         let (width, height) = tile_grid::get_grid_dimensions(&self.dungeon.grid);
-        
+
         for y in 0..height {
             for x in 0..width {
                 let pos = TilePos::new(x as i32, y as i32);
@@ -532,14 +619,17 @@ impl GameState {
                 }
             }
         }
-        
+
         // Collect creature positions (only player's creatures provide vision, except imps)
         // Wild/neutral creatures should not reveal fog for the player
-        let creature_positions: Vec<TilePos> = self.entities
+        let creature_positions: Vec<TilePos> = self
+            .entities
             .creatures()
             .filter(|(_, creature)| {
                 // Exclude imps (workers don't provide vision)
-                if creature.creature_id == "imp" { return false; }
+                if creature.creature_id == "imp" {
+                    return false;
+                }
                 // Only dungeon faction creatures provide vision
                 if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
                     monster_data.faction == "dungeon"
@@ -551,16 +641,20 @@ impl GameState {
             .flatten()
             .map(|e| e.pos)
             .collect();
-        
+
         // Update fog of war with sight radius of 5
-        self.dungeon.update_fog_of_war(&claimed_tiles, &creature_positions, game_data);
+        self.dungeon
+            .update_fog_of_war(&claimed_tiles, &creature_positions, game_data);
     }
 
     pub fn get_tile(&self, pos: TilePos) -> Option<&crate::state::tile_state::TileState> {
         self.dungeon.get_tile(pos)
     }
 
-    pub fn get_tile_mut(&mut self, pos: TilePos) -> Option<&mut crate::state::tile_state::TileState> {
+    pub fn get_tile_mut(
+        &mut self,
+        pos: TilePos,
+    ) -> Option<&mut crate::state::tile_state::TileState> {
         self.dungeon.get_tile_mut(pos)
     }
 
@@ -576,37 +670,40 @@ impl GameState {
             dt,
             self.attack_marker,
             self.defend_marker,
-            |task, room_manager, entities| GameState::get_task_target_position_static(task, room_manager, entities),
+            |task, room_manager, entities| {
+                GameState::get_task_target_position_static(task, room_manager, entities)
+            },
         );
     }
 
     /// Static version of get_task_target_position that doesn't require &self
-    fn get_task_target_position_static(task: &crate::state::entities::Task, room_manager: &crate::state::room_manager::RoomManager, entities: &crate::state::entities::EntityManager) -> Option<TilePos> {
+    fn get_task_target_position_static(
+        task: &crate::state::entities::Task,
+        room_manager: &crate::state::room_manager::RoomManager,
+        entities: &crate::state::entities::EntityManager,
+    ) -> Option<TilePos> {
         use crate::state::entities::Task;
 
         match task {
-            Task::Sleep(room_id)
-            | Task::Eat(room_id) => {
-                room_manager.rooms.iter()
-                    .find(|r| r.id == *room_id)
-                    .map(|room: &crate::engine::room_validator::Room| room.get_center())
-            }
+            Task::Sleep(room_id) | Task::Eat(room_id) => room_manager
+                .rooms
+                .iter()
+                .find(|r| r.id == *room_id)
+                .map(|room: &crate::engine::room_validator::Room| room.get_center()),
             Task::Work(_, pos) => Some(*pos),
             Task::Train(room_id)
             | Task::Research(room_id)
             | Task::DepositGold(room_id)
-            | Task::CollectWages(room_id) => {
-                room_manager.rooms.iter()
-                    .find(|r| r.id == *room_id)
-                    .map(|room: &crate::engine::room_validator::Room| room.get_center())
-            }
+            | Task::CollectWages(room_id) => room_manager
+                .rooms
+                .iter()
+                .find(|r| r.id == *room_id)
+                .map(|room: &crate::engine::room_validator::Room| room.get_center()),
             Task::Dig(pos) => Some(*pos),
             Task::ClaimTile(pos) => Some(*pos),
             Task::PickupResource(target_id) => entities.get(*target_id).map(|e| e.pos),
             Task::MoveTo(pos) => Some(*pos),
-            Task::Attack(entity_id) => {
-                entities.get(*entity_id).map(|e| e.pos)
-            },
+            Task::Attack(entity_id) => entities.get(*entity_id).map(|e| e.pos),
             Task::Idle | Task::Flee => None,
         }
     }
@@ -626,13 +723,16 @@ impl GameState {
 
         // Apply state changes from task result
         if result.gold_change.abs() > 0.001 {
-            self.player.add_resources_precise(result.gold_change, 0.0, 0.0, 0.0);
+            self.player
+                .add_resources_precise(result.gold_change, 0.0, 0.0, 0.0);
         }
         if result.food_change.abs() > 0.001 {
-            self.player.add_resources_precise(0.0, 0.0, result.food_change, 0.0);
+            self.player
+                .add_resources_precise(0.0, 0.0, result.food_change, 0.0);
         }
         if result.materials_change.abs() > 0.001 {
-            self.player.add_resources_precise(0.0, 0.0, 0.0, result.materials_change);
+            self.player
+                .add_resources_precise(0.0, 0.0, 0.0, result.materials_change);
         }
         if result.research_change > 0.0 {
             if let Some(active_tech_id) = &self.player.active_research {
@@ -642,13 +742,17 @@ impl GameState {
                 } else {
                     100.0 // Fallback
                 };
-                
-                if let Some(completed) = self.player.update_research(result.research_change, cost, dt) {
+
+                if let Some(completed) =
+                    self.player
+                        .update_research(result.research_change, cost, dt)
+                {
                     // Research completed!
                     if let Some(tech) = game_data.technologies.get(&completed) {
                         self.player.complete_research(tech);
                         eprintln!("Research Complete: {}", tech.name);
-                        self.notifications.success(format!("Research Complete: {}", tech.name));
+                        self.notifications
+                            .success(format!("Research Complete: {}", tech.name));
                     }
                 }
             }
@@ -664,16 +768,17 @@ impl GameState {
     }
 
     pub fn detect_and_update_rooms(&mut self, game_data: &GameData) {
-        self.room_manager.detect_and_update_rooms(&mut self.dungeon, game_data);
-        
+        self.room_manager
+            .detect_and_update_rooms(&mut self.dungeon, game_data);
+
         // Detect Hero Base Buildings
         self.detect_hero_base(game_data);
 
         // Recalculate max gold and mana based on rooms
-        let mut max_gold = 0; 
+        let mut max_gold = 0;
         let mut max_mana = 0;
         let mut lair_tiles_count = 0;
-        
+
         for room in &self.room_manager.rooms {
             if room.room_type == "lair" {
                 lair_tiles_count += room.tiles.len();
@@ -688,10 +793,10 @@ impl GameState {
                 }
             }
         }
-        
+
         self.player.max_gold = max_gold;
         self.player.max_mana = max_mana;
-        
+
         // Capacity is exactly equal to the number of lair tiles
         self.player.max_creatures = lair_tiles_count;
     }
@@ -716,10 +821,14 @@ impl GameState {
                             id: format!("{}_{}_{}", tile.tile_type, pos.x, pos.y),
                             building_type: tile.tile_type.clone(),
                             pos,
-                            spawn_timers: building_data.spawn_triggers.iter().map(|t| crate::state::hero_base::SpawnTimer {
-                                hero_id: t.hero_id.clone(),
-                                time_until_spawn: 1.0, // Start almost immediately for feedback
-                            }).collect(),
+                            spawn_timers: building_data
+                                .spawn_triggers
+                                .iter()
+                                .map(|t| crate::state::hero_base::SpawnTimer {
+                                    hero_id: t.hero_id.clone(),
+                                    time_until_spawn: 1.0, // Start almost immediately for feedback
+                                })
+                                .collect(),
                             entity_id: None,
                         };
 
@@ -727,7 +836,9 @@ impl GameState {
                         let mut existing_id = None;
                         for entity in self.entities.all() {
                             if entity.pos == pos {
-                                if let crate::state::entities::EntityType::Structure(_) = entity.entity_type {
+                                if let crate::state::entities::EntityType::Structure(_) =
+                                    entity.entity_type
+                                {
                                     existing_id = Some(entity.id);
                                     break;
                                 }
@@ -739,7 +850,7 @@ impl GameState {
                         } else {
                             let structure_state = crate::state::entities::StructureState::new(
                                 tile.tile_type.clone(),
-                                building_data.hp as f32
+                                building_data.hp as f32,
                             );
                             self.entities.spawn_structure(pos, structure_state)
                         };
@@ -747,7 +858,7 @@ impl GameState {
                         building.entity_id = Some(entity_id);
 
                         self.hero_base.buildings.push(building);
-                        
+
                         base_detected = true;
                         base_center_acc.0 += x as i32;
                         base_center_acc.1 += y as i32;
@@ -760,26 +871,31 @@ impl GameState {
         if base_detected {
             self.hero_base.enabled = true;
             if building_count > 0 {
-                 self.hero_base.position = TilePos::new(base_center_acc.0 / building_count, base_center_acc.1 / building_count);
+                self.hero_base.position = TilePos::new(
+                    base_center_acc.0 / building_count,
+                    base_center_acc.1 / building_count,
+                );
             }
-            eprintln!("Hero Base detected with {} buildings at {:?}", building_count, self.hero_base.position);
+            eprintln!(
+                "Hero Base detected with {} buildings at {:?}",
+                building_count, self.hero_base.position
+            );
         }
     }
-
-
 
     fn spawn_random_creature(&mut self, game_data: &GameData) {
         crate::engine::spawner::SpawnSystem::spawn_random_creature(
             &mut self.dungeon,
             &self.room_manager,
             &mut self.entities,
-            game_data
+            game_data,
         );
     }
 
     /// Release lair tile claimed by an entity (when creature dies/leaves)
     fn release_lair_tile(&mut self, entity_id: crate::state::entities::EntityId) {
-        self.room_manager.release_lair_tile(&mut self.dungeon, entity_id);
+        self.room_manager
+            .release_lair_tile(&mut self.dungeon, entity_id);
     }
 
     /// Generate food from hatcheries based on their size
@@ -787,11 +903,10 @@ impl GameState {
     fn generate_food_from_hatcheries(&mut self, dt: f32) {
         let total_food_generated = self.room_manager.generate_food_from_hatcheries(dt);
         if total_food_generated > 0.0 {
-            self.player.add_resources_precise(0.0, 0.0, total_food_generated, 0.0);
+            self.player
+                .add_resources_precise(0.0, 0.0, total_food_generated, 0.0);
         }
     }
-
-
 
     /// Find the dungeon heart tile position
     pub fn find_dungeon_heart_position(&self) -> Option<TilePos> {
@@ -815,7 +930,9 @@ impl GameState {
 
     /// Maximum number of imps allowed (reads from monster data)
     pub fn max_imps(game_data: &GameData) -> usize {
-        game_data.monsters.get("imp")
+        game_data
+            .monsters
+            .get("imp")
             .map(|m| m.spawn.max_population as usize)
             .unwrap_or(10)
     }
@@ -850,7 +967,8 @@ impl GameState {
         for row in &self.dungeon.grid {
             for tile in row {
                 if tile.ownership == Ownership::Player
-                   && (tile.tile_type == "claimed_floor" || tile.tile_type == "dungeon_heart") {
+                    && (tile.tile_type == "claimed_floor" || tile.tile_type == "dungeon_heart")
+                {
                     spawn_positions.push(tile.pos);
                 }
             }
@@ -888,10 +1006,9 @@ impl GameState {
                 creature.set_need("gold".to_string(), 0.0);
             }
         }
-        self.notifications.warning("Pay Day! Creatures demand wages.");
+        self.notifications
+            .warning("Pay Day! Creatures demand wages.");
     }
-
-
 
     fn resolve_combat(&mut self, game_data: &GameData, dt: f32) {
         let all_entities: Vec<EntityId> = self.entities.all().map(|e| e.id).collect();
@@ -904,7 +1021,12 @@ impl GameState {
 
             let attack_type = get_entity_attack_type(&attacker.entity_type, game_data);
             let attacker_visual_pos = attacker.visual_pos;
-            let targets = crate::engine::combat::find_combat_targets(attacker, self.entities.entities(), &self.dungeon, game_data);
+            let targets = crate::engine::combat::find_combat_targets(
+                attacker,
+                self.entities.entities(),
+                &self.dungeon,
+                game_data,
+            );
 
             for target_id in targets {
                 let defender = match self.entities.get(target_id) {
@@ -912,13 +1034,19 @@ impl GameState {
                     None => continue,
                 };
 
-                if !crate::engine::combat::in_combat_range(attacker.pos, defender.pos, &attack_type, &self.dungeon.grid, game_data) {
+                if !crate::engine::combat::in_combat_range(
+                    attacker.pos,
+                    defender.pos,
+                    &attack_type,
+                    &self.dungeon.grid,
+                    game_data,
+                ) {
                     continue;
                 }
 
                 let defender_visual_pos = defender.visual_pos;
                 let result = resolve_combat_tick(attacker, defender, dt, game_data);
-                
+
                 // Handle projectile spawning
                 if let Some((p_type, damage)) = result.projectile_spawned.clone() {
                     // Ranged/Magic: Spawn actual projectile carrying damage
@@ -932,7 +1060,7 @@ impl GameState {
                     );
                 } else if result.damage_dealt > 0.0 {
                     // Melee with damage: Spawn visual projectile (0 damage)
-                     self.projectiles.spawn(
+                    self.projectiles.spawn(
                         attacker_visual_pos,
                         defender_visual_pos,
                         &attack_type,
@@ -941,20 +1069,22 @@ impl GameState {
                         0.0,
                     );
                 }
-                
-                crate::engine::combat::apply_combat_result(&result, attacker_id, target_id, self.entities.entities_mut(), game_data, self.time_elapsed);
+
+                crate::engine::combat::apply_combat_result(
+                    &result,
+                    attacker_id,
+                    target_id,
+                    self.entities.entities_mut(),
+                    game_data,
+                    self.time_elapsed,
+                );
                 break;
             }
         }
     }
 
-
-
-
-
     /// Process hero digging logic with flattened control flow
     /// Returns (carved_wall_pos, should_move)
-
 
     /// Check for victory or defeat conditions
     pub fn check_game_over_conditions(&mut self) {
@@ -967,7 +1097,8 @@ impl GameState {
             self.game_over = true;
             self.victory = true;
             eprintln!("VICTORY! All Hero Buildings destroyed!");
-            self.notifications.success("VICTORY! All hero buildings have been destroyed!");
+            self.notifications
+                .success("VICTORY! All hero buildings have been destroyed!");
         }
 
         // Check Defeat: Dungeon Heart destroyed
@@ -975,7 +1106,8 @@ impl GameState {
             self.game_over = true;
             self.victory = false;
             eprintln!("DEFEAT! Dungeon Heart destroyed!");
-            self.notifications.danger("DEFEAT! Your Dungeon Heart was destroyed!");
+            self.notifications
+                .danger("DEFEAT! Your Dungeon Heart was destroyed!");
         }
     }
 }

@@ -9,10 +9,10 @@ use super::config::{Difficulty, Grid, MapConfig, StartingLayout, StartingPositio
 /// Rotate offset by 0, 90, 180, or 270 degrees
 fn rotate_offset(x: i32, y: i32, rotation: u8) -> (i32, i32) {
     match rotation % 4 {
-        0 => (x, y),       // 0° - no rotation
-        1 => (-y, x),      // 90° clockwise
-        2 => (-x, -y),     // 180°
-        _ => (y, -x),      // 270° clockwise
+        0 => (x, y),   // 0° - no rotation
+        1 => (-y, x),  // 90° clockwise
+        2 => (-x, -y), // 180°
+        _ => (y, -x),  // 270° clockwise
     }
 }
 
@@ -39,17 +39,21 @@ pub fn calculate_starting_position(config: &MapConfig) -> TilePos {
             let edge = rand::gen_range(0u32, 4);
             match edge {
                 0 => TilePos::new(rand::gen_range(12, config.width as i32 - 12), 12),
-                1 => TilePos::new((config.width - 12) as i32, rand::gen_range(12, config.height as i32 - 12)),
-                2 => TilePos::new(rand::gen_range(12, config.width as i32 - 12), (config.height - 12) as i32),
+                1 => TilePos::new(
+                    (config.width - 12) as i32,
+                    rand::gen_range(12, config.height as i32 - 12),
+                ),
+                2 => TilePos::new(
+                    rand::gen_range(12, config.width as i32 - 12),
+                    (config.height - 12) as i32,
+                ),
                 _ => TilePos::new(12, rand::gen_range(12, config.height as i32 - 12)),
             }
         }
-        StartingPosition::Random => {
-            TilePos::new(
-                rand::gen_range(15, config.width as i32 - 15),
-                rand::gen_range(15, config.height as i32 - 15),
-            )
-        }
+        StartingPosition::Random => TilePos::new(
+            rand::gen_range(15, config.width as i32 - 15),
+            rand::gen_range(15, config.height as i32 - 15),
+        ),
     }
 }
 
@@ -63,10 +67,10 @@ pub fn create_starting_area(grid: &mut Grid, config: &MapConfig, start_pos: Tile
     let width = grid[0].len();
     let center_x = start_pos.x as usize;
     let center_y = start_pos.y as usize;
-    
+
     // Get layout from difficulty
     let layout = StartingLayout::from_difficulty(config.difficulty);
-    
+
     // Random rotation for variety (0, 90, 180, or 270 degrees)
     let rotation = rand::gen_range(0u8, 4);
 

@@ -53,14 +53,14 @@ pub fn load_hero_buildings() -> Result<HashMap<String, HeroBuildingData>, Box<dy
             std::fs::read_to_string("assets/data/hero_buildings.json")?
         }
     };
-    
+
     // The JSON is an array of objects
     let buildings_list: Vec<HeroBuildingData> = serde_json::from_str(&json_content)?;
-    
+
     let mut buildings_map = HashMap::new();
     for building in buildings_list {
         buildings_map.insert(building.id.clone(), building);
     }
-    
+
     Ok(buildings_map)
 }

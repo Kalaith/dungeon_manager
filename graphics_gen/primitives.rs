@@ -1,5 +1,5 @@
+use crate::graphics_gen::core::{shade_color, DepthBuffer, Material, TILT};
 use image::RgbaImage;
-use crate::graphics_gen::core::{DepthBuffer, Material, shade_color, TILT};
 
 /// Solve quadratic equation: at^2 + bt + c = 0
 /// Returns the largest valid root (closest to camera/top), if any
@@ -146,7 +146,10 @@ pub fn draw_ellipsoid_3d(
 
             // Constant:
             // dx_val^2/rx^2 + dy_val^2/ry^2 + cz^2/rz^2 - 1
-            let c_coeff = (dx_val * dx_val) / (rx * rx) + (dy_val * dy_val) / (ry * ry) + (cz * cz) / (rz * rz) - 1.0;
+            let c_coeff = (dx_val * dx_val) / (rx * rx)
+                + (dy_val * dy_val) / (ry * ry)
+                + (cz * cz) / (rz * rz)
+                - 1.0;
 
             if let Some(wz) = solve_quadratic(a, b, c_coeff) {
                 let wx = px as f32;
@@ -158,7 +161,9 @@ pub fn draw_ellipsoid_3d(
                 let mut ny = (wy - cy) / (ry * ry);
                 let mut nz = (wz - cz) / (rz * rz);
                 let len = (nx * nx + ny * ny + nz * nz).sqrt();
-                nx /= len; ny /= len; nz /= len;
+                nx /= len;
+                ny /= len;
+                nz /= len;
 
                 if depth.test_and_set(px as u32, py as u32, wz) {
                     img.put_pixel(px as u32, py as u32, shade_color((nx, ny, nz), mat, wz));
@@ -234,14 +239,14 @@ pub fn draw_cylinder_3d(
                 // We check if this wy is within [y_top, y_bot]
                 // We test both front and back faces, though front usually obscures back
                 for wz in [wz_front, wz_back] {
-                     let wy = py as f32 + wz * TILT;
-                     if wy >= y_top && wy <= y_bot {
-                         if wz > best_z {
-                             best_z = wz;
-                             best_normal = (dx_val / radius, 0.0, (wz - cz) / radius);
-                             hit = true;
-                         }
-                     }
+                    let wy = py as f32 + wz * TILT;
+                    if wy >= y_top && wy <= y_bot {
+                        if wz > best_z {
+                            best_z = wz;
+                            best_normal = (dx_val / radius, 0.0, (wz - cz) / radius);
+                            hit = true;
+                        }
+                    }
                 }
 
                 // 2. Test Top Cap (Plane y = y_top)
@@ -252,11 +257,11 @@ pub fn draw_cylinder_3d(
                     let wx_top = px as f32;
                     // Check if inside circle: (wx - cx)^2 + (wz - cz)^2 <= r^2
                     if (wx_top - cx).powi(2) + (wz_top - cz).powi(2) <= radius.powi(2) {
-                         if wz_top > best_z {
-                             best_z = wz_top;
-                             best_normal = (0.0, -1.0, 0.0);
-                             hit = true;
-                         }
+                        if wz_top > best_z {
+                            best_z = wz_top;
+                            best_normal = (0.0, -1.0, 0.0);
+                            hit = true;
+                        }
                     }
                 }
 
@@ -269,11 +274,11 @@ pub fn draw_cylinder_3d(
                         // Usually bottom is obscured, but if we see under it or via clipping...
                         // Or if looking from above, we shouldn't see bottom, but let's be correct.
                         // Actually if we look from "top-front", we see top cap.
-                         if wz_bot > best_z {
-                             best_z = wz_bot;
-                             best_normal = (0.0, 1.0, 0.0);
-                             hit = true;
-                         }
+                        if wz_bot > best_z {
+                            best_z = wz_bot;
+                            best_normal = (0.0, 1.0, 0.0);
+                            hit = true;
+                        }
                     }
                 }
 
@@ -300,7 +305,9 @@ pub fn draw_cone_3d(
 ) {
     let screen_cx = cx;
     let height = y_base - y_tip;
-    if height <= 0.0 { return; }
+    if height <= 0.0 {
+        return;
+    }
 
     // Rough bounding box
     let slope = base_radius / height;
@@ -382,8 +389,8 @@ pub fn draw_cone_3d(
                                 let nx = 2.0 * dx_val;
                                 let nz = 2.0 * (wz - cz);
                                 let ny = -2.0 * slope * slope * (wy - y_tip);
-                                let len = (nx*nx + ny*ny + nz*nz).sqrt();
-                                best_normal = (nx/len, ny/len, nz/len);
+                                let len = (nx * nx + ny * ny + nz * nz).sqrt();
+                                best_normal = (nx / len, ny / len, nz / len);
                                 hit = true;
                             }
                         }
@@ -406,7 +413,7 @@ pub fn draw_cone_3d(
             }
 
             if hit {
-                 if depth.test_and_set(px as u32, py as u32, best_z) {
+                if depth.test_and_set(px as u32, py as u32, best_z) {
                     img.put_pixel(px as u32, py as u32, shade_color(best_normal, mat, best_z));
                 }
             }
@@ -437,10 +444,10 @@ pub fn draw_torus_3d(
     // This is essentially what the old code did, but we need to respect the projection now.
     // To avoid gaps, we need valid step size.
     let _step = 0.5; // Half pixel steps
-    
+
     let circum = 2.0 * std::f32::consts::PI * major_radius;
     let tube_circum = 2.0 * std::f32::consts::PI * minor_radius;
-    
+
     let u_steps = (circum * 2.0) as i32; // Over-sample
     let v_steps = (tube_circum * 2.0) as i32;
 
@@ -460,7 +467,7 @@ pub fn draw_torus_3d(
             // (major + minor*cos(v)) * cos(u)
             // (major + minor*cos(v)) * sin(u)
             // minor * sin(v)
-            
+
             let wx = cx + (major_radius + minor_radius * cos_v) * cos_u;
             let wy = cy + (major_radius + minor_radius * cos_v) * sin_u;
             let wz = cz + minor_radius * sin_v;
@@ -469,15 +476,19 @@ pub fn draw_torus_3d(
             let px = wx.round() as i32;
             let py = (wy - wz * TILT).round() as i32;
 
-             if px >= 0 && py >= 0 && px < size && py < size {
-                 let normal_x = cos_v * cos_u;
-                 let normal_y = cos_v * sin_u;
-                 let normal_z = sin_v;
-                 
-                 if depth.test_and_set(px as u32, py as u32, wz) {
-                     img.put_pixel(px as u32, py as u32, shade_color((normal_x, normal_y, normal_z), mat, wz));
-                 }
-             }
+            if px >= 0 && py >= 0 && px < size && py < size {
+                let normal_x = cos_v * cos_u;
+                let normal_y = cos_v * sin_u;
+                let normal_z = sin_v;
+
+                if depth.test_and_set(px as u32, py as u32, wz) {
+                    img.put_pixel(
+                        px as u32,
+                        py as u32,
+                        shade_color((normal_x, normal_y, normal_z), mat, wz),
+                    );
+                }
+            }
         }
     }
 }
@@ -499,7 +510,7 @@ pub fn draw_box_3d(
     // Or just "paint" the 3 visible faces based on camera.
     // Camera is roughly (0, -inf, +inf) looking down-forward.
     // So we see Front (Z+), Top (Y-), and maybe Left/Right or Bottom depending on angle.
-    // With TILT=0.5, we look from "below" in screen Y terms? 
+    // With TILT=0.5, we look from "below" in screen Y terms?
     // Screen Y = World Y - Z * TILT. Low Wy -> Low Sy. High Z -> Low Sy.
     // We look from Y- (Top) and Z+ (Front).
 
@@ -507,11 +518,11 @@ pub fn draw_box_3d(
     let x_max = cx + half_width;
     let y_min = cy - half_height;
     let y_max = cy + half_height;
-    let _z_min = cz; // Box starts at cz? Original used cz+half_depth. 
-    // Original draw_box_3d used cz as center? No, it used cz as back?
-    // "front_z = cz + half_depth"
-    // "pz = cz + half_depth - dz"
-    // Let's assume (cx, cy, cz) is center.
+    let _z_min = cz; // Box starts at cz? Original used cz+half_depth.
+                     // Original draw_box_3d used cz as center? No, it used cz as back?
+                     // "front_z = cz + half_depth"
+                     // "pz = cz + half_depth - dz"
+                     // Let's assume (cx, cy, cz) is center.
     let z_front = cz + half_depth;
     let z_back = cz - half_depth;
 
@@ -524,11 +535,11 @@ pub fn draw_box_3d(
         // Left: X = x_min. Visible? Maybe.
         // Bottom: Y = y_max. Obscured.
         // Back: Z = z_back. Obscured.
-        
+
         // Face 1: Front (Z+)
         (0.0f32, 0.0f32, 1.0f32, z_front, 0, 1), // N, z_val, axes
         // Face 2: Top (Y-)
-        (0.0, -1.0, 0.0, y_min, 0, 2), 
+        (0.0, -1.0, 0.0, y_min, 0, 2),
         // Face 3: X+
         (1.0, 0.0, 0.0, x_max, 1, 2),
         // Face 4: X-
@@ -557,49 +568,55 @@ pub fn draw_box_3d(
             }
         }
     }
-    
+
     // Expand a bit
-    min_px -= 2; max_px += 2; min_py -= 2; max_py += 2;
+    min_px -= 2;
+    max_px += 2;
+    min_py -= 2;
+    max_py += 2;
 
     for py in min_py..=max_py {
         for px in min_px..=max_px {
-             if px < 0 || px >= size_w || py < 0 || py >= size_h { continue; }
-             
-             let mut best_z = f32::NEG_INFINITY;
-             let mut best_n = (0.0, 0.0, 0.0);
-             let mut hit = false;
+            if px < 0 || px >= size_w || py < 0 || py >= size_h {
+                continue;
+            }
 
-             // Check Front Face (Z = z_front)
-             // wy = py + z_front * TILT
-             // Check bounds x, y
-             let wy_front = py as f32 + z_front * TILT;
-             if px as f32 >= x_min && px as f32 <= x_max && wy_front >= y_min && wy_front <= y_max {
-                 if z_front > best_z {
-                     best_z = z_front;
-                     best_n = (0.0, 0.0, 1.0);
-                     hit = true;
-                 }
-             }
+            let mut best_z = f32::NEG_INFINITY;
+            let mut best_n = (0.0, 0.0, 0.0);
+            let mut hit = false;
+
+            // Check Front Face (Z = z_front)
+            // wy = py + z_front * TILT
+            // Check bounds x, y
+            let wy_front = py as f32 + z_front * TILT;
+            if px as f32 >= x_min && px as f32 <= x_max && wy_front >= y_min && wy_front <= y_max {
+                if z_front > best_z {
+                    best_z = z_front;
+                    best_n = (0.0, 0.0, 1.0);
+                    hit = true;
+                }
+            }
 
             // Check Top Face (Y = y_min)
             // Ray: wy = py + wz * TILT = y_min -> wz = (y_min - py) / TILT
             let wz_top = (y_min - py as f32) / TILT;
             if TILT.abs() > 0.001 {
-                if px as f32 >= x_min && px as f32 <= x_max && wz_top >= z_back && wz_top <= z_front {
+                if px as f32 >= x_min && px as f32 <= x_max && wz_top >= z_back && wz_top <= z_front
+                {
                     if wz_top > best_z {
-                         best_z = wz_top;
-                         best_n = (0.0, -1.0, 0.0);
-                         hit = true;
+                        best_z = wz_top;
+                        best_n = (0.0, -1.0, 0.0);
+                        hit = true;
                     }
                 }
             }
 
             // Check Side Faces...
-             if hit {
-                 if depth.test_and_set(px as u32, py as u32, best_z) {
-                     img.put_pixel(px as u32, py as u32, shade_color(best_n, mat, best_z));
-                 }
-             }
+            if hit {
+                if depth.test_and_set(px as u32, py as u32, best_z) {
+                    img.put_pixel(px as u32, py as u32, shade_color(best_n, mat, best_z));
+                }
+            }
         }
     }
 }
@@ -625,56 +642,64 @@ pub fn draw_wedge_3d(
     // Gradient is (0, depth_val/h, 1) assuming z(y).
     // Let slope = depth_val/h.
     // z = depth_val - slope*(y - y_top)
-    
+
     // Ray: y = py + wz * TILT
     // wz = depth_val - slope*(py + wz*TILT - y_top)
     // wz = depth_val - slope*py - slope*wz*TILT + slope*y_top
     // wz(1 + slope*TILT) = depth_val - slope*py + slope*y_top
-    
+
     let h = y_bot - y_top;
-    if h <= 0.0 { return; }
+    if h <= 0.0 {
+        return;
+    }
     let slope = depth_val / h;
-    
+
     // Box bounds...
     // just splat for now to save complexity, or simple iteration
     let half_w = width / 2.0;
-    
+
     let size_w = img.width() as i32;
     let size_h = img.height() as i32;
 
-    let min_py = (y_top - (cz+depth_val)*TILT).round() as i32 - 5;
-    let max_py = (y_bot - cz*TILT).round() as i32 + 5;
+    let min_py = (y_top - (cz + depth_val) * TILT).round() as i32 - 5;
+    let max_py = (y_bot - cz * TILT).round() as i32 + 5;
     let min_px = (cx - half_w).round() as i32;
     let max_px = (cx + half_w).round() as i32;
 
     for py in min_py..=max_py {
         for px in min_px..=max_px {
-            if px < 0 || px >= size_w || py < 0 || py >= size_h { continue; }
-            
+            if px < 0 || px >= size_w || py < 0 || py >= size_h {
+                continue;
+            }
+
             // Solve wz
             // wz(1 + slope*TILT) = depth_val - slope*(py - y_top)
             let denom = 1.0 + slope * TILT;
             if denom.abs() > 0.0001 {
                 let wz = (depth_val - slope * (py as f32 - y_top)) / denom;
-                
+
                 // Check bounds
                 // wx = px. Inside width?
                 if (px as f32) >= cx - half_w && (px as f32) <= cx + half_w {
-                     // Check y range
-                     let wy = py as f32 + wz * TILT;
-                     if wy >= y_top && wy <= y_bot {
-                         // Normal
-                         // z = C - s*y
-                         // 0 = C - s*y - z
-                         // N = (0, -s, -1) -> (0, s, 1) to point out
-                         let ny = slope;
-                         let nz = 1.0;
-                         let len = (ny*ny + nz*nz).sqrt();
-                         
-                         if depth.test_and_set(px as u32, py as u32, wz + cz) {
-                             img.put_pixel(px as u32, py as u32, shade_color((0.0, ny/len, nz/len), mat, wz + cz));
-                         }
-                     }
+                    // Check y range
+                    let wy = py as f32 + wz * TILT;
+                    if wy >= y_top && wy <= y_bot {
+                        // Normal
+                        // z = C - s*y
+                        // 0 = C - s*y - z
+                        // N = (0, -s, -1) -> (0, s, 1) to point out
+                        let ny = slope;
+                        let nz = 1.0;
+                        let len = (ny * ny + nz * nz).sqrt();
+
+                        if depth.test_and_set(px as u32, py as u32, wz + cz) {
+                            img.put_pixel(
+                                px as u32,
+                                py as u32,
+                                shade_color((0.0, ny / len, nz / len), mat, wz + cz),
+                            );
+                        }
+                    }
                 }
             }
         }

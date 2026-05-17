@@ -2,9 +2,9 @@
 //!
 //! Handles drawing main menu, pause menu, and game over screens.
 
-use macroquad::prelude::*;
 use crate::state::MapType;
 use crate::ui::resources::GraphicsCache;
+use macroquad::prelude::*;
 
 /// Draw the main menu screen
 pub fn draw_main_menu(graphics_cache: Option<&GraphicsCache>, _selected_map_type: &MapType) {
@@ -27,7 +27,13 @@ pub fn draw_main_menu(graphics_cache: Option<&GraphicsCache>, _selected_map_type
     }
 
     // Dark overlay for readability (less intense than solid color)
-    draw_rectangle(0.0, 0.0, screen_width(), screen_height(), Color::new(0.0, 0.0, 0.0, 0.4));
+    draw_rectangle(
+        0.0,
+        0.0,
+        screen_width(),
+        screen_height(),
+        Color::new(0.0, 0.0, 0.0, 0.4),
+    );
 
     // Draw title
     draw_text(
@@ -47,37 +53,89 @@ pub fn draw_main_menu(graphics_cache: Option<&GraphicsCache>, _selected_map_type
 
     // 1. Start Game
     let start_y_pos = start_y;
-    let is_start_hovered = mouse_pos.0 >= center_x && mouse_pos.0 <= center_x + button_width
-        && mouse_pos.1 >= start_y_pos && mouse_pos.1 <= start_y_pos + button_height;
+    let is_start_hovered = mouse_pos.0 >= center_x
+        && mouse_pos.0 <= center_x + button_width
+        && mouse_pos.1 >= start_y_pos
+        && mouse_pos.1 <= start_y_pos + button_height;
 
-    let start_color = if is_start_hovered { Color::new(0.4, 0.6, 0.9, 1.0) } else { Color::new(0.3, 0.5, 0.8, 1.0) };
-    draw_rectangle(center_x, start_y_pos, button_width, button_height, start_color);
-    draw_rectangle_lines(center_x, start_y_pos, button_width, button_height, 3.0, WHITE);
-    draw_text("START GAME", center_x + 35.0, start_y_pos + 32.0, 24.0, WHITE);
+    let start_color = if is_start_hovered {
+        Color::new(0.4, 0.6, 0.9, 1.0)
+    } else {
+        Color::new(0.3, 0.5, 0.8, 1.0)
+    };
+    draw_rectangle(
+        center_x,
+        start_y_pos,
+        button_width,
+        button_height,
+        start_color,
+    );
+    draw_rectangle_lines(
+        center_x,
+        start_y_pos,
+        button_width,
+        button_height,
+        3.0,
+        WHITE,
+    );
+    draw_text(
+        "START GAME",
+        center_x + 35.0,
+        start_y_pos + 32.0,
+        24.0,
+        WHITE,
+    );
 
     // 2. Load Game
     let load_y_pos = start_y_pos + button_height + spacing;
     let save_exists = crate::state::save_system::save_exists("slot_1");
-    let is_load_hovered = mouse_pos.0 >= center_x && mouse_pos.0 <= center_x + button_width
-        && mouse_pos.1 >= load_y_pos && mouse_pos.1 <= load_y_pos + button_height;
+    let is_load_hovered = mouse_pos.0 >= center_x
+        && mouse_pos.0 <= center_x + button_width
+        && mouse_pos.1 >= load_y_pos
+        && mouse_pos.1 <= load_y_pos + button_height;
 
     let load_color = if save_exists {
-        if is_load_hovered { Color::new(0.4, 0.8, 0.4, 1.0) } else { Color::new(0.3, 0.7, 0.3, 1.0) }
+        if is_load_hovered {
+            Color::new(0.4, 0.8, 0.4, 1.0)
+        } else {
+            Color::new(0.3, 0.7, 0.3, 1.0)
+        }
     } else {
         Color::new(0.3, 0.3, 0.3, 0.5)
     };
-    draw_rectangle(center_x, load_y_pos, button_width, button_height, load_color);
-    draw_rectangle_lines(center_x, load_y_pos, button_width, button_height, 3.0, if save_exists { WHITE } else { GRAY });
-    draw_text("LOAD GAME", center_x + 35.0, load_y_pos + 32.0, 24.0, if save_exists { WHITE } else { GRAY });
+    draw_rectangle(
+        center_x,
+        load_y_pos,
+        button_width,
+        button_height,
+        load_color,
+    );
+    draw_rectangle_lines(
+        center_x,
+        load_y_pos,
+        button_width,
+        button_height,
+        3.0,
+        if save_exists { WHITE } else { GRAY },
+    );
+    draw_text(
+        "LOAD GAME",
+        center_x + 35.0,
+        load_y_pos + 32.0,
+        24.0,
+        if save_exists { WHITE } else { GRAY },
+    );
 }
 
 /// Draw the pause menu overlay
 pub fn draw_pause_menu() {
     // Semi-transparent overlay
     draw_rectangle(
-        0.0, 0.0,
-        screen_width(), screen_height(),
-        Color::new(0.0, 0.0, 0.0, 0.7)
+        0.0,
+        0.0,
+        screen_width(),
+        screen_height(),
+        Color::new(0.0, 0.0, 0.0, 0.7),
     );
 
     let screen_center_x = screen_width() / 2.0;
@@ -95,15 +153,17 @@ pub fn draw_pause_menu() {
         screen_center_x - title_dims.width / 2.0,
         start_y - 80.0,
         60.0,
-        WHITE
+        WHITE,
     );
 
     // Resume Button
     let resume_y = start_y;
     draw_rectangle(
-        screen_center_x - button_width / 2.0, resume_y,
-        button_width, button_height,
-        Color::new(0.2, 0.6, 0.2, 1.0)
+        screen_center_x - button_width / 2.0,
+        resume_y,
+        button_width,
+        button_height,
+        Color::new(0.2, 0.6, 0.2, 1.0),
     );
     let resume_text = "RESUME";
     let resume_dims = measure_text(resume_text, None, 30, 1.0);
@@ -112,15 +172,17 @@ pub fn draw_pause_menu() {
         screen_center_x - resume_dims.width / 2.0,
         resume_y + 35.0,
         30.0,
-        WHITE
+        WHITE,
     );
 
     // Save Game Button
     let save_y = start_y + button_height + spacing;
     draw_rectangle(
-        screen_center_x - button_width / 2.0, save_y,
-        button_width, button_height,
-        Color::new(0.3, 0.5, 0.7, 1.0)
+        screen_center_x - button_width / 2.0,
+        save_y,
+        button_width,
+        button_height,
+        Color::new(0.3, 0.5, 0.7, 1.0),
     );
     let save_text = "SAVE GAME";
     let save_dims = measure_text(save_text, None, 30, 1.0);
@@ -129,7 +191,7 @@ pub fn draw_pause_menu() {
         screen_center_x - save_dims.width / 2.0,
         save_y + 35.0,
         30.0,
-        WHITE
+        WHITE,
     );
 
     // Load Game Button
@@ -141,9 +203,11 @@ pub fn draw_pause_menu() {
         Color::new(0.3, 0.3, 0.3, 1.0) // Grayed out if no save
     };
     draw_rectangle(
-        screen_center_x - button_width / 2.0, load_y,
-        button_width, button_height,
-        load_color
+        screen_center_x - button_width / 2.0,
+        load_y,
+        button_width,
+        button_height,
+        load_color,
     );
     let load_text = "LOAD GAME";
     let load_dims = measure_text(load_text, None, 30, 1.0);
@@ -152,15 +216,17 @@ pub fn draw_pause_menu() {
         screen_center_x - load_dims.width / 2.0,
         load_y + 35.0,
         30.0,
-        if save_exists { WHITE } else { GRAY }
+        if save_exists { WHITE } else { GRAY },
     );
 
     // Main Menu Button
     let menu_y = start_y + (button_height + spacing) * 3.0;
     draw_rectangle(
-        screen_center_x - button_width / 2.0, menu_y,
-        button_width, button_height,
-        Color::new(0.6, 0.4, 0.2, 1.0)
+        screen_center_x - button_width / 2.0,
+        menu_y,
+        button_width,
+        button_height,
+        Color::new(0.6, 0.4, 0.2, 1.0),
     );
     let menu_text = "MAIN MENU";
     let menu_dims = measure_text(menu_text, None, 30, 1.0);
@@ -169,15 +235,17 @@ pub fn draw_pause_menu() {
         screen_center_x - menu_dims.width / 2.0,
         menu_y + 35.0,
         30.0,
-        WHITE
+        WHITE,
     );
 
     // Exit Button
     let exit_y = start_y + (button_height + spacing) * 4.0;
     draw_rectangle(
-        screen_center_x - button_width / 2.0, exit_y,
-        button_width, button_height,
-        Color::new(0.8, 0.2, 0.2, 1.0)
+        screen_center_x - button_width / 2.0,
+        exit_y,
+        button_width,
+        button_height,
+        Color::new(0.8, 0.2, 0.2, 1.0),
     );
     let exit_text = "EXIT";
     let exit_dims = measure_text(exit_text, None, 30, 1.0);
@@ -186,7 +254,7 @@ pub fn draw_pause_menu() {
         screen_center_x - exit_dims.width / 2.0,
         exit_y + 35.0,
         30.0,
-        WHITE
+        WHITE,
     );
 }
 
@@ -194,16 +262,22 @@ pub fn draw_pause_menu() {
 pub fn draw_game_over_screen(victory: bool) {
     // Semi-transparent overlay
     draw_rectangle(
-        0.0, 0.0,
-        screen_width(), screen_height(),
-        Color::new(0.0, 0.0, 0.0, 0.8)
+        0.0,
+        0.0,
+        screen_width(),
+        screen_height(),
+        Color::new(0.0, 0.0, 0.0, 0.8),
     );
 
     let screen_center_x = screen_width() / 2.0;
     let screen_center_y = screen_height() / 2.0;
 
     let title = if victory { "VICTORY" } else { "DEFEAT" };
-    let color = if victory { crate::ui::core::colors::POSITIVE } else { crate::ui::core::colors::NEGATIVE };
+    let color = if victory {
+        crate::ui::core::colors::POSITIVE
+    } else {
+        crate::ui::core::colors::NEGATIVE
+    };
 
     // Title
     let title_dims = measure_text(title, None, 80, 1.0);
@@ -212,18 +286,22 @@ pub fn draw_game_over_screen(victory: bool) {
         screen_center_x - title_dims.width / 2.0,
         screen_center_y - 100.0,
         80.0,
-        color
+        color,
     );
 
     // Subtitle
-    let subtitle = if victory { "The Hero Base has been destroyed!" } else { "Your Dungeon Heart has fallen!" };
+    let subtitle = if victory {
+        "The Hero Base has been destroyed!"
+    } else {
+        "Your Dungeon Heart has fallen!"
+    };
     let sub_dims = measure_text(subtitle, None, 40, 1.0);
     draw_text(
         subtitle,
         screen_center_x - sub_dims.width / 2.0,
         screen_center_y - 20.0,
         40.0,
-        WHITE
+        WHITE,
     );
 
     // Instructions
@@ -234,6 +312,6 @@ pub fn draw_game_over_screen(victory: bool) {
         screen_center_x - instr_dims.width / 2.0,
         screen_center_y + 60.0,
         30.0,
-        GRAY
+        GRAY,
     );
 }

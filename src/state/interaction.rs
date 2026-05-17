@@ -15,7 +15,7 @@ pub enum InteractionMode {
     PlaceSpawner,
     Pickup,
     Drop,
-    Sell, // Sell room or cancel task
+    Sell,    // Sell room or cancel task
     Inspect, // Inspect minion details
     SetAttackMarker,
     SetDefendMarker,

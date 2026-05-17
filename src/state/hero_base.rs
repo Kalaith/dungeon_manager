@@ -1,12 +1,12 @@
-use crate::state::tile_state::TilePos;
 use crate::state::entities::EntityManager;
-use serde::{Serialize, Deserialize};
+use crate::state::tile_state::TilePos;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeroBuilding {
-    pub id: String, // Unique instance ID
+    pub id: String,            // Unique instance ID
     pub building_type: String, // Reference to HeroBuildingData.id
-    pub pos: TilePos, // Top-left position
+    pub pos: TilePos,          // Top-left position
     pub spawn_timers: Vec<SpawnTimer>,
     pub entity_id: Option<crate::state::entities::EntityId>,
 }
@@ -22,7 +22,7 @@ impl HeroBuilding {
         // No entity assigned - consider destroyed
         true
     }
-    
+
     /// Get current health from entity system
     pub fn get_health(&self, entities: &EntityManager) -> (f32, f32) {
         if let Some(entity_id) = self.entity_id {
@@ -47,7 +47,7 @@ pub struct HeroBase {
     pub buildings: Vec<HeroBuilding>,
     pub position: TilePos, // General location (e.g., center of base)
     pub enabled: bool,
-    
+
     // Wave attack state
     /// Time until the next attack wave launches
     pub time_until_next_wave: f32,
@@ -75,8 +75,10 @@ impl HeroBase {
     /// Check if all buildings are destroyed using entity health
     pub fn is_defeated(&self, entities: &EntityManager) -> bool {
         // Victory condition: All buildings destroyed
-        if !self.enabled { return false; }
-        
+        if !self.enabled {
+            return false;
+        }
+
         if self.buildings.is_empty() {
             return true;
         }

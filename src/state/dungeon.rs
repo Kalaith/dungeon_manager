@@ -23,7 +23,7 @@ impl Dungeon {
         ];
         let random_idx = macroquad::rand::gen_range(0, starting_positions.len());
         let random_start = starting_positions[random_idx];
-        
+
         let grid = match map_type {
             MapType::Standard => {
                 let config = map_generator::MapConfig {

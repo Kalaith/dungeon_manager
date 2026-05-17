@@ -10,7 +10,7 @@ pub fn process_hero_digging(
     dungeon: &Dungeon,
     game_data: &GameData,
     hero_id: EntityId,
-    dt: f32
+    dt: f32,
 ) -> (Option<TilePos>, bool) {
     // First, gather the info we need without holding mutable borrows
     let (next_pos, can_dig) = {
@@ -35,9 +35,13 @@ pub fn process_hero_digging(
 
     // Check tile properties without holding entity borrow
     let is_wall = tile_blocks_movement(dungeon, next_pos, game_data);
-    let is_hero_wall = dungeon.get_tile(next_pos).map(|t| t.tile_type == "hero_wall").unwrap_or(false);
-    
-    let is_diggable = dungeon.get_tile(next_pos)
+    let is_hero_wall = dungeon
+        .get_tile(next_pos)
+        .map(|t| t.tile_type == "hero_wall")
+        .unwrap_or(false);
+
+    let is_diggable = dungeon
+        .get_tile(next_pos)
         .and_then(|t| game_data.tiles.get(&t.tile_type))
         .map(|td| td.diggable)
         .unwrap_or(false);
@@ -88,5 +92,9 @@ fn tile_blocks_movement(dungeon: &Dungeon, pos: TilePos, game_data: &GameData) -
         Some(t) => t,
         None => return false,
     };
-    game_data.tiles.get(&tile.tile_type).map(|td| td.blocks_movement).unwrap_or(false)
+    game_data
+        .tiles
+        .get(&tile.tile_type)
+        .map(|td| td.blocks_movement)
+        .unwrap_or(false)
 }

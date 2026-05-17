@@ -3,13 +3,12 @@ use crate::state::dungeon::Dungeon;
 use crate::state::entities::EntityManager;
 use crate::state::room_manager::RoomManager;
 
-
 /// Check for creatures with critical needs and make them desert
 pub fn handle_creature_desertion(
     entities: &mut EntityManager,
     room_manager: &RoomManager,
     dungeon: &mut Dungeon,
-    game_data: &GameData
+    game_data: &GameData,
 ) {
     use crate::engine::creature_task_logic;
 

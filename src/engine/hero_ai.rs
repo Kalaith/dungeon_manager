@@ -5,10 +5,10 @@
 
 use crate::data::heroes::HeroData;
 use crate::data::GameData;
+use crate::engine::room_validator::Room;
 use crate::state::entities::{Entity, HeroGoal, HeroState};
 use crate::state::game_state::GameState;
 use crate::state::tile_state::TilePos;
-use crate::engine::room_validator::Room;
 
 /// Threat level assessment for heroes
 #[derive(Debug, Clone, PartialEq)]
@@ -81,10 +81,7 @@ pub fn decide_hero_goal(
 }
 
 /// Choose a secondary goal when primary is complete
-fn choose_secondary_goal(
-    hero_state: &HeroState,
-    hero_data: &HeroData
-) -> HeroGoal {
+fn choose_secondary_goal(hero_state: &HeroState, hero_data: &HeroData) -> HeroGoal {
     // Pick the highest priority secondary goal that's still viable
     for goal_name in &hero_data.ai.secondary_goals {
         match goal_name.as_str() {
@@ -148,7 +145,9 @@ pub fn evaluate_threat(hero_pos: TilePos, game_state: &GameState) -> ThreatLevel
                 nearby_creatures += 1;
 
                 // Consider stronger creatures (higher level or specific types)
-                if creature.level >= 3 || matches!(creature.creature_id.as_str(), "demon_spawn" | "troll") {
+                if creature.level >= 3
+                    || matches!(creature.creature_id.as_str(), "demon_spawn" | "troll")
+                {
                     nearby_strong_creatures += 1;
                 }
             }
@@ -223,7 +222,12 @@ fn find_best_room_by_priority(
 
     for room in &game_state.room_manager.rooms {
         if room.room_type == room_type {
-            let priority = hero_data.ai.room_priorities.get(&room.room_type).copied().unwrap_or(1.0);
+            let priority = hero_data
+                .ai
+                .room_priorities
+                .get(&room.room_type)
+                .copied()
+                .unwrap_or(1.0);
             let distance_factor = calculate_room_distance_factor(hero_pos, room);
 
             let total_priority = priority / distance_factor; // Closer rooms get higher priority
@@ -327,11 +331,20 @@ fn calculate_distance(a: TilePos, b: TilePos) -> f32 {
 
 /// Check if dungeon heart is still alive
 fn is_dungeon_heart_alive(game_state: &GameState) -> bool {
-    game_state.room_manager.rooms.iter().any(|room| room.room_type == "dungeon_heart")
+    game_state
+        .room_manager
+        .rooms
+        .iter()
+        .any(|room| room.room_type == "dungeon_heart")
 }
 
 /// Find a valid wander target position for a hero
-fn find_wander_target(spawn_pos: TilePos, current_pos: TilePos, game_state: &GameState, game_data: &GameData) -> Option<TilePos> {
+fn find_wander_target(
+    spawn_pos: TilePos,
+    current_pos: TilePos,
+    game_state: &GameState,
+    game_data: &GameData,
+) -> Option<TilePos> {
     let radius = 5;
     for _ in 0..10 {
         let dx = macroquad::rand::gen_range(-radius, radius + 1);
@@ -378,7 +391,7 @@ pub fn update_hero_ai(
     hero_entity: &Entity,
     hero_state: &mut HeroState,
     game_state: &GameState,
-    game_data: &GameData
+    game_data: &GameData,
 ) {
     // Defenders always stay at spawn - don't change their goal
     if hero_state.is_defender {
@@ -397,7 +410,7 @@ pub fn update_hero_ai(
             HeroGoal::DestroyHeart => false,   // Keep attacking - wave assigned this goal
             _ => hero_state.current_path.is_none(), // Other goals: re-evaluate if lost
         };
-        
+
         if should_reevaluate {
             let new_goal = decide_hero_goal(hero_state, game_state, game_data);
             if new_goal != hero_state.current_goal {
@@ -412,9 +425,12 @@ pub fn update_hero_ai(
     // Update target if needed
     match &hero_state.current_goal {
         HeroGoal::RestAtSpawn(spawn_pos) => {
-            let needs_new_target = hero_state.target_pos.is_none() || hero_state.target_pos == Some(hero_entity.pos);
+            let needs_new_target =
+                hero_state.target_pos.is_none() || hero_state.target_pos == Some(hero_entity.pos);
             if needs_new_target {
-                if let Some(target) = find_wander_target(*spawn_pos, hero_entity.pos, game_state, game_data) {
+                if let Some(target) =
+                    find_wander_target(*spawn_pos, hero_entity.pos, game_state, game_data)
+                {
                     hero_state.target_pos = Some(target);
                     hero_state.current_path = None;
                 }
@@ -423,57 +439,91 @@ pub fn update_hero_ai(
         HeroGoal::StealGold(_) => {
             // Priority: Visible gold piles -> Treasury room
             let mut found_pile = false;
-            
+
             // 1. Look for nearby gold piles (visual range)
             if hero_state.target_pos.is_none() {
-                 if let Some(pile_pos) = find_nearby_gold_pile(hero_entity.pos, game_state) {
-                     hero_state.target_pos = Some(pile_pos);
-                     hero_state.target_room_id = None; // Ignore room if we see gold
-                     found_pile = true;
-                     eprintln!("[DEBUG] Hero {} spotted gold pile at {:?}", hero_state.hero_id, pile_pos);
-                 }
+                if let Some(pile_pos) = find_nearby_gold_pile(hero_entity.pos, game_state) {
+                    hero_state.target_pos = Some(pile_pos);
+                    hero_state.target_room_id = None; // Ignore room if we see gold
+                    found_pile = true;
+                    eprintln!(
+                        "[DEBUG] Hero {} spotted gold pile at {:?}",
+                        hero_state.hero_id, pile_pos
+                    );
+                }
             }
 
             // 2. If no pile visible, go to treasury
             if !found_pile {
-                 if hero_state.target_room_id.is_none() && hero_state.target_pos.is_none() {
-                    hero_state.target_room_id = find_target_room(hero_entity.pos, &hero_state.hero_id, &hero_state.current_goal, game_state, game_data);
-                 }
+                if hero_state.target_room_id.is_none() && hero_state.target_pos.is_none() {
+                    hero_state.target_room_id = find_target_room(
+                        hero_entity.pos,
+                        &hero_state.hero_id,
+                        &hero_state.current_goal,
+                        game_state,
+                        game_data,
+                    );
+                }
             }
         }
         _ => {
             // For goals that target rooms, try to find a target room
             if hero_state.target_room_id.is_none() && hero_state.target_pos.is_none() {
-                hero_state.target_room_id = find_target_room(hero_entity.pos, &hero_state.hero_id, &hero_state.current_goal, game_state, game_data);
-                
+                hero_state.target_room_id = find_target_room(
+                    hero_entity.pos,
+                    &hero_state.hero_id,
+                    &hero_state.current_goal,
+                    game_state,
+                    game_data,
+                );
+
                 // Special fallback for DestroyHeart: if no room found, find dungeon heart tile directly
-                if hero_state.target_room_id.is_none() && matches!(hero_state.current_goal, HeroGoal::DestroyHeart) {
-                    eprintln!("[DEBUG] Hero {} attempting fallback find_dungeon_heart_position...", hero_state.hero_id);
+                if hero_state.target_room_id.is_none()
+                    && matches!(hero_state.current_goal, HeroGoal::DestroyHeart)
+                {
+                    eprintln!(
+                        "[DEBUG] Hero {} attempting fallback find_dungeon_heart_position...",
+                        hero_state.hero_id
+                    );
                     if let Some(heart_pos) = game_state.find_dungeon_heart_position() {
                         hero_state.target_pos = Some(heart_pos);
-                        eprintln!("[DEBUG] Hero {} targeting dungeon heart directly at {:?}", hero_state.hero_id, heart_pos);
+                        eprintln!(
+                            "[DEBUG] Hero {} targeting dungeon heart directly at {:?}",
+                            hero_state.hero_id, heart_pos
+                        );
                     } else {
-                        eprintln!("[DEBUG] Hero {} FAILED to find dungeon heart tile!", hero_state.hero_id);
+                        eprintln!(
+                            "[DEBUG] Hero {} FAILED to find dungeon heart tile!",
+                            hero_state.hero_id
+                        );
                     }
                 }
             }
         }
     }
-    
+
     // Resolve Room ID to Target Pos
     if let Some(room_id) = hero_state.target_room_id {
         if hero_state.target_pos.is_none() {
-             // Find room directly
-             if let Some(room) = game_state.room_manager.rooms.iter().find(|r| r.id == room_id) {
-                 // Pick random tile in room or center
-                 if !room.tiles.is_empty() {
+            // Find room directly
+            if let Some(room) = game_state
+                .room_manager
+                .rooms
+                .iter()
+                .find(|r| r.id == room_id)
+            {
+                // Pick random tile in room or center
+                if !room.tiles.is_empty() {
                     let idx = macroquad::rand::gen_range(0, room.tiles.len());
                     if let Some(&pos) = room.tiles.iter().nth(idx) {
                         hero_state.target_pos = Some(pos);
-                        eprintln!("[DEBUG] Hero {} target resolved to room {} at {:?}", hero_state.hero_id, room_id, pos);
+                        eprintln!(
+                            "[DEBUG] Hero {} target resolved to room {} at {:?}",
+                            hero_state.hero_id, room_id, pos
+                        );
                     }
-                 }
-             }
+                }
+            }
         }
     }
 
@@ -481,7 +531,7 @@ pub fn update_hero_ai(
     if let Some(target) = hero_state.target_pos {
         if target == hero_entity.pos {
             hero_state.target_pos = None;
-            hero_state.target_room_id = None; 
+            hero_state.target_room_id = None;
             // Also clear path just in case
             hero_state.current_path = None;
         }
@@ -499,25 +549,44 @@ pub fn update_hero_ai(
     };
 
     if matches!(hero_state.current_goal, HeroGoal::DestroyHeart) {
-        eprintln!("[DEBUG] Hero {} calculating path from {:?} to {:?} (Goal: DestroyHeart)", hero_state.hero_id, hero_entity.pos, target);
+        eprintln!(
+            "[DEBUG] Hero {} calculating path from {:?} to {:?} (Goal: DestroyHeart)",
+            hero_state.hero_id, hero_entity.pos, target
+        );
     }
 
     let pf_grid = build_hero_pathfinding_grid(game_state, game_data, hero_state.can_dig);
     let pf_start = crate::engine::pathfinding::Pos::new(hero_entity.pos.x, hero_entity.pos.y);
     let pf_end = crate::engine::pathfinding::Pos::new(target.x, target.y);
 
-    let path_result = crate::engine::pathfinding::find_path(pf_start, pf_end, &pf_grid, crate::engine::pathfinding::Heuristic::Manhattan, false);
+    let path_result = crate::engine::pathfinding::find_path(
+        pf_start,
+        pf_end,
+        &pf_grid,
+        crate::engine::pathfinding::Heuristic::Manhattan,
+        false,
+    );
 
     if let Some(p) = path_result {
-        let waypoints: Vec<TilePos> = p.waypoints.iter().map(|pos| TilePos::new(pos.x, pos.y)).collect();
+        let waypoints: Vec<TilePos> = p
+            .waypoints
+            .iter()
+            .map(|pos| TilePos::new(pos.x, pos.y))
+            .collect();
         hero_state.current_path = Some(waypoints);
     } else if hero_state.can_dig && matches!(hero_state.current_goal, HeroGoal::DestroyHeart) {
-        eprintln!("[DEBUG] Hero {} pathfinding to Heart failed! Switching to temporary Wander.", hero_state.hero_id);
+        eprintln!(
+            "[DEBUG] Hero {} pathfinding to Heart failed! Switching to temporary Wander.",
+            hero_state.hero_id
+        );
         if let Some(wt) = find_emergency_wander_target(hero_entity.pos, game_state) {
             hero_state.target_pos = Some(wt);
             hero_state.current_path = None;
         } else {
-            eprintln!("[DEBUG] Hero {} stuck and could not find wander target!", hero_state.hero_id);
+            eprintln!(
+                "[DEBUG] Hero {} stuck and could not find wander target!",
+                hero_state.hero_id
+            );
         }
     }
 
@@ -527,7 +596,11 @@ pub fn update_hero_ai(
 }
 
 /// Build a pathfinding grid for hero navigation
-fn build_hero_pathfinding_grid(game_state: &GameState, game_data: &GameData, can_dig: bool) -> crate::engine::pathfinding::PathfindingGrid {
+fn build_hero_pathfinding_grid(
+    game_state: &GameState,
+    game_data: &GameData,
+    can_dig: bool,
+) -> crate::engine::pathfinding::PathfindingGrid {
     let (w, h) = crate::engine::tile_grid::get_grid_dimensions(&game_state.dungeon.grid);
     let mut pf_grid = crate::engine::pathfinding::PathfindingGrid::new(w, h);
 
@@ -545,7 +618,12 @@ fn build_hero_pathfinding_grid(game_state: &GameState, game_data: &GameData, can
 }
 
 /// Get pathfinding walkability and cost for a tile
-fn get_tile_pathfinding_info(pos: TilePos, game_state: &GameState, game_data: &GameData, can_dig: bool) -> (bool, f32) {
+fn get_tile_pathfinding_info(
+    pos: TilePos,
+    game_state: &GameState,
+    game_data: &GameData,
+    can_dig: bool,
+) -> (bool, f32) {
     let tile = match game_state.dungeon.get_tile(pos) {
         Some(t) => t,
         None => return (false, 1.0),
@@ -610,6 +688,6 @@ fn find_nearby_gold_pile(hero_pos: TilePos, game_state: &GameState) -> Option<Ti
             }
         }
     }
-    
+
     best_pos
 }
