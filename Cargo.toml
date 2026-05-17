@@ -15,10 +15,6 @@ image = "0.24"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 sapp-jsutils = "0.1"
 
-[profile.release]
-opt-level = 3
-lto = true
-
 [[bin]]
 name = "dungeon_manager"
 path = "src/main.rs"
