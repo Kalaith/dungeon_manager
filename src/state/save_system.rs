@@ -52,7 +52,8 @@ pub fn save_game(game_state: &GameState, slot_name: &str) -> Result<(), String> 
     #[cfg(not(target_arch = "wasm32"))]
     {
         let filename = format!("{}.json", key);
-        fs::write(&filename, serialized).map_err(|e| format!("File write error: {}", e))?;
+        macroquad_toolkit::persistence::save_string_atomic(&filename, &serialized)
+            .map_err(|e| format!("File write error: {}", e))?;
         eprintln!("Game saved to file: {}", filename);
         Ok(())
     }
