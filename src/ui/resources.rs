@@ -1,7 +1,15 @@
 use crate::sprite_variation::SpriteVariationCache;
 use macroquad::prelude::*;
+use macroquad_toolkit::assets::AssetManager;
 use std::cell::RefCell;
 use std::collections::HashMap;
+
+const ASSET_PACKS: [&str; 4] = [
+    "assets/tiles.zip",
+    "assets/sprites.zip",
+    "assets/icons.zip",
+    "assets/ui.zip",
+];
 
 pub struct GraphicsCache {
     pub tile_textures: HashMap<String, Texture2D>,
@@ -65,6 +73,7 @@ impl GraphicsCache {
 
     pub async fn load_all(game_data: Option<&crate::data::GameData>) -> Result<Self, String> {
         let mut cache = Self::new();
+        let mut loader = PackedTextureLoader::new().await;
 
         // Load tile textures
         let tile_types = vec![
@@ -108,11 +117,8 @@ impl GraphicsCache {
 
         for tile_type in tile_types {
             let path = format!("assets/tiles/{}.png", tile_type);
-            // In a real scenario we'd use robust error handling.
-            // For macroquad web, loading is async.
-            match load_texture(&path).await {
+            match loader.load(&path, FilterMode::Nearest).await {
                 Ok(tex) => {
-                    tex.set_filter(FilterMode::Nearest);
                     cache.tile_textures.insert(tile_type.to_string(), tex);
                 }
                 Err(e) => {
@@ -124,9 +130,8 @@ impl GraphicsCache {
 
         for tile_type in hero_building_tiles {
             let path = format!("assets/tiles/hero_buildings/{}.png", tile_type);
-            match load_texture(&path).await {
+            match loader.load(&path, FilterMode::Nearest).await {
                 Ok(tex) => {
-                    tex.set_filter(FilterMode::Nearest);
                     cache.tile_textures.insert(tile_type.to_string(), tex);
                 }
                 Err(e) => {
@@ -149,9 +154,8 @@ impl GraphicsCache {
         ];
         for creature in creatures {
             let path = format!("assets/sprites/monsters/{}.png", creature);
-            match load_texture(&path).await {
+            match loader.load(&path, FilterMode::Nearest).await {
                 Ok(tex) => {
-                    tex.set_filter(FilterMode::Nearest);
                     cache.monster_textures.insert(creature.to_string(), tex);
                 }
                 Err(e) => println!("Failed to load texture {}: {}", path, e),
@@ -177,9 +181,8 @@ impl GraphicsCache {
         ];
         for hero in heroes {
             let path = format!("assets/sprites/heroes/{}.png", hero);
-            match load_texture(&path).await {
+            match loader.load(&path, FilterMode::Nearest).await {
                 Ok(tex) => {
-                    tex.set_filter(FilterMode::Nearest);
                     cache.hero_textures.insert(hero.to_string(), tex);
                 }
                 Err(e) => println!("Failed to load texture {}: {}", path, e),
@@ -190,9 +193,8 @@ impl GraphicsCache {
         let ui_textures = vec!["main_menu_bg"];
         for tex_name in ui_textures {
             let path = format!("assets/ui/{}.png", tex_name);
-            match load_texture(&path).await {
+            match loader.load(&path, FilterMode::Linear).await {
                 Ok(tex) => {
-                    tex.set_filter(FilterMode::Linear); // UI usually looks better with Linear
                     cache.ui_textures.insert(tex_name.to_string(), tex);
                 }
                 Err(e) => println!("Failed to load texture {}: {}", path, e),
@@ -212,9 +214,8 @@ impl GraphicsCache {
                 let icon_path = &spell.visual.icon;
                 if !icon_path.is_empty() && known_spell_icons.contains(&icon_path.as_str()) {
                     let path = format!("assets/{}", icon_path);
-                    match load_texture(&path).await {
+                    match loader.load(&path, FilterMode::Nearest).await {
                         Ok(tex) => {
-                            tex.set_filter(FilterMode::Nearest);
                             println!("Loaded spell icon: {} -> {}", icon_path, path);
                             cache.ui_textures.insert(icon_path.clone(), tex);
                         }
@@ -228,9 +229,8 @@ impl GraphicsCache {
         let projectiles = vec!["projectile_melee", "projectile_arrow", "projectile_magic"];
         for projectile in projectiles {
             let path = format!("assets/sprites/projectiles/{}.png", projectile);
-            match load_texture(&path).await {
+            match loader.load(&path, FilterMode::Nearest).await {
                 Ok(tex) => {
-                    tex.set_filter(FilterMode::Nearest);
                     cache
                         .projectile_textures
                         .insert(projectile.to_string(), tex);
@@ -240,5 +240,30 @@ impl GraphicsCache {
         }
 
         Ok(cache)
+    }
+}
+
+struct PackedTextureLoader {
+    assets: AssetManager,
+}
+
+impl PackedTextureLoader {
+    async fn new() -> Self {
+        let mut assets = AssetManager::new();
+        for path in ASSET_PACKS {
+            assets.load_asset_pack(path).await.ok();
+        }
+
+        Self { assets }
+    }
+
+    async fn load(&mut self, path: &str, filter: FilterMode) -> Result<Texture2D, String> {
+        self.assets
+            .load_texture_with_filter(path, path, filter)
+            .await?;
+        self.assets
+            .get_texture(path)
+            .cloned()
+            .ok_or_else(|| format!("Texture was not cached after loading: {}", path))
     }
 }

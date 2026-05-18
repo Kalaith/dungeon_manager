@@ -1,0 +1,28 @@
+{
+  "packs": [
+    {
+      "source": "assets/tiles",
+      "output": "assets/tiles.zip",
+      "entry_root": "assets/tiles",
+      "delete_source": true
+    },
+    {
+      "source": "assets/sprites",
+      "output": "assets/sprites.zip",
+      "entry_root": "assets/sprites",
+      "delete_source": true
+    },
+    {
+      "source": "assets/icons",
+      "output": "assets/icons.zip",
+      "entry_root": "assets/icons",
+      "delete_source": true
+    },
+    {
+      "source": "assets/ui",
+      "output": "assets/ui.zip",
+      "entry_root": "assets/ui",
+      "delete_source": true
+    }
+  ]
+}
