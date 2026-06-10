@@ -403,7 +403,7 @@ fn spawn_entity_effect(
             }
 
             if let Some(monster_data) = game_data.monsters.get("imp") {
-                let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
+                let visual_seed = macroquad_toolkit::rng::random_u64();
                 let creature_state = CreatureState::new(
                     "imp".to_string(),
                     1,

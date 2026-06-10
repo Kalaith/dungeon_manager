@@ -43,7 +43,7 @@ pub fn handle_prison_captures(
 
     for hero_id in heroes_to_capture {
         // Just pick a random one for now
-        let random_idx = macroquad::rand::gen_range(0, available_prison_tiles.len());
+        let random_idx = macroquad_toolkit::rng::gen_range(0, available_prison_tiles.len());
         let target_pos = available_prison_tiles[random_idx];
 
         // Capture the hero
@@ -155,7 +155,7 @@ pub fn progress_prison_conversions(
                 entities.remove(hero_id);
 
                 if let Some(monster_data) = game_data.monsters.get("skeleton") {
-                    let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
+                    let visual_seed = macroquad_toolkit::rng::random_u64();
                     let creature_state = crate::state::entities::CreatureState::new(
                         "skeleton".to_string(),
                         1,

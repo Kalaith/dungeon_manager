@@ -2,7 +2,7 @@
 //! Ensures all open regions are connected via flood fill and tunnel carving
 
 use crate::state::tile_state::TilePos;
-use macroquad::rand;
+use macroquad_toolkit::rng;
 use std::collections::VecDeque;
 
 use super::config::Grid;
@@ -115,7 +115,7 @@ fn find_closest_points(region_a: &[TilePos], region_b: &[TilePos]) -> (TilePos, 
 /// Carve an L-shaped tunnel between two points
 fn carve_tunnel(grid: &mut Grid, start: TilePos, end: TilePos) {
     let width = 1;
-    let horizontal_first = rand::gen_range(0u32, 2) == 0;
+    let horizontal_first = rng::gen_range(0u32, 2) == 0;
 
     if horizontal_first {
         carve_horizontal_line(grid, start.x, end.x, start.y, width);

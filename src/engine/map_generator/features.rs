@@ -1,7 +1,7 @@
 //! Natural features and hero portals
 
 use crate::state::tile_state::{Ownership, TilePos};
-use macroquad::rand;
+use macroquad_toolkit::rng;
 use std::collections::VecDeque;
 
 use super::config::{Grid, MapConfig};
@@ -23,9 +23,9 @@ fn add_stone_pillars(grid: &mut Grid, count: usize) {
     let width = grid[0].len();
 
     for _ in 0..count {
-        let x = rand::gen_range(8, width - 8);
-        let y = rand::gen_range(8, height - 8);
-        let radius = rand::gen_range(1, 3);
+        let x = rng::gen_range(8, width - 8);
+        let y = rng::gen_range(8, height - 8);
+        let radius = rng::gen_range(1, 3);
 
         if is_open_area(grid, TilePos::new(x as i32, y as i32), radius * 2 + 1) {
             create_pillar(grid, x, y, radius);
@@ -81,9 +81,9 @@ fn add_collapsed_chambers(grid: &mut Grid, count: usize) {
     let width = grid[0].len();
 
     for _ in 0..count {
-        let cx = rand::gen_range(12, width - 12);
-        let cy = rand::gen_range(12, height - 12);
-        let size = rand::gen_range(5, 10);
+        let cx = rng::gen_range(12, width - 12);
+        let cy = rng::gen_range(12, height - 12);
+        let size = rng::gen_range(5, 10);
         create_collapsed_chamber(grid, cx, cy, size);
     }
 }
@@ -115,7 +115,7 @@ fn create_collapsed_chamber(grid: &mut Grid, cx: usize, cy: usize, size: usize) 
             let ny = (y as i32 + dy) as usize;
 
             if nx > 5 && nx < width - 5 && ny > 5 && ny < height - 5 {
-                if !visited[ny][nx] && rand::gen_range(0.0f32, 1.0) < 0.75 {
+                if !visited[ny][nx] && rng::gen_range(0.0f32, 1.0) < 0.75 {
                     visited[ny][nx] = true;
                     queue.push_back((nx, ny));
                 }
@@ -132,7 +132,7 @@ fn create_collapsed_chamber(grid: &mut Grid, cx: usize, cy: usize, size: usize) 
 pub fn add_monster_lairs(grid: &mut Grid, start_pos: TilePos, _config: &MapConfig) {
     let height = grid.len();
     let width = grid[0].len();
-    let target_lairs = rand::gen_range(3u32, 6); // Aim for 3-5 lairs
+    let target_lairs = rng::gen_range(3u32, 6); // Aim for 3-5 lairs
     let mut min_distance = 25.0; // Initial strict distance
 
     let mut lairs_placed = 0;
@@ -168,8 +168,8 @@ fn try_place_lair(
     start_pos: TilePos,
     min_dist: f32,
 ) -> bool {
-    let cx = rand::gen_range(10, width - 10);
-    let cy = rand::gen_range(10, height - 10);
+    let cx = rng::gen_range(10, width - 10);
+    let cy = rng::gen_range(10, height - 10);
     let pos = TilePos::new(cx as i32, cy as i32);
 
     if distance_f32(pos, start_pos) < min_dist {
@@ -189,7 +189,7 @@ fn try_place_lair(
 fn create_monster_lair(grid: &mut Grid, cx: usize, cy: usize) {
     let height = grid.len();
     let width = grid[0].len();
-    let radius = rand::gen_range(2i32, 4);
+    let radius = rng::gen_range(2i32, 4);
 
     // Carve room
     for dy in -radius..=radius {
@@ -212,15 +212,15 @@ fn create_monster_lair(grid: &mut Grid, cx: usize, cy: usize) {
 
     // Add some random gold/treasure around
     for _ in 0..3 {
-        let dx = rand::gen_range(-radius, radius + 1);
-        let dy = rand::gen_range(-radius, radius + 1);
+        let dx = rng::gen_range(-radius, radius + 1);
+        let dy = rng::gen_range(-radius, radius + 1);
         let x = (cx as i32 + dx).max(1).min(width as i32 - 2) as usize;
         let y = (cy as i32 + dy).max(1).min(height as i32 - 2) as usize;
 
         if grid[y][x].tile_type == "corrupted_floor" && (dx != 0 || dy != 0) {
-            if rand::gen_range(0.0f32, 1.0) < 0.3 {
+            if rng::gen_range(0.0f32, 1.0) < 0.3 {
                 grid[y][x].tile_type = "gold_vein".to_string();
-                grid[y][x].resources_remaining = Some(rand::gen_range(100u32, 300));
+                grid[y][x].resources_remaining = Some(rng::gen_range(100u32, 300));
             }
         }
     }
@@ -280,7 +280,7 @@ fn select_best_portal_location(
         return None;
     }
     if existing_portals.is_empty() {
-        return Some(candidates[rand::gen_range(0, candidates.len())]);
+        return Some(candidates[rng::gen_range(0, candidates.len())]);
     }
 
     let min_portal_spacing = 15.0;
@@ -300,8 +300,8 @@ fn select_best_portal_location(
     }
 
     if best_candidates.is_empty() {
-        Some(candidates[rand::gen_range(0, candidates.len())])
+        Some(candidates[rng::gen_range(0, candidates.len())])
     } else {
-        Some(best_candidates[rand::gen_range(0, best_candidates.len())])
+        Some(best_candidates[rng::gen_range(0, best_candidates.len())])
     }
 }

@@ -97,7 +97,7 @@ pub fn load_map(
 
         // Check if it's a monster/creature
         if let Some(monster_data) = game_data.monsters.get(&entity_def.id) {
-            let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
+            let visual_seed = macroquad_toolkit::rng::random_u64();
             let creature_state = CreatureState::new(
                 entity_def.id.clone(),
                 1, // level

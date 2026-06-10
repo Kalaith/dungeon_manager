@@ -68,7 +68,7 @@ impl SpawnerSystem {
             // Spawn the monster
             if let Some(monster_data) = game_data.monsters.get(&spawner.monster_id) {
                 // Generate visual variation seed
-                let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
+                let visual_seed = macroquad_toolkit::rng::random_u64();
                 let creature = CreatureState::new(
                     spawner.monster_id.clone(),
                     1, // Level 1

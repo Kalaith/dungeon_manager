@@ -76,7 +76,8 @@ impl SpawnSystem {
         }
 
         // Pick a random connected spawner
-        let spawn_pos = connected_spawners[macroquad::rand::gen_range(0, connected_spawners.len())];
+        let spawn_pos =
+            connected_spawners[macroquad_toolkit::rng::gen_range(0, connected_spawners.len())];
 
         // Determine potential creatures based on existing rooms
         let mut potential_creatures = Vec::new();
@@ -109,11 +110,11 @@ impl SpawnSystem {
         }
 
         if let Some(&creature_id) =
-            valid_creatures.get(macroquad::rand::gen_range(0, valid_creatures.len()))
+            valid_creatures.get(macroquad_toolkit::rng::gen_range(0, valid_creatures.len()))
         {
             if let Some(monster_data) = game_data.monsters.get(creature_id) {
                 // Generate visual variation seed
-                let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
+                let visual_seed = macroquad_toolkit::rng::random_u64();
                 // Create creature with food need initialized
                 let mut creature_state = CreatureState::new(
                     creature_id.to_string(),

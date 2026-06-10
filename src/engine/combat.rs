@@ -44,7 +44,7 @@ pub fn resolve_combat_tick(
     let attacks_per_second = attacker_stats.attack_speed;
     let attack_chance = attacks_per_second * dt;
 
-    if macroquad::rand::gen_range(0.0f32, 1.0) > attack_chance {
+    if macroquad_toolkit::rng::gen_range(0.0f32, 1.0) > attack_chance {
         // No attack this tick
         return CombatResult {
             damage_dealt: 0.0,
@@ -185,7 +185,7 @@ pub fn calculate_damage(
     // Base damage from attacker's range
     let base_damage = if attacker.damage_range[1] > attacker.damage_range[0] {
         let range = attacker.damage_range[1] - attacker.damage_range[0];
-        attacker.damage_range[0] + macroquad::rand::gen_range(0.0f32, 1.0) * range
+        attacker.damage_range[0] + macroquad_toolkit::rng::gen_range(0.0f32, 1.0) * range
     } else {
         attacker.damage_range[0]
     };

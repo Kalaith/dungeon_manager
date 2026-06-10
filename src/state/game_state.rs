@@ -2,33 +2,16 @@
 //! Holds the dungeon grid, entities, rooms, and player state
 
 use crate::data::GameData;
-use crate::engine::combat::{resolve_combat_tick, update_status_effects};
+use crate::engine::combat::update_status_effects;
 use crate::engine::tile_grid;
-use crate::state::entities::{EntityId, EntityManager, EntityType};
+use crate::state::entities::{EntityId, EntityManager};
 use crate::state::player_state::PlayerState;
 use crate::state::projectiles::ProjectileManager;
 use crate::state::room_manager::RoomManager;
 use crate::state::tile_state::{Ownership, TilePos};
+use macroquad_toolkit::rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-
-/// Extract attack type from an entity type for combat calculations
-fn get_entity_attack_type(entity_type: &EntityType, game_data: &GameData) -> String {
-    match entity_type {
-        EntityType::Creature(state) => game_data
-            .monsters
-            .get(&state.creature_id)
-            .map(|d| d.combat.attack_type.clone())
-            .unwrap_or_else(|| "melee".to_string()),
-        EntityType::Hero(state) => game_data
-            .heroes
-            .get(&state.hero_id)
-            .map(|d| d.combat.attack_type.clone())
-            .unwrap_or_else(|| "melee".to_string()),
-        EntityType::Structure(_) => "none".to_string(),
-        EntityType::ResourcePile(_) => "none".to_string(),
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MapType {
@@ -123,29 +106,7 @@ impl GameState {
         // Detect and register starting rooms (either generated or loaded)
         room_manager.detect_and_update_rooms(&mut dungeon, game_data);
 
-        // Detect Monster Spawners from map tiles
-        let mut spawners = Vec::new();
-        let (w, h) = tile_grid::get_grid_dimensions(&dungeon.grid);
-        for y in 0..h {
-            for x in 0..w {
-                let pos = TilePos::new(x as i32, y as i32);
-                if let Some(tile) = tile_grid::get_tile(&dungeon.grid, pos) {
-                    if tile.tile_type == "monster_spawner" {
-                        // Randomly pick Spider or Lizard
-                        let monster_id = if macroquad::rand::gen_range(0.0f32, 1.0) < 0.5 {
-                            "spider"
-                        } else {
-                            "lizard"
-                        };
-                        spawners.push(crate::engine::spawner_logic::MonsterSpawner::new(
-                            pos,
-                            monster_id.to_string(),
-                            game_data.config.spawning.max_monsters_per_spawner,
-                        ));
-                    }
-                }
-            }
-        }
+        let spawners = crate::state::spawning::detect_monster_spawners(&dungeon, game_data);
 
         let mut state = Self {
             dungeon,
@@ -284,8 +245,8 @@ impl GameState {
             self.spawn_random_creature(game_data);
             let spawn_range = game_data.config.timing.creature_spawn_max_interval
                 - game_data.config.timing.creature_spawn_min_interval;
-            self.next_creature_spawn_time = game_data.config.timing.creature_spawn_min_interval
-                + macroquad::rand::gen_range(0.0f32, 1.0) * spawn_range;
+            self.next_creature_spawn_time =
+                game_data.config.timing.creature_spawn_min_interval + rng::rand() * spawn_range;
         }
 
         // Pay Day Logic
@@ -302,88 +263,7 @@ impl GameState {
             crate::engine::hero_spawner::update_hero_spawning(self, game_data, dt);
         }
 
-        // Dungeon Heart Attack Logic
-        let heart_pos = self.find_dungeon_heart_position();
-        if let Some(target_pos) = heart_pos {
-            let mut total_damage = 0.0;
-            let mut attackers: Vec<(EntityId, (f32, f32), String)> = Vec::new();
-
-            // Check for heroes in range with DestroyHeart goal
-            for entity in self.entities.all() {
-                if let Some(hero) = entity.as_hero() {
-                    if matches!(
-                        hero.current_goal,
-                        crate::state::entities::HeroGoal::DestroyHeart
-                    ) {
-                        // Get the hero's attack type and stats
-                        let hero_data = game_data.heroes.get(&hero.hero_id);
-                        let attack_type = hero_data
-                            .map(|d| d.combat.attack_type.clone())
-                            .unwrap_or_else(|| "melee".to_string());
-                        let attack_speed = hero_data.map(|d| d.combat.attack_speed).unwrap_or(1.0);
-
-                        // Calculate Manhattan distance for range check
-                        let manhattan_dist = (entity.pos.x - target_pos.x).abs()
-                            + (entity.pos.y - target_pos.y).abs();
-
-                        // Determine attack range based on attack type
-                        let attack_range = match attack_type.as_str() {
-                            "melee" => game_data.config.combat_ranges.melee,
-                            "ranged" => game_data.config.combat_ranges.ranged,
-                            "magic" => game_data.config.combat_ranges.magic,
-                            _ => game_data.config.combat_ranges.melee,
-                        };
-
-                        if manhattan_dist <= attack_range {
-                            // Use probabilistic attack like normal combat
-                            let attack_chance = attack_speed * dt;
-                            if macroquad::rand::gen_range(0.0f32, 1.0) < attack_chance {
-                                // Calculate damage based on hero stats
-                                let base_damage = hero_data
-                                    .map(|d| {
-                                        let (min, max) = (
-                                            d.combat.damage_range[0] as f32,
-                                            d.combat.damage_range[1] as f32,
-                                        );
-                                        macroquad::rand::gen_range(min, max)
-                                    })
-                                    .unwrap_or(5.0);
-
-                                total_damage += base_damage;
-
-                                // Store attacker info for projectile spawning
-                                attackers.push((entity.id, entity.visual_pos, attack_type));
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Spawn projectiles for each attacker that landed an attack
-            for (attacker_id, visual_pos, attack_type) in attackers {
-                self.projectiles.spawn_at_position(
-                    visual_pos,
-                    target_pos,
-                    &attack_type,
-                    attacker_id,
-                    0.0,
-                );
-            }
-
-            if total_damage > 0.0 && !self.cheat_immortal_heart {
-                self.dungeon_heart_health -= total_damage;
-                eprintln!(
-                    "Heart taking damage! Health: {:.1} -> {:.1}",
-                    self.dungeon_heart_health + total_damage,
-                    self.dungeon_heart_health
-                );
-                if self.dungeon_heart_health <= 0.0 && !self.game_over {
-                    self.game_over = true;
-                    self.notifications
-                        .danger("DUNGEON HEART DESTROYED! GAME OVER");
-                }
-            }
-        }
+        self.process_dungeon_heart_attacks(game_data, dt);
         for hero_id in hero_entities {
             // Update AI first
             if let Some(entity) = self.entities.get(hero_id) {
@@ -767,131 +647,6 @@ impl GameState {
         }
     }
 
-    pub fn detect_and_update_rooms(&mut self, game_data: &GameData) {
-        self.room_manager
-            .detect_and_update_rooms(&mut self.dungeon, game_data);
-
-        // Detect Hero Base Buildings
-        self.detect_hero_base(game_data);
-
-        // Recalculate max gold and mana based on rooms
-        let mut max_gold = 0;
-        let mut max_mana = 0;
-        let mut lair_tiles_count = 0;
-
-        for room in &self.room_manager.rooms {
-            if room.room_type == "lair" {
-                lair_tiles_count += room.tiles.len();
-            }
-
-            if let Some(room_data) = game_data.rooms.get(&room.room_type) {
-                if room_data.effects.gold_storage_capacity > 0 {
-                    max_gold += room.tiles.len() as i32 * room_data.effects.gold_storage_capacity;
-                }
-                if room_data.effects.mana_storage_capacity > 0 {
-                    max_mana += room.tiles.len() as i32 * room_data.effects.mana_storage_capacity;
-                }
-            }
-        }
-
-        self.player.max_gold = max_gold;
-        self.player.max_mana = max_mana;
-
-        // Capacity is exactly equal to the number of lair tiles
-        self.player.max_creatures = lair_tiles_count;
-    }
-
-    fn detect_hero_base(&mut self, game_data: &GameData) {
-        // Clear existing buildings to avoid duplicates on re-scan
-        self.hero_base.buildings.clear();
-        self.hero_base.enabled = false;
-
-        let (w, h) = tile_grid::get_grid_dimensions(&self.dungeon.grid);
-        let mut base_detected = false;
-        let mut base_center_acc = (0, 0);
-        let mut building_count = 0;
-
-        for y in 0..h {
-            for x in 0..w {
-                let pos = TilePos::new(x as i32, y as i32);
-                if let Some(tile) = tile_grid::get_tile(&self.dungeon.grid, pos) {
-                    if let Some(building_data) = game_data.hero_buildings.get(&tile.tile_type) {
-                        // Found a building tile!
-                        let mut building = crate::state::hero_base::HeroBuilding {
-                            id: format!("{}_{}_{}", tile.tile_type, pos.x, pos.y),
-                            building_type: tile.tile_type.clone(),
-                            pos,
-                            spawn_timers: building_data
-                                .spawn_triggers
-                                .iter()
-                                .map(|t| crate::state::hero_base::SpawnTimer {
-                                    hero_id: t.hero_id.clone(),
-                                    time_until_spawn: 1.0, // Start almost immediately for feedback
-                                })
-                                .collect(),
-                            entity_id: None,
-                        };
-
-                        // Check if Structure Entity already exists to avoid health reset
-                        let mut existing_id = None;
-                        for entity in self.entities.all() {
-                            if entity.pos == pos {
-                                if let crate::state::entities::EntityType::Structure(_) =
-                                    entity.entity_type
-                                {
-                                    existing_id = Some(entity.id);
-                                    break;
-                                }
-                            }
-                        }
-
-                        let entity_id = if let Some(id) = existing_id {
-                            id
-                        } else {
-                            let structure_state = crate::state::entities::StructureState::new(
-                                tile.tile_type.clone(),
-                                building_data.hp as f32,
-                            );
-                            self.entities.spawn_structure(pos, structure_state)
-                        };
-
-                        building.entity_id = Some(entity_id);
-
-                        self.hero_base.buildings.push(building);
-
-                        base_detected = true;
-                        base_center_acc.0 += x as i32;
-                        base_center_acc.1 += y as i32;
-                        building_count += 1;
-                    }
-                }
-            }
-        }
-
-        if base_detected {
-            self.hero_base.enabled = true;
-            if building_count > 0 {
-                self.hero_base.position = TilePos::new(
-                    base_center_acc.0 / building_count,
-                    base_center_acc.1 / building_count,
-                );
-            }
-            eprintln!(
-                "Hero Base detected with {} buildings at {:?}",
-                building_count, self.hero_base.position
-            );
-        }
-    }
-
-    fn spawn_random_creature(&mut self, game_data: &GameData) {
-        crate::engine::spawner::SpawnSystem::spawn_random_creature(
-            &mut self.dungeon,
-            &self.room_manager,
-            &mut self.entities,
-            game_data,
-        );
-    }
-
     /// Release lair tile claimed by an entity (when creature dies/leaves)
     fn release_lair_tile(&mut self, entity_id: crate::state::entities::EntityId) {
         self.room_manager
@@ -949,138 +704,6 @@ impl GameState {
                 }
             })
             .count()
-    }
-
-    /// Spawn starting imps at game initialization
-    pub fn spawn_starting_imps(&mut self, game_data: &GameData, count: usize) {
-        for _ in 0..count {
-            self.spawn_imp(game_data);
-        }
-        eprintln!("Spawned {} starting imps", count);
-    }
-
-    /// Spawn an imp at a claimed floor tile or dungeon heart
-    fn spawn_imp(&mut self, game_data: &GameData) {
-        // Find a claimed floor tile to spawn on
-        let mut spawn_positions = Vec::new();
-
-        for row in &self.dungeon.grid {
-            for tile in row {
-                if tile.ownership == Ownership::Player
-                    && (tile.tile_type == "claimed_floor" || tile.tile_type == "dungeon_heart")
-                {
-                    spawn_positions.push(tile.pos);
-                }
-            }
-        }
-
-        if spawn_positions.is_empty() {
-            // No claimed tiles yet, can't spawn imp
-            return;
-        }
-
-        // Pick a random spawn position
-        let pos = spawn_positions[macroquad::rand::gen_range(0, spawn_positions.len())];
-
-        // Spawn the imp
-        if let Some(monster_data) = game_data.monsters.get("imp") {
-            let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
-            let creature_state = crate::state::entities::CreatureState::new(
-                "imp".to_string(),
-                1,
-                monster_data.stats.health,
-                monster_data.stats.mana,
-                visual_seed,
-            );
-            self.entities.spawn_creature(pos, creature_state);
-            eprintln!("Spawned imp at {:?}", pos);
-        }
-    }
-
-    /// Trigger Pay Day: All creatures become unpaid and seek wages
-    pub fn trigger_pay_day(&mut self) {
-        eprintln!("PAY DAY! All creatures are demanding wages!");
-        for entity in self.entities.all_mut() {
-            if let Some(creature) = entity.as_creature_mut() {
-                // Set gold need to 0 (Critical) to force them to collect wages
-                creature.set_need("gold".to_string(), 0.0);
-            }
-        }
-        self.notifications
-            .warning("Pay Day! Creatures demand wages.");
-    }
-
-    fn resolve_combat(&mut self, game_data: &GameData, dt: f32) {
-        let all_entities: Vec<EntityId> = self.entities.all().map(|e| e.id).collect();
-
-        for &attacker_id in &all_entities {
-            let attacker = match self.entities.get(attacker_id) {
-                Some(a) => a,
-                None => continue,
-            };
-
-            let attack_type = get_entity_attack_type(&attacker.entity_type, game_data);
-            let attacker_visual_pos = attacker.visual_pos;
-            let targets = crate::engine::combat::find_combat_targets(
-                attacker,
-                self.entities.entities(),
-                &self.dungeon,
-                game_data,
-            );
-
-            for target_id in targets {
-                let defender = match self.entities.get(target_id) {
-                    Some(d) => d,
-                    None => continue,
-                };
-
-                if !crate::engine::combat::in_combat_range(
-                    attacker.pos,
-                    defender.pos,
-                    &attack_type,
-                    &self.dungeon.grid,
-                    game_data,
-                ) {
-                    continue;
-                }
-
-                let defender_visual_pos = defender.visual_pos;
-                let result = resolve_combat_tick(attacker, defender, dt, game_data);
-
-                // Handle projectile spawning
-                if let Some((p_type, damage)) = result.projectile_spawned.clone() {
-                    // Ranged/Magic: Spawn actual projectile carrying damage
-                    self.projectiles.spawn(
-                        attacker_visual_pos,
-                        defender_visual_pos,
-                        &p_type,
-                        attacker_id,
-                        target_id,
-                        damage,
-                    );
-                } else if result.damage_dealt > 0.0 {
-                    // Melee with damage: Spawn visual projectile (0 damage)
-                    self.projectiles.spawn(
-                        attacker_visual_pos,
-                        defender_visual_pos,
-                        &attack_type,
-                        attacker_id,
-                        target_id,
-                        0.0,
-                    );
-                }
-
-                crate::engine::combat::apply_combat_result(
-                    &result,
-                    attacker_id,
-                    target_id,
-                    self.entities.entities_mut(),
-                    game_data,
-                    self.time_elapsed,
-                );
-                break;
-            }
-        }
     }
 
     /// Process hero digging logic with flattened control flow

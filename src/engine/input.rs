@@ -647,7 +647,7 @@ impl InputHandler {
                             *level,
                             max_health,
                             max_mana,
-                            macroquad::rand::gen_range(0, 1000000),
+                            macroquad_toolkit::rng::gen_range(0, 1000000),
                         );
                         state.entities.spawn_creature(tile_pos, creature_state);
                         state
@@ -678,7 +678,7 @@ impl InputHandler {
                             max_mana,
                             tile_pos,
                             dig_time,
-                            macroquad::rand::gen_range(0, 1000000),
+                            macroquad_toolkit::rng::gen_range(0, 1000000),
                         );
                         state.entities.spawn_hero(tile_pos, hero_state);
                         state

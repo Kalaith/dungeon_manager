@@ -20,7 +20,7 @@ mod utils;
 pub use config::{Grid, MapConfig, StartingPosition};
 
 use crate::data::GameData;
-use macroquad::rand;
+use macroquad_toolkit::rng;
 
 // ============================================================================
 // MAIN GENERATION FUNCTION
@@ -30,10 +30,10 @@ use macroquad::rand;
 pub fn generate_map(config: &MapConfig, game_data: &GameData) -> Grid {
     // Seed the RNG if a seed is provided
     if let Some(seed) = config.seed {
-        rand::srand(seed);
+        rng::srand(seed);
     } else {
         // Use current time as seed for variety
-        rand::srand(macroquad::miniquad::date::now() as u64);
+        rng::srand(macroquad::miniquad::date::now() as u64);
     }
 
     // Step 1: Create base terrain

@@ -2,7 +2,7 @@
 //! Includes noise generation, base terrain, and cellular automata smoothing
 
 use crate::state::tile_state::{TilePos, TileState};
-use macroquad::rand;
+use macroquad_toolkit::rng;
 
 use super::config::{Grid, MapConfig};
 
@@ -50,9 +50,7 @@ impl SimpleNoise {
 
 /// Create terrain using Perlin noise for natural cave systems
 pub fn create_noise_terrain(config: &MapConfig) -> Grid {
-    let seed = config
-        .seed
-        .unwrap_or_else(|| rand::gen_range(0u64, u64::MAX));
+    let seed = config.seed.unwrap_or_else(|| rng::random_u64());
     let noise = SimpleNoise::new(seed);
     let mut grid = Vec::new();
 

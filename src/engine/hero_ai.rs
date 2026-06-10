@@ -347,8 +347,8 @@ fn find_wander_target(
 ) -> Option<TilePos> {
     let radius = 5;
     for _ in 0..10 {
-        let dx = macroquad::rand::gen_range(-radius, radius + 1);
-        let dy = macroquad::rand::gen_range(-radius, radius + 1);
+        let dx = macroquad_toolkit::rng::gen_range(-radius, radius + 1);
+        let dy = macroquad_toolkit::rng::gen_range(-radius, radius + 1);
         let target_pos = TilePos::new(spawn_pos.x + dx, spawn_pos.y + dy);
 
         if target_pos == current_pos {
@@ -514,7 +514,7 @@ pub fn update_hero_ai(
             {
                 // Pick random tile in room or center
                 if !room.tiles.is_empty() {
-                    let idx = macroquad::rand::gen_range(0, room.tiles.len());
+                    let idx = macroquad_toolkit::rng::gen_range(0, room.tiles.len());
                     if let Some(&pos) = room.tiles.iter().nth(idx) {
                         hero_state.target_pos = Some(pos);
                         eprintln!(
@@ -654,8 +654,8 @@ fn get_tile_pathfinding_info(
 fn find_emergency_wander_target(current_pos: TilePos, game_state: &GameState) -> Option<TilePos> {
     let radius = 3;
     for _ in 0..10 {
-        let dx = macroquad::rand::gen_range(-radius, radius + 1);
-        let dy = macroquad::rand::gen_range(-radius, radius + 1);
+        let dx = macroquad_toolkit::rng::gen_range(-radius, radius + 1);
+        let dy = macroquad_toolkit::rng::gen_range(-radius, radius + 1);
         let n_pos = TilePos::new(current_pos.x + dx, current_pos.y + dy);
 
         if n_pos == current_pos {

@@ -1,13 +1,10 @@
 use crate::state::game_state::GameState;
 use serde::{Deserialize, Serialize};
 
-#[cfg(not(target_arch = "wasm32"))]
-use std::fs;
-#[cfg(not(target_arch = "wasm32"))]
-use std::path::Path;
-
 #[cfg(target_arch = "wasm32")]
 use crate::state::wasm_storage;
+
+const GAME_NAME: &str = "dungeon_manager";
 
 /// Wrapper for saving game state with metadata (uses reference to avoid Clone)
 #[derive(Serialize)]
@@ -37,14 +34,11 @@ pub fn save_game(game_state: &GameState, slot_name: &str) -> Result<(), String> 
         version: "0.1.0".to_string(),
     };
 
-    let serialized =
-        serde_json::to_string(&wrapper).map_err(|e| format!("Serialization error: {}", e))?;
-
     let key = format!("save_{}", slot_name);
 
     #[cfg(target_arch = "wasm32")]
     {
-        wasm_storage::storage_set(&key, &serialized);
+        macroquad_toolkit::persistence::save_json_key(GAME_NAME, &key, &wrapper)?;
         eprintln!("Game saved to localStorage key: {}", key);
         Ok(())
     }
@@ -52,7 +46,7 @@ pub fn save_game(game_state: &GameState, slot_name: &str) -> Result<(), String> 
     #[cfg(not(target_arch = "wasm32"))]
     {
         let filename = format!("{}.json", key);
-        macroquad_toolkit::persistence::save_string_atomic(&filename, &serialized)
+        macroquad_toolkit::persistence::save_json_atomic(&filename, &wrapper)
             .map_err(|e| format!("File write error: {}", e))?;
         eprintln!("Game saved to file: {}", filename);
         Ok(())
@@ -63,25 +57,24 @@ pub fn save_game(game_state: &GameState, slot_name: &str) -> Result<(), String> 
 pub fn load_game(slot_name: &str) -> Result<GameState, String> {
     let key = format!("save_{}", slot_name);
 
-    let content = {
-        #[cfg(target_arch = "wasm32")]
-        {
-            wasm_storage::storage_get(&key)
-                .ok_or_else(|| format!("No save found for slot: {}", slot_name))?
-        }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let wrapper =
+            macroquad_toolkit::persistence::load_json_key::<GameLoadWrapper>(GAME_NAME, &key)
+                .or_else(|_| load_legacy_browser_save(&key))
+                .map_err(|e| format!("No save found for slot {slot_name}: {e}"))?;
+        eprintln!("Game loaded from {}", slot_name);
+        Ok(wrapper.game_state)
+    }
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let filename = format!("{}.json", key);
-            fs::read_to_string(&filename).map_err(|e| format!("File read error: {}", e))?
-        }
-    };
-
-    let wrapper: GameLoadWrapper =
-        serde_json::from_str(&content).map_err(|e| format!("Deserialization error: {}", e))?;
-
-    eprintln!("Game loaded from {}", slot_name);
-    Ok(wrapper.game_state)
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let filename = format!("{}.json", key);
+        let wrapper: GameLoadWrapper = macroquad_toolkit::persistence::load_json(&filename)
+            .map_err(|e| format!("File read error: {}", e))?;
+        eprintln!("Game loaded from {}", slot_name);
+        Ok(wrapper.game_state)
+    }
 }
 
 /// Check if a save exists for the given slot
@@ -90,12 +83,23 @@ pub fn save_exists(slot_name: &str) -> bool {
 
     #[cfg(target_arch = "wasm32")]
     {
-        wasm_storage::storage_exists(&key)
+        macroquad_toolkit::persistence::json_key_exists(GAME_NAME, &key)
+            || wasm_storage::storage_exists(&key)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     {
         let filename = format!("{}.json", key);
-        Path::new(&filename).exists()
+        macroquad_toolkit::persistence::file_exists(filename)
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn load_legacy_browser_save(key: &str) -> Result<GameLoadWrapper, String> {
+    let serialized = wasm_storage::storage_get(key)
+        .ok_or_else(|| format!("No legacy browser save found for key '{key}'."))?;
+    let wrapper = serde_json::from_str(&serialized)
+        .map_err(|e| format!("Deserialization error for legacy save {key}: {e}"))?;
+    let _ = macroquad_toolkit::persistence::save_string_key(GAME_NAME, key, &serialized);
+    Ok(wrapper)
 }

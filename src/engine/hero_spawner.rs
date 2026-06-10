@@ -186,7 +186,7 @@ fn spawn_hero_at(
         let spawn_pos = find_spawn_pos(state, building_pos, game_data);
 
         // Generate visual variation seed
-        let visual_seed = macroquad::rand::gen_range(0u64, u64::MAX);
+        let visual_seed = macroquad_toolkit::rng::random_u64();
         let mut hero_state = HeroState::new(
             hero_id.to_string(),
             1, // Level 1
