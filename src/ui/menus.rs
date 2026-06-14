@@ -5,6 +5,7 @@
 use crate::state::MapType;
 use crate::ui::resources::GraphicsCache;
 use macroquad::prelude::*;
+use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text};
 
 /// Draw the main menu screen
 pub fn draw_main_menu(graphics_cache: Option<&GraphicsCache>, _selected_map_type: &MapType) {
@@ -36,7 +37,7 @@ pub fn draw_main_menu(graphics_cache: Option<&GraphicsCache>, _selected_map_type
     );
 
     // Draw title
-    draw_text(
+    draw_ui_text(
         "Deep Dominion",
         screen_width() / 2.0 - 150.0,
         screen_height() / 2.0 - 180.0,
@@ -78,7 +79,7 @@ pub fn draw_main_menu(graphics_cache: Option<&GraphicsCache>, _selected_map_type
         3.0,
         WHITE,
     );
-    draw_text(
+    draw_ui_text(
         "START GAME",
         center_x + 35.0,
         start_y_pos + 32.0,
@@ -118,7 +119,7 @@ pub fn draw_main_menu(graphics_cache: Option<&GraphicsCache>, _selected_map_type
         3.0,
         if save_exists { WHITE } else { GRAY },
     );
-    draw_text(
+    draw_ui_text(
         "LOAD GAME",
         center_x + 35.0,
         load_y_pos + 32.0,
@@ -147,8 +148,8 @@ pub fn draw_pause_menu() {
 
     // Title
     let title = "PAUSED";
-    let title_dims = measure_text(title, None, 60, 1.0);
-    draw_text(
+    let title_dims = measure_ui_text(title, None, 60, 1.0);
+    draw_ui_text(
         title,
         screen_center_x - title_dims.width / 2.0,
         start_y - 80.0,
@@ -166,8 +167,8 @@ pub fn draw_pause_menu() {
         Color::new(0.2, 0.6, 0.2, 1.0),
     );
     let resume_text = "RESUME";
-    let resume_dims = measure_text(resume_text, None, 30, 1.0);
-    draw_text(
+    let resume_dims = measure_ui_text(resume_text, None, 30, 1.0);
+    draw_ui_text(
         resume_text,
         screen_center_x - resume_dims.width / 2.0,
         resume_y + 35.0,
@@ -185,8 +186,8 @@ pub fn draw_pause_menu() {
         Color::new(0.3, 0.5, 0.7, 1.0),
     );
     let save_text = "SAVE GAME";
-    let save_dims = measure_text(save_text, None, 30, 1.0);
-    draw_text(
+    let save_dims = measure_ui_text(save_text, None, 30, 1.0);
+    draw_ui_text(
         save_text,
         screen_center_x - save_dims.width / 2.0,
         save_y + 35.0,
@@ -210,8 +211,8 @@ pub fn draw_pause_menu() {
         load_color,
     );
     let load_text = "LOAD GAME";
-    let load_dims = measure_text(load_text, None, 30, 1.0);
-    draw_text(
+    let load_dims = measure_ui_text(load_text, None, 30, 1.0);
+    draw_ui_text(
         load_text,
         screen_center_x - load_dims.width / 2.0,
         load_y + 35.0,
@@ -229,8 +230,8 @@ pub fn draw_pause_menu() {
         Color::new(0.6, 0.4, 0.2, 1.0),
     );
     let menu_text = "MAIN MENU";
-    let menu_dims = measure_text(menu_text, None, 30, 1.0);
-    draw_text(
+    let menu_dims = measure_ui_text(menu_text, None, 30, 1.0);
+    draw_ui_text(
         menu_text,
         screen_center_x - menu_dims.width / 2.0,
         menu_y + 35.0,
@@ -248,8 +249,8 @@ pub fn draw_pause_menu() {
         Color::new(0.8, 0.2, 0.2, 1.0),
     );
     let exit_text = "EXIT";
-    let exit_dims = measure_text(exit_text, None, 30, 1.0);
-    draw_text(
+    let exit_dims = measure_ui_text(exit_text, None, 30, 1.0);
+    draw_ui_text(
         exit_text,
         screen_center_x - exit_dims.width / 2.0,
         exit_y + 35.0,
@@ -280,8 +281,8 @@ pub fn draw_game_over_screen(victory: bool) {
     };
 
     // Title
-    let title_dims = measure_text(title, None, 80, 1.0);
-    draw_text(
+    let title_dims = measure_ui_text(title, None, 80, 1.0);
+    draw_ui_text(
         title,
         screen_center_x - title_dims.width / 2.0,
         screen_center_y - 100.0,
@@ -295,8 +296,8 @@ pub fn draw_game_over_screen(victory: bool) {
     } else {
         "Your Dungeon Heart has fallen!"
     };
-    let sub_dims = measure_text(subtitle, None, 40, 1.0);
-    draw_text(
+    let sub_dims = measure_ui_text(subtitle, None, 40, 1.0);
+    draw_ui_text(
         subtitle,
         screen_center_x - sub_dims.width / 2.0,
         screen_center_y - 20.0,
@@ -306,8 +307,8 @@ pub fn draw_game_over_screen(victory: bool) {
 
     // Instructions
     let instr = "Press ESC to Exit";
-    let instr_dims = measure_text(instr, None, 30, 1.0);
-    draw_text(
+    let instr_dims = measure_ui_text(instr, None, 30, 1.0);
+    draw_ui_text(
         instr,
         screen_center_x - instr_dims.width / 2.0,
         screen_center_y + 60.0,

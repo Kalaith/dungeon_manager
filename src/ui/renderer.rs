@@ -7,6 +7,7 @@ use crate::state::{DragSelection, GamePhase, InteractionMode, MapType, Ownership
 use crate::ui::resources::GraphicsCache;
 use crate::ui::sidebar::Sidebar;
 use macroquad::prelude::*;
+use macroquad_toolkit::ui::draw_ui_text;
 
 pub struct GameRenderer {
     pub graphics_cache: Option<GraphicsCache>,
@@ -45,7 +46,7 @@ impl GameRenderer {
 
         match phase {
             GamePhase::Loading => {
-                draw_text(
+                draw_ui_text(
                     "Loading Deep Dominion...",
                     screen_width() / 2.0 - 150.0,
                     screen_height() / 2.0,
@@ -146,11 +147,11 @@ impl GameRenderer {
             match interaction_mode {
                 InteractionMode::SetAttackMarker => {
                     let mouse = mouse_position();
-                    draw_text("ATTACK", mouse.0 + 20.0, mouse.1, 20.0, RED);
+                    draw_ui_text("ATTACK", mouse.0 + 20.0, mouse.1, 20.0, RED);
                 }
                 InteractionMode::SetDefendMarker => {
                     let mouse = mouse_position();
-                    draw_text("DEFEND", mouse.0 + 20.0, mouse.1, 20.0, BLUE);
+                    draw_ui_text("DEFEND", mouse.0 + 20.0, mouse.1, 20.0, BLUE);
                 }
                 _ => {}
             }
@@ -214,7 +215,7 @@ impl GameRenderer {
             InteractionMode::SaveGame => "Mode: Saving...".to_string(),
         };
 
-        draw_text(
+        draw_ui_text(
             &format!("Gold: {}/{} | Mana: {}/{} | Food: {} | Mats: {}/{} | Minions: {}/{} | Heart: {:.0}",
                 state.player.gold, state.player.max_gold,
                 state.player.mana, state.player.max_mana,
@@ -228,7 +229,7 @@ impl GameRenderer {
             crate::ui::core::colors::TEXT,
         );
 
-        draw_text(
+        draw_ui_text(
             &mode_text,
             10.0,
             45.0,

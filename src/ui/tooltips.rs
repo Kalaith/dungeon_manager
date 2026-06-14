@@ -9,6 +9,7 @@ use crate::state::tile_state::TilePos;
 use crate::state::{DragSelection, InteractionMode, Ownership};
 use crate::ui::sidebar::Sidebar;
 use macroquad::prelude::*;
+use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text};
 
 /// Draw tooltips for hovered tiles and entities
 pub fn draw_tooltips(
@@ -157,7 +158,7 @@ pub fn draw_tooltips(
             let mut max_width = 0.0f32;
 
             for line in &lines {
-                let dims = measure_text(line, None, font_size as u16, 1.0);
+                let dims = measure_ui_text(line, None, font_size as u16, 1.0);
                 if dims.width > max_width {
                     max_width = dims.width;
                 }
@@ -189,7 +190,7 @@ pub fn draw_tooltips(
             draw_rectangle_lines(draw_x, draw_y, box_width, box_height, 1.0, WHITE);
 
             for (i, line) in lines.iter().enumerate() {
-                draw_text(
+                draw_ui_text(
                     line,
                     draw_x + padding,
                     draw_y + padding + (i as f32 * (font_size + 4.0)) + font_size - 4.0,
@@ -331,7 +332,7 @@ pub fn draw_drag_tooltip(
     // Draw Tooltip
     let mouse_pos = mouse_position();
     let font_size = 20.0;
-    let dims = measure_text(&text, None, font_size as u16, 1.0);
+    let dims = measure_ui_text(&text, None, font_size as u16, 1.0);
 
     let padding = 8.0;
     // Position tooltip to the bottom-right of cursor
@@ -358,7 +359,7 @@ pub fn draw_drag_tooltip(
 
     // Center text vertically
     let text_y_offset = (box_h - dims.height) / 2.0 + dims.height - 2.0;
-    draw_text(
+    draw_ui_text(
         &text,
         box_x + padding,
         box_y + text_y_offset,

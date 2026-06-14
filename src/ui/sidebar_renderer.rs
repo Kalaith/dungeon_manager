@@ -7,6 +7,7 @@ use crate::ui::sidebar::{
 };
 use crate::InteractionMode;
 use macroquad::prelude::*;
+use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text};
 use std::collections::HashMap;
 
 pub fn draw_sidebar(
@@ -67,7 +68,7 @@ pub fn draw_sidebar(
 
     // Draw selected spell hint if any
     if let Some(spell_id) = &sidebar.selected_spell {
-        draw_text(
+        draw_ui_text(
             &format!(
                 "Casting: {} (Left Click to Cast, Right Click to Cancel)",
                 spell_id
@@ -123,8 +124,8 @@ fn draw_tabs(sidebar: &Sidebar) {
         let text_color = if is_active { WHITE } else { GRAY };
 
         // Center text
-        let text_size = measure_text(label, None, 16, 1.0);
-        draw_text(
+        let text_size = measure_ui_text(label, None, 16, 1.0);
+        draw_ui_text(
             label,
             x + (tab_width - text_size.width) / 2.0,
             y + 20.0,
@@ -143,7 +144,7 @@ fn draw_tabs(sidebar: &Sidebar) {
         TAB_HEIGHT,
         Color::new(0.2, 0.2, 0.2, 0.9),
     );
-    draw_text(
+    draw_ui_text(
         if sidebar.is_expanded { "v" } else { "^" },
         toggle_x + 15.0,
         toggle_y + 20.0,
@@ -174,7 +175,7 @@ fn draw_utils_content(sidebar: &Sidebar, current_mode: &InteractionMode) {
 
     draw_rectangle(save_x, save_y, btn_width, btn_height, save_color);
     draw_rectangle_lines(save_x, save_y, btn_width, btn_height, 2.0, WHITE);
-    draw_text("Save Game", save_x + 30.0, save_y + 30.0, 16.0, WHITE);
+    draw_ui_text("Save Game", save_x + 30.0, save_y + 30.0, 16.0, WHITE);
 
     // Load Game Button
     let load_x = save_x + btn_width + spacing;
@@ -197,7 +198,7 @@ fn draw_utils_content(sidebar: &Sidebar, current_mode: &InteractionMode) {
         2.0,
         if save_exists { WHITE } else { GRAY },
     );
-    draw_text(
+    draw_ui_text(
         "Load Game",
         load_x + 30.0,
         load_y + 30.0,
@@ -318,7 +319,7 @@ fn draw_build_content(
             Color::new(0.4, 0.4, 0.5, 1.0),
         );
 
-        draw_text(
+        draw_ui_text(
             &label,
             current_x + 5.0,
             current_y + 18.0,
@@ -326,10 +327,10 @@ fn draw_build_content(
             if is_locked { GRAY } else { WHITE },
         );
         if is_locked {
-            draw_text("LOCKED", current_x + 5.0, current_y + 40.0, 14.0, RED);
+            draw_ui_text("LOCKED", current_x + 5.0, current_y + 40.0, 14.0, RED);
         } else {
             if cost > 0 {
-                draw_text(
+                draw_ui_text(
                     &format!("{}g", cost),
                     current_x + 5.0,
                     current_y + 40.0,
@@ -338,7 +339,7 @@ fn draw_build_content(
                 );
             }
             if !hotkey.is_empty() {
-                draw_text(
+                draw_ui_text(
                     &hotkey,
                     current_x + width - 15.0,
                     current_y + 15.0,
@@ -404,7 +405,7 @@ fn draw_tooltip(pos: (f32, f32), lines: Vec<String>) {
     let mut max_width = 0.0f32;
 
     for line in &lines {
-        let dims = measure_text(line, None, font_size as u16, 1.0);
+        let dims = measure_ui_text(line, None, font_size as u16, 1.0);
         if dims.width > max_width {
             max_width = dims.width;
         }
@@ -431,7 +432,7 @@ fn draw_tooltip(pos: (f32, f32), lines: Vec<String>) {
 
     for (i, line) in lines.iter().enumerate() {
         let color = if i == 0 { RED } else { WHITE }; // Header is red
-        draw_text(
+        draw_ui_text(
             line,
             draw_x + padding,
             draw_y + padding + (i as f32 * (font_size + 4.0)) + font_size - 4.0,
@@ -524,12 +525,12 @@ fn draw_magic_content(
         if !icon_drawn {
             // Fallback: Icon placeholder (first letter)
             let abbrev = &spell_id[0..1].to_uppercase();
-            draw_text(abbrev, btn_x + 15.0, btn_y + 30.0, 24.0, WHITE);
+            draw_ui_text(abbrev, btn_x + 15.0, btn_y + 30.0, 24.0, WHITE);
         }
 
         // Cost
         if let Some(data) = spells.get(*spell_id) {
-            draw_text(
+            draw_ui_text(
                 &format!("{}M", data.cost.mana),
                 btn_x,
                 btn_y + BUTTON_SIZE + 12.0,
@@ -589,7 +590,7 @@ fn draw_minions_content(
 
     draw_rectangle(start_x, start_y, BUTTON_SIZE * 2.5, BUTTON_SIZE, pd_color);
     draw_rectangle_lines(start_x, start_y, BUTTON_SIZE * 2.5, BUTTON_SIZE, 2.0, WHITE);
-    draw_text(pd_label, start_x + 10.0, start_y + 30.0, 16.0, WHITE);
+    draw_ui_text(pd_label, start_x + 10.0, start_y + 30.0, 16.0, WHITE);
 
     // Inspect Button
     let inspect_x = start_x + BUTTON_SIZE * 2.5 + BUTTON_SPACING;
@@ -614,7 +615,7 @@ fn draw_minions_content(
         2.0,
         WHITE,
     );
-    draw_text("Inspect", inspect_x + 10.0, start_y + 30.0, 16.0, WHITE);
+    draw_ui_text("Inspect", inspect_x + 10.0, start_y + 30.0, 16.0, WHITE);
 
     // Marker Buttons (New Line)
     let marker_y = start_y + BUTTON_SIZE + BUTTON_SPACING;
@@ -640,7 +641,7 @@ fn draw_minions_content(
         2.0,
         WHITE,
     );
-    draw_text("Set Attack", start_x + 10.0, marker_y + 30.0, 16.0, WHITE);
+    draw_ui_text("Set Attack", start_x + 10.0, marker_y + 30.0, 16.0, WHITE);
 
     // Defend Marker
     let defend_x = start_x + BUTTON_SIZE * 2.5 + BUTTON_SPACING;
@@ -664,10 +665,10 @@ fn draw_minions_content(
         2.0,
         WHITE,
     );
-    draw_text("Set Defend", defend_x + 10.0, marker_y + 30.0, 16.0, WHITE);
+    draw_ui_text("Set Defend", defend_x + 10.0, marker_y + 30.0, 16.0, WHITE);
 
     // Minion Count info
-    draw_text(
+    draw_ui_text(
         "Selection Controls",
         start_x,
         start_y + (BUTTON_SIZE * 2.0) + 40.0,
@@ -700,7 +701,7 @@ fn draw_selection_details(
     } else if let Some(room_id) = selected_room {
         draw_room_details(details_x, start_y, room_id, rooms);
     } else {
-        draw_text(
+        draw_ui_text(
             "Select a unit or room to view details",
             details_x,
             start_y + 30.0,
@@ -722,7 +723,7 @@ fn draw_entity_details(
     };
 
     if let Some(creature) = entity.as_creature() {
-        draw_text(
+        draw_ui_text(
             &format!(
                 "Selected: {} (Lvl {})",
                 creature.creature_id, creature.level
@@ -732,7 +733,7 @@ fn draw_entity_details(
             20.0,
             WHITE,
         );
-        draw_text(
+        draw_ui_text(
             &format!(
                 "HP: {:.0}/{:.0} | Mood: {:.0}%",
                 creature.health, creature.max_health, creature.mood
@@ -742,7 +743,7 @@ fn draw_entity_details(
             16.0,
             WHITE,
         );
-        draw_text(
+        draw_ui_text(
             &format!(
                 "Rest: {:.0}% | Food: {:.0}%",
                 creature.get_need("sleep"),
@@ -753,7 +754,7 @@ fn draw_entity_details(
             16.0,
             WHITE,
         );
-        draw_text(
+        draw_ui_text(
             &format!("Job: {:?}", creature.current_task),
             details_x,
             start_y + 85.0,
@@ -764,7 +765,7 @@ fn draw_entity_details(
     }
 
     if let Some(hero) = entity.as_hero() {
-        draw_text(
+        draw_ui_text(
             &format!("Hero: {} (Lvl {})", hero.hero_id, hero.level),
             details_x,
             start_y + 20.0,
@@ -776,7 +777,7 @@ fn draw_entity_details(
         let bar_w = 200.0;
         draw_rectangle(details_x, start_y + 30.0, bar_w, 10.0, RED);
         draw_rectangle(details_x, start_y + 30.0, bar_w * hp_pct, 10.0, GREEN);
-        draw_text(
+        draw_ui_text(
             &format!("{:.0}/{:.0} HP", hero.health, hero.max_health),
             details_x + 5.0,
             start_y + 39.0,
@@ -794,7 +795,7 @@ fn draw_entity_details(
         } else {
             String::new()
         };
-        draw_text(
+        draw_ui_text(
             &format!("Role: {}{}", role, wave_info),
             details_x,
             start_y + 55.0,
@@ -809,14 +810,14 @@ fn draw_entity_details(
         } else {
             "Idle"
         };
-        draw_text(
+        draw_ui_text(
             &format!("Status: {} | Goal: {:?}", status, hero.current_goal),
             details_x,
             start_y + 75.0,
             14.0,
             LIGHTGRAY,
         );
-        draw_text(
+        draw_ui_text(
             &format!("Kills: {} | Gold: {}", hero.kills, hero.gold_stolen),
             details_x,
             start_y + 95.0,
@@ -825,7 +826,7 @@ fn draw_entity_details(
         );
 
         if hero.is_fleeing {
-            draw_text("FLEEING!", details_x + 150.0, start_y + 55.0, 16.0, RED);
+            draw_ui_text("FLEEING!", details_x + 150.0, start_y + 55.0, 16.0, RED);
         }
     }
 }
@@ -841,14 +842,14 @@ fn draw_room_details(
         None => return,
     };
 
-    draw_text(
+    draw_ui_text(
         &format!("Room: {} (ID: {})", room.room_type, room.id),
         details_x,
         start_y + 20.0,
         20.0,
         WHITE,
     );
-    draw_text(
+    draw_ui_text(
         &format!("Size: {} tiles", room.tiles.len()),
         details_x,
         start_y + 45.0,
@@ -857,14 +858,14 @@ fn draw_room_details(
     );
 
     let eff_color = efficiency_color(room.efficiency);
-    draw_text(
+    draw_ui_text(
         &format!("Efficiency: {:.0}%", room.efficiency * 100.0),
         details_x,
         start_y + 65.0,
         16.0,
         eff_color,
     );
-    draw_text(
+    draw_ui_text(
         "Walls/doors needed for 100%",
         details_x,
         start_y + 85.0,
@@ -933,10 +934,10 @@ fn draw_traps_content(
             Color::new(0.4, 0.4, 0.5, 1.0),
         );
 
-        draw_text(label, current_x + 5.0, current_y + 18.0, 16.0, WHITE);
+        draw_ui_text(label, current_x + 5.0, current_y + 18.0, 16.0, WHITE);
         if cost > 0 {
             // Use M for materials
-            draw_text(
+            draw_ui_text(
                 &format!("{} Mats", cost),
                 current_x + 5.0,
                 current_y + 40.0,
@@ -944,7 +945,7 @@ fn draw_traps_content(
                 WHITE,
             );
         }
-        draw_text(
+        draw_ui_text(
             hotkey,
             current_x + width - 15.0,
             current_y + 15.0,
@@ -956,7 +957,7 @@ fn draw_traps_content(
     }
 
     // Show material count
-    draw_text(
+    draw_ui_text(
         &format!("Materials: {} / {}", player.materials, player.max_materials),
         screen_width() - RIGHT_MARGIN - 250.0,
         sidebar.panel_y + 30.0,
@@ -1024,7 +1025,7 @@ fn draw_research_content(
         );
 
         // Tech Name
-        draw_text(
+        draw_ui_text(
             &tech.name,
             current_x + 5.0,
             current_y + 15.0,
@@ -1034,7 +1035,7 @@ fn draw_research_content(
 
         // Cost / Progress
         if is_completed {
-            draw_text(
+            draw_ui_text(
                 "Completed",
                 current_x + 5.0,
                 current_y + 35.0,
@@ -1050,7 +1051,7 @@ fn draw_research_content(
             draw_rectangle(current_x + 5.0, current_y + 35.0, bar_w, 10.0, BLACK);
             draw_rectangle(current_x + 5.0, current_y + 35.0, bar_w * pct, 10.0, GREEN);
 
-            draw_text(
+            draw_ui_text(
                 &format!("{:.0}/{:.0}", progress, tech.cost),
                 current_x + 5.0,
                 current_y + 30.0,
@@ -1058,7 +1059,7 @@ fn draw_research_content(
                 WHITE,
             );
         } else if prereqs_met {
-            draw_text(
+            draw_ui_text(
                 &format!("Cost: {:.0}", tech.cost),
                 current_x + 5.0,
                 current_y + 35.0,
@@ -1066,7 +1067,7 @@ fn draw_research_content(
                 GOLD,
             );
         } else {
-            draw_text("Locked", current_x + 5.0, current_y + 35.0, 14.0, RED);
+            draw_ui_text("Locked", current_x + 5.0, current_y + 35.0, 14.0, RED);
         }
 
         // Move to next position
@@ -1077,7 +1078,7 @@ fn draw_research_content(
     // Hard to calculate here without iterating all rooms/creatures, but let's show status text
     if let Some(active) = &player.active_research {
         if let Some(tech) = technologies.get(active) {
-            draw_text(
+            draw_ui_text(
                 &format!(
                     "Researching: {} ({:.1}%)",
                     tech.name,
@@ -1090,7 +1091,7 @@ fn draw_research_content(
             );
         }
     } else {
-        draw_text(
+        draw_ui_text(
             "No Active Research",
             screen_width() - RIGHT_MARGIN - 300.0,
             sidebar.panel_y + 30.0,
@@ -1120,7 +1121,7 @@ fn draw_cheats_content(sidebar: &Sidebar) {
         Color::new(0.2, 0.4, 0.6, 1.0),
     );
     draw_rectangle_lines(start_x, row1_y, cat_btn_width, BUTTON_SIZE, 2.0, WHITE);
-    draw_text(&cat_text, start_x + 10.0, row1_y + 30.0, 16.0, WHITE);
+    draw_ui_text(&cat_text, start_x + 10.0, row1_y + 30.0, 16.0, WHITE);
 
     // 2. Level Controls
     let lvl_minus_x = start_x + cat_btn_width + BUTTON_SPACING;
@@ -1132,11 +1133,11 @@ fn draw_cheats_content(sidebar: &Sidebar) {
         Color::new(0.4, 0.2, 0.2, 1.0),
     );
     draw_rectangle_lines(lvl_minus_x, row1_y, BUTTON_SIZE, BUTTON_SIZE, 2.0, WHITE);
-    draw_text("-", lvl_minus_x + 15.0, row1_y + 30.0, 20.0, WHITE);
+    draw_ui_text("-", lvl_minus_x + 15.0, row1_y + 30.0, 20.0, WHITE);
 
     let lvl_text = format!("Lvl {}", sidebar.cheat_state.level);
     let lvl_text_x = lvl_minus_x + BUTTON_SIZE + BUTTON_SPACING;
-    draw_text(&lvl_text, lvl_text_x, row1_y + 30.0, 16.0, WHITE);
+    draw_ui_text(&lvl_text, lvl_text_x, row1_y + 30.0, 16.0, WHITE);
 
     let lvl_plus_x = lvl_text_x + 50.0 + BUTTON_SPACING; // Assumes text fits in 50px
     draw_rectangle(
@@ -1147,7 +1148,7 @@ fn draw_cheats_content(sidebar: &Sidebar) {
         Color::new(0.2, 0.4, 0.2, 1.0),
     );
     draw_rectangle_lines(lvl_plus_x, row1_y, BUTTON_SIZE, BUTTON_SIZE, 2.0, WHITE);
-    draw_text("+", lvl_plus_x + 15.0, row1_y + 30.0, 20.0, WHITE);
+    draw_ui_text("+", lvl_plus_x + 15.0, row1_y + 30.0, 20.0, WHITE);
 
     // 3. Entity ID
     let id_x = lvl_plus_x + BUTTON_SIZE + BUTTON_SPACING;
@@ -1161,7 +1162,7 @@ fn draw_cheats_content(sidebar: &Sidebar) {
         Color::new(0.3, 0.3, 0.35, 1.0),
     );
     draw_rectangle_lines(id_x, row1_y, id_btn_width, BUTTON_SIZE, 2.0, WHITE);
-    draw_text(id_text, id_x + 10.0, row1_y + 30.0, 16.0, WHITE);
+    draw_ui_text(id_text, id_x + 10.0, row1_y + 30.0, 16.0, WHITE);
 
     // 4. Spawn Button
     let spawn_x = id_x + id_btn_width + BUTTON_SPACING;
@@ -1174,7 +1175,7 @@ fn draw_cheats_content(sidebar: &Sidebar) {
         Color::new(0.6, 0.2, 0.6, 1.0),
     );
     draw_rectangle_lines(spawn_x, row1_y, spawn_btn_width, BUTTON_SIZE, 2.0, WHITE);
-    draw_text("Prepare Spawn", spawn_x + 10.0, row1_y + 30.0, 16.0, WHITE);
+    draw_ui_text("Prepare Spawn", spawn_x + 10.0, row1_y + 30.0, 16.0, WHITE);
 
     // --- Row 2: Cheats & Toggles ---
     let row2_y = row1_y + BUTTON_SIZE + BUTTON_SPACING;
@@ -1183,7 +1184,7 @@ fn draw_cheats_content(sidebar: &Sidebar) {
     let gold_btn_width = 120.0;
     draw_rectangle(start_x, row2_y, gold_btn_width, BUTTON_SIZE, GOLD);
     draw_rectangle_lines(start_x, row2_y, gold_btn_width, BUTTON_SIZE, 2.0, WHITE);
-    draw_text("Gold +100", start_x + 10.0, row2_y + 30.0, 16.0, BLACK);
+    draw_ui_text("Gold +100", start_x + 10.0, row2_y + 30.0, 16.0, BLACK);
 
     // 2. Toggle Fog
     let fow_x = start_x + gold_btn_width + BUTTON_SPACING;
@@ -1196,7 +1197,7 @@ fn draw_cheats_content(sidebar: &Sidebar) {
         Color::new(0.3, 0.3, 0.4, 1.0),
     );
     draw_rectangle_lines(fow_x, row2_y, fow_width, BUTTON_SIZE, 2.0, WHITE);
-    draw_text("Toggle Fog", fow_x + 10.0, row2_y + 30.0, 16.0, WHITE);
+    draw_ui_text("Toggle Fog", fow_x + 10.0, row2_y + 30.0, 16.0, WHITE);
 
     // 3. Instant Dig
     let dig_x = fow_x + fow_width + BUTTON_SPACING;
@@ -1205,7 +1206,7 @@ fn draw_cheats_content(sidebar: &Sidebar) {
     let dig_color = if dig_active { GREEN } else { RED };
     draw_rectangle(dig_x, row2_y, dig_width, BUTTON_SIZE, dig_color);
     draw_rectangle_lines(dig_x, row2_y, dig_width, BUTTON_SIZE, 2.0, WHITE);
-    draw_text("Instant Dig", dig_x + 10.0, row2_y + 30.0, 16.0, WHITE);
+    draw_ui_text("Instant Dig", dig_x + 10.0, row2_y + 30.0, 16.0, WHITE);
 
     // 4. God Mode
     let heart_x = dig_x + dig_width + BUTTON_SPACING;
@@ -1214,5 +1215,5 @@ fn draw_cheats_content(sidebar: &Sidebar) {
     let heart_color = if heart_active { GREEN } else { RED };
     draw_rectangle(heart_x, row2_y, heart_width, BUTTON_SIZE, heart_color);
     draw_rectangle_lines(heart_x, row2_y, heart_width, BUTTON_SIZE, 2.0, WHITE);
-    draw_text("God Mode", heart_x + 10.0, row2_y + 30.0, 16.0, WHITE);
+    draw_ui_text("God Mode", heart_x + 10.0, row2_y + 30.0, 16.0, WHITE);
 }
