@@ -2,6 +2,7 @@
 //! Handles creatures, heroes, and their runtime state
 
 use crate::state::tile_state::TilePos;
+use crate::state::OwnerId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -14,6 +15,8 @@ pub struct Entity {
     pub id: EntityId,
     pub entity_type: EntityType,
     pub pos: TilePos,
+    #[serde(default)]
+    pub owner: OwnerId,
     #[serde(skip, default = "default_visual_pos")]
     pub visual_pos: (f32, f32),
     #[serde(skip, default = "default_damage_time")]
@@ -31,10 +34,20 @@ fn default_visual_pos() -> (f32, f32) {
 impl Entity {
     /// Create a new creature entity
     pub fn new_creature(id: EntityId, pos: TilePos, creature_state: CreatureState) -> Self {
+        Self::new_creature_for_owner(id, pos, creature_state, OwnerId::Player)
+    }
+
+    pub fn new_creature_for_owner(
+        id: EntityId,
+        pos: TilePos,
+        creature_state: CreatureState,
+        owner: OwnerId,
+    ) -> Self {
         Self {
             id,
             entity_type: EntityType::Creature(creature_state),
             pos,
+            owner,
             visual_pos: (pos.x as f32, pos.y as f32),
             last_damage_time: -100.0,
         }
@@ -42,10 +55,20 @@ impl Entity {
 
     /// Create a new hero entity
     pub fn new_hero(id: EntityId, pos: TilePos, hero_state: HeroState) -> Self {
+        Self::new_hero_for_owner(id, pos, hero_state, OwnerId::Heroes)
+    }
+
+    pub fn new_hero_for_owner(
+        id: EntityId,
+        pos: TilePos,
+        hero_state: HeroState,
+        owner: OwnerId,
+    ) -> Self {
         Self {
             id,
             entity_type: EntityType::Hero(hero_state),
             pos,
+            owner,
             visual_pos: (pos.x as f32, pos.y as f32),
             last_damage_time: -100.0,
         }
@@ -53,11 +76,21 @@ impl Entity {
 
     /// Create a new structure entity
     pub fn new_structure(id: EntityId, pos: TilePos, structure_state: StructureState) -> Self {
+        Self::new_structure_for_owner(id, pos, structure_state, OwnerId::Heroes)
+    }
+
+    pub fn new_structure_for_owner(
+        id: EntityId,
+        pos: TilePos,
+        structure_state: StructureState,
+        owner: OwnerId,
+    ) -> Self {
         Self {
             id,
             entity_type: EntityType::Structure(structure_state),
             visual_pos: (pos.x as f32, pos.y as f32),
             pos,
+            owner,
             last_damage_time: -100.0,
         }
     }
@@ -551,20 +584,38 @@ impl EntityManager {
 
     /// Spawn a new creature
     pub fn spawn_creature(&mut self, pos: TilePos, creature_state: CreatureState) -> EntityId {
+        self.spawn_creature_for_owner(pos, creature_state, OwnerId::Player)
+    }
+
+    pub fn spawn_creature_for_owner(
+        &mut self,
+        pos: TilePos,
+        creature_state: CreatureState,
+        owner: OwnerId,
+    ) -> EntityId {
         let id = self.next_id;
         self.next_id += 1;
 
-        let entity = Entity::new_creature(id, pos, creature_state);
+        let entity = Entity::new_creature_for_owner(id, pos, creature_state, owner);
         self.entities.insert(id, entity);
         id
     }
 
     /// Spawn a new hero
     pub fn spawn_hero(&mut self, pos: TilePos, hero_state: HeroState) -> EntityId {
+        self.spawn_hero_for_owner(pos, hero_state, OwnerId::Heroes)
+    }
+
+    pub fn spawn_hero_for_owner(
+        &mut self,
+        pos: TilePos,
+        hero_state: HeroState,
+        owner: OwnerId,
+    ) -> EntityId {
         let id = self.next_id;
         self.next_id += 1;
 
-        let entity = Entity::new_hero(id, pos, hero_state);
+        let entity = Entity::new_hero_for_owner(id, pos, hero_state, owner);
         self.entities.insert(id, entity);
         id
     }
@@ -576,10 +627,19 @@ impl EntityManager {
 
     /// Spawn a new structure
     pub fn spawn_structure(&mut self, pos: TilePos, structure_state: StructureState) -> EntityId {
+        self.spawn_structure_for_owner(pos, structure_state, OwnerId::Heroes)
+    }
+
+    pub fn spawn_structure_for_owner(
+        &mut self,
+        pos: TilePos,
+        structure_state: StructureState,
+        owner: OwnerId,
+    ) -> EntityId {
         let id = self.next_id;
         self.next_id += 1;
 
-        let entity = Entity::new_structure(id, pos, structure_state);
+        let entity = Entity::new_structure_for_owner(id, pos, structure_state, owner);
         self.entities.insert(id, entity);
         id
     }
@@ -593,6 +653,7 @@ impl EntityManager {
             id,
             entity_type: EntityType::ResourcePile(state),
             pos,
+            owner: OwnerId::Neutral,
             visual_pos: (pos.x as f32, pos.y as f32),
             last_damage_time: -100.0,
         };

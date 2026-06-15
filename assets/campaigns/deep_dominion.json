@@ -1,0 +1,33 @@
+[
+  {
+    "id": "deep_dominion",
+    "name": "Deep Dominion",
+    "description": "A campaign about growing from a hidden dungeon heart into a realm-spanning dark empire.",
+    "starting_mission": "dark_beginnings",
+    "persistent_unlocks": {
+      "rooms": [
+        "lair",
+        "hatchery",
+        "treasury"
+      ],
+      "spells": [
+        "summon_imps"
+      ],
+      "traps": [
+        "door"
+      ],
+      "creatures": [
+        "goblin"
+      ]
+    },
+    "missions": [
+      {
+        "id": "dark_beginnings",
+        "scenario_id": "dark_beginnings",
+        "name": "Dark Beginnings",
+        "briefing": "Carve your first chambers, attract a fighting force, and break the hero foothold before the surface rallies.",
+        "unlocks_after": []
+      }
+    ]
+  }
+]

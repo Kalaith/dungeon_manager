@@ -3,11 +3,12 @@
 
 use crate::data::GameData;
 use crate::engine::combat::update_status_effects;
-use crate::engine::tile_grid;
 use crate::state::entities::{EntityId, EntityManager};
 use crate::state::player_state::PlayerState;
 use crate::state::projectiles::ProjectileManager;
+use crate::state::rival_keeper::RivalKeeperRuntime;
 use crate::state::room_manager::RoomManager;
+use crate::state::scenario_state::ScenarioRuntimeState;
 use crate::state::tile_state::{Ownership, TilePos};
 use macroquad_toolkit::rng;
 use serde::{Deserialize, Serialize};
@@ -62,11 +63,79 @@ pub struct GameState {
     /// Cheat toggles
     pub cheat_fog_enabled: bool,
     pub cheat_immortal_heart: bool,
+
+    #[serde(default)]
+    pub active_scenario_id: Option<String>,
+    #[serde(default)]
+    pub scenario_runtime: Option<ScenarioRuntimeState>,
+    #[serde(default)]
+    pub campaign_progress: Option<crate::data::campaign::CampaignProgress>,
+    #[serde(default)]
+    pub rival_keepers: RivalKeeperRuntime,
 }
 
 impl GameState {
     pub fn new(width: usize, height: usize, game_data: &GameData) -> Self {
         Self::new_with_map_type(width, height, game_data, MapType::Standard)
+    }
+
+    pub fn new_for_scenario(game_data: &GameData, scenario_id: &str) -> Self {
+        let Some(scenario) = game_data.scenarios.get(scenario_id) else {
+            return Self::new(
+                game_data.config.map_size.width,
+                game_data.config.map_size.height,
+                game_data,
+            );
+        };
+
+        let width = scenario
+            .map
+            .width
+            .unwrap_or(game_data.config.map_size.width);
+        let height = scenario
+            .map
+            .height
+            .unwrap_or(game_data.config.map_size.height);
+        let mut state = Self::new_with_map_type(
+            width,
+            height,
+            game_data,
+            MapType::File(
+                game_data
+                    .resolve_map_path(&scenario.map.path)
+                    .to_string_lossy()
+                    .to_string(),
+            ),
+        );
+
+        state.active_scenario_id = Some(scenario.meta.id.clone());
+        state.scenario_runtime = Some(ScenarioRuntimeState::from_definition(scenario));
+        state.rival_keepers.merge_from_scenario(scenario);
+        state.apply_scenario_setup(game_data, scenario_id);
+        state
+    }
+
+    pub fn new_campaign_start(game_data: &GameData, campaign_id: &str) -> Self {
+        let Some(campaign) = game_data.campaigns.get(campaign_id) else {
+            return Self::new(
+                game_data.config.map_size.width,
+                game_data.config.map_size.height,
+                game_data,
+            );
+        };
+
+        let progress = crate::data::campaign::CampaignProgress::new(campaign);
+        let scenario_id = campaign
+            .missions
+            .iter()
+            .find(|mission| mission.id == progress.active_mission)
+            .map(|mission| mission.scenario_id.as_str())
+            .unwrap_or("dark_beginnings");
+
+        let mut state = Self::new_for_scenario(game_data, scenario_id);
+        state.apply_campaign_unlocks(&progress.persistent_unlocks);
+        state.campaign_progress = Some(progress);
+        state
     }
 
     pub fn new_with_map_type(
@@ -77,12 +146,19 @@ impl GameState {
     ) -> Self {
         let mut entities = EntityManager::new();
         let mut dungeon;
+        let mut map_rival_keepers = RivalKeeperRuntime::default();
 
         match &map_type {
             MapType::File(path) => {
                 println!("Loading map from: {}", path);
-                dungeon = crate::state::map_loader::load_map(path, game_data, &mut entities)
-                    .unwrap_or_else(|e| {
+                dungeon = match crate::state::map_loader::load_map(path, game_data, &mut entities) {
+                    Ok(loaded) => {
+                        map_rival_keepers =
+                            crate::state::map_loader::load_rival_keeper_runtime(path)
+                                .unwrap_or_default();
+                        loaded
+                    }
+                    Err(e) => {
                         eprintln!(
                             "Failed to load map: {}. Falling back to standard generation.",
                             e
@@ -93,7 +169,8 @@ impl GameState {
                             game_data,
                             MapType::Standard,
                         )
-                    });
+                    }
+                };
             }
             _ => {
                 dungeon =
@@ -137,6 +214,10 @@ impl GameState {
             cheat_menu: crate::ui::cheat_menu::CheatMenuState::default(),
             cheat_fog_enabled: true,
             cheat_immortal_heart: false,
+            active_scenario_id: None,
+            scenario_runtime: None,
+            campaign_progress: None,
+            rival_keepers: map_rival_keepers,
         };
 
         // Recalculate max gold and other room-based stats
@@ -229,6 +310,12 @@ impl GameState {
 
         // Hero spawning via Hero Base
         crate::engine::hero_spawner::update_hero_spawning(self, game_data, dt);
+
+        // Scenario scripted events
+        crate::engine::scenario_events::update_scenario_events(self, game_data);
+
+        // Rival keeper planning and reinforcement behavior
+        crate::engine::rival_keeper_ai::update_rival_keeper_ai(self, game_data, dt);
 
         // NPC Spawner Update
         crate::engine::spawner_logic::SpawnerSystem::update(
@@ -385,6 +472,7 @@ impl GameState {
             &mut self.entities,
             &self.room_manager,
             &mut self.notifications,
+            game_data,
         );
 
         // Progress prison conversions
@@ -395,6 +483,9 @@ impl GameState {
             game_data,
             dt,
         );
+
+        // Process room-specific mechanics that are not generic work tasks
+        crate::engine::special_rooms::process_special_rooms(self, game_data, dt);
 
         // Remove dead entities and release their lair space (but not captured heroes)
         let dead_ids: Vec<EntityId> = self
@@ -477,54 +568,7 @@ impl GameState {
             self.count_player_creatures(game_data) - self.count_imps();
 
         // Check for Game Over
-        self.check_game_over_conditions();
-    }
-
-    /// Update fog of war using the tile_grid system
-    fn update_fog_of_war_system(&mut self, game_data: &GameData) {
-        use std::collections::HashSet;
-
-        // Collect claimed tiles
-        let mut claimed_tiles = HashSet::new();
-        // Access grid via dungeon
-        let (width, height) = tile_grid::get_grid_dimensions(&self.dungeon.grid);
-
-        for y in 0..height {
-            for x in 0..width {
-                let pos = TilePos::new(x as i32, y as i32);
-                if let Some(tile) = tile_grid::get_tile(&self.dungeon.grid, pos) {
-                    if tile.ownership == Ownership::Player {
-                        claimed_tiles.insert(pos);
-                    }
-                }
-            }
-        }
-
-        // Collect creature positions (only player's creatures provide vision, except imps)
-        // Wild/neutral creatures should not reveal fog for the player
-        let creature_positions: Vec<TilePos> = self
-            .entities
-            .creatures()
-            .filter(|(_, creature)| {
-                // Exclude imps (workers don't provide vision)
-                if creature.creature_id == "imp" {
-                    return false;
-                }
-                // Only dungeon faction creatures provide vision
-                if let Some(monster_data) = game_data.monsters.get(&creature.creature_id) {
-                    monster_data.faction == "dungeon"
-                } else {
-                    false
-                }
-            })
-            .map(|(id, _)| self.entities.get(id))
-            .flatten()
-            .map(|e| e.pos)
-            .collect();
-
-        // Update fog of war with sight radius of 5
-        self.dungeon
-            .update_fog_of_war(&claimed_tiles, &creature_positions, game_data);
+        self.check_game_over_conditions(game_data);
     }
 
     pub fn get_tile(&self, pos: TilePos) -> Option<&crate::state::tile_state::TileState> {
@@ -613,6 +657,11 @@ impl GameState {
         if result.materials_change.abs() > 0.001 {
             self.player
                 .add_resources_precise(0.0, 0.0, 0.0, result.materials_change);
+        }
+        if let Some(trap_id) = result.manufactured_trap {
+            self.player.add_trap_inventory(trap_id.clone(), 1);
+            self.notifications
+                .info(format!("Manufactured {} crate.", trap_id));
         }
         if result.research_change > 0.0 {
             if let Some(active_tech_id) = &self.player.active_research {
@@ -710,27 +759,7 @@ impl GameState {
     /// Returns (carved_wall_pos, should_move)
 
     /// Check for victory or defeat conditions
-    pub fn check_game_over_conditions(&mut self) {
-        if self.game_over {
-            return;
-        }
-
-        // Check Victory: Hero Base destroyed (All buildings)
-        if self.hero_base.enabled && self.hero_base.is_defeated(&self.entities) {
-            self.game_over = true;
-            self.victory = true;
-            eprintln!("VICTORY! All Hero Buildings destroyed!");
-            self.notifications
-                .success("VICTORY! All hero buildings have been destroyed!");
-        }
-
-        // Check Defeat: Dungeon Heart destroyed
-        if self.player.dungeon_heart_health <= 0.0 {
-            self.game_over = true;
-            self.victory = false;
-            eprintln!("DEFEAT! Dungeon Heart destroyed!");
-            self.notifications
-                .danger("DEFEAT! Your Dungeon Heart was destroyed!");
-        }
+    pub fn check_game_over_conditions(&mut self, game_data: &GameData) {
+        crate::engine::objectives::update_victory_and_defeat(self, game_data);
     }
 }

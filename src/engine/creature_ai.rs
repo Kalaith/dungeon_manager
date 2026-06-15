@@ -1,7 +1,6 @@
 //! Creature AI - Needs-based decision making
 //! Stateless service for creature behavior
 
-use crate::data::monsters::MonsterData;
 use crate::data::GameData;
 use crate::engine::combat;
 use crate::engine::creature_targets::{find_available_work_slot, pick_wander_position};
@@ -11,6 +10,10 @@ use crate::state::dungeon::Dungeon;
 use crate::state::entities::{CreatureState, EntityId, EntityManager, Task};
 use crate::state::room_manager::RoomManager;
 use crate::state::tile_state::TilePos;
+
+mod needs;
+
+pub use needs::{apply_slap, calculate_work_efficiency, satisfy_need};
 
 /// Main entry point: Update all creature AI and movement
 /// This replaces the old GameState::update_creature_ai_and_movement method
@@ -91,8 +94,8 @@ fn update_single_creature(
         if let Some(monster_data) = game_data.monsters.get(&creature_type) {
             if let Some(entity) = entities.get_mut(creature_id) {
                 if let Some(creature) = entity.as_creature_mut() {
-                    update_needs(creature, dt, monster_data);
-                    update_mood(creature, monster_data, game_data);
+                    needs::update_needs(creature, dt, monster_data);
+                    needs::update_mood(creature, monster_data, game_data);
                 }
             }
         }
@@ -438,7 +441,7 @@ fn find_kite_position(
 
         // Check if walkable
         if let Some(tile) = dungeon.get_tile(candidate) {
-            if tile_types::is_walkable(&tile.tile_type, game_data) {
+            if tile_types::is_tile_walkable(tile, game_data) {
                 // Make sure we're actually moving away
                 let new_dist = combat::manhattan_distance(candidate, threat_pos);
                 let old_dist = combat::manhattan_distance(current_pos, threat_pos);
@@ -456,7 +459,7 @@ fn find_kite_position(
             continue; // Don't move toward threat
         }
         if let Some(tile) = dungeon.get_tile(candidate) {
-            if tile_types::is_walkable(&tile.tile_type, game_data) {
+            if tile_types::is_tile_walkable(tile, game_data) {
                 return Some(candidate);
             }
         }
@@ -714,7 +717,7 @@ fn pathfind_to_target(
         for x in 0..dungeon.width {
             let tile_pos = TilePos::new(x as i32, y as i32);
             if let Some(tile) = dungeon.get_tile(tile_pos) {
-                let walkable = tile_types::is_walkable(&tile.tile_type, game_data);
+                let walkable = tile_types::is_tile_walkable(tile, game_data);
                 pf_grid.set_walkable(Pos::new(x as i32, y as i32), walkable);
             }
         }
@@ -765,119 +768,4 @@ fn pathfind_to_target(
             }
         }
     }
-}
-
-/// Update all needs for a creature based on time passed
-pub fn update_needs(creature: &mut CreatureState, dt: f32, monster_data: &MonsterData) {
-    let decay_per_second = dt / 60.0; // Convert to per-second from per-minute
-
-    // Decay each need based on monster data
-    for (need_name, need_data) in &monster_data.needs {
-        let current = creature.get_need(need_name);
-        let decay = need_data.decay_per_minute * decay_per_second;
-        creature.set_need(need_name.clone(), current - decay);
-    }
-}
-
-/// Calculate creature mood based on needs satisfaction
-pub fn calculate_mood(
-    creature: &CreatureState,
-    monster_data: &MonsterData,
-    game_data: &GameData,
-) -> f32 {
-    let base_mood = monster_data.ai.base_mood as f32;
-    let mood_penalties = &game_data.config.creature_ai.mood_penalties;
-
-    // Start from base mood
-    let mut mood = base_mood;
-
-    // Average all needs (0-100 each)
-    let need_count = creature.needs.len() as f32;
-    if need_count > 0.0 {
-        let total_satisfaction: f32 = creature.needs.values().sum();
-        let average_satisfaction = total_satisfaction / need_count;
-
-        // Needs contribute ±30 points to mood
-        // 100% satisfied = +30, 0% satisfied = -30
-        let need_modifier = (average_satisfaction - 50.0)
-            * game_data.config.creature_ai.task_desirability.need_modifier;
-        mood += need_modifier;
-    }
-
-    // Health affects mood
-    let health_percent = (creature.health / creature.max_health) * 100.0;
-    if health_percent < mood_penalties.low_health_threshold {
-        mood -= mood_penalties.low_health_penalty;
-    }
-
-    // Being angry reduces mood
-    if creature.is_angry {
-        mood -= mood_penalties.angry_penalty;
-    }
-
-    // Clamp to 0-100
-    mood.clamp(0.0, 100.0)
-}
-
-/// Update creature mood
-pub fn update_mood(creature: &mut CreatureState, monster_data: &MonsterData, game_data: &GameData) {
-    creature.mood = calculate_mood(creature, monster_data, game_data);
-
-    // Update angry state
-    let anger_threshold = monster_data.ai.anger_threshold as f32;
-    creature.is_angry = creature.mood < anger_threshold;
-
-    // Update deserting state
-    let desertion_threshold = monster_data.ai.desertion_threshold as f32;
-    creature.is_deserting = creature.mood < desertion_threshold;
-}
-
-/// Check if creature should desert the dungeon
-
-/// Find the best room of a specific type for a creature
-
-/// Calculate desirability of a task for a creature
-
-/// Satisfy a need when creature is in appropriate room
-pub fn satisfy_need(creature: &mut CreatureState, need_name: &str, rate: f32, dt: f32) {
-    let current = creature.get_need(need_name);
-    let increase = rate * dt;
-    creature.set_need(need_name.to_string(), current + increase);
-}
-
-/// Handle slapping a creature (discipline)
-pub fn apply_slap(creature: &mut CreatureState, monster_data: &MonsterData, game_time: f32) {
-    // Prevent slap spamming (minimum 5 second cooldown)
-    if game_time - creature.last_slapped < 5.0 {
-        return;
-    }
-
-    creature.last_slapped = game_time;
-
-    // Apply mood change from discipline response
-    if let Some(&mood_change) = monster_data.ai.discipline_response.get("slap") {
-        creature.mood = (creature.mood + mood_change).clamp(0.0, 100.0);
-    }
-
-    // Slapping interrupts current task
-    creature.current_task = None;
-    creature.task_time = 0.0;
-}
-
-/// Calculate work efficiency based on creature stats and mood
-pub fn calculate_work_efficiency(creature: &CreatureState, _monster_data: &MonsterData) -> f32 {
-    let base_efficiency = 1.0;
-
-    // Mood affects efficiency (50% to 150%)
-    let mood_multiplier = 0.5 + (creature.mood / 100.0);
-
-    // Health affects efficiency when low
-    let health_percent = creature.health / creature.max_health;
-    let health_multiplier = if health_percent < 0.5 {
-        0.5 + health_percent
-    } else {
-        1.0
-    };
-
-    base_efficiency * mood_multiplier * health_multiplier
 }

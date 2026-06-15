@@ -3,9 +3,33 @@
         "id": "door",
         "name": "Door",
         "description": "A sturdy door that can be locked to block hero movement.",
-        "category": "defense",
+        "category": "door",
         "cost": 50,
         "build_time": 5.0,
+        "effects": {
+            "blocks_movement": true,
+            "lockable": true
+        }
+    },
+    {
+        "id": "braced_door",
+        "name": "Braced Door",
+        "description": "A reinforced door that takes longer to manufacture and build but holds chokepoints better.",
+        "category": "door",
+        "cost": 90,
+        "build_time": 8.0,
+        "effects": {
+            "blocks_movement": true,
+            "lockable": true
+        }
+    },
+    {
+        "id": "magic_door",
+        "name": "Magic Door",
+        "description": "A sealed arcane door for late dungeon defenses.",
+        "category": "door",
+        "cost": 140,
+        "build_time": 12.0,
         "effects": {
             "blocks_movement": true,
             "lockable": true

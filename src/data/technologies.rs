@@ -15,9 +15,14 @@ pub struct TechData {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnlockData {
+    #[serde(default)]
     pub rooms: Vec<String>,
+    #[serde(default)]
     pub spells: Vec<String>,
+    #[serde(default)]
     pub creatures: Vec<String>,
+    #[serde(default)]
+    pub traps: Vec<String>,
 }
 
 pub fn load_technologies() -> Result<HashMap<String, TechData>, Box<dyn Error>> {

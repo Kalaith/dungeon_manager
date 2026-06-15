@@ -585,6 +585,24 @@ pub fn get_entity_attack_type(entity: &Entity, game_data: &GameData) -> String {
 
 /// Check if two entities are hostile to each other
 fn are_hostile(entity_a: &Entity, entity_b: &Entity, game_data: &GameData) -> bool {
+    if matches!(
+        entity_a.entity_type,
+        crate::state::entities::EntityType::ResourcePile(_)
+    ) || matches!(
+        entity_b.entity_type,
+        crate::state::entities::EntityType::ResourcePile(_)
+    ) {
+        return false;
+    }
+
+    if entity_a.owner.is_hostile_to(&entity_b.owner) {
+        return true;
+    }
+
+    if entity_a.owner == entity_b.owner {
+        return false;
+    }
+
     let faction_a = get_faction(entity_a, game_data);
     let faction_b = get_faction(entity_b, game_data);
 
@@ -604,6 +622,10 @@ fn are_hostile(entity_a: &Entity, entity_b: &Entity, game_data: &GameData) -> bo
 }
 
 fn get_faction(entity: &Entity, game_data: &GameData) -> String {
+    if entity.owner != crate::state::OwnerId::Neutral {
+        return entity.owner.label();
+    }
+
     match &entity.entity_type {
         crate::state::entities::EntityType::Creature(c) => game_data
             .monsters

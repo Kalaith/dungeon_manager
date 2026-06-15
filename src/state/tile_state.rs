@@ -2,6 +2,7 @@
 //! This module defines the runtime state of tiles in the dungeon grid,
 //! separate from the static TileData definitions.
 
+use crate::state::faction::OwnerId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -33,6 +34,16 @@ pub enum Ownership {
     Enemy,
 }
 
+impl Ownership {
+    pub fn from_owner(owner: &OwnerId) -> Self {
+        match owner {
+            OwnerId::Player => Ownership::Player,
+            OwnerId::Neutral | OwnerId::Wild => Ownership::Unclaimed,
+            OwnerId::RivalKeeper(_) | OwnerId::Heroes | OwnerId::AboveGround => Ownership::Enemy,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FogState {
     Hidden,
@@ -60,6 +71,8 @@ pub struct TileState {
     pub tile_type: String,
     pub pos: TilePos,
     pub ownership: Ownership,
+    #[serde(default)]
+    pub owner: OwnerId,
     pub room_id: Option<usize>,
     pub fog_state: FogState,
     pub resources_remaining: Option<u32>,
@@ -74,6 +87,7 @@ impl TileState {
             tile_type,
             pos,
             ownership: Ownership::Unclaimed,
+            owner: OwnerId::Neutral,
             room_id: None,
             fog_state: FogState::Hidden, // Start hidden so players must explore
             resources_remaining: None,
@@ -90,6 +104,12 @@ impl TileState {
 
     pub fn claim(&mut self) {
         self.ownership = Ownership::Player;
+        self.owner = OwnerId::Player;
         self.fog_state = FogState::Visible;
+    }
+
+    pub fn set_owner(&mut self, owner: OwnerId) {
+        self.ownership = Ownership::from_owner(&owner);
+        self.owner = owner;
     }
 }

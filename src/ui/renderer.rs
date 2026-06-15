@@ -110,7 +110,7 @@ impl GameRenderer {
             game_data,
             drag_selection,
         );
-        self.draw_entities(graphics, state, &camera, game_data);
+        crate::ui::entity_renderer::draw_entities(graphics, state, &camera, game_data);
         self.draw_projectiles(graphics, state, &camera);
         self.draw_markers(state);
 
@@ -306,7 +306,7 @@ impl GameRenderer {
         }
 
         if state.game_over {
-            crate::ui::menus::draw_game_over_screen(state.victory);
+            crate::ui::menus::draw_game_over_screen(state, game_data.as_ref());
         }
 
         // Draw tooltips last so they are on top of everything
@@ -449,7 +449,7 @@ impl GameRenderer {
                             // Fallback if texture missing (e.g. doors)
                             // Draw a colored box - User requested "full square" for now
                             let (fallback_color, size) = match trap.trap_type.as_str() {
-                                "door" => (
+                                "door" | "braced_door" | "magic_door" => (
                                     Color::new(
                                         0.4,
                                         0.2,
@@ -642,146 +642,6 @@ impl GameRenderer {
                     vec3(width, 1.0, depth),
                     Color::new(0.0, 1.0, 0.0, 1.0), // Bright green
                 );
-            }
-        }
-    }
-
-    fn draw_entities(
-        &self,
-        graphics: &GraphicsCache,
-        state: &GameState,
-        camera: &Camera3D,
-        game_data: &GameData,
-    ) {
-        // Collect and sort entities by distance from camera (far to near) for proper transparency
-        let mut sorted_entities: Vec<_> = state.entities.all().collect();
-        sorted_entities.sort_by(|a, b| {
-            let dist_a =
-                (camera.position - vec3(a.visual_pos.0, 0.5, a.visual_pos.1)).length_squared();
-            let dist_b =
-                (camera.position - vec3(b.visual_pos.0, 0.5, b.visual_pos.1)).length_squared();
-            // Sort far to near (largest distance first)
-            dist_b
-                .partial_cmp(&dist_a)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-
-        // Draw sorted entities
-        for entity in sorted_entities {
-            let (x, z) = entity.visual_pos;
-
-            // Fog of War check: Don't draw entities on hidden tiles (only if fog is enabled)
-            if game_data.config.fog_of_war.enabled {
-                let tile_pos = entity.pos;
-                if let Some(tile) = state.get_tile(tile_pos) {
-                    if tile.fog_state == FogState::Hidden {
-                        continue; // Skip drawing - tile is not visible to player
-                    }
-                }
-            }
-
-            // Handle Structures - draw as billboard sprites like creatures
-            if let crate::state::entities::EntityType::Structure(s) = &entity.entity_type {
-                if let Some(tex) = graphics.tile_textures.get(&s.building_id) {
-                    crate::draw_utils::draw_billboard(
-                        vec3(x, 0.5, z),
-                        vec2(1.0, 1.0), // Slightly larger than creatures
-                        tex,
-                        camera.position,
-                    );
-                    continue;
-                }
-            }
-
-            // Handle ResourcePile
-            if let crate::state::entities::EntityType::ResourcePile(pile) = &entity.entity_type {
-                if pile.resource_type == "gold" {
-                    if let Some(tex) = graphics.tile_textures.get("gold_pile") {
-                        draw_cube(vec3(x, 0.1, z), vec3(0.5, 0.2, 0.5), Some(tex), WHITE);
-                    } else {
-                        draw_cube(vec3(x, 0.1, z), vec3(0.4, 0.2, 0.4), None, GOLD);
-                    }
-                } else {
-                    // Generic pile
-                    draw_cube(vec3(x, 0.1, z), vec3(0.4, 0.2, 0.4), None, GRAY);
-                }
-                continue;
-            }
-
-            // Get texture with visual variation applied
-            let texture: Option<Texture2D> = match &entity.entity_type {
-                crate::state::entities::EntityType::Creature(c) => {
-                    graphics.get_creature_texture(&c.creature_id, c.visual_seed)
-                }
-                crate::state::entities::EntityType::Hero(h) => {
-                    graphics.get_hero_texture(&h.hero_id, h.visual_seed)
-                }
-                crate::state::entities::EntityType::Structure(_) => None, // Should not happen due to block above
-                crate::state::entities::EntityType::ResourcePile(_) => None, // Should not happen due to block above
-            };
-
-            if let Some(ref tex) = texture {
-                crate::draw_utils::draw_billboard(
-                    vec3(x, 0.5, z),
-                    vec2(0.8, 0.8),
-                    tex,
-                    camera.position,
-                );
-            } else {
-                // Fallback to simple colored cylinder/sphere/cube
-                let color = match &entity.entity_type {
-                    crate::state::entities::EntityType::Hero(_) => Color::new(0.2, 0.8, 0.2, 1.0),
-                    crate::state::entities::EntityType::Creature(_) => {
-                        Color::new(0.8, 0.2, 0.2, 1.0)
-                    }
-                    crate::state::entities::EntityType::Structure(_) => {
-                        Color::new(0.5, 0.5, 0.5, 1.0)
-                    }
-                    crate::state::entities::EntityType::ResourcePile(_) => GOLD,
-                };
-                draw_cube_wires(vec3(x, 0.5, z), vec3(0.5, 1.0, 0.5), color);
-            }
-
-            // Draw Health Bar if recently damaged
-            if state.time_elapsed - entity.last_damage_time < 3.0 {
-                let (hp, max_hp) = match &entity.entity_type {
-                    crate::state::entities::EntityType::Creature(c) => (c.health, c.max_health),
-                    crate::state::entities::EntityType::Hero(h) => (h.health, h.max_health),
-                    crate::state::entities::EntityType::Structure(s) => (s.health, s.max_health), // Structure verified ok
-                    _ => (0.0, 0.0), // No health bar for others
-                };
-
-                if max_hp > 0.0 {
-                    let health_pct = (hp / max_hp).clamp(0.0f32, 1.0f32);
-                    let bar_width = 0.8;
-                    let bar_height = 0.1;
-                    let y_offset = 1.2;
-
-                    // Background (Black)
-                    draw_cube(
-                        vec3(x, y_offset, z),
-                        vec3(bar_width, bar_height, 0.05),
-                        None,
-                        BLACK,
-                    );
-
-                    // Foreground (Green/Red based on HP?) -> Green
-                    // Calculate offset to align left (since draw_cube is centered)
-                    // If full width is 0.8 at pos X.
-                    // If pct is 0.5, width is 0.4. Center should be X - 0.2.
-                    // Shift = (bar_width - (bar_width * health_pct)) / 2.0 * -1.0
-                    //       = -0.5 * bar_width * (1.0 - health_pct)
-                    let x_shift = -0.5 * bar_width * (1.0 - health_pct);
-
-                    let bar_color = if health_pct < 0.3 { RED } else { GREEN };
-
-                    draw_cube(
-                        vec3(x + x_shift, y_offset, z),
-                        vec3(bar_width * health_pct, bar_height, 0.06), // Slightly thicker to z-fight
-                        None,
-                        bar_color,
-                    );
-                }
             }
         }
     }

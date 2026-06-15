@@ -3,8 +3,10 @@ pub mod combat;
 pub mod creature_ai;
 mod creature_targets;
 pub mod hero_ai;
+pub mod hero_parties;
 pub mod hero_spawner;
 pub mod pathfinding;
+pub mod rival_keeper_ai;
 pub mod room_validator;
 pub mod tile_grid;
 
@@ -20,9 +22,12 @@ pub mod creature_needs;
 pub mod creature_task_logic;
 pub mod hero_digging;
 pub mod movement;
+pub mod objectives;
 pub mod prison_system;
+pub mod scenario_events;
 pub mod spawner;
 pub mod spawner_logic;
+pub mod special_rooms;
 
 pub mod input;
 pub mod input_handlers;

@@ -34,6 +34,12 @@ pub struct PlayerState {
     pub unlocked_rooms: HashSet<String>,
     pub unlocked_creatures: HashSet<String>,
     pub unlocked_spells: HashSet<String>,
+    #[serde(default)]
+    pub unlocked_traps: HashSet<String>,
+    #[serde(default)]
+    pub trap_inventory: HashMap<String, u32>,
+    #[serde(default)]
+    pub trap_manufacturing_progress: HashMap<String, f32>,
     pub completed_technologies: HashSet<String>,
     pub research_points: i32,
     pub active_research: Option<String>,
@@ -54,6 +60,11 @@ pub struct PlayerState {
     pub gold_mined: u32,
     pub spells_cast: HashMap<String, u32>,
     pub game_time: f32,
+
+    #[serde(default)]
+    pub graveyard_corpses: u32,
+    #[serde(default)]
+    pub scavenger_conversion_progress: HashMap<usize, f32>,
 }
 
 impl PlayerState {
@@ -77,6 +88,9 @@ impl PlayerState {
         unlocked_spells.insert("speed_boost".to_string());
         // unlocked_spells.insert("create_food".to_string()); // Removed as it wasn't in json
 
+        let mut unlocked_traps = HashSet::new();
+        unlocked_traps.insert("door".to_string());
+
         Self {
             gold: game_data.config.player_starting_resources.gold,
             mana: game_data.config.player_starting_resources.mana,
@@ -93,6 +107,9 @@ impl PlayerState {
             unlocked_rooms,
             unlocked_creatures,
             unlocked_spells,
+            unlocked_traps,
+            trap_inventory: HashMap::new(),
+            trap_manufacturing_progress: HashMap::new(),
             completed_technologies: HashSet::new(),
             research_points: 0,
             active_research: None,
@@ -110,6 +127,8 @@ impl PlayerState {
             gold_mined: 0,
             spells_cast: HashMap::new(),
             game_time: 0.0,
+            graveyard_corpses: 0,
+            scavenger_conversion_progress: HashMap::new(),
         }
     }
 
@@ -186,6 +205,37 @@ impl PlayerState {
         self.unlocked_spells.insert(spell_id);
     }
 
+    /// Unlock a trap or door
+    pub fn unlock_trap(&mut self, trap_id: String) {
+        self.unlocked_traps.insert(trap_id);
+    }
+
+    pub fn is_trap_unlocked(&self, trap_id: &str) -> bool {
+        self.unlocked_traps.contains(trap_id)
+    }
+
+    pub fn trap_inventory_count(&self, trap_id: &str) -> u32 {
+        self.trap_inventory.get(trap_id).copied().unwrap_or(0)
+    }
+
+    pub fn add_trap_inventory(&mut self, trap_id: String, amount: u32) {
+        *self.trap_inventory.entry(trap_id).or_insert(0) += amount;
+    }
+
+    pub fn consume_trap_inventory(&mut self, trap_id: &str, amount: u32) -> bool {
+        let available = self.trap_inventory_count(trap_id);
+        if available < amount {
+            return false;
+        }
+
+        if available == amount {
+            self.trap_inventory.remove(trap_id);
+        } else if let Some(count) = self.trap_inventory.get_mut(trap_id) {
+            *count -= amount;
+        }
+        true
+    }
+
     /// Check if a technology is unlocked (completed)
     // For now we don't store "unlocked_techs" explicitly, but we could infer it if needed.
     // However, it's better to store completed techs to check prerequisites.
@@ -246,6 +296,10 @@ impl PlayerState {
         for creature in &tech.unlocks.creatures {
             self.unlock_creature(creature.clone());
         }
+
+        for trap in &tech.unlocks.traps {
+            self.unlock_trap(trap.clone());
+        }
     }
 
     /// Record a spell cast
@@ -274,6 +328,9 @@ mod tests {
             unlocked_rooms: HashSet::new(),
             unlocked_creatures: HashSet::new(),
             unlocked_spells: HashSet::new(),
+            unlocked_traps: HashSet::new(),
+            trap_inventory: HashMap::new(),
+            trap_manufacturing_progress: HashMap::new(),
             completed_technologies: HashSet::new(),
             research_points: 0,
             active_research: None,
@@ -288,6 +345,8 @@ mod tests {
             gold_mined: 0,
             spells_cast: HashMap::new(),
             game_time: 0.0,
+            graveyard_corpses: 0,
+            scavenger_conversion_progress: HashMap::new(),
         };
 
         // Assert initial state matches what test expects
@@ -312,6 +371,9 @@ mod tests {
             unlocked_rooms: HashSet::new(),
             unlocked_creatures: HashSet::new(),
             unlocked_spells: HashSet::new(),
+            unlocked_traps: HashSet::new(),
+            trap_inventory: HashMap::new(),
+            trap_manufacturing_progress: HashMap::new(),
             completed_technologies: HashSet::new(),
             research_points: 0,
             active_research: None,
@@ -326,6 +388,8 @@ mod tests {
             gold_mined: 0,
             spells_cast: HashMap::new(),
             game_time: 0.0,
+            graveyard_corpses: 0,
+            scavenger_conversion_progress: HashMap::new(),
         };
 
         // Add small fractional amount 10 times
@@ -362,6 +426,9 @@ mod tests {
             unlocked_rooms: HashSet::new(),
             unlocked_creatures: HashSet::new(),
             unlocked_spells: HashSet::new(),
+            unlocked_traps: HashSet::new(),
+            trap_inventory: HashMap::new(),
+            trap_manufacturing_progress: HashMap::new(),
             completed_technologies: HashSet::new(),
             research_points: 0,
             active_research: None,
@@ -376,6 +443,8 @@ mod tests {
             gold_mined: 0,
             spells_cast: HashMap::new(),
             game_time: 0.0,
+            graveyard_corpses: 0,
+            scavenger_conversion_progress: HashMap::new(),
         };
 
         assert!(!player.can_afford(10000, 0));
@@ -398,6 +467,9 @@ mod tests {
             unlocked_rooms: HashSet::new(),
             unlocked_creatures: HashSet::new(),
             unlocked_spells: HashSet::new(),
+            unlocked_traps: HashSet::new(),
+            trap_inventory: HashMap::new(),
+            trap_manufacturing_progress: HashMap::new(),
             completed_technologies: HashSet::new(),
             research_points: 0,
             active_research: None,
@@ -412,6 +484,8 @@ mod tests {
             gold_mined: 0,
             spells_cast: HashMap::new(),
             game_time: 0.0,
+            graveyard_corpses: 0,
+            scavenger_conversion_progress: HashMap::new(),
         };
 
         player.add_resources(0, 20000, 1000, 1000);

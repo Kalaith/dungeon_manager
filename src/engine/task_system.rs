@@ -14,6 +14,7 @@ pub struct TaskResult {
     pub food_change: f32,
     pub materials_change: f32,
     pub research_change: f32,
+    pub manufactured_trap: Option<String>,
     pub claimed_tile: Option<TilePos>,
     pub task_complete: bool,
 }
@@ -25,6 +26,7 @@ impl Default for TaskResult {
             food_change: 0.0,
             materials_change: 0.0,
             research_change: 0.0,
+            manufactured_trap: None,
             claimed_tile: None,
             task_complete: false,
         }
@@ -89,8 +91,17 @@ pub fn execute_task(
             // If we complete it here, the imp will stop digging instantly every frame.
         }
         Task::Work(room_id, _) => {
-            result.materials_change =
-                execute_work(creature_id, *room_id, entities, room_manager, game_data, dt);
+            let work = execute_work(
+                creature_id,
+                *room_id,
+                entities,
+                room_manager,
+                player,
+                game_data,
+                dt,
+            );
+            result.materials_change = work.materials_change;
+            result.manufactured_trap = work.manufactured_trap;
         }
         Task::Research(room_id) => {
             result.research_change =
@@ -283,19 +294,30 @@ fn execute_train(
 }
 
 /// Handle Work task - returns materials produced
+struct WorkResult {
+    materials_change: f32,
+    manufactured_trap: Option<String>,
+}
+
 fn execute_work(
     creature_id: EntityId,
     room_id: usize,
     entities: &mut EntityManager,
     room_manager: &RoomManager,
+    player: &PlayerState,
     game_data: &GameData,
     dt: f32,
-) -> f32 {
+) -> WorkResult {
     let room = match room_manager.rooms.iter().find(|r| {
         r.id == room_id && (r.room_type == "workshop" || r.room_type == "torture_chamber")
     }) {
         Some(r) => r,
-        None => return 0.0,
+        None => {
+            return WorkResult {
+                materials_change: 0.0,
+                manufactured_trap: None,
+            }
+        }
     };
 
     let creature = match entities
@@ -303,7 +325,12 @@ fn execute_work(
         .and_then(|e| e.as_creature_mut())
     {
         Some(c) => c,
-        None => return 0.0,
+        None => {
+            return WorkResult {
+                materials_change: 0.0,
+                manufactured_trap: None,
+            }
+        }
     };
 
     let efficiency = game_data
@@ -317,14 +344,43 @@ fn execute_work(
     let work_threshold = game_data.config.task_execution.work_timer_threshold;
     if creature.work_timer >= work_threshold {
         creature.work_timer = 0.0;
-        eprintln!(
-            "Creature {} produced generic material!",
-            creature.creature_id
-        );
-        return 1.0;
+        if room.room_type == "workshop" {
+            let manufactured_trap = select_manufactured_trap(player, game_data);
+            if let Some(trap_id) = &manufactured_trap {
+                eprintln!(
+                    "Creature {} manufactured {} crate.",
+                    creature.creature_id, trap_id
+                );
+            }
+            return WorkResult {
+                materials_change: 0.0,
+                manufactured_trap,
+            };
+        }
     }
 
-    0.0
+    WorkResult {
+        materials_change: 0.0,
+        manufactured_trap: None,
+    }
+}
+
+fn select_manufactured_trap(player: &PlayerState, game_data: &GameData) -> Option<String> {
+    let mut candidates: Vec<&crate::data::traps::TrapData> = player
+        .unlocked_traps
+        .iter()
+        .filter_map(|id| game_data.traps.get(id))
+        .collect();
+
+    candidates.sort_by(|a, b| {
+        player
+            .trap_inventory_count(&a.id)
+            .cmp(&player.trap_inventory_count(&b.id))
+            .then_with(|| a.cost.cmp(&b.cost))
+            .then_with(|| a.name.cmp(&b.name))
+    });
+
+    candidates.first().map(|trap| trap.id.clone())
 }
 
 /// Handle CollectWages task - returns gold consumed from player (negative)
@@ -398,4 +454,55 @@ fn execute_research(
 
     let research_rate = game_data.config.task_execution.research_production_rate;
     research_rate * dt * efficiency
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::room_validator::Room;
+    use crate::state::entities::{CreatureState, EntityManager};
+    use crate::state::player_state::PlayerState;
+    use std::collections::HashSet;
+
+    #[test]
+    fn workshop_work_task_manufactures_lowest_stock_unlocked_trap() {
+        let game_data = GameData::load().expect("game data should load");
+        let mut entities = EntityManager::new();
+        let monster_data = game_data.monsters.get("goblin").unwrap();
+        let mut creature = CreatureState::new(
+            "goblin".to_string(),
+            1,
+            monster_data.stats.health,
+            monster_data.stats.mana,
+            1,
+        );
+        creature.current_task = Some(Task::Work(42, TilePos::new(2, 2)));
+        let creature_id = entities.spawn_creature(TilePos::new(2, 2), creature);
+
+        let mut room_manager = RoomManager::new();
+        let mut room = Room::new(
+            42,
+            "workshop".to_string(),
+            [TilePos::new(2, 2)].into_iter().collect::<HashSet<_>>(),
+            Vec::new(),
+        );
+        room.active = true;
+        room_manager.rooms.push(room);
+
+        let mut player = PlayerState::new(&game_data);
+        player.unlock_trap("spike_trap".to_string());
+        player.add_trap_inventory("door".to_string(), 2);
+
+        let result = execute_task(
+            creature_id,
+            &mut entities,
+            &room_manager,
+            &player,
+            &game_data,
+            game_data.config.task_execution.work_timer_threshold * 2.0,
+        );
+
+        assert_eq!(result.manufactured_trap, Some("spike_trap".to_string()));
+        assert_eq!(result.materials_change, 0.0);
+    }
 }

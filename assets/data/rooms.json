@@ -1071,5 +1071,91 @@
         "flicker": true
       }
     }
+  },
+  {
+    "id": "scavenger",
+    "name": "Scavenger Room",
+    "description": "A chamber where your creatures lure enemy minions into defecting.",
+    "category": "special",
+    "icon": "icons/rooms/scavenger.png",
+    "build": {
+      "cost_per_tile": 220,
+      "mana_cost": 50,
+      "min_tiles": 9,
+      "max_tiles": 64,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
+      "construction_time": 0.8
+    },
+    "requirements": {
+      "research": [
+        "ritual_tech"
+      ],
+      "global_rooms_required": [
+        "temple"
+      ],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "happiness_modifier": -4
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        {
+          "tiles": 9,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 25,
+          "multiplier": 1.4
+        }
+      ],
+      "shape_penalties": {
+        "fragmented": 0.75
+      }
+    },
+    "ai": {
+      "task_type": "scavenge",
+      "desirability": 0.9,
+      "max_creatures": 4,
+      "preferred_creatures": [
+        "warlock",
+        "succubus",
+        "vampire"
+      ],
+      "forbidden_creatures": [
+        "imp"
+      ],
+      "work_size": [
+        1,
+        1
+      ],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/scavenger.png",
+      "wall_sprite": "tiles/scavenger_wall.png",
+      "object_spawn": [
+        {
+          "object": "focus_crystal",
+          "density": 0.1
+        }
+      ],
+      "light": {
+        "color": [
+          80,
+          180,
+          160
+        ],
+        "intensity": 0.6,
+        "flicker": true
+      }
+    }
   }
 ]

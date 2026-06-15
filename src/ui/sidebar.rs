@@ -266,6 +266,17 @@ impl Sidebar {
             spawner_cost,
             "5".to_string(),
         ));
+        let bridge_cost = game_data
+            .tiles
+            .get("bridge")
+            .and_then(|tile| tile.cost)
+            .unwrap_or(50);
+        layout.push((
+            "Bridge".to_string(),
+            InteractionMode::BuildRoom("bridge".to_string()),
+            bridge_cost,
+            "B".to_string(),
+        ));
         layout.push((
             "Sell/Cancel".to_string(),
             InteractionMode::Sell,
@@ -293,7 +304,7 @@ impl Sidebar {
             {
                 // Check if unlocked
                 let is_locked = if let InteractionMode::BuildRoom(room_id) = &mode {
-                    !player.is_room_unlocked(room_id)
+                    room_id != "bridge" && !player.is_room_unlocked(room_id)
                 } else {
                     false
                 };
@@ -429,55 +440,12 @@ impl Sidebar {
         player: &PlayerState,
         game_data: &crate::data::GameData,
     ) -> Option<InteractionMode> {
-        let start_x = PADDING;
-        let start_y = self.panel_y + PADDING;
-
-        // Trap items: Label, Mode, Material Cost, Hotkey (optional)
-        let door_cost = game_data.traps.get("door").map(|t| t.cost).unwrap_or(50);
-        let spike_cost = game_data
-            .traps
-            .get("spike_trap")
-            .map(|t| t.cost)
-            .unwrap_or(100);
-        let buttons = vec![
-            (
-                "Door",
-                InteractionMode::BuildTrap("door".to_string()),
-                door_cost,
-                "D",
-            ),
-            (
-                "Spike Trap",
-                InteractionMode::BuildTrap("spike_trap".to_string()),
-                spike_cost,
-                "S",
-            ),
-        ];
-
-        let mut current_x = start_x;
-        let mut current_y = start_y;
-
-        for (_label, mode, cost, _hotkey) in buttons {
-            let width = BUTTON_SIZE * 2.5;
-            if current_x + width > screen_width() - RIGHT_MARGIN {
-                current_x = start_x;
-                current_y += BUTTON_SIZE + BUTTON_SPACING;
-            }
-
-            if mouse_pos.0 >= current_x
-                && mouse_pos.0 <= current_x + width
-                && mouse_pos.1 >= current_y
-                && mouse_pos.1 <= current_y + BUTTON_SIZE
-            {
-                if player.materials >= cost {
-                    self.selected_spell = None;
-                    return Some(mode);
-                }
-            }
-
-            current_x += width + BUTTON_SPACING;
+        if let Some(mode) =
+            crate::ui::trap_buttons::trap_button_at(self.panel_y, mouse_pos, player, game_data)
+        {
+            self.selected_spell = None;
+            return Some(mode);
         }
-
         None
     }
 

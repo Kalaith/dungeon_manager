@@ -1,6 +1,7 @@
 use crate::data::GameData;
 use crate::state::entities::{EntityId, HeroGoal};
 use crate::state::game_state::GameState;
+use crate::state::OwnerId;
 use macroquad_toolkit::rng;
 
 impl GameState {
@@ -57,6 +58,39 @@ impl GameState {
             attackers.push((entity.id, entity.visual_pos, attack_type));
         }
 
+        for entity in self.entities.all() {
+            let Some(creature) = entity.as_creature() else {
+                continue;
+            };
+            if !entity.owner.is_hostile_to(&OwnerId::Player) {
+                continue;
+            }
+
+            let Some(creature_data) = game_data.monsters.get(&creature.creature_id) else {
+                continue;
+            };
+            let attack_type = creature_data.combat.attack_type.clone();
+            let attack_range = match attack_type.as_str() {
+                "melee" => game_data.config.combat_ranges.melee,
+                "ranged" => game_data.config.combat_ranges.ranged,
+                "magic" => game_data.config.combat_ranges.magic,
+                _ => game_data.config.combat_ranges.melee,
+            };
+            let manhattan_dist =
+                (entity.pos.x - target_pos.x).abs() + (entity.pos.y - target_pos.y).abs();
+
+            if manhattan_dist > attack_range
+                || rng::rand() >= creature_data.combat.attack_speed * dt
+            {
+                continue;
+            }
+
+            let min = creature_data.combat.damage_range[0] as f32;
+            let max = creature_data.combat.damage_range[1] as f32;
+            total_damage += rng::gen_range(min, max);
+            attackers.push((entity.id, entity.visual_pos, attack_type));
+        }
+
         for (attacker_id, visual_pos, attack_type) in attackers {
             self.projectiles.spawn_at_position(
                 visual_pos,
@@ -80,5 +114,38 @@ impl GameState {
                     .danger("DUNGEON HEART DESTROYED! GAME OVER");
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data::GameData;
+    use crate::state::entities::CreatureState;
+    use crate::state::tile_state::TilePos;
+
+    #[test]
+    fn hostile_creatures_can_damage_the_player_heart() {
+        let game_data = GameData::load().expect("game data should load");
+        let mut state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+        let heart_pos = state.find_dungeon_heart_position().unwrap();
+        let monster_data = game_data.monsters.get("goblin").unwrap();
+        let creature = CreatureState::new(
+            "goblin".to_string(),
+            1,
+            monster_data.stats.health,
+            monster_data.stats.mana,
+            42,
+        );
+        state.entities.spawn_creature_for_owner(
+            TilePos::new(heart_pos.x + 1, heart_pos.y),
+            creature,
+            OwnerId::RivalKeeper(1),
+        );
+        let start_health = state.dungeon_heart_health;
+
+        state.process_dungeon_heart_attacks(&game_data, 100.0);
+
+        assert!(state.dungeon_heart_health < start_health);
     }
 }

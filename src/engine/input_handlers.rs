@@ -50,6 +50,11 @@ pub fn handle_build_room(
     room_type: &str,
     tile_pos: TilePos,
 ) {
+    if room_type == tt::BRIDGE {
+        handle_build_bridge(state, game_data, tile_pos);
+        return;
+    }
+
     let cost = game_data
         .rooms
         .get(room_type)
@@ -85,6 +90,13 @@ pub fn handle_build_room_multi(
     room_type: &str,
     tiles: &[TilePos],
 ) {
+    if room_type == tt::BRIDGE {
+        for &tile_pos in tiles {
+            handle_build_bridge(state, game_data, tile_pos);
+        }
+        return;
+    }
+
     let cost_per_tile = game_data
         .rooms
         .get(room_type)
@@ -139,40 +151,52 @@ pub fn handle_build_trap(
     trap_type: &str,
     tile_pos: TilePos,
 ) {
+    if !state.player.is_trap_unlocked(trap_type) || !game_data.traps.contains_key(trap_type) {
+        eprintln!("Cannot build trap: {} is not available.", trap_type);
+        return;
+    }
+
     // Check for Workshop requirement
     let has_workshop = state
         .room_manager
         .rooms
         .iter()
-        .any(|r| r.room_type == "workshop");
+        .any(|r| r.active && r.room_type == "workshop");
     if !has_workshop {
         eprintln!("Cannot build trap: No functioning Workshop!");
         return;
     }
 
-    // Add to pending builds
-    if let Some(tile) = state.get_tile_mut(tile_pos) {
-        if tile.ownership == Ownership::Player
+    let can_place = state.get_tile(tile_pos).map_or(false, |tile| {
+        tile.ownership == Ownership::Player
             && tile_types::can_build_room(&tile.tile_type, game_data)
             && tile.trap.is_none()
-        {
-            // Create trap in "unconstructed" state
-            tile.trap = Some(crate::state::tile_state::TrapState {
-                trap_type: trap_type.to_string(),
-                constructed: false,
-                construction_progress: 0.0,
-                active: false,
-                funded: false,
-                cooldown: 0.0,
-                triggered: false,
-            });
+    });
+    if !can_place {
+        return;
+    }
 
-            state.pending_trap_builds.insert(tile_pos);
-            eprintln!(
-                "Trap '{}' placement started at {:?}. Waiting for construction.",
-                trap_type, tile_pos
-            );
-        }
+    if !state.player.consume_trap_inventory(trap_type, 1) {
+        eprintln!("Cannot build trap: No {} crates in inventory.", trap_type);
+        return;
+    }
+
+    if let Some(tile) = state.get_tile_mut(tile_pos) {
+        tile.trap = Some(crate::state::tile_state::TrapState {
+            trap_type: trap_type.to_string(),
+            constructed: false,
+            construction_progress: 0.0,
+            active: false,
+            funded: true,
+            cooldown: 0.0,
+            triggered: false,
+        });
+
+        state.pending_trap_builds.insert(tile_pos);
+        eprintln!(
+            "Trap '{}' placement started at {:?}. Waiting for construction.",
+            trap_type, tile_pos
+        );
     }
 }
 
@@ -182,38 +206,97 @@ pub fn handle_build_trap_multi(
     trap_type: &str,
     tiles: &[TilePos],
 ) {
+    if !state.player.is_trap_unlocked(trap_type) || !game_data.traps.contains_key(trap_type) {
+        eprintln!("Cannot build trap: {} is not available.", trap_type);
+        return;
+    }
+
     // Check for Workshop requirement
     let has_workshop = state
         .room_manager
         .rooms
         .iter()
-        .any(|r| r.room_type == "workshop");
+        .any(|r| r.active && r.room_type == "workshop");
     if !has_workshop {
         eprintln!("Cannot build trap: No functioning Workshop!");
         return;
     }
 
-    for &tile_pos in tiles {
-        if let Some(tile) = state.get_tile_mut(tile_pos) {
-            if tile.ownership == Ownership::Player
-                && tile_types::can_build_room(&tile.tile_type, game_data)
-                && tile.trap.is_none()
-            {
-                // Create trap in "unconstructed" state
-                tile.trap = Some(crate::state::tile_state::TrapState {
-                    trap_type: trap_type.to_string(),
-                    constructed: false,
-                    construction_progress: 0.0,
-                    active: false,
-                    funded: false,
-                    cooldown: 0.0,
-                    triggered: false,
-                });
+    let valid_tiles: Vec<TilePos> = tiles
+        .iter()
+        .copied()
+        .filter(|&tile_pos| {
+            state.get_tile(tile_pos).map_or(false, |tile| {
+                tile.ownership == Ownership::Player
+                    && tile_types::can_build_room(&tile.tile_type, game_data)
+                    && tile.trap.is_none()
+            })
+        })
+        .take(state.player.trap_inventory_count(trap_type) as usize)
+        .collect();
 
-                state.pending_trap_builds.insert(tile_pos);
-            }
+    for tile_pos in valid_tiles {
+        if !state.player.consume_trap_inventory(trap_type, 1) {
+            break;
+        }
+        if let Some(tile) = state.get_tile_mut(tile_pos) {
+            tile.trap = Some(crate::state::tile_state::TrapState {
+                trap_type: trap_type.to_string(),
+                constructed: false,
+                construction_progress: 0.0,
+                active: false,
+                funded: true,
+                cooldown: 0.0,
+                triggered: false,
+            });
+
+            state.pending_trap_builds.insert(tile_pos);
         }
     }
+}
+
+fn handle_build_bridge(state: &mut GameState, game_data: &GameData, tile_pos: TilePos) {
+    let cost = game_data
+        .tiles
+        .get(tt::BRIDGE)
+        .and_then(|tile| tile.cost)
+        .unwrap_or(50);
+
+    if state.player.gold < cost || !can_build_bridge(state, tile_pos) {
+        return;
+    }
+
+    state.player.gold -= cost;
+    if let Some(tile) = state.get_tile_mut(tile_pos) {
+        tile.tile_type = tt::BRIDGE.to_string();
+        tile.claim();
+    }
+}
+
+fn can_build_bridge(state: &GameState, tile_pos: TilePos) -> bool {
+    let Some(tile) = state.get_tile(tile_pos) else {
+        return false;
+    };
+    if !matches!(tile.tile_type.as_str(), "water" | "lava") {
+        return false;
+    }
+
+    [
+        TilePos::new(tile_pos.x + 1, tile_pos.y),
+        TilePos::new(tile_pos.x - 1, tile_pos.y),
+        TilePos::new(tile_pos.x, tile_pos.y + 1),
+        TilePos::new(tile_pos.x, tile_pos.y - 1),
+    ]
+    .into_iter()
+    .any(|neighbor| {
+        state
+            .get_tile(neighbor)
+            .map(|tile| {
+                tile.ownership == Ownership::Player
+                    && !matches!(tile.tile_type.as_str(), "water" | "lava")
+            })
+            .unwrap_or(false)
+    })
 }
 
 pub fn handle_place_spawner(state: &mut GameState, game_data: &GameData, tile_pos: TilePos) {
@@ -339,9 +422,26 @@ pub fn handle_drop(
     };
 
     let is_walkable =
-        tile.ownership == Ownership::Player && tile_types::is_walkable(&tile.tile_type, game_data);
+        tile.ownership == Ownership::Player && tile_types::is_tile_walkable(tile, game_data);
     if !is_walkable {
         return;
+    }
+
+    let should_try_sacrifice = state
+        .entities
+        .get(entity_id)
+        .map(|entity| {
+            entity.owner == crate::state::OwnerId::Player && entity.as_creature().is_some()
+        })
+        .unwrap_or(false);
+    if should_try_sacrifice {
+        if crate::engine::special_rooms::sacrifice_creature_at(
+            state, game_data, entity_id, tile_pos,
+        ) {
+            *held_entity = None;
+            *interaction_mode = InteractionMode::Pickup;
+            return;
+        }
     }
 
     let entity = match state.entities.get_mut(entity_id) {
@@ -462,4 +562,75 @@ pub fn handle_inspect(
 ) {
     // Reuse the same selection logic
     select_entity_or_room(state, selected_entity, selected_room, tile_pos);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::room_validator::Room;
+
+    fn active_room(id: usize, room_type: &str, tiles: &[TilePos]) -> Room {
+        let mut room = Room::new(
+            id,
+            room_type.to_string(),
+            tiles.iter().copied().collect(),
+            Vec::new(),
+        );
+        room.active = true;
+        room
+    }
+
+    fn set_tile(state: &mut GameState, pos: TilePos, tile_type: &str, ownership: Ownership) {
+        let tile = state.get_tile_mut(pos).expect("test tile should exist");
+        tile.tile_type = tile_type.to_string();
+        match ownership {
+            Ownership::Player => tile.claim(),
+            Ownership::Enemy => tile.set_owner(crate::state::OwnerId::RivalKeeper(1)),
+            Ownership::Unclaimed => {
+                tile.ownership = Ownership::Unclaimed;
+                tile.owner = crate::state::OwnerId::Neutral;
+            }
+        }
+    }
+
+    #[test]
+    fn bridge_building_claims_water_or_lava_crossing() {
+        let game_data = GameData::load().expect("game data should load");
+        let mut state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+        let floor = TilePos::new(2, 2);
+        let water = TilePos::new(3, 2);
+        set_tile(&mut state, floor, tt::CLAIMED_FLOOR, Ownership::Player);
+        set_tile(&mut state, water, "water", Ownership::Unclaimed);
+        let before_gold = state.player.gold;
+
+        handle_build_room(&mut state, &game_data, tt::BRIDGE, water);
+
+        let tile = state.get_tile(water).expect("bridge tile should exist");
+        assert_eq!(tile.tile_type, tt::BRIDGE);
+        assert_eq!(tile.ownership, Ownership::Player);
+        assert!(state.player.gold < before_gold);
+    }
+
+    #[test]
+    fn trap_placement_consumes_manufactured_inventory() {
+        let game_data = GameData::load().expect("game data should load");
+        let mut state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+        let trap_pos = TilePos::new(2, 2);
+        set_tile(&mut state, trap_pos, tt::CLAIMED_FLOOR, Ownership::Player);
+        state
+            .room_manager
+            .rooms
+            .push(active_room(777, "workshop", &[TilePos::new(3, 3)]));
+        state.player.unlock_trap("spike_trap".to_string());
+        state.player.add_trap_inventory("spike_trap".to_string(), 1);
+
+        handle_build_trap(&mut state, &game_data, "spike_trap", trap_pos);
+
+        let tile = state.get_tile(trap_pos).expect("trap tile should exist");
+        let trap = tile.trap.as_ref().expect("trap should be placed");
+        assert_eq!(trap.trap_type, "spike_trap");
+        assert!(trap.funded);
+        assert_eq!(state.player.trap_inventory_count("spike_trap"), 0);
+        assert!(state.pending_trap_builds.contains(&trap_pos));
+    }
 }

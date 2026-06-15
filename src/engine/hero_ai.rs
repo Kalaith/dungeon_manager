@@ -633,6 +633,12 @@ fn get_tile_pathfinding_info(
         return (true, 1.0);
     }
 
+    if !crate::engine::tile_types::is_tile_walkable(tile, game_data)
+        && !can_dig_through_tile(tile, game_data, can_dig)
+    {
+        return (false, 1.0);
+    }
+
     if let Some(td) = game_data.tiles.get(&tile.tile_type) {
         if !td.blocks_movement {
             return (true, 1.0);
@@ -648,6 +654,19 @@ fn get_tile_pathfinding_info(
     }
 
     (true, 1.0)
+}
+
+fn can_dig_through_tile(
+    tile: &crate::state::tile_state::TileState,
+    game_data: &GameData,
+    can_dig: bool,
+) -> bool {
+    can_dig
+        && game_data
+            .tiles
+            .get(&tile.tile_type)
+            .map(|td| td.diggable && tile.tile_type != "hero_wall")
+            .unwrap_or(false)
 }
 
 /// Find an emergency wander target when pathfinding fails

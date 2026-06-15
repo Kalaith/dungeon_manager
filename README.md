@@ -27,3 +27,10 @@ Keep the dungeon heart alive while growing a self-sustaining underground empire.
 ## Current Scope
 
 In-development dungeon management with digging, rooms, creatures, needs, resources, combat pressure, and defense planning.
+# Practical Future Improvements
+
+- Add tests for menu action handlers, sidebar selection, tooltip state, and dungeon command dispatch.
+- Separate model mutation from renderer/sidebar modules so UI actions call explicit domain commands.
+- Add scenario fixtures for room placement, resource flow, encounters, and dungeon progression milestones.
+- Profile large-dungeon sidebar and renderer paths, then cache derived layout data that is recalculated every frame.
+

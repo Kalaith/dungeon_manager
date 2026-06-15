@@ -103,3 +103,39 @@ fn load_legacy_browser_save(key: &str) -> Result<GameLoadWrapper, String> {
     let _ = macroquad_toolkit::persistence::save_string_key(GAME_NAME, key, &serialized);
     Ok(wrapper)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data::GameData;
+
+    #[test]
+    fn campaign_progress_survives_save_serialization() {
+        let game_data = GameData::load().expect("game data should load");
+        let mut state = GameState::new_campaign_start(&game_data, "deep_dominion");
+        let progress = state
+            .campaign_progress
+            .as_mut()
+            .expect("campaign progress should exist");
+        progress
+            .completed_missions
+            .insert("dark_beginnings".to_string());
+
+        let wrapper = GameSaveWrapper {
+            game_state: &state,
+            save_date: "test".to_string(),
+            version: "0.1.0".to_string(),
+        };
+        let json = serde_json::to_string(&wrapper).expect("save should serialize");
+        let loaded: GameLoadWrapper = serde_json::from_str(&json).expect("save should deserialize");
+
+        let loaded_progress = loaded
+            .game_state
+            .campaign_progress
+            .expect("campaign progress should load");
+        assert_eq!(loaded_progress.campaign_id, "deep_dominion");
+        assert!(loaded_progress
+            .completed_missions
+            .contains("dark_beginnings"));
+    }
+}

@@ -57,7 +57,7 @@ impl Game {
     async fn load_resources(&mut self) {
         // Load game data
         if self.game_data.is_none() {
-            match GameData::load() {
+            match GameData::load_with_default_mod_order() {
                 Ok(data) => {
                     eprintln!("Successfully loaded game data!");
                     self.game_data = Some(data);

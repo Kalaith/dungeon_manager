@@ -38,7 +38,7 @@ pub fn process_trap_construction(
     let pending: Vec<TilePos> = pending_trap_builds.iter().cloned().collect();
 
     for pos in &pending {
-        try_fund_trap(dungeon, player, *pos, game_data);
+        try_fund_trap(dungeon, player, *pos);
     }
 
     let completed_traps: Vec<TilePos> = pending
@@ -54,12 +54,7 @@ pub fn process_trap_construction(
 }
 
 /// Try to fund a trap at the given position
-fn try_fund_trap(
-    dungeon: &mut Dungeon,
-    player: &mut PlayerState,
-    pos: TilePos,
-    game_data: &GameData,
-) {
+fn try_fund_trap(dungeon: &mut Dungeon, player: &mut PlayerState, pos: TilePos) {
     let tile = match dungeon.get_tile_mut(pos) {
         Some(t) => t,
         None => return,
@@ -73,9 +68,8 @@ fn try_fund_trap(
         return;
     }
 
-    let cost = get_trap_cost(&trap.trap_type, game_data);
-    if player.materials >= cost {
-        player.materials -= cost;
+    let trap_type = trap.trap_type.clone();
+    if player.consume_trap_inventory(&trap_type, 1) {
         trap.funded = true;
         eprintln!("Funded trap at {:?}", pos);
     }

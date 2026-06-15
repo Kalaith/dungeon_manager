@@ -101,12 +101,16 @@ impl InputHandler {
 
             if let Some(ref mut data) = game_data {
                 // Cheats removed from here
-                let game_state = GameState::new_with_map_type(
-                    data.config.map_size.width,
-                    data.config.map_size.height,
-                    data,
-                    selected_map_type.clone(),
-                );
+                let game_state = if data.campaigns.contains_key("deep_dominion") {
+                    GameState::new_campaign_start(data, "deep_dominion")
+                } else {
+                    GameState::new_with_map_type(
+                        data.config.map_size.width,
+                        data.config.map_size.height,
+                        data,
+                        selected_map_type.clone(),
+                    )
+                };
                 *phase = GamePhase::Playing(game_state);
             }
         }
@@ -152,6 +156,26 @@ impl InputHandler {
     ) -> bool {
         // Handle Game Over Input
         if state.game_over {
+            if state.victory && state.has_pending_campaign_mission(game_data) {
+                let mouse_pos = mouse_position();
+                let next_clicked = is_mouse_button_pressed(MouseButton::Left)
+                    && mouse_pos.0 >= screen_width() / 2.0 - 120.0
+                    && mouse_pos.0 <= screen_width() / 2.0 + 120.0
+                    && mouse_pos.1 >= screen_height() / 2.0 + 100.0
+                    && mouse_pos.1 <= screen_height() / 2.0 + 150.0;
+
+                if is_key_pressed(KeyCode::Enter) || is_key_pressed(KeyCode::Space) || next_clicked
+                {
+                    if let Some(next_state) = state.start_pending_campaign_mission(game_data) {
+                        *state = next_state;
+                        *interaction_mode = InteractionMode::None;
+                        sidebar.clear_selection();
+                        drag_selection.cancel();
+                    }
+                    return false;
+                }
+            }
+
             if is_key_pressed(KeyCode::Escape) {
                 return true; // Return to Main Menu
             }

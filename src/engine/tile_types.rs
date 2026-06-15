@@ -12,6 +12,7 @@ pub mod types {
     pub const FLOOR: &str = "floor";
     pub const CLAIMED_FLOOR: &str = "claimed_floor";
     pub const REINFORCED_WALL: &str = "reinforced_wall";
+    pub const BRIDGE: &str = "bridge";
 
     // Special tiles
     pub const DUNGEON_HEART: &str = "dungeon_heart";
@@ -19,6 +20,7 @@ pub mod types {
 }
 
 use crate::data::GameData;
+use crate::state::tile_state::TileState;
 
 /// Check if a tile type is a wall/blocking tile
 pub fn is_wall(tile_type: &str, game_data: &GameData) -> bool {
@@ -67,6 +69,23 @@ pub fn is_walkable(tile_type: &str, game_data: &GameData) -> bool {
         .get(tile_type)
         .map(|t| !t.blocks_movement)
         .unwrap_or(false) // unknown tiles not walkable
+}
+
+pub fn is_tile_walkable(tile: &TileState, game_data: &GameData) -> bool {
+    if let Some(trap) = &tile.trap {
+        if trap.constructed && trap.active {
+            if game_data
+                .traps
+                .get(&trap.trap_type)
+                .map(|trap_data| trap_data.effects.blocks_movement)
+                .unwrap_or(false)
+            {
+                return false;
+            }
+        }
+    }
+
+    is_walkable(&tile.tile_type, game_data)
 }
 
 /// Check if a tile type is a room tile

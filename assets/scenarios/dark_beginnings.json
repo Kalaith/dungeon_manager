@@ -1,0 +1,195 @@
+[
+  {
+    "meta": {
+      "id": "dark_beginnings",
+      "name": "Dark Beginnings",
+      "description": "Establish a first dungeon, survive the opening hero raid, and destroy the nearby hero base.",
+      "author": "Deep Dominion Team"
+    },
+    "map": {
+      "path": "assets/maps/level_1.json",
+      "width": 32,
+      "height": 32,
+      "biome": "underground",
+      "above_ground": false
+    },
+    "players": [
+      {
+        "id": "keeper0",
+        "owner": "player",
+        "role": "human",
+        "start_gold": 2500,
+        "start_mana": 500,
+        "max_creatures": 15
+      },
+      {
+        "id": "heroes",
+        "owner": "heroes",
+        "role": "heroes",
+        "start_gold": 0,
+        "start_mana": 0
+      },
+      {
+        "id": "keeper1",
+        "owner": {
+          "rival_keeper": 1
+        },
+        "role": "rival_keeper",
+        "start_gold": 1800,
+        "start_mana": 300,
+        "max_creatures": 10,
+        "ai_profile": "builder_defender"
+      }
+    ],
+    "rules": {
+      "fog_of_war": true,
+      "starting_research": [
+        "training_tech"
+      ],
+      "threat_multiplier": 1.0
+    },
+    "creature_pool": {
+      "goblin": 10,
+      "orc": 5,
+      "warlock": 3,
+      "troll": 3
+    },
+    "availability": {
+      "rooms": {
+        "lair": {
+          "available": true,
+          "unlocked": true,
+          "owner": "player"
+        },
+        "hatchery": {
+          "available": true,
+          "unlocked": true,
+          "owner": "player"
+        },
+        "treasury": {
+          "available": true,
+          "unlocked": true,
+          "owner": "player"
+        },
+        "training_hall": {
+          "available": true,
+          "unlocked": true,
+          "owner": "player"
+        },
+        "workshop": {
+          "available": true,
+          "unlocked": false,
+          "owner": "player"
+        }
+      },
+      "spells": {
+        "summon_imps": {
+          "available": true,
+          "unlocked": true,
+          "owner": "player"
+        },
+        "lightning_strike": {
+          "available": true,
+          "unlocked": false,
+          "owner": "player"
+        }
+      },
+      "traps": {
+        "door": {
+          "available": true,
+          "unlocked": true,
+          "owner": "player"
+        },
+        "spike_trap": {
+          "available": true,
+          "unlocked": false,
+          "owner": "player"
+        }
+      },
+      "creatures": {
+        "goblin": {
+          "available": true,
+          "unlocked": true,
+          "owner": "player"
+        },
+        "orc": {
+          "available": true,
+          "unlocked": false,
+          "owner": "player"
+        }
+      }
+    },
+    "objectives": [
+      {
+        "type": "survive_time",
+        "seconds": 600.0
+      },
+      {
+        "type": "destroy_all_hero_buildings"
+      }
+    ],
+    "events": [
+      {
+        "id": "first_raid",
+        "trigger": {
+          "type": "time_elapsed",
+          "seconds": 180.0
+        },
+        "actions": [
+          {
+            "action": "spawn_hero_party",
+            "party": "first_raid",
+            "x": 28,
+            "y": 28
+          },
+          {
+            "action": "unlock_trap",
+            "trap": "spike_trap",
+            "owner": "player"
+          }
+        ],
+        "once": true
+      }
+    ],
+    "hero_parties": [
+      {
+        "id": "first_raid",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          {
+            "hero": "peasant_militia",
+            "level": 1,
+            "count": 3
+          },
+          {
+            "hero": "acolyte",
+            "level": 1,
+            "count": 1
+          }
+        ]
+      }
+    ],
+    "rival_keepers": [
+      {
+        "owner": {
+          "rival_keeper": 1
+        },
+        "ai_profile": "builder_defender",
+        "starting_rooms": [
+          "lair",
+          "hatchery",
+          "treasury"
+        ],
+        "preferred_creatures": [
+          "goblin",
+          "orc"
+        ],
+        "min_garrison": 3,
+        "raid_size": 3,
+        "dig_batch": 5,
+        "room_size": 2,
+        "attack_cooldown": 35.0
+      }
+    ]
+  }
+]

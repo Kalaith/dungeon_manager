@@ -2,6 +2,7 @@
 pub mod actions;
 pub mod cheat_menu;
 pub mod core;
+pub mod entity_renderer;
 pub mod menus;
 pub mod minimap;
 pub mod notifications;
@@ -10,3 +11,4 @@ pub mod resources;
 pub mod sidebar;
 pub mod sidebar_renderer;
 pub mod tooltips;
+pub mod trap_buttons;

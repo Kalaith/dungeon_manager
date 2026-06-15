@@ -10,7 +10,8 @@
                 "training_hall"
             ],
             "spells": [],
-            "creatures": []
+            "creatures": [],
+            "traps": []
         },
         "icon": "icons/tech/training.png"
     },
@@ -28,7 +29,8 @@
                 "guard_post"
             ],
             "spells": [],
-            "creatures": []
+            "creatures": [],
+            "traps": []
         },
         "icon": "icons/tech/prison.png"
     },
@@ -49,6 +51,9 @@
             ],
             "creatures": [
                 "warlock"
+            ],
+            "traps": [
+                "magic_door"
             ]
         },
         "icon": "icons/tech/ritual.png"
@@ -66,7 +71,14 @@
                 "workshop"
             ],
             "spells": [],
-            "creatures": []
+            "creatures": [],
+            "traps": [
+                "spike_trap",
+                "blowgun_trap",
+                "boulder_trap",
+                "alarm_trap",
+                "braced_door"
+            ]
         },
         "icon": "icons/tech/traps.png"
     }

@@ -117,12 +117,13 @@ impl GraphicsCache {
 
         for tile_type in tile_types {
             let path = format!("assets/tiles/{}.png", tile_type);
-            match loader.load(&path, FilterMode::Nearest).await {
+            let load_path = resolve_asset_path(game_data, &path);
+            match loader.load(&load_path, FilterMode::Nearest).await {
                 Ok(tex) => {
                     cache.tile_textures.insert(tile_type.to_string(), tex);
                 }
                 Err(e) => {
-                    println!("Failed to load texture {}: {}", path, e);
+                    println!("Failed to load texture {}: {}", load_path, e);
                     // generate a placeholder?
                 }
             }
@@ -130,12 +131,13 @@ impl GraphicsCache {
 
         for tile_type in hero_building_tiles {
             let path = format!("assets/tiles/hero_buildings/{}.png", tile_type);
-            match loader.load(&path, FilterMode::Nearest).await {
+            let load_path = resolve_asset_path(game_data, &path);
+            match loader.load(&load_path, FilterMode::Nearest).await {
                 Ok(tex) => {
                     cache.tile_textures.insert(tile_type.to_string(), tex);
                 }
                 Err(e) => {
-                    println!("Failed to load hero building texture {}: {}", path, e);
+                    println!("Failed to load hero building texture {}: {}", load_path, e);
                 }
             }
         }
@@ -154,11 +156,12 @@ impl GraphicsCache {
         ];
         for creature in creatures {
             let path = format!("assets/sprites/monsters/{}.png", creature);
-            match loader.load(&path, FilterMode::Nearest).await {
+            let load_path = resolve_asset_path(game_data, &path);
+            match loader.load(&load_path, FilterMode::Nearest).await {
                 Ok(tex) => {
                     cache.monster_textures.insert(creature.to_string(), tex);
                 }
-                Err(e) => println!("Failed to load texture {}: {}", path, e),
+                Err(e) => println!("Failed to load texture {}: {}", load_path, e),
             }
         }
 
@@ -181,11 +184,12 @@ impl GraphicsCache {
         ];
         for hero in heroes {
             let path = format!("assets/sprites/heroes/{}.png", hero);
-            match loader.load(&path, FilterMode::Nearest).await {
+            let load_path = resolve_asset_path(game_data, &path);
+            match loader.load(&load_path, FilterMode::Nearest).await {
                 Ok(tex) => {
                     cache.hero_textures.insert(hero.to_string(), tex);
                 }
-                Err(e) => println!("Failed to load texture {}: {}", path, e),
+                Err(e) => println!("Failed to load texture {}: {}", load_path, e),
             }
         }
 
@@ -193,11 +197,12 @@ impl GraphicsCache {
         let ui_textures = vec!["main_menu_bg"];
         for tex_name in ui_textures {
             let path = format!("assets/ui/{}.png", tex_name);
-            match loader.load(&path, FilterMode::Linear).await {
+            let load_path = resolve_asset_path(game_data, &path);
+            match loader.load(&load_path, FilterMode::Linear).await {
                 Ok(tex) => {
                     cache.ui_textures.insert(tex_name.to_string(), tex);
                 }
-                Err(e) => println!("Failed to load texture {}: {}", path, e),
+                Err(e) => println!("Failed to load texture {}: {}", load_path, e),
             }
         }
 
@@ -214,12 +219,13 @@ impl GraphicsCache {
                 let icon_path = &spell.visual.icon;
                 if !icon_path.is_empty() && known_spell_icons.contains(&icon_path.as_str()) {
                     let path = format!("assets/{}", icon_path);
-                    match loader.load(&path, FilterMode::Nearest).await {
+                    let load_path = resolve_asset_path(game_data, &path);
+                    match loader.load(&load_path, FilterMode::Nearest).await {
                         Ok(tex) => {
-                            println!("Loaded spell icon: {} -> {}", icon_path, path);
+                            println!("Loaded spell icon: {} -> {}", icon_path, load_path);
                             cache.ui_textures.insert(icon_path.clone(), tex);
                         }
-                        Err(e) => println!("Failed to load spell icon {}: {}", path, e),
+                        Err(e) => println!("Failed to load spell icon {}: {}", load_path, e),
                     }
                 }
             }
@@ -229,18 +235,25 @@ impl GraphicsCache {
         let projectiles = vec!["projectile_melee", "projectile_arrow", "projectile_magic"];
         for projectile in projectiles {
             let path = format!("assets/sprites/projectiles/{}.png", projectile);
-            match loader.load(&path, FilterMode::Nearest).await {
+            let load_path = resolve_asset_path(game_data, &path);
+            match loader.load(&load_path, FilterMode::Nearest).await {
                 Ok(tex) => {
                     cache
                         .projectile_textures
                         .insert(projectile.to_string(), tex);
                 }
-                Err(e) => println!("Failed to load projectile texture {}: {}", path, e),
+                Err(e) => println!("Failed to load projectile texture {}: {}", load_path, e),
             }
         }
 
         Ok(cache)
     }
+}
+
+fn resolve_asset_path(game_data: Option<&crate::data::GameData>, path: &str) -> String {
+    game_data
+        .map(|data| data.resolve_asset_path(path))
+        .unwrap_or_else(|| path.to_string())
 }
 
 struct PackedTextureLoader {
