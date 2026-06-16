@@ -114,8 +114,7 @@ fn place_strategic_veins(
     let candidates = find_strategic_positions(grid, start_pos, strategy);
 
     let placed = candidates.len().min(count);
-    for i in 0..placed {
-        let pos = candidates[i];
+    for pos in candidates.iter().copied().take(placed) {
         let length = rng::gen_range(length_range.start, length_range.end);
         generate_mineral_vein(grid, pos, tile_type, length, thickness);
     }
@@ -460,11 +459,15 @@ fn create_organic_hazard_pool(
             let nx = (x as i32 + dx) as usize;
             let ny = (y as i32 + dy) as usize;
 
-            if nx > 5 && nx < width - 5 && ny > 5 && ny < height - 5 {
-                if !visited[ny][nx] && rng::gen_range(0.0f32, 1.0) < 0.65 {
-                    visited[ny][nx] = true;
-                    queue.push_back((nx, ny));
-                }
+            if nx > 5
+                && nx < width - 5
+                && ny > 5
+                && ny < height - 5
+                && !visited[ny][nx]
+                && rng::gen_range(0.0f32, 1.0) < 0.65
+            {
+                visited[ny][nx] = true;
+                queue.push_back((nx, ny));
             }
         }
     }

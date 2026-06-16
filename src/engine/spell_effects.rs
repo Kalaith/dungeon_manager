@@ -428,8 +428,8 @@ fn spawn_entity_effect(
 fn reveal_map_effect(center: TilePos, _effect: &SpellEffect, game_state: &mut GameState) {
     let radius = 8; // Default reveal radius
 
-    for dy in -(radius as i32)..=(radius as i32) {
-        for dx in -(radius as i32)..=(radius as i32) {
+    for dy in -radius..=radius {
+        for dx in -radius..=radius {
             let target_pos = TilePos::new(center.x + dx, center.y + dy);
 
             if let Some(tile) = game_state.get_tile_mut(target_pos) {

@@ -37,7 +37,7 @@ pub fn create_melee_slash() -> RgbaImage {
     // Motion blur trail (fainter)
     for i in 0..4 {
         let alpha = 100 - i * 20;
-        let trail_color = Rgba([255, 100 + i * 30, 0, alpha as u8]);
+        let trail_color = Rgba([255, 100 + i * 30, 0, alpha]);
         for y in (cy as i32 - 2)..(cy as i32 + 2) {
             for x in (cx as i32 - 12 + i as i32)..(cx as i32 + 12 - i as i32) {
                 if x >= 0 && x < PROJECTILE_SIZE as i32 && y >= 0 && y < PROJECTILE_SIZE as i32 {
@@ -466,7 +466,7 @@ pub fn create_shadow_bolt() -> RgbaImage {
     // Shadow wisps trailing behind
     for i in 0..6 {
         let wisp_x = cx - 5.0 - i as f32 * 2.0;
-        let wisp_offset = ((i as f32 * 1.5).sin() * 3.0) as f32;
+        let wisp_offset = (i as f32 * 1.5).sin() * 3.0;
         let wisp_size = 3.0 - i as f32 * 0.4;
         let alpha = (150 - i * 20) as u8;
 
@@ -630,7 +630,7 @@ pub fn create_rock_projectile() -> RgbaImage {
             if dist < 6.0 {
                 // Rock coloring with some variation
                 let shade = 0.7 + 0.3 * (1.0 - dist / 6.0);
-                let noise = ((x as f32 * 0.5 + y as f32 * 0.7).sin() * 0.1 + 0.9) as f32;
+                let noise = (x as f32 * 0.5 + y as f32 * 0.7).sin() * 0.1 + 0.9;
 
                 let base_gray = 120.0;
                 let r = (base_gray * shade * noise) as u8;

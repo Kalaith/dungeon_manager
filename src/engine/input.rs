@@ -244,18 +244,17 @@ impl InputHandler {
                 && mouse_pos.0 <= screen_center_x + button_width / 2.0
                 && mouse_pos.1 >= load_y
                 && mouse_pos.1 <= load_y + button_height
+                && crate::state::save_system::save_exists("slot_1")
             {
-                if crate::state::save_system::save_exists("slot_1") {
-                    match crate::state::save_system::load_game("slot_1") {
-                        Ok(loaded_state) => {
-                            *state = loaded_state;
-                            state.notifications.success("Game loaded!");
-                            eprintln!("Game loaded from slot_1");
-                        }
-                        Err(e) => {
-                            state.notifications.danger(format!("Load failed: {}", e));
-                            eprintln!("Failed to load game: {}", e);
-                        }
+                match crate::state::save_system::load_game("slot_1") {
+                    Ok(loaded_state) => {
+                        *state = loaded_state;
+                        state.notifications.success("Game loaded!");
+                        eprintln!("Game loaded from slot_1");
+                    }
+                    Err(e) => {
+                        state.notifications.danger(format!("Load failed: {}", e));
+                        eprintln!("Failed to load game: {}", e);
                     }
                 }
             }

@@ -4,19 +4,15 @@ use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum OwnerId {
     Player,
     RivalKeeper(u8),
     Heroes,
+    #[default]
     Neutral,
     Wild,
     AboveGround,
-}
-
-impl Default for OwnerId {
-    fn default() -> Self {
-        Self::Neutral
-    }
 }
 
 impl OwnerId {

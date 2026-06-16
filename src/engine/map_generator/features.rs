@@ -114,11 +114,15 @@ fn create_collapsed_chamber(grid: &mut Grid, cx: usize, cy: usize, size: usize) 
             let nx = (x as i32 + dx) as usize;
             let ny = (y as i32 + dy) as usize;
 
-            if nx > 5 && nx < width - 5 && ny > 5 && ny < height - 5 {
-                if !visited[ny][nx] && rng::gen_range(0.0f32, 1.0) < 0.75 {
-                    visited[ny][nx] = true;
-                    queue.push_back((nx, ny));
-                }
+            if nx > 5
+                && nx < width - 5
+                && ny > 5
+                && ny < height - 5
+                && !visited[ny][nx]
+                && rng::gen_range(0.0f32, 1.0) < 0.75
+            {
+                visited[ny][nx] = true;
+                queue.push_back((nx, ny));
             }
         }
     }
@@ -217,11 +221,12 @@ fn create_monster_lair(grid: &mut Grid, cx: usize, cy: usize) {
         let x = (cx as i32 + dx).max(1).min(width as i32 - 2) as usize;
         let y = (cy as i32 + dy).max(1).min(height as i32 - 2) as usize;
 
-        if grid[y][x].tile_type == "corrupted_floor" && (dx != 0 || dy != 0) {
-            if rng::gen_range(0.0f32, 1.0) < 0.3 {
-                grid[y][x].tile_type = "gold_vein".to_string();
-                grid[y][x].resources_remaining = Some(rng::gen_range(100u32, 300));
-            }
+        if grid[y][x].tile_type == "corrupted_floor"
+            && (dx != 0 || dy != 0)
+            && rng::gen_range(0.0f32, 1.0) < 0.3
+        {
+            grid[y][x].tile_type = "gold_vein".to_string();
+            grid[y][x].resources_remaining = Some(rng::gen_range(100u32, 300));
         }
     }
 }

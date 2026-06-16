@@ -409,7 +409,7 @@ fn execute_collect_wages(
         None => return 0.0,
     };
 
-    if game_data.monsters.get(&creature.creature_id).is_none() {
+    if !game_data.monsters.contains_key(&creature.creature_id) {
         return 0.0;
     }
 

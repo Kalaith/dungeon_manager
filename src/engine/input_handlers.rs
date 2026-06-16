@@ -167,7 +167,7 @@ pub fn handle_build_trap(
         return;
     }
 
-    let can_place = state.get_tile(tile_pos).map_or(false, |tile| {
+    let can_place = state.get_tile(tile_pos).is_some_and(|tile| {
         tile.ownership == Ownership::Player
             && tile_types::can_build_room(&tile.tile_type, game_data)
             && tile.trap.is_none()
@@ -226,7 +226,7 @@ pub fn handle_build_trap_multi(
         .iter()
         .copied()
         .filter(|&tile_pos| {
-            state.get_tile(tile_pos).map_or(false, |tile| {
+            state.get_tile(tile_pos).is_some_and(|tile| {
                 tile.ownership == Ownership::Player
                     && tile_types::can_build_room(&tile.tile_type, game_data)
                     && tile.trap.is_none()
@@ -434,14 +434,14 @@ pub fn handle_drop(
             entity.owner == crate::state::OwnerId::Player && entity.as_creature().is_some()
         })
         .unwrap_or(false);
-    if should_try_sacrifice {
-        if crate::engine::special_rooms::sacrifice_creature_at(
+    if should_try_sacrifice
+        && crate::engine::special_rooms::sacrifice_creature_at(
             state, game_data, entity_id, tile_pos,
-        ) {
-            *held_entity = None;
-            *interaction_mode = InteractionMode::Pickup;
-            return;
-        }
+        )
+    {
+        *held_entity = None;
+        *interaction_mode = InteractionMode::Pickup;
+        return;
     }
 
     let entity = match state.entities.get_mut(entity_id) {

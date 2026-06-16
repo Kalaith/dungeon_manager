@@ -319,7 +319,7 @@ fn calculate_room_distance_factor(hero_pos: TilePos, room: &Room) -> f32 {
     }
 
     // Convert to factor (closer = smaller factor = higher priority)
-    (min_distance / 10.0).max(0.5).min(3.0)
+    (min_distance / 10.0).clamp(0.5, 3.0)
 }
 
 /// Calculate Manhattan distance between two positions
@@ -377,7 +377,7 @@ fn is_tile_walkable_for_hero(pos: TilePos, game_state: &GameState, game_data: &G
         return false;
     }
 
-    if game_data.hero_buildings.get(&tile.tile_type).is_some() {
+    if game_data.hero_buildings.contains_key(&tile.tile_type) {
         return true;
     }
 
@@ -454,16 +454,15 @@ pub fn update_hero_ai(
             }
 
             // 2. If no pile visible, go to treasury
-            if !found_pile {
-                if hero_state.target_room_id.is_none() && hero_state.target_pos.is_none() {
-                    hero_state.target_room_id = find_target_room(
-                        hero_entity.pos,
-                        &hero_state.hero_id,
-                        &hero_state.current_goal,
-                        game_state,
-                        game_data,
-                    );
-                }
+            if !found_pile && hero_state.target_room_id.is_none() && hero_state.target_pos.is_none()
+            {
+                hero_state.target_room_id = find_target_room(
+                    hero_entity.pos,
+                    &hero_state.hero_id,
+                    &hero_state.current_goal,
+                    game_state,
+                    game_data,
+                );
             }
         }
         _ => {

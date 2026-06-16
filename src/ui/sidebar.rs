@@ -121,51 +121,51 @@ impl Sidebar {
         }
 
         // Handle Tab Switching
-        if mouse_pos.1 >= self.panel_y - TAB_HEIGHT && mouse_pos.1 <= self.panel_y {
-            if is_mouse_button_pressed(MouseButton::Left) {
-                let tab_width = 100.0;
-                let start_x = 20.0;
+        if mouse_pos.1 >= self.panel_y - TAB_HEIGHT
+            && mouse_pos.1 <= self.panel_y
+            && is_mouse_button_pressed(MouseButton::Left)
+        {
+            let tab_width = 100.0;
+            let start_x = 20.0;
 
-                if mouse_pos.0 >= start_x && mouse_pos.0 < start_x + tab_width {
-                    self.current_tab = SidebarTab::Build;
-                    self.is_expanded = true;
-                } else if mouse_pos.0 >= start_x + tab_width
-                    && mouse_pos.0 < start_x + tab_width * 2.0
-                {
-                    self.current_tab = SidebarTab::Magic;
-                    self.is_expanded = true;
-                } else if mouse_pos.0 >= start_x + tab_width * 2.0
-                    && mouse_pos.0 < start_x + tab_width * 3.0
-                {
-                    self.current_tab = SidebarTab::Minions;
-                    self.is_expanded = true;
-                } else if mouse_pos.0 >= start_x + tab_width * 3.0
-                    && mouse_pos.0 < start_x + tab_width * 4.0
-                {
-                    self.current_tab = SidebarTab::Traps;
-                    self.is_expanded = true;
-                } else if mouse_pos.0 >= start_x + tab_width * 4.0
-                    && mouse_pos.0 < start_x + tab_width * 5.0
-                {
-                    self.current_tab = SidebarTab::Research;
-                    self.is_expanded = true;
-                } else if mouse_pos.0 >= start_x + tab_width * 5.0
-                    && mouse_pos.0 < start_x + tab_width * 6.0
-                {
-                    self.current_tab = SidebarTab::Utils;
-                    self.is_expanded = true;
-                } else if self.cheats_visible
-                    && mouse_pos.0 >= start_x + tab_width * 6.0
-                    && mouse_pos.0 < start_x + tab_width * 7.0
-                {
-                    self.current_tab = SidebarTab::Cheats;
-                    self.is_expanded = true;
-                } else if mouse_pos.0 >= screen_width() - RIGHT_MARGIN - 40.0
-                    && mouse_pos.0 <= screen_width() - RIGHT_MARGIN
-                {
-                    // Toggle expand/collapse
-                    self.is_expanded = !self.is_expanded;
-                }
+            if mouse_pos.0 >= start_x && mouse_pos.0 < start_x + tab_width {
+                self.current_tab = SidebarTab::Build;
+                self.is_expanded = true;
+            } else if mouse_pos.0 >= start_x + tab_width && mouse_pos.0 < start_x + tab_width * 2.0
+            {
+                self.current_tab = SidebarTab::Magic;
+                self.is_expanded = true;
+            } else if mouse_pos.0 >= start_x + tab_width * 2.0
+                && mouse_pos.0 < start_x + tab_width * 3.0
+            {
+                self.current_tab = SidebarTab::Minions;
+                self.is_expanded = true;
+            } else if mouse_pos.0 >= start_x + tab_width * 3.0
+                && mouse_pos.0 < start_x + tab_width * 4.0
+            {
+                self.current_tab = SidebarTab::Traps;
+                self.is_expanded = true;
+            } else if mouse_pos.0 >= start_x + tab_width * 4.0
+                && mouse_pos.0 < start_x + tab_width * 5.0
+            {
+                self.current_tab = SidebarTab::Research;
+                self.is_expanded = true;
+            } else if mouse_pos.0 >= start_x + tab_width * 5.0
+                && mouse_pos.0 < start_x + tab_width * 6.0
+            {
+                self.current_tab = SidebarTab::Utils;
+                self.is_expanded = true;
+            } else if self.cheats_visible
+                && mouse_pos.0 >= start_x + tab_width * 6.0
+                && mouse_pos.0 < start_x + tab_width * 7.0
+            {
+                self.current_tab = SidebarTab::Cheats;
+                self.is_expanded = true;
+            } else if mouse_pos.0 >= screen_width() - RIGHT_MARGIN - 40.0
+                && mouse_pos.0 <= screen_width() - RIGHT_MARGIN
+            {
+                // Toggle expand/collapse
+                self.is_expanded = !self.is_expanded;
             }
         }
 
@@ -174,37 +174,38 @@ impl Sidebar {
         }
 
         // Handle Content Clicks
-        if mouse_pos.1 >= self.panel_y && mouse_pos.0 < screen_width() - RIGHT_MARGIN {
-            if is_mouse_button_pressed(MouseButton::Left) {
-                match self.current_tab {
-                    SidebarTab::Build => {
-                        return self.handle_build_tab_click(mouse_pos, player, game_data);
-                    }
-                    SidebarTab::Magic => {
-                        return self.handle_magic_tab_click(mouse_pos, player, &game_data.spells);
-                    }
-                    SidebarTab::Minions => {
-                        return self.handle_minions_tab_click(mouse_pos, held_entity);
-                    }
-                    SidebarTab::Traps => {
-                        return self.handle_traps_tab_click(mouse_pos, player, game_data);
-                    }
-                    SidebarTab::Research => {
-                        self.handle_research_tab_click(
-                            mouse_pos,
-                            player,
-                            &game_data.technologies,
-                            action_queue,
-                        );
-                        return None;
-                    }
-                    SidebarTab::Utils => {
-                        self.handle_utils_tab_click(mouse_pos, action_queue);
-                        return None;
-                    }
-                    SidebarTab::Cheats => {
-                        return self.handle_cheats_tab_click(mouse_pos, action_queue, game_data);
-                    }
+        if mouse_pos.1 >= self.panel_y
+            && mouse_pos.0 < screen_width() - RIGHT_MARGIN
+            && is_mouse_button_pressed(MouseButton::Left)
+        {
+            match self.current_tab {
+                SidebarTab::Build => {
+                    return self.handle_build_tab_click(mouse_pos, player, game_data);
+                }
+                SidebarTab::Magic => {
+                    return self.handle_magic_tab_click(mouse_pos, player, &game_data.spells);
+                }
+                SidebarTab::Minions => {
+                    return self.handle_minions_tab_click(mouse_pos, held_entity);
+                }
+                SidebarTab::Traps => {
+                    return self.handle_traps_tab_click(mouse_pos, player, game_data);
+                }
+                SidebarTab::Research => {
+                    self.handle_research_tab_click(
+                        mouse_pos,
+                        player,
+                        &game_data.technologies,
+                        action_queue,
+                    );
+                    return None;
+                }
+                SidebarTab::Utils => {
+                    self.handle_utils_tab_click(mouse_pos, action_queue);
+                    return None;
+                }
+                SidebarTab::Cheats => {
+                    return self.handle_cheats_tab_click(mouse_pos, action_queue, game_data);
                 }
             }
         }
@@ -349,7 +350,7 @@ impl Sidebar {
         let mut current_x = start_x;
         let mut current_y = start_y;
 
-        for (_i, spell_id) in sorted_spells.iter().enumerate() {
+        for spell_id in sorted_spells.iter() {
             let width = BUTTON_SIZE;
 
             if current_x + width > screen_width() - RIGHT_MARGIN {
@@ -618,10 +619,9 @@ impl Sidebar {
             && mouse_pos.0 <= lvl_minus_x + BUTTON_SIZE
             && mouse_pos.1 >= row1_y
             && mouse_pos.1 <= row1_y + BUTTON_SIZE
+            && self.cheat_state.level > 1
         {
-            if self.cheat_state.level > 1 {
-                self.cheat_state.level -= 1;
-            }
+            self.cheat_state.level -= 1;
         }
 
         // 3. Level +
@@ -632,10 +632,9 @@ impl Sidebar {
             && mouse_pos.0 <= lvl_plus_x + BUTTON_SIZE
             && mouse_pos.1 >= row1_y
             && mouse_pos.1 <= row1_y + BUTTON_SIZE
+            && self.cheat_state.level < 10
         {
-            if self.cheat_state.level < 10 {
-                self.cheat_state.level += 1;
-            }
+            self.cheat_state.level += 1;
         }
 
         // 4. Entity ID (Width 200)

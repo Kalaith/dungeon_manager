@@ -49,7 +49,7 @@ impl RoomManager {
                     let room_id = self.next_room_id;
                     self.next_room_id += 1;
 
-                    let work_size = room_data.ai.work_size.clone().unwrap_or([1, 1]); // Default to 1x1 if not specified (e.g. special rooms)
+                    let work_size = room_data.ai.work_size.unwrap_or([1, 1]); // Default to 1x1 if not specified (e.g. special rooms)
                     let work_slots = room_validator::calculate_work_slots(&room_tiles, work_size);
 
                     let mut room = Room::new(
@@ -160,11 +160,9 @@ impl RoomManager {
     }
 
     pub fn get_room_at(&self, pos: TilePos) -> Option<&Room> {
-        for room in &self.rooms {
-            if room.tiles.contains(&pos) {
-                return Some(room);
-            }
-        }
-        None
+        self.rooms
+            .iter()
+            .find(|&room| room.tiles.contains(&pos))
+            .map(|v| v as _)
     }
 }

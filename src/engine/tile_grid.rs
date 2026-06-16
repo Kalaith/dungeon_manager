@@ -246,15 +246,13 @@ fn has_line_of_sight_snapshot(
 
     loop {
         // Check if current tile blocks vision (skip the start position)
-        if (x0, y0) != (from.x, from.y) {
-            if y0 >= 0 && (y0 as usize) < tile_types.len() {
-                let row = &tile_types[y0 as usize];
-                if x0 >= 0 && (x0 as usize) < row.len() {
-                    let tile_type = &row[x0 as usize];
-                    // Solid tiles block vision
-                    if tile_types::blocks_vision(tile_type, game_data) {
-                        return false;
-                    }
+        if (x0, y0) != (from.x, from.y) && y0 >= 0 && (y0 as usize) < tile_types.len() {
+            let row = &tile_types[y0 as usize];
+            if x0 >= 0 && (x0 as usize) < row.len() {
+                let tile_type = &row[x0 as usize];
+                // Solid tiles block vision
+                if tile_types::blocks_vision(tile_type, game_data) {
+                    return false;
                 }
             }
         }

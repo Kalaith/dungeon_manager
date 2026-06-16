@@ -330,8 +330,7 @@ pub fn create_tile_base(color: Rgba<u8>) -> RgbaImage {
 pub fn add_noise(img: &mut RgbaImage, amount: i32) {
     for (x, y, p) in img.enumerate_pixels_mut() {
         if p[3] > 0 {
-            let hash =
-                ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            let hash = (x.wrapping_mul(2654435761) ^ y.wrapping_mul(2246822519)) as i32;
             let noise = (hash % (amount * 2 + 1)) - amount;
             for i in 0..3 {
                 let val = p[i] as i32 + noise;
@@ -359,11 +358,14 @@ pub fn add_outline(img: &mut RgbaImage, outline_color: Rgba<u8>) {
                         }
                         let nx = x as i32 + dx;
                         let ny = y as i32 + dy;
-                        if nx >= 0 && nx < width as i32 && ny >= 0 && ny < height as i32 {
-                            if img.get_pixel(nx as u32, ny as u32)[3] == 0 {
-                                is_edge = true;
-                                break;
-                            }
+                        if nx >= 0
+                            && nx < width as i32
+                            && ny >= 0
+                            && ny < height as i32
+                            && img.get_pixel(nx as u32, ny as u32)[3] == 0
+                        {
+                            is_edge = true;
+                            break;
                         }
                     }
                     if is_edge {

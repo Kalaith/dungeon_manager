@@ -750,7 +750,7 @@ fn test_hero_tiers_exist() {
     let mut tiers_found = [false; 5];
     for hero in heroes.values() {
         let tier = hero.tier.unwrap_or(1) as usize;
-        if tier >= 1 && tier <= 5 {
+        if (1..=5).contains(&tier) {
             tiers_found[tier - 1] = true;
         }
     }

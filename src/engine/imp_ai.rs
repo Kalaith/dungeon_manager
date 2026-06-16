@@ -586,7 +586,7 @@ fn complete_dig(
                 );
             }
         } else if mana_gained > 0 {
-            player.mana = (player.mana + mana_gained as i32).min(player.max_mana);
+            player.mana = (player.mana + mana_gained).min(player.max_mana);
             eprintln!(
                 "Imp mined mana crystal at {:?}, gained {} mana",
                 marked_pos, mana_gained

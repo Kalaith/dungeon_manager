@@ -32,8 +32,8 @@ pub fn generate_biome_map(width: usize, height: usize, num_regions: usize) -> Ve
 
     let mut biome_map = vec![vec![Biome::Standard; width]; height];
 
-    for y in 0..height {
-        for x in 0..width {
+    for (y, row) in biome_map.iter_mut().enumerate() {
+        for (x, biome_cell) in row.iter_mut().enumerate() {
             let mut nearest_biome = Biome::Standard;
             let mut min_dist = f32::INFINITY;
 
@@ -46,7 +46,7 @@ pub fn generate_biome_map(width: usize, height: usize, num_regions: usize) -> Ve
                 }
             }
 
-            biome_map[y][x] = nearest_biome;
+            *biome_cell = nearest_biome;
         }
     }
 

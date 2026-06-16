@@ -133,11 +133,14 @@ fn apply_difficulty_bonuses(grid: &mut Grid, difficulty: Difficulty, cx: usize, 
                 (cx + 3, cy + 3),
             ];
             for (gx, gy) in gold_positions {
-                if gx > 0 && gx < grid[0].len() - 1 && gy > 0 && gy < grid.len() - 1 {
-                    if grid[gy][gx].tile_type == "claimed_floor" {
-                        grid[gy][gx].tile_type = "gold_vein".to_string();
-                        grid[gy][gx].resources_remaining = Some(100);
-                    }
+                if gx > 0
+                    && gx < grid[0].len() - 1
+                    && gy > 0
+                    && gy < grid.len() - 1
+                    && grid[gy][gx].tile_type == "claimed_floor"
+                {
+                    grid[gy][gx].tile_type = "gold_vein".to_string();
+                    grid[gy][gx].resources_remaining = Some(100);
                 }
             }
         }

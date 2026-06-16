@@ -26,8 +26,10 @@ pub fn process_special_rooms(
     game_data: &GameData,
     dt: f32,
 ) -> SpecialRoomReport {
-    let mut report = SpecialRoomReport::default();
-    report.mana_generated = generate_temple_mana(state, game_data, dt);
+    let mut report = SpecialRoomReport {
+        mana_generated: generate_temple_mana(state, game_data, dt),
+        ..Default::default()
+    };
     if report.mana_generated > 0.0 {
         state
             .player

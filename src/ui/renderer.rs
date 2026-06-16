@@ -143,7 +143,7 @@ impl GameRenderer {
         // Removed call
 
         // Draw 2D Cursor Label
-        if let Some(_) = hovered_tile {
+        if hovered_tile.is_some() {
             match interaction_mode {
                 InteractionMode::SetAttackMarker => {
                     let mouse = mouse_position();

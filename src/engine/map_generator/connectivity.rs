@@ -23,8 +23,8 @@ pub fn ensure_connectivity(grid: &mut Grid) {
 
     // Connect all regions to the largest one
     let largest_region = &regions[0];
-    for i in 1..regions.len() {
-        connect_regions(grid, largest_region, &regions[i]);
+    for region in regions.iter().skip(1) {
+        connect_regions(grid, largest_region, region);
     }
 }
 
@@ -55,7 +55,7 @@ fn flood_fill_region(
     grid: &Grid,
     start_x: usize,
     start_y: usize,
-    visited: &mut Vec<Vec<bool>>,
+    visited: &mut [Vec<bool>],
 ) -> Vec<TilePos> {
     let height = grid.len();
     let width = grid[0].len();

@@ -227,17 +227,13 @@ pub struct HeroPartyDefinition {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum HeroPartyBehavior {
+    #[default]
     AttackDungeonHeart,
     DefendLocation,
     StealGold,
     Explore,
-}
-
-impl Default for HeroPartyBehavior {
-    fn default() -> Self {
-        Self::AttackDungeonHeart
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

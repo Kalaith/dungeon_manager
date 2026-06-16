@@ -20,7 +20,7 @@ pub fn try_satisfy_critical_need(
 
     let need_data = monster_data.needs.get(&need_name)?;
 
-    for room_type in &need_data.satisfied_by {
+    if let Some(room_type) = need_data.satisfied_by.first() {
         use crate::engine::room_validator;
         let (room_id, _) =
             room_validator::find_nearest_room(&room_manager.rooms, room_type, creature_pos, 0.0)?;
@@ -95,7 +95,7 @@ pub fn calculate_task_desirability(
 
 /// Check if creature should desert the dungeon
 pub fn should_desert(creature: &CreatureState, monster_data: &MonsterData) -> bool {
-    let desertion_threshold = monster_data.ai.desertion_threshold as f32;
+    let desertion_threshold = monster_data.ai.desertion_threshold;
     creature.mood < desertion_threshold
 }
 

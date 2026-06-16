@@ -13,6 +13,7 @@
 // Allow unused items - these are exported for external use and future expansion
 #![allow(dead_code)]
 #![allow(unused_imports)]
+#![allow(clippy::too_many_arguments)]
 
 pub mod buildings;
 pub mod core;

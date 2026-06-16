@@ -186,8 +186,7 @@ pub fn create_gold_pile() -> RgbaImage {
     let mut img = create_tile_base(Rgba([180, 140, 20, 255])); // Darker gold base
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            let hash =
-                ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            let hash = (x.wrapping_mul(2654435761) ^ y.wrapping_mul(2246822519)) as i32;
             if hash % 5 < 2 {
                 img.put_pixel(x, y, Rgba([255, 215, 0, 255])); // Shiny gold coins
             } else if hash % 7 < 1 {
@@ -219,7 +218,7 @@ pub fn create_mana_crystal() -> RgbaImage {
                 img.put_pixel(x, y, Rgba([50, 150, 255, 255]));
             }
 
-            if dx < 10 && dy.abs() < 8.0 && (x + y as u32) % 5 == 0 {
+            if dx < 10 && dy.abs() < 8.0 && (x + y) % 5 == 0 {
                 let pixel = img.get_pixel(x, y);
                 if pixel[0] < 100 {
                     img.put_pixel(x, y, Rgba([60, 60, 90, 255]));
@@ -434,8 +433,7 @@ pub fn create_marble_floor() -> RgbaImage {
     // Add marble veins
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            let hash =
-                ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            let hash = (x.wrapping_mul(2654435761) ^ y.wrapping_mul(2246822519)) as i32;
             if hash % 50 < 3 {
                 img.put_pixel(x, y, Rgba([180, 180, 190, 255]));
             }
@@ -450,8 +448,7 @@ pub fn create_grass() -> RgbaImage {
     let mut img = create_tile_base(Rgba([60, 120, 40, 255]));
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            let hash =
-                ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            let hash = (x.wrapping_mul(2654435761) ^ y.wrapping_mul(2246822519)) as i32;
             if hash % 7 < 2 {
                 img.put_pixel(x, y, Rgba([80, 140, 50, 255]));
             } else if hash % 11 < 1 {
@@ -476,8 +473,7 @@ pub fn create_snow() -> RgbaImage {
     // Add subtle blue shadows
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            let hash =
-                ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            let hash = (x.wrapping_mul(2654435761) ^ y.wrapping_mul(2246822519)) as i32;
             if hash % 20 < 2 {
                 img.put_pixel(x, y, Rgba([220, 230, 250, 255]));
             }
@@ -613,10 +609,8 @@ pub fn create_monster_spawner() -> RgbaImage {
         for x in 0..TILE_WIDTH {
             let dx = x as i32 - center_x as i32;
             let dy = y as i32 - center_y as i32;
-            if (dx * dx + dy * dy) < 400 {
-                if (dx * dx + dy * dy) % 20 < 10 {
-                    img.put_pixel(x, y, Rgba([150, 50, 200, 255]));
-                }
+            if (dx * dx + dy * dy) < 400 && (dx * dx + dy * dy) % 20 < 10 {
+                img.put_pixel(x, y, Rgba([150, 50, 200, 255]));
             }
         }
     }
@@ -654,8 +648,7 @@ pub fn create_torture_chamber() -> RgbaImage {
     // Blood stains
     for y in 0..TILE_HEIGHT {
         for x in 0..TILE_WIDTH {
-            let hash =
-                ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(2246822519)) as i32;
+            let hash = (x.wrapping_mul(2654435761) ^ y.wrapping_mul(2246822519)) as i32;
             if hash % 30 < 2 {
                 img.put_pixel(x, y, Rgba([100, 20, 20, 255]));
             }
@@ -858,8 +851,8 @@ pub fn create_fire_trap() -> RgbaImage {
     let cy = TILE_HEIGHT / 2;
     // Fire nozzles
     for angle in 0..4 {
-        let offset_x = (angle % 2) as i32 * 20 - 10;
-        let offset_y = (angle / 2) as i32 * 20 - 10;
+        let offset_x = (angle % 2) * 20 - 10;
+        let offset_y = (angle / 2) * 20 - 10;
         draw_circle(
             &mut img,
             (cx as i32 + offset_x) as u32,

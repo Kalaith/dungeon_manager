@@ -50,7 +50,7 @@ impl SimpleNoise {
 
 /// Create terrain using Perlin noise for natural cave systems
 pub fn create_noise_terrain(config: &MapConfig) -> Grid {
-    let seed = config.seed.unwrap_or_else(|| rng::random_u64());
+    let seed = config.seed.unwrap_or_else(rng::random_u64);
     let noise = SimpleNoise::new(seed);
     let mut grid = Vec::new();
 
@@ -122,14 +122,14 @@ pub fn smooth_caves_cellular_automata(grid: &mut Grid, iterations: usize) {
     for _ in 0..iterations {
         let mut next_grid = grid.clone();
 
-        for y in 1..height - 1 {
-            for x in 1..width - 1 {
+        for (y, row) in next_grid.iter_mut().enumerate().take(height - 1).skip(1) {
+            for (x, tile) in row.iter_mut().enumerate().take(width - 1).skip(1) {
                 let solid_neighbors = count_solid_neighbors(grid, x, y);
 
                 if solid_neighbors >= 5 {
-                    next_grid[y][x].tile_type = "solid_rock".to_string();
+                    tile.tile_type = "solid_rock".to_string();
                 } else if solid_neighbors < 4 {
-                    next_grid[y][x].tile_type = "earth".to_string();
+                    tile.tile_type = "earth".to_string();
                 }
             }
         }

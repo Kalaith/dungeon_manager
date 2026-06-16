@@ -17,7 +17,7 @@ pub fn calculate_mood(
     monster_data: &MonsterData,
     game_data: &GameData,
 ) -> f32 {
-    let base_mood = monster_data.ai.base_mood as f32;
+    let base_mood = monster_data.ai.base_mood;
     let mood_penalties = &game_data.config.creature_ai.mood_penalties;
     let mut mood = base_mood;
 
@@ -45,10 +45,10 @@ pub fn calculate_mood(
 pub fn update_mood(creature: &mut CreatureState, monster_data: &MonsterData, game_data: &GameData) {
     creature.mood = calculate_mood(creature, monster_data, game_data);
 
-    let anger_threshold = monster_data.ai.anger_threshold as f32;
+    let anger_threshold = monster_data.ai.anger_threshold;
     creature.is_angry = creature.mood < anger_threshold;
 
-    let desertion_threshold = monster_data.ai.desertion_threshold as f32;
+    let desertion_threshold = monster_data.ai.desertion_threshold;
     creature.is_deserting = creature.mood < desertion_threshold;
 }
 

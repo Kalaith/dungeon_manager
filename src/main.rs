@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, clippy::large_enum_variant, clippy::too_many_arguments)]
 
 use macroquad::prelude::*;
 

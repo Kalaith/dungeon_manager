@@ -738,10 +738,13 @@ fn pathfind_to_target(
         for (dx, dy) in directions.iter() {
             let n = Pos::new(target.x + dx, target.y + dy);
             // Check bounds
-            if n.x >= 0 && n.x < dungeon.width as i32 && n.y >= 0 && n.y < dungeon.height as i32 {
-                if pf_grid.is_walkable(n) {
-                    neighbors.push(n);
-                }
+            if n.x >= 0
+                && n.x < dungeon.width as i32
+                && n.y >= 0
+                && n.y < dungeon.height as i32
+                && pf_grid.is_walkable(n)
+            {
+                neighbors.push(n);
             }
         }
 

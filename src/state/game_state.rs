@@ -755,8 +755,8 @@ impl GameState {
             .count()
     }
 
-    /// Process hero digging logic with flattened control flow
-    /// Returns (carved_wall_pos, should_move)
+    // Process hero digging logic with flattened control flow.
+    // Returns (carved_wall_pos, should_move).
 
     /// Check for victory or defeat conditions
     pub fn check_game_over_conditions(&mut self, game_data: &GameData) {

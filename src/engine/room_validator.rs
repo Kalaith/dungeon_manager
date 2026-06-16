@@ -66,14 +66,14 @@ pub fn calculate_work_slots(tiles: &HashSet<TilePos>, work_size: [u32; 2]) -> Ve
         // For 1x1, we can just use all tiles, or maybe a subset?
         // Let's use all tiles for now, but sort them for consistency
         let mut sorted_tiles: Vec<TilePos> = tiles.iter().cloned().collect();
-        sorted_tiles.sort_by(|a, b| (a.y, a.x).cmp(&(b.y, b.x)));
+        sorted_tiles.sort_by_key(|a| (a.y, a.x));
         return sorted_tiles;
     }
 
     // For larger slots, we need to pack them
     // Sort tiles to try filling from top-left
     let mut sorted_tiles: Vec<TilePos> = tiles.iter().cloned().collect();
-    sorted_tiles.sort_by(|a, b| (a.y, a.x).cmp(&(b.y, b.x)));
+    sorted_tiles.sort_by_key(|a| (a.y, a.x));
 
     let mut occupied = HashSet::new();
 
@@ -149,12 +149,10 @@ pub fn detect_rooms(grid: &Grid, room_type: &str) -> Vec<HashSet<TilePos>> {
             }
 
             // Only detect rooms on tiles that match the room type
-            if tile.tile_type == room_type {
-                if tile.ownership == Ownership::Player {
-                    let room_tiles = flood_fill(grid, tile.pos, room_type, &mut visited);
-                    if !room_tiles.is_empty() {
-                        rooms.push(room_tiles);
-                    }
+            if tile.tile_type == room_type && tile.ownership == Ownership::Player {
+                let room_tiles = flood_fill(grid, tile.pos, room_type, &mut visited);
+                if !room_tiles.is_empty() {
+                    rooms.push(room_tiles);
                 }
             }
         }

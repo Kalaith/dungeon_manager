@@ -192,8 +192,8 @@ pub fn draw_cylinder_3d(
     let max_screen_y = p_top_y.max(p_bot_y) + radius * TILT;
 
     let bb_w = (radius + 2.0).ceil() as i32;
-    let bb_h_top = (y_top as f32 - min_screen_y).abs().ceil() as i32 + 5;
-    let bb_h_bot = (max_screen_y - y_top as f32).abs().ceil() as i32 + 5;
+    let bb_h_top = (y_top - min_screen_y).abs().ceil() as i32 + 5;
+    let bb_h_bot = (max_screen_y - y_top).abs().ceil() as i32 + 5;
 
     let size_w = img.width() as i32;
     let size_h = img.height() as i32;
@@ -240,12 +240,10 @@ pub fn draw_cylinder_3d(
                 // We test both front and back faces, though front usually obscures back
                 for wz in [wz_front, wz_back] {
                     let wy = py as f32 + wz * TILT;
-                    if wy >= y_top && wy <= y_bot {
-                        if wz > best_z {
-                            best_z = wz;
-                            best_normal = (dx_val / radius, 0.0, (wz - cz) / radius);
-                            hit = true;
-                        }
+                    if wy >= y_top && wy <= y_bot && wz > best_z {
+                        best_z = wz;
+                        best_normal = (dx_val / radius, 0.0, (wz - cz) / radius);
+                        hit = true;
                     }
                 }
 
@@ -256,12 +254,12 @@ pub fn draw_cylinder_3d(
                     let wz_top = (y_top - (py as f32)) / TILT;
                     let wx_top = px as f32;
                     // Check if inside circle: (wx - cx)^2 + (wz - cz)^2 <= r^2
-                    if (wx_top - cx).powi(2) + (wz_top - cz).powi(2) <= radius.powi(2) {
-                        if wz_top > best_z {
-                            best_z = wz_top;
-                            best_normal = (0.0, -1.0, 0.0);
-                            hit = true;
-                        }
+                    if (wx_top - cx).powi(2) + (wz_top - cz).powi(2) <= radius.powi(2)
+                        && wz_top > best_z
+                    {
+                        best_z = wz_top;
+                        best_normal = (0.0, -1.0, 0.0);
+                        hit = true;
                     }
                 }
 
@@ -282,10 +280,8 @@ pub fn draw_cylinder_3d(
                     }
                 }
 
-                if hit {
-                    if depth.test_and_set(px as u32, py as u32, best_z) {
-                        img.put_pixel(px as u32, py as u32, shade_color(best_normal, mat, best_z));
-                    }
+                if hit && depth.test_and_set(px as u32, py as u32, best_z) {
+                    img.put_pixel(px as u32, py as u32, shade_color(best_normal, mat, best_z));
                 }
             }
         }
@@ -377,22 +373,20 @@ pub fn draw_cone_3d(
                     if wy >= y_tip && wy <= y_base {
                         // Check if we are "inside" the cone volume (it's a double cone mathematically)
                         // radius_at_y must be positive
-                        if (wy - y_tip) >= 0.0 {
-                            if wz > best_z {
-                                best_z = wz;
-                                // Normal:
-                                // Vector along slope.
-                                // Horizontal part is (x, z). Vertical is 'slope'.
-                                // normalize((x, -r*slope, z)) approximately?
-                                // Precise: gradient of f(x,y,z) = x^2 + z^2 - s^2(y-y0)^2 = 0
-                                // (2x, -2s^2(y-y0), 2z)
-                                let nx = 2.0 * dx_val;
-                                let nz = 2.0 * (wz - cz);
-                                let ny = -2.0 * slope * slope * (wy - y_tip);
-                                let len = (nx * nx + ny * ny + nz * nz).sqrt();
-                                best_normal = (nx / len, ny / len, nz / len);
-                                hit = true;
-                            }
+                        if (wy - y_tip) >= 0.0 && wz > best_z {
+                            best_z = wz;
+                            // Normal:
+                            // Vector along slope.
+                            // Horizontal part is (x, z). Vertical is 'slope'.
+                            // normalize((x, -r*slope, z)) approximately?
+                            // Precise: gradient of f(x,y,z) = x^2 + z^2 - s^2(y-y0)^2 = 0
+                            // (2x, -2s^2(y-y0), 2z)
+                            let nx = 2.0 * dx_val;
+                            let nz = 2.0 * (wz - cz);
+                            let ny = -2.0 * slope * slope * (wy - y_tip);
+                            let len = (nx * nx + ny * ny + nz * nz).sqrt();
+                            best_normal = (nx / len, ny / len, nz / len);
+                            hit = true;
                         }
                     }
                 }
@@ -403,19 +397,17 @@ pub fn draw_cone_3d(
                 let wz_base = (y_base - py as f32) / TILT;
                 let wx_base = px as f32;
                 // Check dist from axis
-                if (wx_base - cx).powi(2) + (wz_base - cz).powi(2) <= base_radius.powi(2) {
-                    if wz_base > best_z {
-                        best_z = wz_base;
-                        best_normal = (0.0, 1.0, 0.0);
-                        hit = true;
-                    }
+                if (wx_base - cx).powi(2) + (wz_base - cz).powi(2) <= base_radius.powi(2)
+                    && wz_base > best_z
+                {
+                    best_z = wz_base;
+                    best_normal = (0.0, 1.0, 0.0);
+                    hit = true;
                 }
             }
 
-            if hit {
-                if depth.test_and_set(px as u32, py as u32, best_z) {
-                    img.put_pixel(px as u32, py as u32, shade_color(best_normal, mat, best_z));
-                }
+            if hit && depth.test_and_set(px as u32, py as u32, best_z) {
+                img.put_pixel(px as u32, py as u32, shade_color(best_normal, mat, best_z));
             }
         }
     }
@@ -589,33 +581,35 @@ pub fn draw_box_3d(
             // wy = py + z_front * TILT
             // Check bounds x, y
             let wy_front = py as f32 + z_front * TILT;
-            if px as f32 >= x_min && px as f32 <= x_max && wy_front >= y_min && wy_front <= y_max {
-                if z_front > best_z {
-                    best_z = z_front;
-                    best_n = (0.0, 0.0, 1.0);
-                    hit = true;
-                }
+            if px as f32 >= x_min
+                && px as f32 <= x_max
+                && wy_front >= y_min
+                && wy_front <= y_max
+                && z_front > best_z
+            {
+                best_z = z_front;
+                best_n = (0.0, 0.0, 1.0);
+                hit = true;
             }
 
             // Check Top Face (Y = y_min)
             // Ray: wy = py + wz * TILT = y_min -> wz = (y_min - py) / TILT
             let wz_top = (y_min - py as f32) / TILT;
-            if TILT.abs() > 0.001 {
-                if px as f32 >= x_min && px as f32 <= x_max && wz_top >= z_back && wz_top <= z_front
-                {
-                    if wz_top > best_z {
-                        best_z = wz_top;
-                        best_n = (0.0, -1.0, 0.0);
-                        hit = true;
-                    }
-                }
+            if TILT.abs() > 0.001
+                && px as f32 >= x_min
+                && px as f32 <= x_max
+                && wz_top >= z_back
+                && wz_top <= z_front
+                && wz_top > best_z
+            {
+                best_z = wz_top;
+                best_n = (0.0, -1.0, 0.0);
+                hit = true;
             }
 
             // Check Side Faces...
-            if hit {
-                if depth.test_and_set(px as u32, py as u32, best_z) {
-                    img.put_pixel(px as u32, py as u32, shade_color(best_n, mat, best_z));
-                }
+            if hit && depth.test_and_set(px as u32, py as u32, best_z) {
+                img.put_pixel(px as u32, py as u32, shade_color(best_n, mat, best_z));
             }
         }
     }

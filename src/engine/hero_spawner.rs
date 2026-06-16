@@ -122,7 +122,7 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
                 let current_count = hero_counts.get(&timer.hero_id).copied().unwrap_or(0);
 
                 // Calculate scaling factors based on wave number
-                let wave = state.hero_base.current_wave_number.max(0) as f32;
+                let wave = state.hero_base.current_wave_number as f32;
 
                 // Scale max_active linearly with waves: +1 slot per 2 waves, plus a small base multiplier
                 let max_active_base =

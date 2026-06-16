@@ -300,7 +300,7 @@ pub fn apply_combat_result(
 
 /// Award experience to attacker for killing a creature
 fn award_experience(attacker: &mut Entity, victim_level: u32, game_data: &GameData) {
-    let exp_gain = victim_level as u32 * game_data.config.combat.xp_per_victim_level as u32;
+    let exp_gain = victim_level * game_data.config.combat.xp_per_victim_level as u32;
 
     match &mut attacker.entity_type {
         crate::state::entities::EntityType::Creature(state) => {
@@ -415,7 +415,7 @@ pub fn in_combat_range(
     attacker_pos: TilePos,
     defender_pos: TilePos,
     attack_type: &str,
-    dungeon_grid: &Vec<Vec<crate::state::tile_state::TileState>>,
+    dungeon_grid: &[Vec<crate::state::tile_state::TileState>],
     game_data: &GameData,
 ) -> bool {
     let distance = calculate_manhattan_distance(attacker_pos, defender_pos);
@@ -443,7 +443,7 @@ fn calculate_manhattan_distance(a: TilePos, b: TilePos) -> i32 {
 fn check_line_of_sight(
     start: TilePos,
     end: TilePos,
-    grid: &Vec<Vec<crate::state::tile_state::TileState>>,
+    grid: &[Vec<crate::state::tile_state::TileState>],
     game_data: &GameData,
 ) -> bool {
     let (x0, y0, x1, y1) = (start.x, start.y, end.x, end.y);
@@ -479,7 +479,7 @@ fn check_line_of_sight(
 fn tile_blocks_vision(
     x: i32,
     y: i32,
-    grid: &Vec<Vec<crate::state::tile_state::TileState>>,
+    grid: &[Vec<crate::state::tile_state::TileState>],
     game_data: &GameData,
 ) -> bool {
     let row = match grid.get(y as usize) {

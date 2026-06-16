@@ -236,7 +236,7 @@ impl PlayerState {
         true
     }
 
-    /// Check if a technology is unlocked (completed)
+    // Check if a technology is unlocked (completed)
     // For now we don't store "unlocked_techs" explicitly, but we could infer it if needed.
     // However, it's better to store completed techs to check prerequisites.
     // We'll add a `completed_research` set to PlayerState in a separate step or just assume unlocks handle it.

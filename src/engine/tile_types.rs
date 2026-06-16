@@ -73,15 +73,15 @@ pub fn is_walkable(tile_type: &str, game_data: &GameData) -> bool {
 
 pub fn is_tile_walkable(tile: &TileState, game_data: &GameData) -> bool {
     if let Some(trap) = &tile.trap {
-        if trap.constructed && trap.active {
-            if game_data
+        if trap.constructed
+            && trap.active
+            && game_data
                 .traps
                 .get(&trap.trap_type)
                 .map(|trap_data| trap_data.effects.blocks_movement)
                 .unwrap_or(false)
-            {
-                return false;
-            }
+        {
+            return false;
         }
     }
 

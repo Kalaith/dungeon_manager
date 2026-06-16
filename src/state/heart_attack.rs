@@ -48,8 +48,8 @@ impl GameState {
 
             let base_damage = hero_data
                 .map(|data| {
-                    let min = data.combat.damage_range[0] as f32;
-                    let max = data.combat.damage_range[1] as f32;
+                    let min = data.combat.damage_range[0];
+                    let max = data.combat.damage_range[1];
                     rng::gen_range(min, max)
                 })
                 .unwrap_or(5.0);
@@ -85,8 +85,8 @@ impl GameState {
                 continue;
             }
 
-            let min = creature_data.combat.damage_range[0] as f32;
-            let max = creature_data.combat.damage_range[1] as f32;
+            let min = creature_data.combat.damage_range[0];
+            let max = creature_data.combat.damage_range[1];
             total_damage += rng::gen_range(min, max);
             attackers.push((entity.id, entity.visual_pos, attack_type));
         }
