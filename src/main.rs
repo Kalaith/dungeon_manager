@@ -1,6 +1,7 @@
 #![allow(dead_code, clippy::large_enum_variant, clippy::too_many_arguments)]
 
 use macroquad::prelude::*;
+use macroquad_toolkit::capture;
 
 mod config;
 mod data;
@@ -16,6 +17,7 @@ mod combat_tests;
 use data::GameData;
 use engine::action_processor;
 use engine::input::InputHandler;
+use state::game_state::GameState;
 use state::MapType;
 use state::{DragSelection, GamePhase, InteractionMode};
 use ui::actions::ActionQueue;
@@ -158,21 +160,59 @@ impl Game {
             }
         }
     }
+
+    /// Seed a specific scene for the screenshot harness. Call after
+    /// `load_resources` so `game_data` is populated.
+    fn begin_capture_scene(&mut self, scene: &str) {
+        match scene {
+            "mainmenu" => {
+                self.phase = GamePhase::MainMenu;
+            }
+            _ => {
+                // Default ("gameplay"): jump straight into a playable dungeon
+                // so the capture photographs the main game view.
+                if let Some(ref data) = self.game_data {
+                    let game_state = if data.campaigns.contains_key("deep_dominion") {
+                        GameState::new_campaign_start(data, "deep_dominion")
+                    } else {
+                        GameState::new_with_map_type(
+                            data.config.map_size.width,
+                            data.config.map_size.height,
+                            data,
+                            self.selected_map_type.clone(),
+                        )
+                    };
+                    self.phase = GamePhase::Playing(game_state);
+                } else {
+                    self.phase = GamePhase::MainMenu;
+                }
+            }
+        }
+    }
 }
 
 fn window_conf() -> Conf {
-    Conf {
-        window_title: "Deep Dominion".to_owned(),
-        window_width: 1280,
-        window_height: 720,
-        window_resizable: true,
-        ..Default::default()
-    }
+    capture::capture_window_conf("DUNGEON_MANAGER", "Deep Dominion", 1280, 720)
 }
 
 #[macroquad::main(window_conf)]
 async fn main() {
     let mut game = Game::new();
+
+    // Screenshot harness: when DUNGEON_MANAGER_CAPTURE_PATH is set, load
+    // resources synchronously, seed a scene, simulate deterministic frames,
+    // write a PNG, and exit.
+    if let Some(config) = capture::CaptureConfig::from_env("DUNGEON_MANAGER") {
+        game.load_resources().await;
+        game.begin_capture_scene(&config.scene);
+        capture::run_capture(&config, |dt| {
+            game.update(dt);
+            game.draw();
+        })
+        .await;
+        return;
+    }
+
     let mut loading_started = false;
 
     loop {
