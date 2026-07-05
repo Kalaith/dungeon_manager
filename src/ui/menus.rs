@@ -10,9 +10,7 @@ use crate::ui::core::colors;
 use crate::ui::menu_layout;
 use crate::ui::resources::GraphicsCache;
 use macroquad::prelude::*;
-use macroquad_toolkit::ui::{
-    button_rect_tone, draw_ui_text, measure_ui_text, ButtonTone,
-};
+use macroquad_toolkit::ui::{button_rect_tone, draw_ui_text, measure_ui_text, ButtonTone};
 
 /// Draw a menu button for visuals only; clicks are handled by the input
 /// layer against the same `menu_layout` rects.
@@ -113,7 +111,12 @@ pub fn draw_settings_menu(settings: &GameSettings) {
     } else {
         "FULLSCREEN: OFF"
     };
-    draw_menu_button(layout.fullscreen, fullscreen_label, true, ButtonTone::Secondary);
+    draw_menu_button(
+        layout.fullscreen,
+        fullscreen_label,
+        true,
+        ButtonTone::Secondary,
+    );
 
     let scale_label = format!("UI SCALE: {:.0}%", settings.ui_text_scale * 100.0);
     draw_menu_button(layout.ui_scale, &scale_label, true, ButtonTone::Secondary);

@@ -94,7 +94,15 @@ pub fn draw_intro_overlay(state: &GameState, game_data: &GameData) -> bool {
 
     let mut y = rect.y + 100.0;
     for line in intro {
-        draw_text_centered_in_box(line, rect.x + 20.0, y, rect.w - 40.0, line_height, 18.0, colors::TEXT);
+        draw_text_centered_in_box(
+            line,
+            rect.x + 20.0,
+            y,
+            rect.w - 40.0,
+            line_height,
+            18.0,
+            colors::TEXT,
+        );
         y += line_height;
     }
 

@@ -138,10 +138,7 @@ impl InputHandler {
         }
     }
 
-    fn handle_settings(
-        phase: &mut GamePhase,
-        settings: &mut crate::state::settings::GameSettings,
-    ) {
+    fn handle_settings(phase: &mut GamePhase, settings: &mut crate::state::settings::GameSettings) {
         let layout = crate::ui::menu_layout::settings_menu();
         let mouse = mouse_position();
         let mouse = vec2(mouse.0, mouse.1);

@@ -2,8 +2,8 @@
 pub mod actions;
 pub mod cheat_menu;
 pub mod core;
-pub mod menu_layout;
 pub mod entity_renderer;
+pub mod menu_layout;
 pub mod menus;
 pub mod minimap;
 pub mod notifications;
