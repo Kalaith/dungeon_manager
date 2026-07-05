@@ -18,10 +18,12 @@ pub mod rival_keeper;
 pub mod room_manager;
 mod rooms;
 pub mod save_system;
+pub mod settings;
 mod scenario_setup;
 pub mod scenario_state;
 mod spawning;
 pub mod tile_state;
+pub mod tutorial;
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_storage;

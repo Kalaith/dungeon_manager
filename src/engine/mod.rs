@@ -17,6 +17,7 @@ pub mod spell_effects;
 pub mod task_system;
 pub mod tile_types;
 pub mod trap_system;
+pub mod tutorial_system;
 
 pub mod creature_needs;
 pub mod creature_task_logic;

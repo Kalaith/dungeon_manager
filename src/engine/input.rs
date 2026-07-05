@@ -25,6 +25,7 @@ impl InputHandler {
         sidebar: &mut Sidebar,
         action_queue: &mut ActionQueue,
         drag_selection: &mut DragSelection,
+        settings: &mut crate::state::settings::GameSettings,
     ) {
         match phase {
             GamePhase::Loading => {
@@ -33,8 +34,24 @@ impl InputHandler {
             GamePhase::MainMenu => {
                 Self::handle_main_menu(selected_map_type, phase, game_data);
             }
+            GamePhase::Settings => {
+                Self::handle_settings(phase, settings);
+            }
             GamePhase::Playing(state) => {
                 if let Some(ref data) = game_data {
+                    // Scenario intro overlay: freeze the game until dismissed so
+                    // the player can read the story before timers start
+                    if crate::engine::tutorial_system::pending_intro(state, data).is_some() {
+                        if is_mouse_button_pressed(MouseButton::Left)
+                            || is_key_pressed(KeyCode::Enter)
+                            || is_key_pressed(KeyCode::Space)
+                            || is_key_pressed(KeyCode::Escape)
+                        {
+                            state.tutorial.intro_dismissed = true;
+                        }
+                        return;
+                    }
+
                     if !state.paused {
                         state.update(dt, data);
                     }
@@ -64,43 +81,19 @@ impl InputHandler {
         phase: &mut GamePhase,
         game_data: &mut Option<GameData>,
     ) {
-        let mouse_pos = mouse_position();
+        let layout = crate::ui::menu_layout::main_menu();
+        let mouse = mouse_position();
+        let mouse = vec2(mouse.0, mouse.1);
+        let clicked = |rect: macroquad::math::Rect| {
+            is_mouse_button_pressed(MouseButton::Left) && rect.contains(mouse)
+        };
 
-        // Cheat menu popup removed
-
-        // --- Standard Main Menu Buttons ---
-
-        // Map Type is effectively hardcoded to Standard via the button
-        // "Standard Map" Button can be just a label or selection setter.
-        // Let's implement the buttons layout:
-        // 1. Standard Map (selects Standard)
-        // 2. Start Game
-        // 3. Load Game
-        // 4. Cheats
-
-        // Buttons
-        let button_width = 200.0;
-        let button_height = 50.0;
-        let spacing = 20.0;
-        let start_y = screen_height() / 2.0 - 50.0;
-        let center_x = screen_width() / 2.0 - button_width / 2.0;
-
-        // Button 1: Start Game (Act as Standard Map + Start)
-        let start_btn_y = start_y;
-
-        let should_start = is_key_pressed(KeyCode::Space)
-            || (is_mouse_button_pressed(MouseButton::Left)
-                && mouse_pos.0 >= center_x
-                && mouse_pos.0 <= center_x + button_width
-                && mouse_pos.1 >= start_btn_y
-                && mouse_pos.1 <= start_btn_y + button_height);
-
-        if should_start {
+        // Start Game (Space also starts)
+        if is_key_pressed(KeyCode::Space) || clicked(layout.start) {
             // Force Standard Map type
             *selected_map_type = MapType::Standard;
 
             if let Some(ref mut data) = game_data {
-                // Cheats removed from here
                 let game_state = if data.campaigns.contains_key("deep_dominion") {
                     GameState::new_campaign_start(data, "deep_dominion")
                 } else {
@@ -113,31 +106,59 @@ impl InputHandler {
                 };
                 *phase = GamePhase::Playing(game_state);
             }
+            return;
         }
 
-        // Button 3: Load Game
-        let load_y = start_btn_y + button_height + spacing;
-        let should_load = is_mouse_button_pressed(MouseButton::Left)
-            && mouse_pos.0 >= center_x
-            && mouse_pos.0 <= center_x + button_width
-            && mouse_pos.1 >= load_y
-            && mouse_pos.1 <= load_y + button_height;
-
-        if should_load {
-            // Check if save exists first
-            if crate::state::save_system::save_exists("slot_1") {
-                match crate::state::save_system::load_game("slot_1") {
-                    Ok(loaded_state) => {
-                        println!("Game loaded successfully!");
-                        // Overwrite cheats with loaded state?
-                        // Actually loading game replaces state, so cheats don't matter unless persistent.
-                        *phase = GamePhase::Playing(loaded_state);
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to load game: {}", e);
-                    }
+        // Load Game
+        if clicked(layout.load) && crate::state::save_system::save_exists("slot_1") {
+            match crate::state::save_system::load_game("slot_1") {
+                Ok(loaded_state) => {
+                    println!("Game loaded successfully!");
+                    *phase = GamePhase::Playing(loaded_state);
+                }
+                Err(e) => {
+                    eprintln!("Failed to load game: {}", e);
                 }
             }
+            return;
+        }
+
+        // Settings
+        if clicked(layout.settings) {
+            *phase = GamePhase::Settings;
+            return;
+        }
+
+        // Exit Game (native only)
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(exit) = layout.exit {
+            if clicked(exit) {
+                std::process::exit(0);
+            }
+        }
+    }
+
+    fn handle_settings(
+        phase: &mut GamePhase,
+        settings: &mut crate::state::settings::GameSettings,
+    ) {
+        let layout = crate::ui::menu_layout::settings_menu();
+        let mouse = mouse_position();
+        let mouse = vec2(mouse.0, mouse.1);
+        let clicked = |rect: macroquad::math::Rect| {
+            is_mouse_button_pressed(MouseButton::Left) && rect.contains(mouse)
+        };
+
+        if clicked(layout.fullscreen) {
+            settings.toggle_fullscreen();
+        }
+
+        if clicked(layout.ui_scale) {
+            settings.cycle_ui_text_scale();
+        }
+
+        if clicked(layout.back) || is_key_pressed(KeyCode::Escape) {
+            *phase = GamePhase::MainMenu;
         }
     }
 
@@ -157,12 +178,10 @@ impl InputHandler {
         // Handle Game Over Input
         if state.game_over {
             if state.victory && state.has_pending_campaign_mission(game_data) {
+                let next_rect = crate::ui::menu_layout::game_over_next_mission();
                 let mouse_pos = mouse_position();
                 let next_clicked = is_mouse_button_pressed(MouseButton::Left)
-                    && mouse_pos.0 >= screen_width() / 2.0 - 120.0
-                    && mouse_pos.0 <= screen_width() / 2.0 + 120.0
-                    && mouse_pos.1 >= screen_height() / 2.0 + 100.0
-                    && mouse_pos.1 <= screen_height() / 2.0 + 150.0;
+                    && next_rect.contains(vec2(mouse_pos.0, mouse_pos.1));
 
                 if is_key_pressed(KeyCode::Enter) || is_key_pressed(KeyCode::Space) || next_clicked
                 {
@@ -195,36 +214,19 @@ impl InputHandler {
         }
 
         if state.paused {
-            // Handle Pause Menu Input
-            let screen_center_x = screen_width() / 2.0;
-            let screen_center_y = screen_height() / 2.0;
-            let button_width = 200.0;
-            let button_height = 50.0;
-            let spacing = 20.0;
-            let start_y = screen_center_y - 100.0; // Matches renderer
+            // Handle Pause Menu Input (rects shared with ui::menus)
+            let layout = crate::ui::menu_layout::pause_menu();
+            let mouse = mouse_position();
+            let mouse = vec2(mouse.0, mouse.1);
+            let clicked = |rect: macroquad::math::Rect| {
+                is_mouse_button_pressed(MouseButton::Left) && rect.contains(mouse)
+            };
 
-            let mouse_pos = mouse_position();
-            let is_click = is_mouse_button_pressed(MouseButton::Left);
-
-            // Resume Button
-            let resume_y = start_y;
-            if is_click
-                && mouse_pos.0 >= screen_center_x - button_width / 2.0
-                && mouse_pos.0 <= screen_center_x + button_width / 2.0
-                && mouse_pos.1 >= resume_y
-                && mouse_pos.1 <= resume_y + button_height
-            {
+            if clicked(layout.resume) {
                 state.paused = false;
             }
 
-            // Save Game Button
-            let save_y = start_y + button_height + spacing;
-            if is_click
-                && mouse_pos.0 >= screen_center_x - button_width / 2.0
-                && mouse_pos.0 <= screen_center_x + button_width / 2.0
-                && mouse_pos.1 >= save_y
-                && mouse_pos.1 <= save_y + button_height
-            {
+            if clicked(layout.save) {
                 match crate::state::save_system::save_game(state, "slot_1") {
                     Ok(_) => {
                         state.notifications.success("Game saved successfully!");
@@ -237,15 +239,7 @@ impl InputHandler {
                 }
             }
 
-            // Load Game Button
-            let load_y = start_y + (button_height + spacing) * 2.0;
-            if is_click
-                && mouse_pos.0 >= screen_center_x - button_width / 2.0
-                && mouse_pos.0 <= screen_center_x + button_width / 2.0
-                && mouse_pos.1 >= load_y
-                && mouse_pos.1 <= load_y + button_height
-                && crate::state::save_system::save_exists("slot_1")
-            {
+            if clicked(layout.load) && crate::state::save_system::save_exists("slot_1") {
                 match crate::state::save_system::load_game("slot_1") {
                     Ok(loaded_state) => {
                         *state = loaded_state;
@@ -259,26 +253,15 @@ impl InputHandler {
                 }
             }
 
-            // Main Menu Button
-            let menu_y = start_y + (button_height + spacing) * 3.0;
-            if is_click
-                && mouse_pos.0 >= screen_center_x - button_width / 2.0
-                && mouse_pos.0 <= screen_center_x + button_width / 2.0
-                && mouse_pos.1 >= menu_y
-                && mouse_pos.1 <= menu_y + button_height
-            {
+            if clicked(layout.main_menu) {
                 return true;
             }
 
-            // Exit Button
-            let exit_y = start_y + (button_height + spacing) * 4.0;
-            if is_click
-                && mouse_pos.0 >= screen_center_x - button_width / 2.0
-                && mouse_pos.0 <= screen_center_x + button_width / 2.0
-                && mouse_pos.1 >= exit_y
-                && mouse_pos.1 <= exit_y + button_height
-            {
-                std::process::exit(0);
+            #[cfg(not(target_arch = "wasm32"))]
+            if let Some(exit) = layout.exit {
+                if clicked(exit) {
+                    std::process::exit(0);
+                }
             }
 
             return false; // Skip normal game input when paused

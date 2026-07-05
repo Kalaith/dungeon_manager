@@ -4,8 +4,9 @@ use crate::state::dungeon::Dungeon;
 use crate::state::entities::{CreatureState, EntityManager, HeroState, StructureState};
 use crate::state::faction::{owner_from_label, OwnerId};
 use crate::state::rival_keeper::{
-    default_attack_cooldown, default_dig_batch, default_min_garrison, default_raid_size,
-    default_room_size, RivalKeeperAiState, RivalKeeperRuntime,
+    default_attack_cooldown, default_attack_cooldown_growth, default_dig_batch,
+    default_first_attack_delay, default_min_garrison, default_raid_size, default_room_size,
+    RivalKeeperAiState, RivalKeeperRuntime,
 };
 use crate::state::tile_state::{TilePos, TileState};
 use serde::Deserialize;
@@ -66,6 +67,10 @@ pub struct MapRivalKeeper {
     pub room_size: usize,
     #[serde(default = "default_attack_cooldown")]
     pub attack_cooldown: f32,
+    #[serde(default = "default_first_attack_delay")]
+    pub first_attack_delay: f32,
+    #[serde(default = "default_attack_cooldown_growth")]
+    pub attack_cooldown_growth: f32,
 }
 
 pub fn load_map(
@@ -205,7 +210,9 @@ pub fn rival_keeper_runtime_from_map(map_data: &MapFile) -> RivalKeeperRuntime {
                 dig_batch: keeper.dig_batch,
                 room_size: keeper.room_size,
                 attack_cooldown: keeper.attack_cooldown,
-                next_attack_time: keeper.attack_cooldown,
+                first_attack_delay: keeper.first_attack_delay,
+                attack_cooldown_growth: keeper.attack_cooldown_growth.max(1.0),
+                next_attack_time: keeper.first_attack_delay,
             })
             .collect(),
     }
@@ -325,7 +332,11 @@ mod tests {
         assert_eq!(keeper.ai_profile, "builder_attacker");
         assert_eq!(keeper.dig_batch, 5);
         assert_eq!(keeper.room_size, 2);
-        assert_eq!(keeper.attack_cooldown, 35.0);
+        assert_eq!(keeper.attack_cooldown, 90.0);
+        assert_eq!(keeper.first_attack_delay, 240.0);
+        assert_eq!(keeper.attack_cooldown_growth, 1.5);
+        // The first raid is gated by the grace period, not the repeat cooldown
+        assert_eq!(keeper.next_attack_time, keeper.first_attack_delay);
 
         let mut entities = EntityManager::new();
         let dungeon = load_map("assets/maps/level_1.json", &game_data, &mut entities)

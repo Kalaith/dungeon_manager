@@ -4,15 +4,45 @@
 
 use crate::data::GameData;
 use crate::state::game_state::GameState;
+use crate::state::settings::GameSettings;
 use crate::state::MapType;
+use crate::ui::core::colors;
+use crate::ui::menu_layout;
 use crate::ui::resources::GraphicsCache;
 use macroquad::prelude::*;
-use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text};
+use macroquad_toolkit::ui::{
+    button_rect_tone, draw_ui_text, measure_ui_text, ButtonTone,
+};
+
+/// Draw a menu button for visuals only; clicks are handled by the input
+/// layer against the same `menu_layout` rects.
+fn draw_menu_button(rect: Rect, text: &str, enabled: bool, tone: ButtonTone) {
+    let _ = button_rect_tone(rect, text, enabled, tone);
+}
+
+fn draw_title_block(title: &str, subtitle: &str, baseline_y: f32) {
+    let title_dims = measure_ui_text(title, None, 64, 1.0);
+    draw_ui_text(
+        title,
+        screen_width() / 2.0 - title_dims.width / 2.0,
+        baseline_y,
+        64.0,
+        colors::ACCENT_GOLD,
+    );
+    if !subtitle.is_empty() {
+        let sub_dims = measure_ui_text(subtitle, None, 20, 1.0);
+        draw_ui_text(
+            subtitle,
+            screen_width() / 2.0 - sub_dims.width / 2.0,
+            baseline_y + 32.0,
+            20.0,
+            colors::TEXT_DIM,
+        );
+    }
+}
 
 /// Draw the main menu screen
 pub fn draw_main_menu(graphics_cache: Option<&GraphicsCache>, _selected_map_type: &MapType) {
-    let mouse_pos = mouse_position();
-
     // Draw background if available
     if let Some(cache) = graphics_cache {
         if let Some(bg_tex) = cache.ui_textures.get("main_menu_bg") {
@@ -35,98 +65,69 @@ pub fn draw_main_menu(graphics_cache: Option<&GraphicsCache>, _selected_map_type
         0.0,
         screen_width(),
         screen_height(),
-        Color::new(0.0, 0.0, 0.0, 0.4),
+        Color::new(0.0, 0.0, 0.0, 0.55),
     );
 
-    // Draw title
-    draw_ui_text(
+    draw_title_block(
         "Deep Dominion",
-        screen_width() / 2.0 - 150.0,
-        screen_height() / 2.0 - 180.0,
-        48.0,
-        WHITE,
+        "Dig deep. Rule the dark.",
+        screen_height() / 2.0 - 160.0,
     );
 
-    // Buttons
-    let button_width = 200.0;
-    let button_height = 50.0;
-    let spacing = 20.0;
-    let start_y = screen_height() / 2.0 - 50.0;
-    let center_x = screen_width() / 2.0 - button_width / 2.0;
-
-    // 1. Start Game
-    let start_y_pos = start_y;
-    let is_start_hovered = mouse_pos.0 >= center_x
-        && mouse_pos.0 <= center_x + button_width
-        && mouse_pos.1 >= start_y_pos
-        && mouse_pos.1 <= start_y_pos + button_height;
-
-    let start_color = if is_start_hovered {
-        Color::new(0.4, 0.6, 0.9, 1.0)
-    } else {
-        Color::new(0.3, 0.5, 0.8, 1.0)
-    };
-    draw_rectangle(
-        center_x,
-        start_y_pos,
-        button_width,
-        button_height,
-        start_color,
-    );
-    draw_rectangle_lines(
-        center_x,
-        start_y_pos,
-        button_width,
-        button_height,
-        3.0,
-        WHITE,
-    );
-    draw_ui_text(
-        "START GAME",
-        center_x + 35.0,
-        start_y_pos + 32.0,
-        24.0,
-        WHITE,
-    );
-
-    // 2. Load Game
-    let load_y_pos = start_y_pos + button_height + spacing;
+    let layout = menu_layout::main_menu();
     let save_exists = crate::state::save_system::save_exists("slot_1");
-    let is_load_hovered = mouse_pos.0 >= center_x
-        && mouse_pos.0 <= center_x + button_width
-        && mouse_pos.1 >= load_y_pos
-        && mouse_pos.1 <= load_y_pos + button_height;
 
-    let load_color = if save_exists {
-        if is_load_hovered {
-            Color::new(0.4, 0.8, 0.4, 1.0)
-        } else {
-            Color::new(0.3, 0.7, 0.3, 1.0)
-        }
-    } else {
-        Color::new(0.3, 0.3, 0.3, 0.5)
-    };
-    draw_rectangle(
-        center_x,
-        load_y_pos,
-        button_width,
-        button_height,
-        load_color,
-    );
-    draw_rectangle_lines(
-        center_x,
-        load_y_pos,
-        button_width,
-        button_height,
-        3.0,
-        if save_exists { WHITE } else { GRAY },
-    );
+    draw_menu_button(layout.start, "START GAME", true, ButtonTone::Primary);
+    draw_menu_button(layout.load, "LOAD GAME", save_exists, ButtonTone::Positive);
+    draw_menu_button(layout.settings, "SETTINGS", true, ButtonTone::Secondary);
+    if let Some(exit) = layout.exit {
+        draw_menu_button(exit, "EXIT GAME", true, ButtonTone::Danger);
+    }
+
+    // Version string
+    let version = concat!("v", env!("CARGO_PKG_VERSION"));
     draw_ui_text(
-        "LOAD GAME",
-        center_x + 35.0,
-        load_y_pos + 32.0,
-        24.0,
-        if save_exists { WHITE } else { GRAY },
+        version,
+        12.0,
+        screen_height() - 14.0,
+        16.0,
+        colors::TEXT_DIM,
+    );
+}
+
+/// Draw the settings menu screen
+pub fn draw_settings_menu(settings: &GameSettings) {
+    draw_rectangle(
+        0.0,
+        0.0,
+        screen_width(),
+        screen_height(),
+        Color::new(0.0, 0.0, 0.0, 0.55),
+    );
+
+    draw_title_block("Settings", "", screen_height() / 2.0 - 140.0);
+
+    let layout = menu_layout::settings_menu();
+    let fullscreen_label = if settings.fullscreen {
+        "FULLSCREEN: ON"
+    } else {
+        "FULLSCREEN: OFF"
+    };
+    draw_menu_button(layout.fullscreen, fullscreen_label, true, ButtonTone::Secondary);
+
+    let scale_label = format!("UI SCALE: {:.0}%", settings.ui_text_scale * 100.0);
+    draw_menu_button(layout.ui_scale, &scale_label, true, ButtonTone::Secondary);
+
+    draw_menu_button(layout.back, "BACK", true, ButtonTone::Muted);
+
+    let hint = "Press ESC to return";
+    let hint_dims = measure_ui_text(hint, None, 16, 1.0);
+    draw_ui_text(
+        hint,
+        screen_width() / 2.0 - hint_dims.width / 2.0,
+        layout.back.y + layout.back.h + 40.0,
+        16.0,
+        colors::TEXT_DIM,
     );
 }
 
@@ -141,124 +142,18 @@ pub fn draw_pause_menu() {
         Color::new(0.0, 0.0, 0.0, 0.7),
     );
 
-    let screen_center_x = screen_width() / 2.0;
-    let screen_center_y = screen_height() / 2.0;
-    let button_width = 200.0;
-    let button_height = 50.0;
-    let spacing = 20.0;
-    let start_y = screen_center_y - 100.0; // Adjusted to fit more buttons
+    let layout = menu_layout::pause_menu();
 
-    // Title
-    let title = "PAUSED";
-    let title_dims = measure_ui_text(title, None, 60, 1.0);
-    draw_ui_text(
-        title,
-        screen_center_x - title_dims.width / 2.0,
-        start_y - 80.0,
-        60.0,
-        WHITE,
-    );
+    draw_title_block("PAUSED", "", layout.resume.y - 60.0);
 
-    // Resume Button
-    let resume_y = start_y;
-    draw_rectangle(
-        screen_center_x - button_width / 2.0,
-        resume_y,
-        button_width,
-        button_height,
-        Color::new(0.2, 0.6, 0.2, 1.0),
-    );
-    let resume_text = "RESUME";
-    let resume_dims = measure_ui_text(resume_text, None, 30, 1.0);
-    draw_ui_text(
-        resume_text,
-        screen_center_x - resume_dims.width / 2.0,
-        resume_y + 35.0,
-        30.0,
-        WHITE,
-    );
-
-    // Save Game Button
-    let save_y = start_y + button_height + spacing;
-    draw_rectangle(
-        screen_center_x - button_width / 2.0,
-        save_y,
-        button_width,
-        button_height,
-        Color::new(0.3, 0.5, 0.7, 1.0),
-    );
-    let save_text = "SAVE GAME";
-    let save_dims = measure_ui_text(save_text, None, 30, 1.0);
-    draw_ui_text(
-        save_text,
-        screen_center_x - save_dims.width / 2.0,
-        save_y + 35.0,
-        30.0,
-        WHITE,
-    );
-
-    // Load Game Button
-    let load_y = start_y + (button_height + spacing) * 2.0;
     let save_exists = crate::state::save_system::save_exists("slot_1");
-    let load_color = if save_exists {
-        Color::new(0.3, 0.7, 0.4, 1.0)
-    } else {
-        Color::new(0.3, 0.3, 0.3, 1.0) // Grayed out if no save
-    };
-    draw_rectangle(
-        screen_center_x - button_width / 2.0,
-        load_y,
-        button_width,
-        button_height,
-        load_color,
-    );
-    let load_text = "LOAD GAME";
-    let load_dims = measure_ui_text(load_text, None, 30, 1.0);
-    draw_ui_text(
-        load_text,
-        screen_center_x - load_dims.width / 2.0,
-        load_y + 35.0,
-        30.0,
-        if save_exists { WHITE } else { GRAY },
-    );
-
-    // Main Menu Button
-    let menu_y = start_y + (button_height + spacing) * 3.0;
-    draw_rectangle(
-        screen_center_x - button_width / 2.0,
-        menu_y,
-        button_width,
-        button_height,
-        Color::new(0.6, 0.4, 0.2, 1.0),
-    );
-    let menu_text = "MAIN MENU";
-    let menu_dims = measure_ui_text(menu_text, None, 30, 1.0);
-    draw_ui_text(
-        menu_text,
-        screen_center_x - menu_dims.width / 2.0,
-        menu_y + 35.0,
-        30.0,
-        WHITE,
-    );
-
-    // Exit Button
-    let exit_y = start_y + (button_height + spacing) * 4.0;
-    draw_rectangle(
-        screen_center_x - button_width / 2.0,
-        exit_y,
-        button_width,
-        button_height,
-        Color::new(0.8, 0.2, 0.2, 1.0),
-    );
-    let exit_text = "EXIT";
-    let exit_dims = measure_ui_text(exit_text, None, 30, 1.0);
-    draw_ui_text(
-        exit_text,
-        screen_center_x - exit_dims.width / 2.0,
-        exit_y + 35.0,
-        30.0,
-        WHITE,
-    );
+    draw_menu_button(layout.resume, "RESUME", true, ButtonTone::Positive);
+    draw_menu_button(layout.save, "SAVE GAME", true, ButtonTone::Primary);
+    draw_menu_button(layout.load, "LOAD GAME", save_exists, ButtonTone::Secondary);
+    draw_menu_button(layout.main_menu, "MAIN MENU", true, ButtonTone::Warning);
+    if let Some(exit) = layout.exit {
+        draw_menu_button(exit, "EXIT", true, ButtonTone::Danger);
+    }
 }
 
 /// Draw the game over screen (victory or defeat)
@@ -342,26 +237,11 @@ pub fn draw_game_over_screen(state: &GameState, game_data: Option<&GameData>) {
             }
         }
 
-        let button_width = 240.0;
-        let button_height = 50.0;
-        let button_x = screen_center_x - button_width / 2.0;
-        let button_y = screen_center_y + 100.0;
-        draw_rectangle(
-            button_x,
-            button_y,
-            button_width,
-            button_height,
-            Color::new(0.25, 0.55, 0.35, 1.0),
-        );
-        draw_rectangle_lines(button_x, button_y, button_width, button_height, 2.0, WHITE);
-        let next_text = "NEXT MISSION";
-        let next_dims = measure_ui_text(next_text, None, 24, 1.0);
-        draw_ui_text(
-            next_text,
-            screen_center_x - next_dims.width / 2.0,
-            button_y + 32.0,
-            24.0,
-            WHITE,
+        draw_menu_button(
+            menu_layout::game_over_next_mission(),
+            "NEXT MISSION",
+            true,
+            ButtonTone::Positive,
         );
     }
 

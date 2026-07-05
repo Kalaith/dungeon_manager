@@ -3,6 +3,7 @@ use crate::state::game_state::GameState;
 pub enum GamePhase {
     Loading,
     MainMenu,
+    Settings,
     Playing(GameState),
 }
 

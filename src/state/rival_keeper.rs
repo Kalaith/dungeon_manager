@@ -6,7 +6,9 @@ pub const DEFAULT_MIN_GARRISON: usize = 3;
 pub const DEFAULT_RAID_SIZE: usize = 3;
 pub const DEFAULT_DIG_BATCH: usize = 4;
 pub const DEFAULT_ROOM_SIZE: usize = 3;
-pub const DEFAULT_ATTACK_COOLDOWN: f32 = 45.0;
+pub const DEFAULT_ATTACK_COOLDOWN: f32 = 90.0;
+pub const DEFAULT_FIRST_ATTACK_DELAY: f32 = 180.0;
+pub const DEFAULT_ATTACK_COOLDOWN_GROWTH: f32 = 1.25;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RivalKeeperRuntime {
@@ -34,6 +36,10 @@ pub struct RivalKeeperAiState {
     pub room_size: usize,
     #[serde(default = "default_attack_cooldown")]
     pub attack_cooldown: f32,
+    #[serde(default = "default_first_attack_delay")]
+    pub first_attack_delay: f32,
+    #[serde(default = "default_attack_cooldown_growth")]
+    pub attack_cooldown_growth: f32,
     #[serde(default)]
     pub next_attack_time: f32,
 }
@@ -55,7 +61,9 @@ impl RivalKeeperRuntime {
                     dig_batch: keeper.dig_batch,
                     room_size: keeper.room_size,
                     attack_cooldown: keeper.attack_cooldown,
-                    next_attack_time: keeper.attack_cooldown,
+                    first_attack_delay: keeper.first_attack_delay,
+                    attack_cooldown_growth: keeper.attack_cooldown_growth.max(1.0),
+                    next_attack_time: keeper.first_attack_delay,
                 })
                 .collect(),
         }
@@ -74,7 +82,9 @@ impl RivalKeeperRuntime {
                 dig_batch: keeper.dig_batch,
                 room_size: keeper.room_size,
                 attack_cooldown: keeper.attack_cooldown,
-                next_attack_time: keeper.attack_cooldown,
+                first_attack_delay: keeper.first_attack_delay,
+                attack_cooldown_growth: keeper.attack_cooldown_growth.max(1.0),
+                next_attack_time: keeper.first_attack_delay,
             });
         }
     }
@@ -110,4 +120,12 @@ pub fn default_room_size() -> usize {
 
 pub fn default_attack_cooldown() -> f32 {
     DEFAULT_ATTACK_COOLDOWN
+}
+
+pub fn default_first_attack_delay() -> f32 {
+    DEFAULT_FIRST_ATTACK_DELAY
+}
+
+pub fn default_attack_cooldown_growth() -> f32 {
+    DEFAULT_ATTACK_COOLDOWN_GROWTH
 }

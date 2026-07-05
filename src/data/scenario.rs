@@ -36,6 +36,9 @@ pub struct ScenarioMeta {
     pub description: String,
     #[serde(default)]
     pub author: String,
+    /// Story lines shown as an intro overlay when the scenario starts
+    #[serde(default)]
+    pub intro: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -263,6 +266,10 @@ pub struct RivalKeeperDefinition {
     pub room_size: usize,
     #[serde(default = "crate::state::rival_keeper::default_attack_cooldown")]
     pub attack_cooldown: f32,
+    #[serde(default = "crate::state::rival_keeper::default_first_attack_delay")]
+    pub first_attack_delay: f32,
+    #[serde(default = "crate::state::rival_keeper::default_attack_cooldown_growth")]
+    pub attack_cooldown_growth: f32,
 }
 
 impl ScenarioDefinition {

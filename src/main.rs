@@ -36,6 +36,7 @@ pub struct Game {
     action_queue: ActionQueue,
     selected_spell: Option<String>,
     drag_selection: DragSelection,
+    settings: state::settings::GameSettings,
 }
 
 impl Game {
@@ -53,6 +54,7 @@ impl Game {
             action_queue: ActionQueue::new(),
             selected_spell: None,
             drag_selection: DragSelection::new(),
+            settings: state::settings::GameSettings::load(),
         }
     }
 
@@ -95,6 +97,7 @@ impl Game {
             &mut self.renderer.sidebar,
             &mut self.action_queue,
             &mut self.drag_selection,
+            &mut self.settings,
         );
 
         // Process queued actions
@@ -156,6 +159,7 @@ impl Game {
                     self.selected_room,
                     &self.game_data,
                     &self.drag_selection,
+                    &self.settings,
                 );
             }
         }
@@ -198,6 +202,7 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf)]
 async fn main() {
     let mut game = Game::new();
+    game.settings.apply();
 
     // Screenshot harness: when DUNGEON_MANAGER_CAPTURE_PATH is set, load
     // resources synchronously, seed a scene, simulate deterministic frames,

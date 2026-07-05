@@ -11,8 +11,12 @@ pub mod colors {
 
     pub const BACKGROUND: Color = Color::new(0.08, 0.08, 0.12, 1.0);
     pub const PANEL: Color = Color::new(0.12, 0.12, 0.16, 1.0);
-    pub const TEXT: Color = Color::new(0.9, 0.9, 0.95, 1.0);
+    pub const PANEL_DARK: Color = Color::new(0.07, 0.07, 0.1, 1.0);
+    pub const PANEL_BORDER: Color = Color::new(0.45, 0.38, 0.22, 1.0);
+    pub const TEXT: Color = Color::new(0.92, 0.92, 0.96, 1.0);
+    pub const TEXT_DIM: Color = Color::new(0.62, 0.62, 0.68, 1.0);
     pub const ACCENT: Color = Color::new(0.4, 0.6, 1.0, 1.0);
+    pub const ACCENT_GOLD: Color = Color::new(0.85, 0.65, 0.25, 1.0);
     pub const POSITIVE: Color = Color::new(0.3, 0.8, 0.4, 1.0);
     pub const NEGATIVE: Color = Color::new(0.9, 0.3, 0.3, 1.0);
 

@@ -37,9 +37,27 @@ pub fn add_mineral_veins(
     let base_area = game_data.config.resource_generation.base_map_area as f32;
     let size_scale = map_area / base_area;
 
+    // Starter gold - guaranteed short veins near the dungeon heart so early
+    // room building isn't starved for income
+    let starter_gold_strategy = ResourcePlacementStrategy {
+        min_distance_from_start: 4.0,
+        max_distance_from_start: 12.0,
+        prefer_near_hazards: false,
+        hazard_bonus_radius: 0.0,
+    };
+    place_strategic_veins(
+        grid,
+        start_pos,
+        "gold_vein",
+        2,
+        4..8,
+        1,
+        &starter_gold_strategy,
+    );
+
     // Gold veins - moderate distance, basic resources
     let gold_strategy = ResourcePlacementStrategy {
-        min_distance_from_start: 8.0,
+        min_distance_from_start: 5.0,
         max_distance_from_start: 35.0 * size_scale.sqrt(), // Scale distance with map size
         prefer_near_hazards: false,
         hazard_bonus_radius: 0.0,

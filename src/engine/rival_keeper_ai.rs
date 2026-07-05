@@ -99,6 +99,10 @@ fn execute_keeper_decision(state: &mut GameState, game_data: &GameData, keeper_i
 
     if launch_heart_raid(state, &keeper.owner, keeper.raid_size) {
         if let Some(runtime) = state.rival_keepers.keepers.get_mut(keeper_index) {
+            // Each raid widens the gap to the next one so the player gets
+            // breathing room to rebuild between waves
+            runtime.attack_cooldown =
+                (runtime.attack_cooldown * runtime.attack_cooldown_growth.max(1.0)).min(600.0);
             runtime.next_attack_time = runtime.attack_cooldown;
         }
     }
@@ -506,6 +510,50 @@ mod tests {
             .count();
         assert_eq!(attackers, raid_size);
         assert!(state.rival_keepers.keepers[0].next_attack_time > 0.0);
+    }
+
+    #[test]
+    fn rival_keeper_first_attack_waits_for_grace_period_then_gaps_grow() {
+        let game_data = GameData::load().expect("game data should load");
+        let mut state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+        let owner = OwnerId::RivalKeeper(1);
+
+        // The opening raid is gated by the grace period, not the repeat cooldown
+        let keeper = &state.rival_keepers.keepers[0];
+        assert_eq!(keeper.next_attack_time, keeper.first_attack_delay);
+        assert!(keeper.first_attack_delay > keeper.attack_cooldown);
+
+        // Force a raid and check the cooldown escalates for the next one
+        remove_rival_keeper_creatures(&mut state, &owner);
+        state.rival_keepers.keepers[0].next_decision_time = 0.0;
+        state.rival_keepers.keepers[0].next_attack_time = 0.0;
+        state.rival_keepers.keepers[0].desired_rooms.clear();
+        state.dungeon.grid[1][1].set_owner(owner.clone());
+        let min_garrison = state.rival_keepers.keepers[0].min_garrison;
+        let cooldown_before = state.rival_keepers.keepers[0].attack_cooldown;
+        let growth = state.rival_keepers.keepers[0].attack_cooldown_growth;
+        assert!(growth > 1.0);
+        let monster_data = game_data.monsters.get("goblin").unwrap();
+        for offset in 0..min_garrison {
+            let creature = CreatureState::new(
+                "goblin".to_string(),
+                1,
+                monster_data.stats.health,
+                monster_data.stats.mana,
+                offset as u64,
+            );
+            state.entities.spawn_creature_for_owner(
+                TilePos::new(1 + offset as i32, 1),
+                creature,
+                owner.clone(),
+            );
+        }
+
+        update_rival_keeper_ai(&mut state, &game_data, 1.0);
+
+        let keeper = &state.rival_keepers.keepers[0];
+        assert_eq!(keeper.attack_cooldown, cooldown_before * growth);
+        assert_eq!(keeper.next_attack_time, keeper.attack_cooldown);
     }
 
     #[test]

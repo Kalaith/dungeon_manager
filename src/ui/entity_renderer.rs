@@ -22,7 +22,7 @@ pub fn draw_entities(
     for entity in sorted_entities {
         let (x, z) = entity.visual_pos;
 
-        if game_data.config.fog_of_war.enabled {
+        if game_data.config.fog_of_war.enabled && state.cheat_fog_enabled {
             let tile_pos = entity.pos;
             if let Some(tile) = state.get_tile(tile_pos) {
                 if tile.fog_state == FogState::Hidden {

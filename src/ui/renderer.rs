@@ -7,7 +7,7 @@ use crate::state::{DragSelection, GamePhase, InteractionMode, MapType, Ownership
 use crate::ui::resources::GraphicsCache;
 use crate::ui::sidebar::Sidebar;
 use macroquad::prelude::*;
-use macroquad_toolkit::ui::draw_ui_text;
+use macroquad_toolkit::ui::{draw_surface, draw_ui_text, SurfaceStyle};
 
 pub struct GameRenderer {
     pub graphics_cache: Option<GraphicsCache>,
@@ -23,6 +23,11 @@ impl GameRenderer {
     }
 
     pub async fn load_resources(&mut self, game_data: Option<&crate::data::GameData>) {
+        // Register the bundled UI font explicitly so text styling is deliberate
+        if let Err(e) = macroquad_toolkit::ui::ensure_default_ui_font() {
+            eprintln!("Failed to load UI font, falling back to built-in: {}", e);
+        }
+
         match GraphicsCache::load_all(game_data).await {
             Ok(cache) => self.graphics_cache = Some(cache),
             Err(e) => eprintln!("Failed to load graphics: {}", e),
@@ -41,6 +46,7 @@ impl GameRenderer {
         selected_room: Option<usize>,
         game_data: &Option<GameData>,
         drag_selection: &DragSelection,
+        settings: &crate::state::settings::GameSettings,
     ) {
         clear_background(crate::ui::core::colors::BACKGROUND);
 
@@ -56,6 +62,9 @@ impl GameRenderer {
             }
             GamePhase::MainMenu => {
                 crate::ui::menus::draw_main_menu(self.graphics_cache.as_ref(), selected_map_type);
+            }
+            GamePhase::Settings => {
+                crate::ui::menus::draw_settings_menu(settings);
             }
             GamePhase::Playing(_) => {
                 if let Some(inner_state) = state {
@@ -176,12 +185,12 @@ impl GameRenderer {
         };
 
         // Draw HUD
-        draw_rectangle(
-            0.0,
-            0.0,
-            screen_width(),
-            crate::ui::core::HUD_HEIGHT,
-            crate::ui::core::colors::PANEL,
+        let hud_style = SurfaceStyle::new(crate::ui::core::colors::PANEL_DARK)
+            .with_border(1.0, crate::ui::core::colors::PANEL_BORDER)
+            .with_top_highlight(2.0, crate::ui::core::colors::ACCENT_GOLD);
+        draw_surface(
+            Rect::new(0.0, 0.0, screen_width(), crate::ui::core::HUD_HEIGHT),
+            &hud_style,
         );
 
         let mode_text = match interaction_mode {
@@ -215,19 +224,53 @@ impl GameRenderer {
             InteractionMode::SaveGame => "Mode: Saving...".to_string(),
         };
 
-        draw_ui_text(
-            &format!("Gold: {}/{} | Mana: {}/{} | Food: {} | Mats: {}/{} | Minions: {}/{} | Heart: {:.0}",
-                state.player.gold, state.player.max_gold,
-                state.player.mana, state.player.max_mana,
-                state.player.food,
-                state.player.materials, state.player.max_materials,
-                state.player.current_creature_count, state.player.max_creatures,
-                state.dungeon_heart_health),
-            10.0,
-            25.0,
-            18.0,
-            crate::ui::core::colors::TEXT,
-        );
+        // Color-coded resource readout
+        let heart_max = game_data
+            .as_ref()
+            .map(|gd| gd.config.dungeon.heart_max_health)
+            .unwrap_or(1000.0);
+        let heart_color = if state.dungeon_heart_health < heart_max * 0.25 {
+            crate::ui::core::colors::NEGATIVE
+        } else {
+            crate::ui::core::colors::POSITIVE
+        };
+        let segments = [
+            (
+                format!("Gold: {}/{}", state.player.gold, state.player.max_gold),
+                crate::ui::core::colors::ACCENT_GOLD,
+            ),
+            (
+                format!("Mana: {}/{}", state.player.mana, state.player.max_mana),
+                crate::ui::core::colors::ACCENT,
+            ),
+            (
+                format!("Food: {}", state.player.food),
+                crate::ui::core::colors::POSITIVE,
+            ),
+            (
+                format!(
+                    "Mats: {}/{}",
+                    state.player.materials, state.player.max_materials
+                ),
+                crate::ui::core::colors::TEXT_DIM,
+            ),
+            (
+                format!(
+                    "Minions: {}/{}",
+                    state.player.current_creature_count, state.player.max_creatures
+                ),
+                crate::ui::core::colors::TEXT,
+            ),
+            (
+                format!("Heart: {:.0}", state.dungeon_heart_health),
+                heart_color,
+            ),
+        ];
+        let mut seg_x = 10.0;
+        for (text, color) in &segments {
+            let dims = draw_ui_text(text, seg_x, 25.0, 18.0, *color);
+            seg_x += dims.width + 18.0;
+        }
 
         draw_ui_text(
             &mode_text,
@@ -300,6 +343,16 @@ impl GameRenderer {
 
         // Draw minimap
         crate::ui::minimap::draw_minimap(state, game_data);
+
+        // Tutorial objective panel
+        crate::ui::tutorial::draw_tutorial_panel(state);
+
+        // Scenario intro overlay (blocks the view until dismissed)
+        if let Some(ref data) = game_data {
+            if !state.paused && !state.game_over {
+                crate::ui::tutorial::draw_intro_overlay(state, data);
+            }
+        }
 
         if state.paused {
             crate::ui::menus::draw_pause_menu();

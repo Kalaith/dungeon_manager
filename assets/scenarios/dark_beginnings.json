@@ -4,7 +4,14 @@
       "id": "dark_beginnings",
       "name": "Dark Beginnings",
       "description": "Establish a first dungeon, survive the opening hero raid, and destroy the nearby hero base.",
-      "author": "Deep Dominion Team"
+      "author": "Deep Dominion Team",
+      "intro": [
+        "Deep beneath the Sunlit Kingdoms, your dark heart beats for the first time.",
+        "The earth here is rich with gold, and your imps are eager to dig.",
+        "But you are not alone: a rival keeper festers in the southern dark,",
+        "and the heroes of the surface have built an outpost dangerously close.",
+        "Carve out your dungeon, raise your creatures, and make this depth your dominion."
+      ]
     },
     "map": {
       "path": "assets/maps/level_1.json",
@@ -133,7 +140,7 @@
         "id": "first_raid",
         "trigger": {
           "type": "time_elapsed",
-          "seconds": 180.0
+          "seconds": 300.0
         },
         "actions": [
           {
@@ -188,7 +195,9 @@
         "raid_size": 3,
         "dig_batch": 5,
         "room_size": 2,
-        "attack_cooldown": 35.0
+        "attack_cooldown": 90.0,
+        "first_attack_delay": 240.0,
+        "attack_cooldown_growth": 1.5
       }
     ]
   }

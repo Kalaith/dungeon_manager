@@ -125,10 +125,10 @@
     "default_cooldown": 5.0
   },
   "resource_generation": {
-    "base_gold_veins": 2,
+    "base_gold_veins": 4,
     "base_gem_seams": 4,
     "base_mana_veins": 2,
-    "scattered_gold_density": 360.0,
+    "scattered_gold_density": 500.0,
     "scattered_mana_density": 90.0,
     "base_map_area": 2500
   }

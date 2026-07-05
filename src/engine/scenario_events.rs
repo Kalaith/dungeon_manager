@@ -225,7 +225,8 @@ mod tests {
     fn timed_event_unlocks_trap_and_spawns_party_once() {
         let game_data = GameData::load().expect("game data should load");
         let mut state = GameState::new_for_scenario(&game_data, "dark_beginnings");
-        state.time_elapsed = 181.0;
+        // first_raid now triggers at 300s to give new players a setup grace period
+        state.time_elapsed = 301.0;
 
         update_scenario_events(&mut state, &game_data);
         let hero_count = state.entities.heroes().count();

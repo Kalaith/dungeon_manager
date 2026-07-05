@@ -12,8 +12,8 @@ impl GameState {
 
         self.detect_hero_base(game_data);
 
-        let mut max_gold = 0;
-        let mut max_mana = 0;
+        let mut max_gold = game_data.config.player_initial_capacity.max_gold;
+        let mut max_mana = game_data.config.player_initial_capacity.max_mana;
         let mut lair_tiles_count = 0;
 
         for room in &self.room_manager.rooms {
@@ -109,5 +109,26 @@ impl GameState {
                 building_count, self.hero_base.position
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::data::GameData;
+    use crate::state::game_state::GameState;
+
+    #[test]
+    fn scenario_start_gold_survives_capacity_clamp() {
+        let game_data = GameData::load().expect("game data should load");
+        let state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+
+        // Base capacity (2000) + dungeon heart storage (500) must hold the
+        // scenario's 2500 start gold without clamping it away.
+        assert!(
+            state.player.max_gold >= 2500,
+            "start capacity too low: {}",
+            state.player.max_gold
+        );
+        assert_eq!(state.player.gold, 2500);
     }
 }

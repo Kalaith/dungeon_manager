@@ -72,6 +72,8 @@ pub struct GameState {
     pub campaign_progress: Option<crate::data::campaign::CampaignProgress>,
     #[serde(default)]
     pub rival_keepers: RivalKeeperRuntime,
+    #[serde(default)]
+    pub tutorial: crate::state::tutorial::TutorialState,
 }
 
 impl GameState {
@@ -109,6 +111,7 @@ impl GameState {
         );
 
         state.active_scenario_id = Some(scenario.meta.id.clone());
+        state.tutorial = crate::state::tutorial::TutorialState::for_new_scenario();
         state.scenario_runtime = Some(ScenarioRuntimeState::from_definition(scenario));
         state.rival_keepers.merge_from_scenario(scenario);
         state.apply_scenario_setup(game_data, scenario_id);
@@ -218,6 +221,7 @@ impl GameState {
             scenario_runtime: None,
             campaign_progress: None,
             rival_keepers: map_rival_keepers,
+            tutorial: crate::state::tutorial::TutorialState::default(),
         };
 
         // Recalculate max gold and other room-based stats
@@ -313,6 +317,9 @@ impl GameState {
 
         // Scenario scripted events
         crate::engine::scenario_events::update_scenario_events(self, game_data);
+
+        // Tutorial objective progression
+        crate::engine::tutorial_system::update_tutorial(self, game_data);
 
         // Rival keeper planning and reinforcement behavior
         crate::engine::rival_keeper_ai::update_rival_keeper_ai(self, game_data, dt);
