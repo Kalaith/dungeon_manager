@@ -446,10 +446,6 @@ pub fn update_hero_ai(
                     hero_state.target_pos = Some(pile_pos);
                     hero_state.target_room_id = None; // Ignore room if we see gold
                     found_pile = true;
-                    eprintln!(
-                        "[DEBUG] Hero {} spotted gold pile at {:?}",
-                        hero_state.hero_id, pile_pos
-                    );
                 }
             }
 
@@ -480,21 +476,8 @@ pub fn update_hero_ai(
                 if hero_state.target_room_id.is_none()
                     && matches!(hero_state.current_goal, HeroGoal::DestroyHeart)
                 {
-                    eprintln!(
-                        "[DEBUG] Hero {} attempting fallback find_dungeon_heart_position...",
-                        hero_state.hero_id
-                    );
                     if let Some(heart_pos) = game_state.find_dungeon_heart_position() {
                         hero_state.target_pos = Some(heart_pos);
-                        eprintln!(
-                            "[DEBUG] Hero {} targeting dungeon heart directly at {:?}",
-                            hero_state.hero_id, heart_pos
-                        );
-                    } else {
-                        eprintln!(
-                            "[DEBUG] Hero {} FAILED to find dungeon heart tile!",
-                            hero_state.hero_id
-                        );
                     }
                 }
             }
@@ -516,10 +499,6 @@ pub fn update_hero_ai(
                     let idx = macroquad_toolkit::rng::gen_range(0, room.tiles.len());
                     if let Some(&pos) = room.tiles.iter().nth(idx) {
                         hero_state.target_pos = Some(pos);
-                        eprintln!(
-                            "[DEBUG] Hero {} target resolved to room {} at {:?}",
-                            hero_state.hero_id, room_id, pos
-                        );
                     }
                 }
             }
@@ -547,13 +526,6 @@ pub fn update_hero_ai(
         }
     };
 
-    if matches!(hero_state.current_goal, HeroGoal::DestroyHeart) {
-        eprintln!(
-            "[DEBUG] Hero {} calculating path from {:?} to {:?} (Goal: DestroyHeart)",
-            hero_state.hero_id, hero_entity.pos, target
-        );
-    }
-
     let pf_grid = build_hero_pathfinding_grid(game_state, game_data, hero_state.can_dig);
     let pf_start = crate::engine::pathfinding::Pos::new(hero_entity.pos.x, hero_entity.pos.y);
     let pf_end = crate::engine::pathfinding::Pos::new(target.x, target.y);
@@ -574,18 +546,9 @@ pub fn update_hero_ai(
             .collect();
         hero_state.current_path = Some(waypoints);
     } else if hero_state.can_dig && matches!(hero_state.current_goal, HeroGoal::DestroyHeart) {
-        eprintln!(
-            "[DEBUG] Hero {} pathfinding to Heart failed! Switching to temporary Wander.",
-            hero_state.hero_id
-        );
         if let Some(wt) = find_emergency_wander_target(hero_entity.pos, game_state) {
             hero_state.target_pos = Some(wt);
             hero_state.current_path = None;
-        } else {
-            eprintln!(
-                "[DEBUG] Hero {} stuck and could not find wander target!",
-                hero_state.hero_id
-            );
         }
     }
 

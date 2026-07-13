@@ -194,7 +194,9 @@ Documented, unresolved (BALANCE_TESTING.md + feedback.md):
       `game_state.rs` (~1113), `balance_calculator/analysis.rs` (~1211), `creature_ai.rs` (~939),
       `renderer.rs` (~846). Workspace rules require restructuring these when touched.
 - [ ] Strip debug output: `eprintln!("[DEBUG] …")` throughout hero AI, combat, imp AI, spells,
-      traps — hot-path console spam in release.
+      traps — hot-path console spam in release. Literal `[DEBUG]`-tagged prints removed from
+      `hero_ai.rs` (8 call sites, per-frame per-hero pathfinding spam); ~98 other un-tagged
+      `eprintln!` calls remain across combat/imp AI/spells/traps/save-load and still need a pass.
 - [ ] Error-handling hardening: ~25 `unwrap()`, 9 `expect()`, 4 `panic!` (per code review) —
       crash-proof asset loading and save handling especially.
 - [ ] Deduplicate movement/distance logic (creature_ai vs imp_ai; two `manhattan_distance` impls)
