@@ -117,13 +117,6 @@ pub fn execute_task(
                 game_data,
                 dt,
             );
-            if result.gold_change < 0.0 {
-                // If we successfully collected gold (negative change), task is done
-                // But simplified: satisfaction happens over time or instant?
-                // Let's make it periodic satisfaction
-                // Actually, wages are paid incrementally or lump sum?
-                // For now, simple rate of wage collection
-            }
         }
         _ => {}
     }
@@ -397,7 +390,7 @@ fn execute_collect_wages(
         .rooms
         .iter()
         .any(|r| r.id == room_id && r.room_type == "treasury");
-    if !is_treasury || player.gold <= 0 {
+    if !is_treasury {
         return 0.0;
     }
 
@@ -409,7 +402,24 @@ fn execute_collect_wages(
         None => return 0.0,
     };
 
-    if !game_data.monsters.contains_key(&creature.creature_id) {
+    let monster_data = match game_data.monsters.get(&creature.creature_id) {
+        Some(data) => data,
+        None => return 0.0,
+    };
+
+    if player.gold <= 0 {
+        // Treasury is empty: this creature goes unpaid this tick. There's nothing physical
+        // to steal from an empty coffer, but a creature prone to theft when unpaid
+        // (`economy.steals_if_unpaid`) resents it harder than a docile one, escalating its
+        // "gold" need faster toward the desertion threshold instead of only decaying at the
+        // same passive rate as a well-behaved creature would.
+        let unpaid_rate = game_data.config.task_execution.wage_satisfaction_rate;
+        let unrest_multiplier = if monster_data.economy.steals_if_unpaid {
+            2.0
+        } else {
+            1.0
+        };
+        creature_ai::satisfy_need(creature, "gold", -unpaid_rate * unrest_multiplier, dt);
         return 0.0;
     }
 
@@ -504,5 +514,92 @@ mod tests {
 
         assert_eq!(result.manufactured_trap, Some("spike_trap".to_string()));
         assert_eq!(result.materials_change, 0.0);
+    }
+
+    #[test]
+    fn unpaid_theft_prone_creature_loses_gold_satisfaction_faster_than_docile_one() {
+        let game_data = GameData::load().expect("game data should load");
+
+        let mut room_manager = RoomManager::new();
+        let mut room = Room::new(
+            42,
+            "treasury".to_string(),
+            [TilePos::new(2, 2)].into_iter().collect::<HashSet<_>>(),
+            Vec::new(),
+        );
+        room.active = true;
+        room_manager.rooms.push(room);
+
+        let mut player = PlayerState::new(&game_data);
+        player.gold = 0; // treasury is empty: nobody gets paid this tick
+
+        // goblin has economy.steals_if_unpaid = true, imp has it = false
+        let goblin_data = game_data.monsters.get("goblin").unwrap();
+        assert!(goblin_data.economy.steals_if_unpaid);
+        let imp_data = game_data.monsters.get("imp").unwrap();
+        assert!(!imp_data.economy.steals_if_unpaid);
+
+        let mut goblin_entities = EntityManager::new();
+        let mut goblin = CreatureState::new(
+            "goblin".to_string(),
+            1,
+            goblin_data.stats.health,
+            goblin_data.stats.mana,
+            1,
+        );
+        goblin.current_task = Some(Task::CollectWages(42));
+        goblin.set_need("gold".to_string(), 50.0);
+        let goblin_id = goblin_entities.spawn_creature(TilePos::new(2, 2), goblin);
+
+        let mut imp_entities = EntityManager::new();
+        let mut imp = CreatureState::new(
+            "imp".to_string(),
+            1,
+            imp_data.stats.health,
+            imp_data.stats.mana,
+            1,
+        );
+        imp.current_task = Some(Task::CollectWages(42));
+        imp.set_need("gold".to_string(), 50.0);
+        let imp_id = imp_entities.spawn_creature(TilePos::new(2, 2), imp);
+
+        let goblin_result = execute_task(
+            goblin_id,
+            &mut goblin_entities,
+            &room_manager,
+            &player,
+            &game_data,
+            1.0,
+        );
+        let imp_result = execute_task(
+            imp_id,
+            &mut imp_entities,
+            &room_manager,
+            &player,
+            &game_data,
+            1.0,
+        );
+
+        // Nobody actually got paid (treasury is empty)
+        assert_eq!(goblin_result.gold_change, 0.0);
+        assert_eq!(imp_result.gold_change, 0.0);
+
+        let goblin_gold_need = goblin_entities
+            .get(goblin_id)
+            .and_then(|e| e.as_creature())
+            .unwrap()
+            .get_need("gold");
+        let imp_gold_need = imp_entities
+            .get(imp_id)
+            .and_then(|e| e.as_creature())
+            .unwrap()
+            .get_need("gold");
+
+        assert!(goblin_gold_need < 50.0, "unpaid creature should lose gold satisfaction");
+        assert!(imp_gold_need < 50.0, "unpaid creature should lose gold satisfaction");
+        assert!(
+            goblin_gold_need < imp_gold_need,
+            "theft-prone creature should resent going unpaid more than a docile one"
+        );
     }
 }

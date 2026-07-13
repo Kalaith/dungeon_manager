@@ -649,10 +649,20 @@ fn get_faction(entity: &Entity, game_data: &GameData) -> String {
 pub fn update_status_effects(entity: &mut Entity, dt: f32) {
     match &mut entity.entity_type {
         crate::state::entities::EntityType::Creature(state) => {
+            let mut expired_speed_multipliers = Vec::new();
             state.status_effects.retain_mut(|effect| {
                 effect.duration -= dt;
-                effect.duration > 0.0
+                let still_active = effect.duration > 0.0;
+                if !still_active && effect.effect_type == "speed_modifier" {
+                    expired_speed_multipliers.push(effect.strength);
+                }
+                still_active
             });
+            for multiplier in expired_speed_multipliers {
+                if multiplier != 0.0 {
+                    state.movement_speed /= multiplier;
+                }
+            }
         }
         crate::state::entities::EntityType::Hero(state) => {
             state.status_effects.retain_mut(|effect| {

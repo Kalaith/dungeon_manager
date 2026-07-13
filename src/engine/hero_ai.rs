@@ -25,6 +25,7 @@ pub enum ThreatLevel {
 
 /// Decide the current goal for a hero based on their state and dungeon situation
 pub fn decide_hero_goal(
+    hero_pos: TilePos,
     hero_state: &HeroState,
     game_state: &GameState,
     game_data: &GameData,
@@ -39,9 +40,7 @@ pub fn decide_hero_goal(
         return HeroGoal::Retreat;
     }
 
-    // Evaluate current situation - need hero position, but we don't have it here
-    // For now, assume moderate threat if we can't evaluate
-    let threat_level = ThreatLevel::Moderate; // Placeholder
+    let threat_level = evaluate_threat(hero_pos, game_state);
 
     // If under high threat, focus on survival
     if threat_level == ThreatLevel::Overwhelming {
@@ -412,7 +411,7 @@ pub fn update_hero_ai(
         };
 
         if should_reevaluate {
-            let new_goal = decide_hero_goal(hero_state, game_state, game_data);
+            let new_goal = decide_hero_goal(hero_entity.pos, hero_state, game_state, game_data);
             if new_goal != hero_state.current_goal {
                 hero_state.current_goal = new_goal;
                 hero_state.target_pos = None;

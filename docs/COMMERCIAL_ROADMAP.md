@@ -82,14 +82,30 @@ everything *around* that engine:
 - [ ] **Traits**: parsed `Vec<String>`, no trait logic anywhere.
 
 ### Known-broken / dead branches
-- [ ] `hero_ai.rs:43` — `threat_level` hardcoded to `Moderate` in `decide_hero_goal`
+- [x] `hero_ai.rs:43` — `threat_level` hardcoded to `Moderate` in `decide_hero_goal`
       ("Placeholder"); the real `evaluate_threat` is never consulted for goal selection.
-- [ ] `spell_effects.rs:269` — heal spell **logs but never heals heroes** (creatures/structures OK).
-- [ ] `spell_effects.rs:398` — `spawn_entity_effect` silently ignores every entity id except "imp".
-- [ ] `spell_effects.rs:288` — stat modifiers support only "speed" and are **permanent** (no
-      duration/revert).
-- [ ] `task_system.rs:125` — wage-collection branch is an empty `if` (no theft/unrest consequence
-      for unpaid creatures, which the design docs treat as core).
+      `decide_hero_goal` now takes the hero's position and calls `evaluate_threat` for real,
+      matching the two other call sites in the same file that already did this correctly.
+- [x] `spell_effects.rs:269` — heal spell **logs but never heals heroes** (creatures/structures OK).
+      Fixed; `apply_heal_effect` now applies `heal_amount` to `hero.health` like it already did
+      for creatures/structures. Covered by a new test (`heal_effect_heals_heroes`).
+- [x] `spell_effects.rs:398` — `spawn_entity_effect` silently ignores every entity id except "imp".
+      Generalized to look up any id in `game_data.monsters`; the imp-specific population cap still
+      applies only to imps. Covered by a new test (`spawn_entity_effect_supports_non_imp_creatures`).
+- [x] `spell_effects.rs:288` — stat modifiers support only "speed" and are **permanent** (no
+      duration/revert). "speed" remains the only supported stat (it's the only mutable runtime
+      stat `CreatureState` tracks — other stats are computed from base data + level at combat time
+      and have no field to modify without a data-model change). Duration/revert is now wired: a
+      timed speed buff pushes a `speed_modifier` status effect, and `combat::update_status_effects`
+      divides the speed back out when it expires. Covered by a new test
+      (`stat_modifier_speed_buff_reverts_after_duration`).
+- [x] `task_system.rs:125` — wage-collection branch is an empty `if` (no theft/unrest consequence
+      for unpaid creatures, which the design docs treat as core). The authored-but-inert
+      `economy.steals_if_unpaid` monster field is now read: when the treasury has no gold to pay a
+      creature, its "gold" need decays extra hard if it's theft-prone (2x vs. 1x for a docile
+      creature), pushing it toward the desertion threshold faster — there's nothing literal to
+      steal from an empty coffer, so this is the unrest consequence rather than a gold transfer.
+      Covered by a new test (`unpaid_theft_prone_creature_loses_gold_satisfaction_faster_than_docile_one`).
 - [x] Mana economy config bug: `game_config.json` max mana capacity 0 vs starting mana 10,000
       (flagged in BALANCE_TESTING.md). Already fixed in code (100/500) and covered by
       `test_mana_capacity_not_zero`.
