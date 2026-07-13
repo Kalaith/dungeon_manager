@@ -215,7 +215,7 @@ impl GameState {
             defend_marker: None,
             projectiles: ProjectileManager::new(),
             cheat_menu: crate::ui::cheat_menu::CheatMenuState::default(),
-            cheat_fog_enabled: true,
+            cheat_fog_enabled: false,
             cheat_immortal_heart: false,
             active_scenario_id: None,
             scenario_runtime: None,

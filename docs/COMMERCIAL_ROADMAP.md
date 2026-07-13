@@ -90,12 +90,14 @@ everything *around* that engine:
       duration/revert).
 - [ ] `task_system.rs:125` — wage-collection branch is an empty `if` (no theft/unrest consequence
       for unpaid creatures, which the design docs treat as core).
-- [ ] Mana economy config bug: `game_config.json` max mana capacity 0 vs starting mana 10,000
-      (flagged in BALANCE_TESTING.md).
+- [x] Mana economy config bug: `game_config.json` max mana capacity 0 vs starting mana 10,000
+      (flagged in BALANCE_TESTING.md). Already fixed in code (100/500) and covered by
+      `test_mana_capacity_not_zero`.
 - [ ] Gem seams give flat 25 gold; GDD + feedback both specify gems as the
       infinite-but-slower gold source.
-- [ ] Fog/visibility leak: player feedback reports the enemy keeper's lair is visible when it
-      shouldn't be; also `cheat_fog_enabled` **defaults to true** (`game_state.rs:218`).
+- [x] Fog/visibility leak default: `cheat_fog_enabled` **defaulted to true** (`game_state.rs:218`),
+      disabling fog-of-war for every new game. Now defaults to `false`. (Player feedback about the
+      enemy keeper's lair being visible may still need separate investigation.)
 
 ### Depth features (designed, not started)
 - [ ] Creature social dynamics: anger currently only penalizes mood — no infighting
@@ -164,8 +166,10 @@ everything *around* that engine:
       hold-vs-toggle options, screen-shake toggle.
 - [ ] Gamepad/controller: none. Decide (PC-only mouse genre — probably cut, but Steam Deck
       verification wants at least basic navigation).
-- [ ] **Gate the cheat menu**: God Mode/gold/spawner reachable via F1 in release builds
-      (`sidebar.rs:73` — no `cfg(debug_assertions)` anywhere). Compile-gate or hide behind a flag.
+- [x] **Gate the cheat menu**: God Mode/gold/spawner reachable via F1 in release builds
+      (`sidebar.rs:73` — no `cfg(debug_assertions)` anywhere). F1 toggle now compiled out via
+      `#[cfg(debug_assertions)]`; `cheats_visible` already defaulted false so the tab/menu stay
+      unreachable in release builds.
 
 ## 6. Balance & playtesting
 

@@ -111,7 +111,8 @@ impl Sidebar {
     ) -> Option<InteractionMode> {
         let mouse_pos = mouse_position();
 
-        // F1 toggles cheats menu visibility
+        // F1 toggles cheats menu visibility (debug builds only)
+        #[cfg(debug_assertions)]
         if is_key_pressed(KeyCode::F1) {
             self.cheats_visible = !self.cheats_visible;
             // If hiding cheats and currently on cheats tab, switch to build
