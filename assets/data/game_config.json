@@ -131,5 +131,33 @@
     "scattered_gold_density": 500.0,
     "scattered_mana_density": 90.0,
     "base_map_area": 2500
+  },
+  "status_effects": {
+    "ability_effects": {
+      "poison_bite": {
+        "status_type": "poison",
+        "duration": 5.0,
+        "strength": 2.0,
+        "proc_chance": 0.5
+      },
+      "fireball": {
+        "status_type": "burn",
+        "duration": 4.0,
+        "strength": 3.0,
+        "proc_chance": 0.4
+      },
+      "fire_breath": {
+        "status_type": "burn",
+        "duration": 6.0,
+        "strength": 5.0,
+        "proc_chance": 0.6
+      },
+      "lightning": {
+        "status_type": "stun",
+        "duration": 1.5,
+        "strength": 0.0,
+        "proc_chance": 0.3
+      }
+    }
   }
 }

@@ -72,14 +72,44 @@ everything *around* that engine:
 ## 2. Half-built gameplay systems (engine work)
 
 ### Inert authored data — the biggest correctness gap
-- [ ] **Status effects**: `combat.rs:222` `generate_status_effects()` returns an empty Vec by
-      design ("no status effects for now"). The struct + duration ticking exist; melee/ranged
-      combat never applies poison/burn/freeze/stun. Wire abilities → effects.
-- [ ] **Monster abilities**: `monsters.rs:59` deserializes `combat.abilities` as raw
-      `serde_json::Value`, never read by the engine. Only 6/13 monsters even have abilities
-      authored. Define the ability schema, execute in combat, author for the full roster.
+- [x] **Status effects**: `combat.rs:222` `generate_status_effects()` returned an empty Vec by
+      design ("no status effects for now"). The struct + duration ticking existed but nothing
+      ever applied poison/burn/freeze/stun. Now fully wired: `combat::update_status_effects`
+      applies poison/burn as real damage-over-time (ticks `strength` damage/sec off health),
+      applies freeze as an immediate movement-speed multiplier that reverts exactly on expiry,
+      and `combat::resolve_combat_tick` checks for an active "stun" effect and skips the
+      attacker's attack (and any projectile spawn) entirely while stunned. Covered by 3 new
+      tests in `combat_tests.rs` (`poison_and_burn_status_effects_deal_damage_over_time`,
+      `freeze_status_effect_slows_movement_and_reverts_on_expiry`,
+      `stunned_attacker_cannot_land_an_attack`).
+- [ ] **Monster abilities** (partially done): `monsters.rs:59` deserialized `combat.abilities` as raw
+      `serde_json::Value`, never read by the engine — but every authored entry was actually a
+      bare ability-name string (`"charge"`, `"fireball"`, etc.), so the schema is now simply
+      `Vec<String>`, matching the real data exactly. Execution is wired via a new data-driven
+      `game_config.json` → `status_effects.ability_effects` table (ability id → status type/
+      duration/strength/proc chance) that `combat::generate_status_effects` rolls against on
+      every landed hit (melee instant, ranged/magic on the cast that spawns the projectile).
+      Of the 8 distinct abilities currently authored across the 13-monster roster, the 4 that
+      are naturally a status-effect proc are wired: `poison_bite` → poison, `fireball` → burn,
+      `fire_breath` → burn, `lightning` → stun. The other 4 (`charge`, `smash`, `berserk`,
+      `charm`) aren't status procs — they need bonus-damage/self-buff/morale mechanics the
+      engine doesn't have hooks for yet, so they're still inert; adding more authored monsters
+      (`docs/monsters.md`'s ~18) is separately tracked under §1 roster content.
 - [ ] **Hero abilities**: `HeroAbilityData` parsed (`heroes.rs:15,57`), zero engine references.
-- [ ] **Traits**: parsed `Vec<String>`, no trait logic anywhere.
+      Deliberately not attempted in this pass: ~20 distinct authored hero abilities each have a
+      bespoke `trigger` (`on_ally_low_health`, `on_party_damaged`, `on_sneak_attack`,
+      `in_workshop`, `on_ritual_detected`, `on_undead_nearby`, `on_trapped`, `in_room`, passive
+      auras, …) that would need new hero-side targeting/awareness systems (party state, ritual
+      detection, room-disable) the engine doesn't have. Wiring these shallowly would mean
+      guessing at unspecified mechanics rather than fixing a bug — needs a real design pass
+      before implementation.
+- [ ] **Traits**: parsed `Vec<String>`, no trait logic anywhere. 17 distinct traits are authored
+      across the 13-monster roster (loyal, cowardly, greedy, aggressive, intelligent, strong,
+      slow, undead, mindless, fearless, demonic, wild, sadistic, arrogant, beast, glutton,
+      hard_worker) with no effects table defined anywhere (`docs/monster_design.md` explicitly
+      defers this: "trait effects live in a separate trait definition table" that doesn't exist
+      yet). Same reasoning as hero abilities: needs a design pass to decide what each trait
+      actually does before it's implemented, not a guess per trait.
 
 ### Known-broken / dead branches
 - [x] `hero_ai.rs:43` — `threat_level` hardcoded to `Moderate` in `decide_hero_goal`

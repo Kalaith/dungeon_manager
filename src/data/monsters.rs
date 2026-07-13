@@ -56,7 +56,7 @@ pub struct CombatData {
     pub attack_speed: f32,
     pub armor_type: String,
     pub resistances: HashMap<String, f32>,
-    pub abilities: Vec<serde_json::Value>,
+    pub abilities: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

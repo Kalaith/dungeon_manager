@@ -1,6 +1,7 @@
 //! Game configuration loaded from JSON
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::error::Error;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -22,6 +23,7 @@ pub struct GameConfig {
     pub dungeon: DungeonConfig,
     pub conversion: ConversionConfig,
     pub resource_generation: ResourceGenerationConfig,
+    pub status_effects: StatusEffectsConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -232,6 +234,26 @@ impl Default for ResourceGenerationConfig {
             base_map_area: 2500,
         }
     }
+}
+
+/// Maps a monster combat ability id (`combat.abilities` in monsters.json) to the status
+/// effect it procs on a landed hit.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct StatusEffectsConfig {
+    pub ability_effects: HashMap<String, AbilityEffectData>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AbilityEffectData {
+    /// One of "poison", "burn", "freeze", "stun" (see `state::entities::StatusEffect` and
+    /// `engine::combat::update_status_effects` for what each type actually does).
+    pub status_type: String,
+    pub duration: f32,
+    /// Poison/burn: damage per second. Freeze: movement speed multiplier while active
+    /// (e.g. 0.5 = 50% slow). Stun: unused, any value works.
+    pub strength: f32,
+    /// Chance in [0.0, 1.0] to proc on a landed hit.
+    pub proc_chance: f32,
 }
 
 pub fn load_game_config() -> Result<GameConfig, Box<dyn Error>> {

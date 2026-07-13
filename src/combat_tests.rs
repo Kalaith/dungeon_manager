@@ -1,6 +1,6 @@
 use crate::data::GameData;
 use crate::engine::combat;
-use crate::state::entities::{CreatureState, HeroState, Task};
+use crate::state::entities::{CreatureState, HeroState, StatusEffect, Task};
 use crate::state::game_state::GameState;
 use crate::state::tile_state::TilePos;
 
@@ -148,5 +148,124 @@ fn test_ranged_monster_spawns_projectile() {
     assert!(
         projectiles_after.is_empty(),
         "Projectile should be removed after impact"
+    );
+}
+
+#[test]
+fn poison_and_burn_status_effects_deal_damage_over_time() {
+    let game_data = GameData::load().expect("Failed to load game data");
+    let mut game_state = GameState::new(20, 20, &game_data);
+
+    let mut creature = CreatureState::new("goblin".to_string(), 1, 100.0, 10.0, 1);
+    creature.status_effects.push(StatusEffect {
+        effect_type: "poison".to_string(),
+        duration: 3.0,
+        strength: 5.0, // 5 damage/sec
+    });
+    let creature_id = game_state
+        .entities
+        .spawn_creature(TilePos::new(1, 1), creature);
+
+    let entity = game_state.entities.get_mut(creature_id).unwrap();
+    combat::update_status_effects(entity, 1.0);
+    let after_one_tick = entity.as_creature().unwrap().health;
+    assert_eq!(after_one_tick, 95.0, "poison should deal 5 dmg/sec");
+    assert_eq!(entity.as_creature().unwrap().status_effects.len(), 1);
+
+    // Advance past the remaining duration (2s left): effect should expire and stop ticking.
+    combat::update_status_effects(entity, 2.5);
+    let after_expiry = entity.as_creature().unwrap().health;
+    assert!(
+        entity.as_creature().unwrap().status_effects.is_empty(),
+        "poison effect should be removed once its duration elapses"
+    );
+
+    combat::update_status_effects(entity, 1.0);
+    assert_eq!(
+        entity.as_creature().unwrap().health,
+        after_expiry,
+        "expired poison should no longer deal damage"
+    );
+}
+
+#[test]
+fn freeze_status_effect_slows_movement_and_reverts_on_expiry() {
+    let game_data = GameData::load().expect("Failed to load game data");
+    let mut game_state = GameState::new(20, 20, &game_data);
+
+    let attacker = CreatureState::new("goblin".to_string(), 1, 100.0, 10.0, 1);
+    let defender = CreatureState::new("goblin".to_string(), 1, 100.0, 10.0, 2);
+    let base_speed = defender.movement_speed;
+
+    let attacker_id = game_state
+        .entities
+        .spawn_creature(TilePos::new(1, 1), attacker);
+    let defender_id = game_state
+        .entities
+        .spawn_creature(TilePos::new(2, 2), defender);
+
+    let result = combat::CombatResult {
+        damage_dealt: 0.0,
+        status_applied: vec![StatusEffect {
+            effect_type: "freeze".to_string(),
+            duration: 2.0,
+            strength: 0.5, // 50% slow
+        }],
+        defender_died: false,
+        projectile_spawned: None,
+    };
+    combat::apply_combat_result(
+        &result,
+        attacker_id,
+        defender_id,
+        game_state.entities.entities_mut(),
+        &game_data,
+        0.0,
+    );
+
+    let slowed_speed = game_state
+        .entities
+        .get(defender_id)
+        .unwrap()
+        .as_creature()
+        .unwrap()
+        .movement_speed;
+    assert_eq!(slowed_speed, base_speed * 0.5, "freeze should immediately slow movement");
+
+    // Tick past the freeze's duration: speed should revert exactly to baseline.
+    let entity = game_state.entities.get_mut(defender_id).unwrap();
+    combat::update_status_effects(entity, 3.0);
+    let reverted_speed = entity.as_creature().unwrap().movement_speed;
+    assert_eq!(reverted_speed, base_speed, "speed should revert once freeze expires");
+}
+
+#[test]
+fn stunned_attacker_cannot_land_an_attack() {
+    let game_data = GameData::load().expect("Failed to load game data");
+    let mut game_state = GameState::new(20, 20, &game_data);
+
+    let mut attacker = CreatureState::new("goblin".to_string(), 1, 100.0, 10.0, 1);
+    attacker.status_effects.push(StatusEffect {
+        effect_type: "stun".to_string(),
+        duration: 1.0,
+        strength: 0.0,
+    });
+    let defender = CreatureState::new("goblin".to_string(), 1, 100.0, 10.0, 2);
+
+    let attacker_id = game_state
+        .entities
+        .spawn_creature(TilePos::new(1, 1), attacker);
+    let defender_id = game_state
+        .entities
+        .spawn_creature(TilePos::new(1, 2), defender);
+
+    let attacker_entity = game_state.entities.get(attacker_id).unwrap();
+    let defender_entity = game_state.entities.get(defender_id).unwrap();
+    let result = combat::resolve_combat_tick(attacker_entity, defender_entity, 10.0, &game_data);
+
+    assert_eq!(result.damage_dealt, 0.0, "a stunned attacker cannot deal damage");
+    assert!(
+        result.projectile_spawned.is_none(),
+        "a stunned attacker cannot spawn a projectile either"
     );
 }
