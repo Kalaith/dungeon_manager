@@ -190,9 +190,16 @@ Documented, unresolved (BALANCE_TESTING.md + feedback.md):
 
 ## 7. Technical debt & quality
 
-- [ ] File-size hard-limit violations (>800 lines): `sidebar_renderer.rs` (~1218),
-      `game_state.rs` (~1113), `balance_calculator/analysis.rs` (~1211), `creature_ai.rs` (~939),
-      `renderer.rs` (~846). Workspace rules require restructuring these when touched.
+- [x] File-size hard-limit violations (>800 lines). The `src/` files this item originally named
+      (`sidebar_renderer.rs`, `game_state.rs`, `balance_calculator/analysis.rs`, `creature_ai.rs`,
+      `renderer.rs`) were already back under 800 lines by the time this was picked up (this
+      roadmap's own line counts were stale — see the disclaimer at the top). A repo-wide scan found
+      the actual violators were all in the `graphics_gen/` dev-tool asset generator plus one test
+      file: `graphics_gen/monsters.rs` (1053), `graphics_gen/core.rs` (956), `graphics_gen/tiles.rs`
+      (882), `graphics_gen/heroes.rs` (839), `tests/balance_tests.rs` (856). All five were split into
+      thin parent files + sibling submodules (`foo.rs` + `foo/child.rs`, no `mod.rs`), verified with
+      `cargo check --all-targets`, `cargo clippy --all-targets`, and `cargo test` (68 unit + 28
+      balance tests, all passing, no behavior change). No file in the repo now exceeds 800 lines.
 - [ ] Strip debug output: `eprintln!("[DEBUG] …")` throughout hero AI, combat, imp AI, spells,
       traps — hot-path console spam in release. Literal `[DEBUG]`-tagged prints removed from
       `hero_ai.rs` (8 call sites, per-frame per-hero pathfinding spam); ~98 other un-tagged
