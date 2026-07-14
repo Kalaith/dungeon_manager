@@ -74,6 +74,10 @@ pub struct GameState {
     pub rival_keepers: RivalKeeperRuntime,
     #[serde(default)]
     pub tutorial: crate::state::tutorial::TutorialState,
+    /// Global difficulty, copied from settings at launch. Scales hero threat on
+    /// top of the mission's authored `threat_multiplier`.
+    #[serde(default)]
+    pub difficulty: crate::state::settings::Difficulty,
 }
 
 impl GameState {
@@ -226,6 +230,7 @@ impl GameState {
             campaign_progress: None,
             rival_keepers: map_rival_keepers,
             tutorial: crate::state::tutorial::TutorialState::default(),
+            difficulty: crate::state::settings::Difficulty::default(),
         };
 
         // Recalculate max gold and other room-based stats
@@ -727,6 +732,19 @@ impl GameState {
     }
 
     /// Find the dungeon heart tile position
+    /// Combined hero-threat multiplier: the mission's authored
+    /// `threat_multiplier` (1.0 if none) scaled by the chosen difficulty. Higher
+    /// = the surface presses harder (faster garrison spawns, more frequent
+    /// waves). Clamped to a small positive floor so it can safely divide timers.
+    pub fn effective_threat_multiplier(&self) -> f32 {
+        let scenario = self
+            .scenario_runtime
+            .as_ref()
+            .map(|runtime| runtime.active_rules.threat_multiplier)
+            .unwrap_or(1.0);
+        (scenario * self.difficulty.threat_scale()).max(0.1)
+    }
+
     pub fn find_dungeon_heart_position(&self) -> Option<TilePos> {
         for row in &self.dungeon.grid {
             for tile in row {

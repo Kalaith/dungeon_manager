@@ -12,12 +12,52 @@ const SETTINGS_KEY: &str = "settings";
 /// UI text scale steps cycled by the settings menu.
 pub const UI_SCALE_STEPS: &[f32] = &[0.8, 1.0, 1.25];
 
+/// Global game difficulty. Scales hero *threat* — how fast the surface's
+/// garrisons replenish and how often they launch waves — layered on top of each
+/// mission's authored `threat_multiplier`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum Difficulty {
+    Easy,
+    #[default]
+    Normal,
+    Hard,
+}
+
+impl Difficulty {
+    pub const ALL: [Difficulty; 3] = [Difficulty::Easy, Difficulty::Normal, Difficulty::Hard];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Difficulty::Easy => "Easy",
+            Difficulty::Normal => "Normal",
+            Difficulty::Hard => "Hard",
+        }
+    }
+
+    /// Multiplier on hero threat. `> 1.0` = harder (faster/bigger pressure).
+    pub fn threat_scale(self) -> f32 {
+        match self {
+            Difficulty::Easy => 0.7,
+            Difficulty::Normal => 1.0,
+            Difficulty::Hard => 1.4,
+        }
+    }
+
+    pub fn next(self) -> Difficulty {
+        let idx = Self::ALL.iter().position(|d| *d == self).unwrap_or(1);
+        Self::ALL[(idx + 1) % Self::ALL.len()]
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameSettings {
     #[serde(default)]
     pub fullscreen: bool,
     #[serde(default = "default_ui_text_scale")]
     pub ui_text_scale: f32,
+    #[serde(default)]
+    pub difficulty: Difficulty,
 }
 
 impl Default for GameSettings {
@@ -25,6 +65,7 @@ impl Default for GameSettings {
         Self {
             fullscreen: false,
             ui_text_scale: default_ui_text_scale(),
+            difficulty: Difficulty::default(),
         }
     }
 }
@@ -90,6 +131,11 @@ impl GameSettings {
         self.apply();
         self.save();
     }
+
+    pub fn cycle_difficulty(&mut self) {
+        self.difficulty = self.difficulty.next();
+        self.save();
+    }
 }
 
 #[cfg(test)]
@@ -101,16 +147,32 @@ mod tests {
         let settings = GameSettings {
             fullscreen: true,
             ui_text_scale: 1.25,
+            difficulty: Difficulty::Hard,
         };
         let json = serde_json::to_string(&settings).expect("settings should serialize");
         let loaded: GameSettings = serde_json::from_str(&json).expect("settings should parse");
         assert!(loaded.fullscreen);
         assert_eq!(loaded.ui_text_scale, 1.25);
+        assert_eq!(loaded.difficulty, Difficulty::Hard);
 
         // Missing fields fall back to defaults for forward compatibility
         let empty: GameSettings = serde_json::from_str("{}").expect("empty settings should parse");
         assert!(!empty.fullscreen);
         assert_eq!(empty.ui_text_scale, 1.0);
+        assert_eq!(empty.difficulty, Difficulty::Normal);
+    }
+
+    #[test]
+    fn difficulty_cycles_and_scales_threat() {
+        assert_eq!(Difficulty::default(), Difficulty::Normal);
+        assert_eq!(Difficulty::Normal.threat_scale(), 1.0);
+        // Easy is gentler, Hard is harsher.
+        assert!(Difficulty::Easy.threat_scale() < 1.0);
+        assert!(Difficulty::Hard.threat_scale() > 1.0);
+        // Cycles Easy → Normal → Hard → Easy.
+        assert_eq!(Difficulty::Easy.next(), Difficulty::Normal);
+        assert_eq!(Difficulty::Normal.next(), Difficulty::Hard);
+        assert_eq!(Difficulty::Hard.next(), Difficulty::Easy);
     }
 
     #[test]

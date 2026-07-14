@@ -131,14 +131,16 @@ pub fn game_over_next_mission() -> Rect {
 pub struct SettingsMenuLayout {
     pub fullscreen: Rect,
     pub ui_scale: Rect,
+    pub difficulty: Rect,
     pub back: Rect,
 }
 
 pub fn settings_menu() -> SettingsMenuLayout {
-    let start_y = screen_height() / 2.0 - 60.0;
+    let start_y = screen_height() / 2.0 - 90.0;
     SettingsMenuLayout {
         fullscreen: stacked(start_y, 0),
         ui_scale: stacked(start_y, 1),
-        back: stacked(start_y, 2),
+        difficulty: stacked(start_y, 2),
+        back: stacked(start_y, 3),
     }
 }

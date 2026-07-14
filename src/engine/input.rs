@@ -38,10 +38,10 @@ impl InputHandler {
                 Self::handle_settings(phase, settings);
             }
             GamePhase::MissionSelect(_) => {
-                Self::handle_mission_select(phase, game_data);
+                Self::handle_mission_select(phase, game_data, settings);
             }
             GamePhase::SkirmishSetup(_) => {
-                Self::handle_skirmish_setup(phase, game_data);
+                Self::handle_skirmish_setup(phase, game_data, settings);
             }
             GamePhase::Playing(state) => {
                 if let Some(ref data) = game_data {
@@ -153,7 +153,11 @@ impl InputHandler {
         }
     }
 
-    fn handle_mission_select(phase: &mut GamePhase, game_data: &Option<GameData>) {
+    fn handle_mission_select(
+        phase: &mut GamePhase,
+        game_data: &Option<GameData>,
+        settings: &crate::state::settings::GameSettings,
+    ) {
         let GamePhase::MissionSelect(progress) = phase else {
             return;
         };
@@ -189,7 +193,10 @@ impl InputHandler {
                 let mut chosen = progress.clone();
                 chosen.select_mission(campaign, &entry.id);
                 *phase = match GameState::new_for_campaign_progress(data, chosen) {
-                    Some(state) => GamePhase::Playing(state),
+                    Some(mut state) => {
+                        state.difficulty = settings.difficulty;
+                        GamePhase::Playing(state)
+                    }
                     None => GamePhase::MainMenu,
                 };
                 return;
@@ -197,7 +204,11 @@ impl InputHandler {
         }
     }
 
-    fn handle_skirmish_setup(phase: &mut GamePhase, game_data: &Option<GameData>) {
+    fn handle_skirmish_setup(
+        phase: &mut GamePhase,
+        game_data: &Option<GameData>,
+        settings: &crate::state::settings::GameSettings,
+    ) {
         let GamePhase::SkirmishSetup(config) = phase else {
             return;
         };
@@ -223,7 +234,8 @@ impl InputHandler {
         if clicked(layout.start) || is_key_pressed(KeyCode::Enter) {
             if let Some(data) = game_data.as_ref() {
                 let (w, h) = config.dimensions();
-                let state = GameState::new_with_map_type(w, h, data, config.map_type());
+                let mut state = GameState::new_with_map_type(w, h, data, config.map_type());
+                state.difficulty = settings.difficulty;
                 *phase = GamePhase::Playing(state);
             }
         }
@@ -243,6 +255,10 @@ impl InputHandler {
 
         if clicked(layout.ui_scale) {
             settings.cycle_ui_text_scale();
+        }
+
+        if clicked(layout.difficulty) {
+            settings.cycle_difficulty();
         }
 
         if clicked(layout.back) || is_key_pressed(KeyCode::Escape) {

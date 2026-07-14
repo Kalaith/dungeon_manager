@@ -240,10 +240,27 @@ everything *around* that engine:
       Verified: `cargo test` (106 unit incl. 3 new — `every_skirmish_config_generates_a_playable_map`
       drives all 3×3 type/size combos through the real launch path and asserts a live player heart) +
       `clippy -D warnings` pass, plus **headless captures** of the SKIRMISH menu button and the setup
-      screen. **Follow-on (not blocking):** seed input (the generator already reads `config.seed`),
-      **rival count** (procedural maps don't yet place rival hearts — needs a small generator add), and
-      difficulty (its own roadmap item below).
-- [ ] Difficulty levels (none exist — no easy/normal/hard anywhere).
+      screen. **Follow-on (not blocking):** seed input (the generator already reads `config.seed`) and
+      **rival count** (procedural maps don't yet place rival hearts — needs a small generator add).
+      Difficulty is now applied globally from Settings (see the Difficulty item below), so skirmish
+      games already respect the chosen difficulty.
+- [x] Difficulty levels (Easy/Normal/Hard). Added a `Difficulty` enum (`state/settings.rs`) with a
+      `threat_scale()` (0.7 / 1.0 / 1.4), persisted in `GameSettings.difficulty` and selectable from a
+      new **DIFFICULTY** row in the Settings menu; skirmish and campaign launches stamp the chosen
+      difficulty onto the `GameState` (and it carries across the whole campaign via
+      `start_pending_campaign_mission`). **Key fix — the difficulty dial is now *live*:** the scenario
+      `threat_multiplier` was **completely inert** (stored in `active_rules` but never read by any
+      system, so the arc's per-mission difficulty curve did nothing). New
+      `GameState::effective_threat_multiplier()` = mission `threat_multiplier` × difficulty
+      `threat_scale`, and `engine::hero_spawner` now consumes it: higher threat **shortens the wave
+      interval** and **speeds garrison replenishment** (`time_until_spawn -= dt * threat`). So both the
+      global difficulty *and* every mission's authored threat finally affect gameplay. Verified:
+      `cargo test` (108 unit incl. 2 new — `difficulty_cycles_and_scales_threat` +
+      `difficulty_scales_the_effective_hero_threat`, which asserts Easy < Normal < Hard on a real
+      mission and that `threat_multiplier` is consumed) + `clippy -D warnings` pass, plus a headless
+      capture of the Settings menu showing the DIFFICULTY row. **Follow-on (not blocking):** difficulty
+      could also scale starting gold / creature stats and per-difficulty hero-party levels; today it
+      scales hero *threat* (the primary lever, and the one that was dead).
 
 ### Roster & data content
 - [ ] More monsters: 13 shipped. `docs/monsters.md` designs ~18 more (Lich, Balor, Ogre, Shadow

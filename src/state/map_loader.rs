@@ -738,6 +738,30 @@ mod tests {
     }
 
     #[test]
+    fn difficulty_scales_the_effective_hero_threat() {
+        use crate::state::settings::Difficulty;
+
+        let game_data = GameData::load().expect("game data should load");
+        // the_iron_siege authors threat_multiplier 1.35; difficulty layers on top.
+        let mut state =
+            crate::state::game_state::GameState::new_for_scenario(&game_data, "the_iron_siege");
+
+        state.difficulty = Difficulty::Normal;
+        let normal = state.effective_threat_multiplier();
+        state.difficulty = Difficulty::Easy;
+        let easy = state.effective_threat_multiplier();
+        state.difficulty = Difficulty::Hard;
+        let hard = state.effective_threat_multiplier();
+
+        // Threat is the mission dial (1.35) times the difficulty scale, and it
+        // orders Easy < Normal < Hard — proving the previously-inert
+        // threat_multiplier is now actually consumed.
+        assert!((normal - 1.35).abs() < 0.001, "normal={normal}");
+        assert!(easy < normal && normal < hard, "{easy} < {normal} < {hard}");
+        assert!(state.effective_threat_multiplier() > 0.0);
+    }
+
+    #[test]
     fn default_scenario_starts_with_markable_dig_targets_near_heart() {
         let game_data = GameData::load().expect("game data should load");
         let mut state =

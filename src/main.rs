@@ -180,6 +180,9 @@ impl Game {
                 self.phase =
                     GamePhase::SkirmishSetup(crate::state::skirmish::SkirmishConfig::default());
             }
+            "settings" => {
+                self.phase = GamePhase::Settings;
+            }
             "missionselect" => {
                 self.phase = match self.game_data.as_ref() {
                     Some(data) if data.campaigns.contains_key("deep_dominion") => {

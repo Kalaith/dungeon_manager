@@ -55,7 +55,11 @@ impl GameState {
             return None;
         }
 
-        Self::new_for_campaign_progress(game_data, self.campaign_progress.as_ref()?.clone())
+        let mut next =
+            Self::new_for_campaign_progress(game_data, self.campaign_progress.as_ref()?.clone())?;
+        // Keep the player's chosen difficulty across the whole campaign.
+        next.difficulty = self.difficulty;
+        Some(next)
     }
 }
 

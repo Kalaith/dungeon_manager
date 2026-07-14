@@ -235,6 +235,14 @@ pub fn draw_settings_menu(settings: &GameSettings) {
     let scale_label = format!("UI SCALE: {:.0}%", settings.ui_text_scale * 100.0);
     draw_menu_button(layout.ui_scale, &scale_label, true, ButtonTone::Secondary);
 
+    let difficulty_label = format!("DIFFICULTY: {}", settings.difficulty.label());
+    draw_menu_button(
+        layout.difficulty,
+        &difficulty_label,
+        true,
+        ButtonTone::Secondary,
+    );
+
     draw_menu_button(layout.back, "BACK", true, ButtonTone::Muted);
 
     let hint = "Press ESC to return";

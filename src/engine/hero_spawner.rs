@@ -22,6 +22,9 @@ pub fn update_hero_spawning(state: &mut GameState, game_data: &GameData, dt: f32
 
 /// Update the wave attack system - countdown timer and launch logic
 fn update_wave_system(state: &mut GameState, game_data: &GameData, dt: f32) {
+    // Higher threat (mission + difficulty) shortens the gap between waves.
+    let threat = state.effective_threat_multiplier();
+
     // Count currently alive attackers to track wave status
     let alive_attackers = state
         .entities
@@ -34,7 +37,7 @@ fn update_wave_system(state: &mut GameState, game_data: &GameData, dt: f32) {
     // If wave was in progress but all attackers died, mark wave as complete
     if state.hero_base.wave_in_progress && alive_attackers == 0 {
         state.hero_base.wave_in_progress = false;
-        state.hero_base.time_until_next_wave = game_data.config.hero_waves.wave_interval;
+        state.hero_base.time_until_next_wave = game_data.config.hero_waves.wave_interval / threat;
         eprintln!(
             "Wave {} defeated! Next wave in {:.0} seconds.",
             state.hero_base.current_wave_number, state.hero_base.time_until_next_wave
@@ -101,6 +104,9 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
         *hero_counts.entry(hero.hero_id.clone()).or_insert(0) += 1;
     }
 
+    // Harder difficulty / higher mission threat replenishes the garrison faster.
+    let threat = state.effective_threat_multiplier();
+
     // Iterate over buildings to check timers
     for building in &mut state.hero_base.buildings {
         // Check if building is still alive (physical entity exists)
@@ -115,7 +121,7 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
         }
 
         for timer in &mut building.spawn_timers {
-            timer.time_until_spawn -= dt;
+            timer.time_until_spawn -= dt * threat;
 
             if timer.time_until_spawn <= 0.0 {
                 // Get current count for this hero type
