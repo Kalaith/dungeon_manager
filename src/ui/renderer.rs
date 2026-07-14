@@ -66,6 +66,9 @@ impl GameRenderer {
             GamePhase::Settings => {
                 crate::ui::menus::draw_settings_menu(settings);
             }
+            GamePhase::MissionSelect(progress) => {
+                crate::ui::menus::draw_mission_select(progress, game_data.as_ref());
+            }
             GamePhase::Playing(_) => {
                 if let Some(inner_state) = state {
                     if let Some(ref data) = game_data {

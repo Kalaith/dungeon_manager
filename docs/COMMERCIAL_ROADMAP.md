@@ -183,9 +183,30 @@ everything *around* that engine:
       `required_completed: ["the_kennels"]`. So completing *either* path unlocks M8, verified from
       both branches (`either_m7_branch_re_merges_into_the_iron_siege`). No engine change was needed —
       fork *and* re-merge both work on the existing graph.
-- [ ] Between-mission screens: mission briefing/debriefing, campaign map / mission-select UI
-      (currently START GAME jumps straight into the one mission; victory shows "NEXT MISSION" that
-      never fires because there is no next mission).
+- [x] Between-mission screens: mission briefing/debriefing, campaign map / mission-select UI.
+      Done: a new **`GamePhase::MissionSelect`** — START GAME now opens a mission-select screen (it no
+      longer jumps straight into the one mission), and the previously-dead "NEXT MISSION" victory
+      button now fires because the campaign has 12+ missions. Pieces:
+      - **Model** (`data/campaign.rs`, fully tested): `MissionStatus` (Completed/Available/Locked) +
+        `CampaignProgress::mission_menu()` (every mission in authored order tagged by per-player
+        status) + `select_mission()` (guards against launching a Locked mission). Test
+        `mission_menu_tags_status_and_exposes_the_branch_choice` proves that at the M7 fork *both*
+        branch paths show as Available — so the player can finally **choose** their branch (before,
+        auto-advance always forced `restless_dead`).
+      - **Screen** (`ui/menus.rs::draw_mission_select` + `ui/menu_layout.rs::mission_select_rows`,
+        which auto-sizes rows so all 13 mission entries fit any window): renders the list with
+        status colours + the hovered/active mission's briefing; `GamePhase::MissionSelect` dispatched
+        in `ui/renderer.rs`.
+      - **Input** (`engine/input.rs::handle_mission_select`): click an unlocked row → launch it via
+        `GameState::new_for_campaign_progress`; Back/Esc → main menu.
+      Verified: `cargo test` (101 unit incl. 1 new + 28 balance) + `clippy -D warnings` pass, **and a
+      headless capture (`missionselect` scene) confirms the screen renders correctly** — 13 missions,
+      the opener Available and the rest locked, the briefing line, and a Back button. Briefing/
+      debriefing on victory is the existing game-over screen (it already shows the win + next
+      mission's briefing). **Polish left (not blocking):** a graphical node-graph "campaign map" (this
+      ships the functional list form), a dedicated pre-mission briefing modal, and carrying campaign
+      progress back to the select screen after a mid-campaign win (today NEXT MISSION auto-continues
+      linearly; the select screen is the fresh-start entry point).
 - [ ] Boss heroes / final-mission climax encounters (designed in hero_notes/ROADMAP, not built).
 - [ ] Skirmish/sandbox mode: `MapType::Rich/Hazardous/Test` and the whole procedural map generator
       exist but are **unreachable from the UI** (`input.rs:93` forces Standard). Add a skirmish

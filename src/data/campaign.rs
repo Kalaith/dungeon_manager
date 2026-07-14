@@ -122,6 +122,72 @@ impl CampaignProgress {
             .filter(|mission| self.unlocked_missions.contains(&mission.id))
             .collect()
     }
+
+    /// Status of a mission for the mission-select screen.
+    fn mission_status(&self, mission: &CampaignMission) -> MissionStatus {
+        if self.completed_missions.contains(&mission.id) {
+            MissionStatus::Completed
+        } else if self.unlocked_missions.contains(&mission.id)
+            && mission
+                .required_completed
+                .iter()
+                .all(|id| self.completed_missions.contains(id))
+        {
+            MissionStatus::Available
+        } else {
+            MissionStatus::Locked
+        }
+    }
+
+    /// The full mission list for the campaign-map / mission-select UI: every
+    /// mission in authored order, tagged with its per-player status.
+    pub fn mission_menu(&self, campaign: &CampaignDefinition) -> Vec<MissionMenuEntry> {
+        campaign
+            .missions
+            .iter()
+            .map(|mission| MissionMenuEntry {
+                id: mission.id.clone(),
+                name: mission.name.clone(),
+                scenario_id: mission.scenario_id.clone(),
+                briefing: mission.briefing.clone(),
+                status: self.mission_status(mission),
+            })
+            .collect()
+    }
+
+    /// Choose a mission to play from the mission-select screen. Only a mission
+    /// the player can actually start (Available, or a Completed one being
+    /// replayed) may be selected; a Locked mission is rejected. On success the
+    /// mission becomes `active_mission`. Returns whether the selection took.
+    pub fn select_mission(&mut self, campaign: &CampaignDefinition, mission_id: &str) -> bool {
+        let Some(mission) = campaign.missions.iter().find(|m| m.id == mission_id) else {
+            return false;
+        };
+        if matches!(self.mission_status(mission), MissionStatus::Locked) {
+            return false;
+        }
+        self.active_mission = mission_id.to_string();
+        true
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MissionStatus {
+    /// Beaten already — replayable.
+    Completed,
+    /// Unlocked and its prerequisites are met — playable now.
+    Available,
+    /// Not yet reachable.
+    Locked,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MissionMenuEntry {
+    pub id: String,
+    pub name: String,
+    pub scenario_id: String,
+    pub briefing: String,
+    pub status: MissionStatus,
 }
 
 /// Load every base-game campaign. Sourced from the build-time embedded manifest
@@ -188,6 +254,57 @@ mod tests {
             progress.unlocked_missions.contains("deep_dominion_finale"),
             "the finale must be reachable by playing the chain"
         );
+    }
+
+    #[test]
+    fn mission_menu_tags_status_and_exposes_the_branch_choice() {
+        let campaign = load_campaigns()
+            .expect("campaign json should parse")
+            .remove("deep_dominion")
+            .expect("campaign missing");
+        let mut progress = CampaignProgress::new(&campaign);
+
+        // At the start only the opener is Available; everything else is Locked.
+        let menu = progress.mission_menu(&campaign);
+        assert_eq!(menu.len(), 13);
+        let opener = menu.iter().find(|e| e.id == "dark_beginnings").unwrap();
+        assert_eq!(opener.status, MissionStatus::Available);
+        assert!(!opener.name.is_empty() && !opener.briefing.is_empty());
+        assert_eq!(
+            menu.iter()
+                .find(|e| e.id == "blood_and_iron")
+                .unwrap()
+                .status,
+            MissionStatus::Locked
+        );
+
+        // A locked mission cannot be selected...
+        assert!(!progress.select_mission(&campaign, "the_iron_siege"));
+
+        // Play up to the branch: both M7 paths become Available together — this
+        // is exactly what the mission-select screen exposes (the player picks).
+        for m in [
+            "dark_beginnings",
+            "blood_and_iron",
+            "the_long_dark",
+            "no_prisoners",
+            "whispers_in_the_circle",
+            "the_kennels",
+        ] {
+            progress.complete_mission(&campaign, m);
+        }
+        let menu = progress.mission_menu(&campaign);
+        let status = |id: &str| menu.iter().find(|e| e.id == id).unwrap().status;
+        assert_eq!(status("restless_dead"), MissionStatus::Available);
+        assert_eq!(status("pacts_and_sacrifice"), MissionStatus::Available);
+        assert_eq!(status("the_kennels"), MissionStatus::Completed);
+        assert_eq!(status("the_iron_siege"), MissionStatus::Locked);
+
+        // The player selects the temple path explicitly.
+        assert!(progress.select_mission(&campaign, "pacts_and_sacrifice"));
+        assert_eq!(progress.active_mission, "pacts_and_sacrifice");
+        // A completed mission may be replayed.
+        assert!(progress.select_mission(&campaign, "the_kennels"));
     }
 
     #[test]

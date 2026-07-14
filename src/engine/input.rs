@@ -37,6 +37,9 @@ impl InputHandler {
             GamePhase::Settings => {
                 Self::handle_settings(phase, settings);
             }
+            GamePhase::MissionSelect(_) => {
+                Self::handle_mission_select(phase, game_data);
+            }
             GamePhase::Playing(state) => {
                 if let Some(ref data) = game_data {
                     // Scenario intro overlay: freeze the game until dismissed so
@@ -93,18 +96,21 @@ impl InputHandler {
             // Force Standard Map type
             *selected_map_type = MapType::Standard;
 
-            if let Some(ref mut data) = game_data {
-                let game_state = if data.campaigns.contains_key("deep_dominion") {
-                    GameState::new_campaign_start(data, "deep_dominion")
+            if let Some(ref data) = game_data {
+                if let Some(campaign) = data.campaigns.get("deep_dominion") {
+                    // Open the mission-select screen so the player can pick which
+                    // unlocked mission to play (notably the M7 branch).
+                    let progress = crate::data::campaign::CampaignProgress::new(campaign);
+                    *phase = GamePhase::MissionSelect(progress);
                 } else {
-                    GameState::new_with_map_type(
+                    let game_state = GameState::new_with_map_type(
                         data.config.map_size.width,
                         data.config.map_size.height,
                         data,
                         selected_map_type.clone(),
-                    )
-                };
-                *phase = GamePhase::Playing(game_state);
+                    );
+                    *phase = GamePhase::Playing(game_state);
+                }
             }
             return;
         }
@@ -134,6 +140,50 @@ impl InputHandler {
         if let Some(exit) = layout.exit {
             if clicked(exit) {
                 std::process::exit(0);
+            }
+        }
+    }
+
+    fn handle_mission_select(phase: &mut GamePhase, game_data: &Option<GameData>) {
+        let GamePhase::MissionSelect(progress) = phase else {
+            return;
+        };
+        // Decouple from `phase` so we can reassign it below.
+        let progress = progress.clone();
+        let Some(data) = game_data.as_ref() else {
+            return;
+        };
+        let Some(campaign) = data.campaigns.get(&progress.campaign_id) else {
+            *phase = GamePhase::MainMenu;
+            return;
+        };
+
+        let mouse = mouse_position();
+        let mouse = vec2(mouse.0, mouse.1);
+        let clicked = |rect: macroquad::math::Rect| {
+            is_mouse_button_pressed(MouseButton::Left) && rect.contains(mouse)
+        };
+
+        if is_key_pressed(KeyCode::Escape) || clicked(crate::ui::menu_layout::mission_select_back())
+        {
+            *phase = GamePhase::MainMenu;
+            return;
+        }
+
+        let entries = progress.mission_menu(campaign);
+        let rows = crate::ui::menu_layout::mission_select_rows(entries.len());
+        for (entry, rect) in entries.iter().zip(rows.iter()) {
+            if matches!(entry.status, crate::data::campaign::MissionStatus::Locked) {
+                continue;
+            }
+            if clicked(*rect) {
+                let mut chosen = progress.clone();
+                chosen.select_mission(campaign, &entry.id);
+                *phase = match GameState::new_for_campaign_progress(data, chosen) {
+                    Some(state) => GamePhase::Playing(state),
+                    None => GamePhase::MainMenu,
+                };
+                return;
             }
         }
     }

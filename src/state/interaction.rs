@@ -4,6 +4,10 @@ pub enum GamePhase {
     Loading,
     MainMenu,
     Settings,
+    /// Campaign map / mission-select: the player picks which unlocked mission
+    /// to play (needed so the M7 branch is actually choosable). Holds the
+    /// campaign progress until a mission is chosen.
+    MissionSelect(crate::data::campaign::CampaignProgress),
     Playing(GameState),
 }
 

@@ -93,6 +93,79 @@ pub fn draw_main_menu(graphics_cache: Option<&GraphicsCache>, _selected_map_type
     );
 }
 
+/// Draw the campaign map / mission-select screen. Renders every mission in
+/// authored order tagged by status; the input layer hit-tests the same
+/// `menu_layout::mission_select_rows` so a click always maps to the visible row.
+pub fn draw_mission_select(
+    progress: &crate::data::campaign::CampaignProgress,
+    game_data: Option<&GameData>,
+) {
+    use crate::data::campaign::MissionStatus;
+
+    draw_title_block("SELECT MISSION", "Choose your next descent", 80.0);
+
+    let Some(data) = game_data else {
+        return;
+    };
+    let Some(campaign) = data.campaigns.get(&progress.campaign_id) else {
+        return;
+    };
+    let entries = progress.mission_menu(campaign);
+    let rows = menu_layout::mission_select_rows(entries.len());
+
+    let mouse = mouse_position();
+    let mouse = vec2(mouse.0, mouse.1);
+    let mut shown_briefing: Option<&str> = None;
+
+    for (i, (entry, rect)) in entries.iter().zip(rows.iter()).enumerate() {
+        let selectable = !matches!(entry.status, MissionStatus::Locked);
+        let hovered = selectable && rect.contains(mouse);
+        let (mut bg, fg, tag) = match entry.status {
+            MissionStatus::Available => (colors::PANEL, colors::TEXT, ""),
+            MissionStatus::Completed => (colors::PANEL_DARK, colors::ACCENT_GOLD, "  [cleared]"),
+            MissionStatus::Locked => (colors::PANEL_DARK, colors::TEXT_DIM, "  [locked]"),
+        };
+        if hovered {
+            bg = colors::PANEL_BORDER;
+        }
+        draw_rectangle(rect.x, rect.y, rect.w, rect.h, bg);
+        draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 1.0, colors::PANEL_BORDER);
+        let label = format!("{}.  {}{}", i + 1, entry.name, tag);
+        draw_ui_text(&label, rect.x + 16.0, rect.y + rect.h / 2.0 + 6.0, 20.0, fg);
+
+        if hovered && !entry.briefing.is_empty() {
+            shown_briefing = Some(&entry.briefing);
+        }
+    }
+
+    // Briefing for the hovered mission (falling back to the active one).
+    let briefing = shown_briefing.or_else(|| {
+        entries
+            .iter()
+            .find(|e| e.id == progress.active_mission)
+            .map(|e| e.briefing.as_str())
+            .filter(|b| !b.is_empty())
+    });
+    if let Some(text) = briefing {
+        let wrapped = fit_text_to_width(text, 720.0, 18.0);
+        let dims = measure_ui_text(&wrapped, None, 18, 1.0);
+        draw_ui_text(
+            &wrapped,
+            screen_width() / 2.0 - dims.width / 2.0,
+            screen_height() - 120.0,
+            18.0,
+            colors::TEXT_DIM,
+        );
+    }
+
+    draw_menu_button(
+        menu_layout::mission_select_back(),
+        "BACK",
+        true,
+        ButtonTone::Muted,
+    );
+}
+
 /// Draw the settings menu screen
 pub fn draw_settings_menu(settings: &GameSettings) {
     draw_rectangle(

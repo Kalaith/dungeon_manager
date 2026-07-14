@@ -176,6 +176,17 @@ impl Game {
             "mainmenu" => {
                 self.phase = GamePhase::MainMenu;
             }
+            "missionselect" => {
+                self.phase = match self.game_data.as_ref() {
+                    Some(data) if data.campaigns.contains_key("deep_dominion") => {
+                        let progress = crate::data::campaign::CampaignProgress::new(
+                            data.campaigns.get("deep_dominion").unwrap(),
+                        );
+                        GamePhase::MissionSelect(progress)
+                    }
+                    _ => GamePhase::MainMenu,
+                };
+            }
             _ => {
                 // Default ("gameplay"): jump straight into a playable dungeon
                 // so the capture photographs the main game view.
