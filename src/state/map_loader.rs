@@ -691,6 +691,31 @@ mod tests {
     }
 
     #[test]
+    fn climax_missions_boot_with_capital_and_boss_heroes() {
+        // M11–M12: assault a fortified capital defended by a named boss hero.
+        // Prove both boot, the capital is live to raze, and the boss stands in
+        // the garrison (a high-level hero entity owned by the heroes faction).
+        let game_data = GameData::load().expect("game data should load");
+        for (id, boss) in [
+            ("heavens_reach", "knight_commander"),
+            ("deep_dominion_finale", "champion_of_light"),
+        ] {
+            let state = crate::state::game_state::GameState::new_for_scenario(&game_data, id);
+            assert!(state.dungeon_heart_health > 0.0, "{id} player heart live");
+            assert!(
+                state.hero_base.enabled,
+                "{id} capital should be live to raze"
+            );
+            let has_boss = state.entities.all().any(|e| {
+                e.owner == OwnerId::Heroes
+                    && matches!(&e.entity_type,
+                        crate::state::entities::EntityType::Hero(h) if h.hero_id == boss)
+            });
+            assert!(has_boss, "{id} should field its {boss} boss");
+        }
+    }
+
+    #[test]
     fn default_scenario_starts_with_markable_dig_targets_near_heart() {
         let game_data = GameData::load().expect("game data should load");
         let mut state =

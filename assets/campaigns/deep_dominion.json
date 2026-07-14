@@ -105,8 +105,24 @@
         "scenario_id": "two_kings",
         "name": "Two Kings Under the Mountain",
         "briefing": "The deep is not big enough for three hearts. Two other keepers scrabble for the same veins — expand faster, hit harder, and leave only your heart beating in the dark.",
-        "unlocks_after": [],
+        "unlocks_after": ["heavens_reach"],
         "required_completed": ["corruption_rising"]
+      },
+      {
+        "id": "heavens_reach",
+        "scenario_id": "heavens_reach",
+        "name": "The Gates of Heaven's Reach",
+        "briefing": "Heaven's Reach has never fallen. Break the gate, scatter its captains, and carve a road to the heart of the Sunlit Kingdoms.",
+        "unlocks_after": ["deep_dominion_finale"],
+        "required_completed": ["two_kings"]
+      },
+      {
+        "id": "deep_dominion_finale",
+        "scenario_id": "deep_dominion_finale",
+        "name": "Deep Dominion",
+        "briefing": "They send their brightest against you — the Champion of Light, and all the host of the Sunlit Kingdoms. Endure their fury, then walk into their capital and put out the last light.",
+        "unlocks_after": [],
+        "required_completed": ["heavens_reach"]
       }
     ]
   }

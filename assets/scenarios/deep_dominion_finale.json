@@ -1,0 +1,107 @@
+[
+  {
+    "meta": {
+      "id": "deep_dominion_finale",
+      "name": "Deep Dominion",
+      "description": "The finale. Endure the full fury of the Sunlit Kingdoms, then break into their capital and put out the last light — the Champion of Light himself.",
+      "author": "Deep Dominion Team",
+      "intro": [
+        "They send their brightest against you now — the Champion of Light, and all the host of the Kingdoms.",
+        "First endure their fury: high priests, archmages, and knight-commanders will throw themselves at your heart.",
+        "Then, when their tide is broken, march into the capital and pull down every hall that still stands —",
+        "and put out the last light. The dominion is yours to keep. Deep, and forever."
+      ]
+    },
+    "map": {
+      "path": "assets/maps/deep_dominion_finale.json",
+      "width": 32,
+      "height": 32,
+      "biome": "underground",
+      "above_ground": false
+    },
+    "players": [
+      { "id": "keeper0", "owner": "player", "role": "human", "start_gold": 3500, "start_mana": 800, "max_creatures": 30 },
+      { "id": "heroes", "owner": "heroes", "role": "heroes", "start_gold": 0, "start_mana": 0 },
+      { "id": "keeper1", "owner": { "rival_keeper": 1 }, "role": "rival_keeper", "start_gold": 1500, "start_mana": 300, "max_creatures": 8, "ai_profile": "builder_defender" }
+    ],
+    "rules": {
+      "fog_of_war": true,
+      "starting_research": [ "training_tech", "trap_tech", "ritual_tech", "prison_tech" ],
+      "threat_multiplier": 1.6
+    },
+    "creature_pool": {
+      "goblin": 8, "orc": 8, "warlock": 6, "hellhound": 6, "spider": 6, "lizard": 6, "troll": 6, "bile_demon": 6
+    },
+    "availability": {
+      "rooms": {
+        "lair": { "available": true, "unlocked": true, "owner": "player" },
+        "hatchery": { "available": true, "unlocked": true, "owner": "player" },
+        "treasury": { "available": true, "unlocked": true, "owner": "player" },
+        "training_hall": { "available": true, "unlocked": true, "owner": "player" },
+        "guard_post": { "available": true, "unlocked": true, "owner": "player" },
+        "library": { "available": true, "unlocked": true, "owner": "player" },
+        "workshop": { "available": true, "unlocked": true, "owner": "player" },
+        "ritual_circle": { "available": true, "unlocked": true, "owner": "player" },
+        "kennel": { "available": true, "unlocked": true, "owner": "player" },
+        "barracks": { "available": true, "unlocked": true, "owner": "player" },
+        "scavenger": { "available": true, "unlocked": true, "owner": "player" },
+        "prison": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "spells": {
+        "summon_imps": { "available": true, "unlocked": true, "owner": "player" },
+        "reveal_map": { "available": true, "unlocked": true, "owner": "player" },
+        "speed_boost": { "available": true, "unlocked": true, "owner": "player" },
+        "lightning_strike": { "available": true, "unlocked": true, "owner": "player" },
+        "call_to_arms": { "available": true, "unlocked": true, "owner": "player" },
+        "iron_skin": { "available": true, "unlocked": true, "owner": "player" },
+        "corrupt_land": { "available": true, "unlocked": true, "owner": "player" },
+        "possess": { "available": true, "unlocked": true, "owner": "player" },
+        "chickenify": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "traps": {
+        "door": { "available": true, "unlocked": true, "owner": "player" },
+        "braced_door": { "available": true, "unlocked": true, "owner": "player" },
+        "magic_door": { "available": true, "unlocked": true, "owner": "player" },
+        "blowgun_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "boulder_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "alarm_trap": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "creatures": {
+        "goblin": { "available": true, "unlocked": true, "owner": "player" },
+        "orc": { "available": true, "unlocked": true, "owner": "player" },
+        "warlock": { "available": true, "unlocked": true, "owner": "player" },
+        "hellhound": { "available": true, "unlocked": true, "owner": "player" },
+        "spider": { "available": true, "unlocked": true, "owner": "player" },
+        "lizard": { "available": true, "unlocked": true, "owner": "player" },
+        "troll": { "available": true, "unlocked": true, "owner": "player" },
+        "bile_demon": { "available": true, "unlocked": true, "owner": "player" }
+      }
+    },
+    "objectives": [
+      { "type": "survive_time", "seconds": 1020.0 },
+      { "type": "destroy_all_hero_buildings" }
+    ],
+    "events": [
+      { "id": "the_fury_1", "trigger": { "type": "time_elapsed", "seconds": 150.0 },
+        "actions": [ { "action": "spawn_hero_party", "party": "the_fury_1", "x": 15, "y": 13 } ], "once": true },
+      { "id": "the_fury_2", "trigger": { "type": "time_elapsed", "seconds": 360.0 },
+        "actions": [ { "action": "spawn_hero_party", "party": "the_fury_2", "x": 23, "y": 13 } ], "once": true },
+      { "id": "the_last_light", "trigger": { "type": "time_elapsed", "seconds": 660.0 },
+        "actions": [ { "action": "spawn_hero_party", "party": "the_last_light", "x": 19, "y": 13 } ], "once": true }
+    ],
+    "hero_parties": [
+      { "id": "the_fury_1", "behavior": "attack_dungeon_heart",
+        "members": [ { "hero": "high_priest", "level": 2, "count": 1 }, { "hero": "knight_commander", "level": 2, "count": 1 }, { "hero": "archer", "level": 3, "count": 2 } ] },
+      { "id": "the_fury_2", "behavior": "attack_dungeon_heart",
+        "members": [ { "hero": "archmage", "level": 2, "count": 1 }, { "hero": "paladin", "level": 3, "count": 1 }, { "hero": "battle_cleric", "level": 3, "count": 1 } ] },
+      { "id": "the_last_light", "behavior": "attack_dungeon_heart",
+        "members": [ { "hero": "champion_of_light", "level": 3, "count": 1 }, { "hero": "high_priest", "level": 3, "count": 1 }, { "hero": "knight_commander", "level": 3, "count": 1 } ] }
+    ],
+    "rival_keepers": [
+      { "owner": { "rival_keeper": 1 }, "ai_profile": "builder_defender",
+        "starting_rooms": [ "lair", "hatchery", "treasury" ], "preferred_creatures": [ "goblin", "orc" ],
+        "min_garrison": 3, "raid_size": 3, "dig_batch": 4, "room_size": 2,
+        "attack_cooldown": 150.0, "first_attack_delay": 600.0, "attack_cooldown_growth": 1.5 }
+    ]
+  }
+]

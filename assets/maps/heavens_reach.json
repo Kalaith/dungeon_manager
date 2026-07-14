@@ -1,0 +1,172 @@
+{
+    "name": "The Gates of Heaven's Reach",
+    "description": "Break the gates of the capital's outer wall, scatter its captains, and carve a road to the heart of the Kingdoms.",
+    "width": 32,
+    "height": 32,
+    "tiles": [
+        "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+        "W..............................W",
+        "W.........XXXXXXXXXXXXXXXXXXX..W",
+        "W.........X.................X..W",
+        "W.........X..T...P...R...B..X..W",
+        "W.........X.................X..W",
+        "W.........X.................X..W",
+        "W.........X.................X..W",
+        "W.........X..C...P...E...B..X..W",
+        "W.........X.................X..W",
+        "W.........X.................X..W",
+        "W.........X.................X..W",
+        "W.........XXXXXYXXXXXXXYXXXXX..W",
+        "W..............................W",
+        "W..............................W",
+        "W..............................W",
+        "W.....AG......GGG.....GG.A.....W",
+        "W.....GG......GGG.....GG.......W",
+        "W.......M.............M........W",
+        "W..............................W",
+        "W.........GG......GG...........W",
+        "W.........GG......GG...........W",
+        "W...........A..................W",
+        "W..............................W",
+        "W..GG..M.......................W",
+        "W..............................W",
+        "W..............................W",
+        "W...H.GG................GG.K...W",
+        "W..............................W",
+        "W..............................W",
+        "W..............................W",
+        "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    ],
+    "legend": {
+        "W": "bedrock",
+        ".": "earth",
+        "G": "gold_vein",
+        "M": "gem_seam",
+        "A": "mana_crystal",
+        "H": "dungeon_heart",
+        "K": "dungeon_heart",
+        "T": "town_hall",
+        "B": "barracks",
+        "C": "church",
+        "R": "armory",
+        "P": "mage_tower",
+        "E": "archery_range",
+        "X": "hero_wall",
+        "Y": "hero_gate"
+    },
+    "tile_owners": [
+        {
+            "owner": "heroes",
+            "x": 10,
+            "y": 2,
+            "width": 19,
+            "height": 11
+        },
+        {
+            "owner": "keeper1",
+            "x": 27,
+            "y": 27,
+            "width": 1,
+            "height": 1
+        }
+    ],
+    "rival_keepers": [
+        {
+            "owner": {
+                "rival_keeper": 1
+            },
+            "ai_profile": "builder_defender",
+            "desired_rooms": [
+                "lair",
+                "hatchery",
+                "treasury"
+            ],
+            "preferred_creatures": [
+                "goblin",
+                "orc"
+            ],
+            "min_garrison": 3,
+            "raid_size": 3,
+            "dig_batch": 4,
+            "room_size": 2,
+            "attack_cooldown": 150.0,
+            "first_attack_delay": 600.0,
+            "attack_cooldown_growth": 1.5
+        }
+    ],
+    "entities": [
+        {
+            "id": "imp",
+            "x": 5,
+            "y": 27,
+            "owner": "player"
+        },
+        {
+            "id": "imp",
+            "x": 4,
+            "y": 26,
+            "owner": "player"
+        },
+        {
+            "id": "imp",
+            "x": 6,
+            "y": 26,
+            "owner": "player"
+        },
+        {
+            "id": "imp",
+            "x": 5,
+            "y": 25,
+            "owner": "player"
+        },
+        {
+            "id": "goblin",
+            "x": 26,
+            "y": 27,
+            "owner": "keeper1",
+            "level": 1
+        },
+        {
+            "id": "orc",
+            "x": 27,
+            "y": 26,
+            "owner": "keeper1",
+            "level": 1
+        },
+        {
+            "id": "knight_commander",
+            "x": 19,
+            "y": 6,
+            "owner": "heroes",
+            "level": 3
+        },
+        {
+            "id": "paladin",
+            "x": 15,
+            "y": 6,
+            "owner": "heroes",
+            "level": 3
+        },
+        {
+            "id": "high_priest",
+            "x": 23,
+            "y": 6,
+            "owner": "heroes",
+            "level": 2
+        },
+        {
+            "id": "archer",
+            "x": 17,
+            "y": 10,
+            "owner": "heroes",
+            "level": 2
+        },
+        {
+            "id": "archer",
+            "x": 21,
+            "y": 10,
+            "owner": "heroes",
+            "level": 2
+        }
+    ]
+}

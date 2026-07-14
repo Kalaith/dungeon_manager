@@ -45,14 +45,15 @@ everything *around* that engine:
       unlock graph that exercises the never-branched `unlocks_after`/`required_completed` logic. This
       is the design deliverable; *authoring* each mission's map + scenario JSON + event scripting is
       the next item below.
-- [ ] Author the missions: one map + one scenario JSON + event scripting each. The event system
+- [x] Author the missions: one map + one scenario JSON + event scripting each. The event system
       (triggers: TimeElapsed, ObjectiveComplete, RoomClaimed, ActionPointReached, DungeonBreached;
-      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 10 of 12
-      authored — all of Acts I–II (M1–M8) + Act III M9–M10** (`docs/CAMPAIGN_ARC.md` arc). Each
-      mission is a hand-authored 32×32 map + scenario JSON + event scripting, wired into
+      actions: unlocks, spawns, rules) is done — this was pure content work. **DONE: the full
+      12-slot arc from `docs/CAMPAIGN_ARC.md` is authored (13 mission *entries* — the M7 slot is a
+      two-way branch)**, each a hand-authored 32×32 map + scenario JSON + event scripting wired into
       `deep_dominion.json`. The chain is linear M1→…→M6, then **M6 forks to both M7a and M7b**, and
-      **both branches re-merge into M8**, then linear M8→M9→M10 (the fork/re-merge are the first real
-      use of the never-branched unlock graph; see the "Exercise the unlock graph" item below):
+      **both branches re-merge into M8**, then linear M8→M9→M10→M11→M12 (the fork/re-merge are the
+      first real use of the never-branched unlock graph; see the "Exercise the unlock graph" item
+      below):
       - **M1 `dark_beginnings`** (pre-existing): dig→build→recruit→survive.
       - **M2 `blood_and_iron`**: survive-720s→raze-outpost; a walled hero outpost w/ single gate;
         training_hall + guard_post + braced_door/blowgun_trap intro; two scripted hero waves
@@ -112,6 +113,21 @@ everything *around* that engine:
         in `#[cfg(test)]` blocks. So M10 ships as a real duel (win adapted from the arc's unsatisfiable
         `destroy_heart(rival)` to survive + out-earn). NB: the §2 "support multiple simultaneous
         rivals" item is about rival-AI *economy depth*, which is still shallow — the *count* works.
+      - **M11 `heavens_reach`** (Act III — capital assault): breach a large double-walled capital
+        (8 halls, two gates) defended by a **knight_commander boss** (a lvl-3 hero entity in the
+        garrison) plus paladin/high_priest/archmage relief columns; survive-900s + raze the capital;
+        threat 1.5.
+      - **M12 `deep_dominion_finale`** (finale): endure the full host (high_priest/archmage/
+        knight_commander waves), then break the capital and its **Champion of Light boss** (lvl-3
+        champion_of_light + high_priest + knight_commander in the last wave); survive-1020s + raze;
+        threat 1.6, cap-30 army. The campaign ends here (`unlocks_after: []`).
+      **Note (boss objectives):** the arc gave M11/M12 a "defeat the named boss" *custom* objective.
+      Like M4/M7's deferrals, there's no "party/entity defeated" trigger to fire a `complete_objective`
+      event, so the boss can't be a *separate* hard objective. Instead each boss is a high-level named
+      hero placed in the capital garrison (+ in the final wave) that must be beaten *in practice* to
+      raze the halls behind it; the win stays survive + `destroy_all_hero_buildings`. A
+      party-defeated trigger is a future §2 engine feature that would promote "defeat the boss" to a
+      first-class objective.
       **Note (deferred objectives):** the arc gave M7a a `destroy_heart(rival)` win and M7b a
       "N sacrifices" custom win. Both are currently *unsatisfiable* — a rival keeper's heart is a map
       *tile*, not the `Structure` entity `destroy_heart` scans for (only the player heart has tracked
@@ -128,14 +144,18 @@ everything *around* that engine:
       knight_commander), the branch is tested (M6 unlocks *both* paths), and **the re-merge is tested
       from *both* branches** (`either_m7_branch_re_merges_into_the_iron_siege` + the graveyard-path
       assertion), the Act III opener M9 boots as an offense mission (single raze objective + a
-      six-hall town), and **M10 loads two mutually-hostile rivals with the player heart still
-      correctly identified among three hearts**
-      (`two_kings_boots_with_two_hostile_rivals_and_a_clear_player_heart`). `cargo test` (98 unit incl.
-      17 new + 28 balance) + `clippy -D warnings` pass. Remaining: **M11–M12** (the capital-assault
-      climax + finale). **Authoring note:** M11–M12 need boss-hero encounters — these can be
-      prototyped as elite, high-level named parties via `spawn_hero_party` (champion_of_light,
-      knight_commander, high_priest, archmage all exist) before any bespoke boss AI, so they are
-      authorable now without engine work.
+      six-hall town), **M10 loads two mutually-hostile rivals with the player heart still correctly
+      identified among three hearts**
+      (`two_kings_boots_with_two_hostile_rivals_and_a_clear_player_heart`), and **M11/M12 boot with a
+      live capital and their named boss hero present**
+      (`climax_missions_boot_with_capital_and_boss_heroes`). A completeness test confirms all 13
+      mission entries load, the finale is terminal, and the whole chain is playable end-to-end
+      (`deep_dominion_campaign_is_complete_thirteen_entries`). `cargo test` (**100 unit** incl. 21 new
+      + 28 balance) + `clippy -D warnings` pass. **The campaign is content-complete.** Follow-on
+      polish (not blocking): the deferred objective types above (capture/conversion/sacrifice/rival-
+      heart/boss-defeated/fail-on-timeout) would each become a first-class win condition given a small
+      §2 engine addition; and balance/pacing wants the §6 playtest program now that all 12 slots
+      exist.
 - [x] **Un-hardcode content loading**: `data/campaign.rs:128` and `data/scenario.rs:350` used to
       `include_str!` exactly one campaign/scenario file. Now manifest-driven: a new `build.rs` scans
       `assets/campaigns/` and `assets/scenarios/` at build time and generates

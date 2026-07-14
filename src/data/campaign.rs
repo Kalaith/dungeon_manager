@@ -147,6 +147,50 @@ mod tests {
     use super::*;
 
     #[test]
+    fn deep_dominion_campaign_is_complete_thirteen_entries() {
+        // The full 12-slot arc is authored — 13 mission *entries* because the M7
+        // slot is a two-way branch (restless_dead + pacts_and_sacrifice). The
+        // finale is terminal, and playing the chain (graveyard branch) reaches it.
+        let campaign = load_campaigns()
+            .expect("campaign json should parse")
+            .remove("deep_dominion")
+            .expect("campaign missing");
+        assert_eq!(
+            campaign.missions.len(),
+            13,
+            "12 arc slots + the extra branch mission"
+        );
+
+        let finale = campaign
+            .missions
+            .iter()
+            .find(|m| m.id == "deep_dominion_finale")
+            .expect("finale present");
+        assert!(finale.unlocks_after.is_empty(), "finale is terminal");
+
+        let mut progress = CampaignProgress::new(&campaign);
+        for m in [
+            "dark_beginnings",
+            "blood_and_iron",
+            "the_long_dark",
+            "no_prisoners",
+            "whispers_in_the_circle",
+            "the_kennels",
+            "restless_dead",
+            "the_iron_siege",
+            "corruption_rising",
+            "two_kings",
+            "heavens_reach",
+        ] {
+            progress.complete_mission(&campaign, m);
+        }
+        assert!(
+            progress.unlocked_missions.contains("deep_dominion_finale"),
+            "the finale must be reachable by playing the chain"
+        );
+    }
+
+    #[test]
     fn embedded_campaign_parses() {
         let campaigns = load_campaigns().expect("campaign json should parse");
         let campaign = campaigns

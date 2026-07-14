@@ -1,0 +1,101 @@
+[
+  {
+    "meta": {
+      "id": "heavens_reach",
+      "name": "The Gates of Heaven's Reach",
+      "description": "The penultimate assault. Breach the double-walled capital, endure its captains and a knight-commander boss, and raze every hall.",
+      "author": "Deep Dominion Team",
+      "intro": [
+        "Heaven's Reach has never fallen. Its walls are old, its captains proud, its gates barred against the dark.",
+        "A knight-commander holds the inner court, and paladins and a high priest stand ready at his side.",
+        "Bring your whole host — beasts, demons, and dark magic — breach the gates, and scatter the captains.",
+        "Pull down every hall of the outer capital and carve a road to the very heart of the Sunlit Kingdoms."
+      ]
+    },
+    "map": {
+      "path": "assets/maps/heavens_reach.json",
+      "width": 32,
+      "height": 32,
+      "biome": "underground",
+      "above_ground": false
+    },
+    "players": [
+      { "id": "keeper0", "owner": "player", "role": "human", "start_gold": 3200, "start_mana": 700, "max_creatures": 28 },
+      { "id": "heroes", "owner": "heroes", "role": "heroes", "start_gold": 0, "start_mana": 0 },
+      { "id": "keeper1", "owner": { "rival_keeper": 1 }, "role": "rival_keeper", "start_gold": 1500, "start_mana": 300, "max_creatures": 8, "ai_profile": "builder_defender" }
+    ],
+    "rules": {
+      "fog_of_war": true,
+      "starting_research": [ "training_tech", "trap_tech", "ritual_tech", "prison_tech" ],
+      "threat_multiplier": 1.5
+    },
+    "creature_pool": {
+      "goblin": 8, "orc": 8, "warlock": 6, "hellhound": 6, "spider": 5, "lizard": 5, "troll": 6, "bile_demon": 5
+    },
+    "availability": {
+      "rooms": {
+        "lair": { "available": true, "unlocked": true, "owner": "player" },
+        "hatchery": { "available": true, "unlocked": true, "owner": "player" },
+        "treasury": { "available": true, "unlocked": true, "owner": "player" },
+        "training_hall": { "available": true, "unlocked": true, "owner": "player" },
+        "guard_post": { "available": true, "unlocked": true, "owner": "player" },
+        "library": { "available": true, "unlocked": true, "owner": "player" },
+        "workshop": { "available": true, "unlocked": true, "owner": "player" },
+        "ritual_circle": { "available": true, "unlocked": true, "owner": "player" },
+        "kennel": { "available": true, "unlocked": true, "owner": "player" },
+        "barracks": { "available": true, "unlocked": true, "owner": "player" },
+        "scavenger": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "spells": {
+        "summon_imps": { "available": true, "unlocked": true, "owner": "player" },
+        "reveal_map": { "available": true, "unlocked": true, "owner": "player" },
+        "speed_boost": { "available": true, "unlocked": true, "owner": "player" },
+        "lightning_strike": { "available": true, "unlocked": true, "owner": "player" },
+        "call_to_arms": { "available": true, "unlocked": true, "owner": "player" },
+        "iron_skin": { "available": true, "unlocked": true, "owner": "player" },
+        "corrupt_land": { "available": true, "unlocked": true, "owner": "player" },
+        "possess": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "traps": {
+        "door": { "available": true, "unlocked": true, "owner": "player" },
+        "braced_door": { "available": true, "unlocked": true, "owner": "player" },
+        "magic_door": { "available": true, "unlocked": true, "owner": "player" },
+        "blowgun_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "boulder_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "alarm_trap": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "creatures": {
+        "goblin": { "available": true, "unlocked": true, "owner": "player" },
+        "orc": { "available": true, "unlocked": true, "owner": "player" },
+        "warlock": { "available": true, "unlocked": true, "owner": "player" },
+        "hellhound": { "available": true, "unlocked": true, "owner": "player" },
+        "spider": { "available": true, "unlocked": true, "owner": "player" },
+        "lizard": { "available": true, "unlocked": true, "owner": "player" },
+        "troll": { "available": true, "unlocked": true, "owner": "player" },
+        "bile_demon": { "available": true, "unlocked": true, "owner": "player" }
+      }
+    },
+    "objectives": [
+      { "type": "survive_time", "seconds": 900.0 },
+      { "type": "destroy_all_hero_buildings" }
+    ],
+    "events": [
+      { "id": "captains_sortie", "trigger": { "type": "time_elapsed", "seconds": 240.0 },
+        "actions": [ { "action": "spawn_hero_party", "party": "captains_sortie", "x": 15, "y": 13 } ], "once": true },
+      { "id": "the_relief_column", "trigger": { "type": "time_elapsed", "seconds": 540.0 },
+        "actions": [ { "action": "spawn_hero_party", "party": "relief_column", "x": 23, "y": 13 } ], "once": true }
+    ],
+    "hero_parties": [
+      { "id": "captains_sortie", "behavior": "attack_dungeon_heart",
+        "members": [ { "hero": "knight_commander", "level": 2, "count": 1 }, { "hero": "paladin", "level": 2, "count": 1 }, { "hero": "archer", "level": 3, "count": 2 } ] },
+      { "id": "relief_column", "behavior": "attack_dungeon_heart",
+        "members": [ { "hero": "high_priest", "level": 2, "count": 1 }, { "hero": "archmage", "level": 2, "count": 1 }, { "hero": "knight", "level": 3, "count": 2 } ] }
+    ],
+    "rival_keepers": [
+      { "owner": { "rival_keeper": 1 }, "ai_profile": "builder_defender",
+        "starting_rooms": [ "lair", "hatchery", "treasury" ], "preferred_creatures": [ "goblin", "orc" ],
+        "min_garrison": 3, "raid_size": 3, "dig_batch": 4, "room_size": 2,
+        "attack_cooldown": 150.0, "first_attack_delay": 600.0, "attack_cooldown_growth": 1.5 }
+    ]
+  }
+]
