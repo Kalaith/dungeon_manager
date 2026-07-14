@@ -653,6 +653,44 @@ mod tests {
     }
 
     #[test]
+    fn two_kings_boots_with_two_hostile_rivals_and_a_clear_player_heart() {
+        // M10 is the two-rival duel. Verify the multi-rival path end to end:
+        // two RivalKeeper runtimes load, both rival hearts are enemy-owned, the
+        // player's heart is still unambiguously identified among THREE hearts,
+        // and the two rivals are mutually hostile.
+        let game_data = GameData::load().expect("game data should load");
+
+        let runtime = load_rival_keeper_runtime("assets/maps/two_kings.json")
+            .expect("rival runtime should load");
+        assert_eq!(runtime.keepers.len(), 2, "both rival keepers should load");
+        assert!(runtime
+            .keepers
+            .iter()
+            .any(|k| k.owner == OwnerId::RivalKeeper(1)));
+        assert!(runtime
+            .keepers
+            .iter()
+            .any(|k| k.owner == OwnerId::RivalKeeper(2)));
+        // Rivals fight each other, not just the player.
+        assert!(OwnerId::RivalKeeper(1).is_hostile_to(&OwnerId::RivalKeeper(2)));
+
+        let state = crate::state::game_state::GameState::new_for_scenario(&game_data, "two_kings");
+        // The player's heart is found (Ownership::Player) despite three hearts.
+        let player_heart = state
+            .find_dungeon_heart_position()
+            .expect("player heart must be identifiable among three hearts");
+        assert_eq!(
+            state.get_tile(player_heart).unwrap().ownership,
+            Ownership::Player
+        );
+        assert!(state.dungeon_heart_health > 0.0);
+        // No hero base in this pure keeper duel; win is survive + out-earn.
+        assert!(!state.hero_base.enabled);
+        let scenario = game_data.scenarios.get("two_kings").unwrap();
+        assert_eq!(scenario.objectives.len(), 2, "survive + gather-gold");
+    }
+
+    #[test]
     fn default_scenario_starts_with_markable_dig_targets_near_heart() {
         let game_data = GameData::load().expect("game data should load");
         let mut state =

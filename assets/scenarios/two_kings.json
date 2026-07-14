@@ -1,0 +1,186 @@
+[
+  {
+    "meta": {
+      "id": "two_kings",
+      "name": "Two Kings Under the Mountain",
+      "description": "A three-way keeper duel. Out-expand and outlast two rival keepers racing you for the deep veins — no heroes, just hungry hearts in the dark.",
+      "author": "Deep Dominion Team",
+      "intro": [
+        "The deep is not big enough for three hearts. Two other keepers scrabble for the same veins,",
+        "and neither will stop digging until the others are cold. This is a war of tempo, not of walls —",
+        "expand faster, mine deeper, and field a horde big enough to weather two enemies at once.",
+        "Endure their raids, out-earn them both, and leave only your heart beating in the mountain."
+      ]
+    },
+    "map": {
+      "path": "assets/maps/two_kings.json",
+      "width": 32,
+      "height": 32,
+      "biome": "underground",
+      "above_ground": false
+    },
+    "players": [
+      {
+        "id": "keeper0",
+        "owner": "player",
+        "role": "human",
+        "start_gold": 3000,
+        "start_mana": 600,
+        "max_creatures": 25
+      },
+      {
+        "id": "heroes",
+        "owner": "heroes",
+        "role": "heroes",
+        "start_gold": 0,
+        "start_mana": 0
+      },
+      {
+        "id": "keeper1",
+        "owner": {
+          "rival_keeper": 1
+        },
+        "role": "rival_keeper",
+        "start_gold": 2600,
+        "start_mana": 400,
+        "max_creatures": 16,
+        "ai_profile": "builder_attacker"
+      },
+      {
+        "id": "keeper2",
+        "owner": {
+          "rival_keeper": 2
+        },
+        "role": "rival_keeper",
+        "start_gold": 2600,
+        "start_mana": 400,
+        "max_creatures": 16,
+        "ai_profile": "builder_attacker"
+      }
+    ],
+    "rules": {
+      "fog_of_war": true,
+      "starting_research": [
+        "training_tech",
+        "trap_tech",
+        "ritual_tech",
+        "prison_tech"
+      ],
+      "threat_multiplier": 1.3
+    },
+    "creature_pool": {
+      "goblin": 8,
+      "orc": 8,
+      "warlock": 5,
+      "hellhound": 6,
+      "spider": 5,
+      "lizard": 5,
+      "troll": 6,
+      "bile_demon": 4
+    },
+    "availability": {
+      "rooms": {
+        "lair": { "available": true, "unlocked": true, "owner": "player" },
+        "hatchery": { "available": true, "unlocked": true, "owner": "player" },
+        "treasury": { "available": true, "unlocked": true, "owner": "player" },
+        "training_hall": { "available": true, "unlocked": true, "owner": "player" },
+        "guard_post": { "available": true, "unlocked": true, "owner": "player" },
+        "library": { "available": true, "unlocked": true, "owner": "player" },
+        "workshop": { "available": true, "unlocked": true, "owner": "player" },
+        "ritual_circle": { "available": true, "unlocked": true, "owner": "player" },
+        "kennel": { "available": true, "unlocked": true, "owner": "player" },
+        "barracks": { "available": true, "unlocked": true, "owner": "player" },
+        "scavenger": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "spells": {
+        "summon_imps": { "available": true, "unlocked": true, "owner": "player" },
+        "reveal_map": { "available": true, "unlocked": true, "owner": "player" },
+        "speed_boost": { "available": true, "unlocked": true, "owner": "player" },
+        "lightning_strike": { "available": true, "unlocked": true, "owner": "player" },
+        "call_to_arms": { "available": true, "unlocked": true, "owner": "player" },
+        "iron_skin": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "traps": {
+        "door": { "available": true, "unlocked": true, "owner": "player" },
+        "braced_door": { "available": true, "unlocked": true, "owner": "player" },
+        "magic_door": { "available": true, "unlocked": true, "owner": "player" },
+        "blowgun_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "boulder_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "alarm_trap": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "creatures": {
+        "goblin": { "available": true, "unlocked": true, "owner": "player" },
+        "orc": { "available": true, "unlocked": true, "owner": "player" },
+        "warlock": { "available": true, "unlocked": true, "owner": "player" },
+        "hellhound": { "available": true, "unlocked": true, "owner": "player" },
+        "spider": { "available": true, "unlocked": true, "owner": "player" },
+        "lizard": { "available": true, "unlocked": true, "owner": "player" },
+        "troll": { "available": true, "unlocked": true, "owner": "player" },
+        "bile_demon": { "available": true, "unlocked": true, "owner": "player" }
+      }
+    },
+    "objectives": [
+      {
+        "type": "survive_time",
+        "seconds": 900.0
+      },
+      {
+        "type": "gather_resource",
+        "resource": "gold",
+        "amount": 8000
+      }
+    ],
+    "events": [],
+    "hero_parties": [],
+    "rival_keepers": [
+      {
+        "owner": {
+          "rival_keeper": 1
+        },
+        "ai_profile": "builder_attacker",
+        "starting_rooms": [
+          "lair",
+          "hatchery",
+          "treasury",
+          "training_hall"
+        ],
+        "preferred_creatures": [
+          "goblin",
+          "orc",
+          "hellhound"
+        ],
+        "min_garrison": 5,
+        "raid_size": 4,
+        "dig_batch": 6,
+        "room_size": 2,
+        "attack_cooldown": 80.0,
+        "first_attack_delay": 150.0,
+        "attack_cooldown_growth": 1.4
+      },
+      {
+        "owner": {
+          "rival_keeper": 2
+        },
+        "ai_profile": "builder_attacker",
+        "starting_rooms": [
+          "lair",
+          "hatchery",
+          "treasury",
+          "training_hall"
+        ],
+        "preferred_creatures": [
+          "goblin",
+          "orc",
+          "troll"
+        ],
+        "min_garrison": 5,
+        "raid_size": 4,
+        "dig_batch": 6,
+        "room_size": 2,
+        "attack_cooldown": 80.0,
+        "first_attack_delay": 150.0,
+        "attack_cooldown_growth": 1.4
+      }
+    ]
+  }
+]

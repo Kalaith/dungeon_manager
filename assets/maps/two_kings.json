@@ -1,0 +1,170 @@
+{
+    "name": "Two Kings Under the Mountain",
+    "description": "Two rival keepers scrabble for the same veins. Expand faster, hit harder, and leave only your heart beating.",
+    "width": 32,
+    "height": 32,
+    "tiles": [
+        "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+        "W..............................W",
+        "W..............................W",
+        "W.....G........................W",
+        "W...H.G.........A..............W",
+        "W..............................W",
+        "W..GG..M...M........M..........W",
+        "W..............................W",
+        "W.............GGGG.............W",
+        "W.............GGGG.............W",
+        "W..............................W",
+        "W..............................W",
+        "W..............................W",
+        "W..............................W",
+        "W.......GG....GGGG....GG.......W",
+        "W.......GG....GGGG....GG.......W",
+        "W...A...GG....GGGG....GG...A...W",
+        "W..............................W",
+        "W..............................W",
+        "W..............................W",
+        "W..............................W",
+        "W..............................W",
+        "W.............GGGG.............W",
+        "W.............GGGG.............W",
+        "W..GG......................G...W",
+        "W..........M........M......G...W",
+        "W..............................W",
+        "W...K.GG........A.......GG.L...W",
+        "W..............................W",
+        "W..............................W",
+        "W..............................W",
+        "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    ],
+    "legend": {
+        "W": "bedrock",
+        ".": "earth",
+        "G": "gold_vein",
+        "M": "gem_seam",
+        "A": "mana_crystal",
+        "H": "dungeon_heart",
+        "K": "dungeon_heart",
+        "L": "dungeon_heart"
+    },
+    "tile_owners": [
+        {
+            "owner": "keeper1",
+            "x": 4,
+            "y": 27,
+            "width": 1,
+            "height": 1
+        },
+        {
+            "owner": "keeper2",
+            "x": 27,
+            "y": 27,
+            "width": 1,
+            "height": 1
+        }
+    ],
+    "rival_keepers": [
+        {
+            "owner": {
+                "rival_keeper": 1
+            },
+            "ai_profile": "builder_attacker",
+            "desired_rooms": [
+                "lair",
+                "hatchery",
+                "treasury",
+                "training_hall"
+            ],
+            "preferred_creatures": [
+                "goblin",
+                "orc",
+                "hellhound"
+            ],
+            "min_garrison": 5,
+            "raid_size": 4,
+            "dig_batch": 6,
+            "room_size": 2,
+            "attack_cooldown": 80.0,
+            "first_attack_delay": 150.0,
+            "attack_cooldown_growth": 1.4
+        },
+        {
+            "owner": {
+                "rival_keeper": 2
+            },
+            "ai_profile": "builder_attacker",
+            "desired_rooms": [
+                "lair",
+                "hatchery",
+                "treasury",
+                "training_hall"
+            ],
+            "preferred_creatures": [
+                "goblin",
+                "orc",
+                "troll"
+            ],
+            "min_garrison": 5,
+            "raid_size": 4,
+            "dig_batch": 6,
+            "room_size": 2,
+            "attack_cooldown": 80.0,
+            "first_attack_delay": 150.0,
+            "attack_cooldown_growth": 1.4
+        }
+    ],
+    "entities": [
+        {
+            "id": "imp",
+            "x": 5,
+            "y": 4,
+            "owner": "player"
+        },
+        {
+            "id": "imp",
+            "x": 4,
+            "y": 5,
+            "owner": "player"
+        },
+        {
+            "id": "imp",
+            "x": 6,
+            "y": 5,
+            "owner": "player"
+        },
+        {
+            "id": "imp",
+            "x": 5,
+            "y": 6,
+            "owner": "player"
+        },
+        {
+            "id": "goblin",
+            "x": 5,
+            "y": 27,
+            "owner": "keeper1",
+            "level": 1
+        },
+        {
+            "id": "orc",
+            "x": 4,
+            "y": 26,
+            "owner": "keeper1",
+            "level": 1
+        },
+        {
+            "id": "goblin",
+            "x": 26,
+            "y": 27,
+            "owner": "keeper2",
+            "level": 1
+        },
+        {
+            "id": "orc",
+            "x": 27,
+            "y": 26,
+            "owner": "keeper2",
+            "level": 1
+        }
+    ]
+}

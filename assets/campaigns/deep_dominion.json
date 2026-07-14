@@ -97,8 +97,16 @@
         "scenario_id": "corruption_rising",
         "name": "Corruption Rising",
         "briefing": "No more waiting in the dark. March on the border town, corrupt its fields, pull down its church and its mage-spire, and let the surface feel the ground rot beneath them.",
-        "unlocks_after": [],
+        "unlocks_after": ["two_kings"],
         "required_completed": ["the_iron_siege"]
+      },
+      {
+        "id": "two_kings",
+        "scenario_id": "two_kings",
+        "name": "Two Kings Under the Mountain",
+        "briefing": "The deep is not big enough for three hearts. Two other keepers scrabble for the same veins — expand faster, hit harder, and leave only your heart beating in the dark.",
+        "unlocks_after": [],
+        "required_completed": ["corruption_rising"]
       }
     ]
   }

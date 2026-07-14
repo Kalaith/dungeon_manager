@@ -47,12 +47,12 @@ everything *around* that engine:
       the next item below.
 - [ ] Author the missions: one map + one scenario JSON + event scripting each. The event system
       (triggers: TimeElapsed, ObjectiveComplete, RoomClaimed, ActionPointReached, DungeonBreached;
-      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 9 of 12
-      authored — all of Acts I–II (M1–M8) + Act III opener (M9)** (`docs/CAMPAIGN_ARC.md` arc). Each
+      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 10 of 12
+      authored — all of Acts I–II (M1–M8) + Act III M9–M10** (`docs/CAMPAIGN_ARC.md` arc). Each
       mission is a hand-authored 32×32 map + scenario JSON + event scripting, wired into
       `deep_dominion.json`. The chain is linear M1→…→M6, then **M6 forks to both M7a and M7b**, and
-      **both branches re-merge into M8**, then linear M8→M9 (the fork/re-merge are the first real use
-      of the never-branched unlock graph; see the "Exercise the unlock graph" item below):
+      **both branches re-merge into M8**, then linear M8→M9→M10 (the fork/re-merge are the first real
+      use of the never-branched unlock graph; see the "Exercise the unlock graph" item below):
       - **M1 `dark_beginnings`** (pre-existing): dig→build→recruit→survive.
       - **M2 `blood_and_iron`**: survive-720s→raze-outpost; a walled hero outpost w/ single gate;
         training_hall + guard_post + braced_door/blowgun_trap intro; two scripted hero waves
@@ -101,6 +101,17 @@ everything *around* that engine:
         (corrupt_land, possess, and chickenify via a `room_claimed` library→research event); a mastery
         mission with no new rooms. (The arc's "raze within a time limit" fail-on-timeout isn't
         expressible — there's no lose-on-time objective — so M9 uses raze-the-town as the pure win.)
+      - **M10 `two_kings`** (rival-keeper duel): a genuine **two-rival** mission — a three-heart map
+        (player + RivalKeeper(1) + RivalKeeper(2)) with no hero base; win = survive-900s +
+        `gather_resource` 8000 gold (out-expand and outlast both). **Multi-rival turned out to be
+        already supported** — I'd flagged it as blocked, but investigation showed the sim handles it:
+        `OwnerId::RivalKeeper(u8)` (any index), the faction table already makes two rivals *mutually*
+        hostile (`RivalKeeper(a),RivalKeeper(b) => a!=b`), `owner_from_label` parses `keeper2`, the
+        rival AI iterates *all* keepers, and `find_dungeon_heart_position` disambiguates the player
+        heart by `Ownership::Player` even among three hearts. The only `RivalKeeper(1)` hardcodes are
+        in `#[cfg(test)]` blocks. So M10 ships as a real duel (win adapted from the arc's unsatisfiable
+        `destroy_heart(rival)` to survive + out-earn). NB: the §2 "support multiple simultaneous
+        rivals" item is about rival-AI *economy depth*, which is still shallow — the *count* works.
       **Note (deferred objectives):** the arc gave M7a a `destroy_heart(rival)` win and M7b a
       "N sacrifices" custom win. Both are currently *unsatisfiable* — a rival keeper's heart is a map
       *tile*, not the `Structure` entity `destroy_heart` scans for (only the player heart has tracked
@@ -116,12 +127,15 @@ everything *around* that engine:
       active), all references validate (the guard test auto-covers new heroes/creatures incl.
       knight_commander), the branch is tested (M6 unlocks *both* paths), and **the re-merge is tested
       from *both* branches** (`either_m7_branch_re_merges_into_the_iron_siege` + the graveyard-path
-      assertion), and the Act III opener M9 boots as an offense mission (single raze objective + a
-      six-hall town). `cargo test` (97 unit incl. 15 new + 28 balance) + `clippy -D warnings` pass.
-      Remaining: M10–M12. **Authoring note:** M10 (rival-keeper duel) needs multiple simultaneous
-      rivals — §2 engine work; only one rival per scenario is wired today, so M10 either waits on that
-      or ships as a single tougher rival. M11–M12 need boss-hero encounters, which can be prototyped
-      as elite named parties via `spawn_hero_party` before any bespoke boss AI.
+      assertion), the Act III opener M9 boots as an offense mission (single raze objective + a
+      six-hall town), and **M10 loads two mutually-hostile rivals with the player heart still
+      correctly identified among three hearts**
+      (`two_kings_boots_with_two_hostile_rivals_and_a_clear_player_heart`). `cargo test` (98 unit incl.
+      17 new + 28 balance) + `clippy -D warnings` pass. Remaining: **M11–M12** (the capital-assault
+      climax + finale). **Authoring note:** M11–M12 need boss-hero encounters — these can be
+      prototyped as elite, high-level named parties via `spawn_hero_party` (champion_of_light,
+      knight_commander, high_priest, archmage all exist) before any bespoke boss AI, so they are
+      authorable now without engine work.
 - [x] **Un-hardcode content loading**: `data/campaign.rs:128` and `data/scenario.rs:350` used to
       `include_str!` exactly one campaign/scenario file. Now manifest-driven: a new `build.rs` scans
       `assets/campaigns/` and `assets/scenarios/` at build time and generates

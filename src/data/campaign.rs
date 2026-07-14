@@ -272,6 +272,13 @@ mod tests {
             progress.unlocked_missions.contains("corruption_rising"),
             "completing M8 should unlock the Act III offense mission"
         );
+
+        // ...and M9 unlocks the two-rival duel (M10).
+        progress.complete_mission(&campaign, "corruption_rising");
+        assert!(
+            progress.unlocked_missions.contains("two_kings"),
+            "completing M9 should unlock the rival-keeper duel"
+        );
     }
 
     #[test]
