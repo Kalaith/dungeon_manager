@@ -206,6 +206,26 @@ mod tests {
             progress.active_mission, "the_kennels",
             "completing mission 5 should advance to mission 6"
         );
+
+        // The branch: completing M6 unlocks BOTH M7 paths (the arc's design fork),
+        // each gated on the_kennels via required_completed.
+        progress.complete_mission(campaign, "the_kennels");
+        assert!(
+            progress.unlocked_missions.contains("restless_dead"),
+            "M6 completion should unlock the graveyard path"
+        );
+        assert!(
+            progress.unlocked_missions.contains("pacts_and_sacrifice"),
+            "M6 completion should unlock the temple path"
+        );
+        for branch in ["restless_dead", "pacts_and_sacrifice"] {
+            let mission = campaign
+                .missions
+                .iter()
+                .find(|m| m.id == branch)
+                .expect("branch mission present");
+            assert_eq!(mission.required_completed, vec!["the_kennels".to_string()]);
+        }
     }
 
     #[test]

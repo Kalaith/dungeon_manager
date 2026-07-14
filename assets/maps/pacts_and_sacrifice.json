@@ -1,0 +1,139 @@
+{
+    "name": "Pacts and Sacrifice",
+    "description": "Feed the temple, bind succubi and demon-spawn, and buy an army no mortal treasury could afford.",
+    "width": 32,
+    "height": 32,
+    "tiles": [
+        "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+        "W..............................W",
+        "W..............................W",
+        "W......................XXXXXXX.W",
+        "W......................XT...PX.W",
+        "W......................X.....X.W",
+        "W......................X.....X.W",
+        "W......................XB...CX.W",
+        "W...........M.......M..X.....X.W",
+        "W......................XXXYXXX.W",
+        "W..............................W",
+        "W..............................W",
+        "W.............GGG..............W",
+        "W..GG.........GGG..............W",
+        "W..............................W",
+        "W..............................W",
+        "W...H..M........A..............W",
+        "W..............................W",
+        "W..............................W",
+        "W..GG..........................W",
+        "W..............GG..............W",
+        "W..............GG..............W",
+        "W..............................W",
+        "W..............................W",
+        "W...........M.......M...GG.....W",
+        "W..............................W",
+        "W..............................W",
+        "W....GG.K.GG...................W",
+        "W..............................W",
+        "W..............................W",
+        "W..............................W",
+        "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    ],
+    "legend": {
+        "W": "bedrock",
+        ".": "earth",
+        "G": "gold_vein",
+        "M": "gem_seam",
+        "A": "mana_crystal",
+        "H": "dungeon_heart",
+        "K": "dungeon_heart",
+        "T": "town_hall",
+        "B": "barracks",
+        "C": "church",
+        "R": "armory",
+        "P": "mage_tower",
+        "X": "hero_wall",
+        "Y": "hero_gate"
+    },
+    "tile_owners": [
+        {
+            "owner": "heroes",
+            "x": 23,
+            "y": 3,
+            "width": 7,
+            "height": 7
+        },
+        {
+            "owner": "keeper1",
+            "x": 8,
+            "y": 27,
+            "width": 1,
+            "height": 1
+        }
+    ],
+    "rival_keepers": [
+        {
+            "owner": {
+                "rival_keeper": 1
+            },
+            "ai_profile": "builder_attacker",
+            "desired_rooms": [
+                "lair",
+                "hatchery",
+                "treasury",
+                "training_hall"
+            ],
+            "preferred_creatures": [
+                "goblin",
+                "orc",
+                "spider"
+            ],
+            "min_garrison": 5,
+            "raid_size": 5,
+            "dig_batch": 6,
+            "room_size": 2,
+            "attack_cooldown": 75.0,
+            "first_attack_delay": 200.0,
+            "attack_cooldown_growth": 1.35
+        }
+    ],
+    "entities": [
+        {
+            "id": "imp",
+            "x": 5,
+            "y": 16,
+            "owner": "player"
+        },
+        {
+            "id": "imp",
+            "x": 4,
+            "y": 15,
+            "owner": "player"
+        },
+        {
+            "id": "imp",
+            "x": 4,
+            "y": 17,
+            "owner": "player"
+        },
+        {
+            "id": "goblin",
+            "x": 7,
+            "y": 27,
+            "owner": "keeper1",
+            "level": 1
+        },
+        {
+            "id": "orc",
+            "x": 9,
+            "y": 27,
+            "owner": "keeper1",
+            "level": 1
+        },
+        {
+            "id": "spider",
+            "x": 8,
+            "y": 26,
+            "owner": "keeper1",
+            "level": 1
+        }
+    ]
+}

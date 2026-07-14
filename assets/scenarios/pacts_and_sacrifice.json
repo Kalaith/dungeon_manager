@@ -1,0 +1,219 @@
+[
+  {
+    "meta": {
+      "id": "pacts_and_sacrifice",
+      "name": "Pacts and Sacrifice",
+      "description": "The temple path. Sacrifice at the altar to bind succubi and demon-spawn, and break an inquisitor order sworn to banish the demonic.",
+      "author": "Deep Dominion Team",
+      "intro": [
+        "The old powers trade in blood. Raise a temple, and feed it what the deep provides.",
+        "In return the pit sends succubi and demon-spawn — an army no mortal treasury could ever afford.",
+        "But the surface has sent inquisitors and a high priest, banish-rituals ready for anything demonic.",
+        "Bind your pact-bound host, weather their holy fire, and pull down the shrine they raised against you."
+      ]
+    },
+    "map": {
+      "path": "assets/maps/pacts_and_sacrifice.json",
+      "width": 32,
+      "height": 32,
+      "biome": "underground",
+      "above_ground": false
+    },
+    "players": [
+      {
+        "id": "keeper0",
+        "owner": "player",
+        "role": "human",
+        "start_gold": 2200,
+        "start_mana": 500,
+        "max_creatures": 22
+      },
+      {
+        "id": "heroes",
+        "owner": "heroes",
+        "role": "heroes",
+        "start_gold": 0,
+        "start_mana": 0
+      },
+      {
+        "id": "keeper1",
+        "owner": {
+          "rival_keeper": 1
+        },
+        "role": "rival_keeper",
+        "start_gold": 2200,
+        "start_mana": 400,
+        "max_creatures": 12,
+        "ai_profile": "builder_attacker"
+      }
+    ],
+    "rules": {
+      "fog_of_war": true,
+      "starting_research": [
+        "training_tech",
+        "trap_tech",
+        "ritual_tech",
+        "prison_tech"
+      ],
+      "threat_multiplier": 1.25
+    },
+    "creature_pool": {
+      "goblin": 8,
+      "orc": 6,
+      "warlock": 4,
+      "hellhound": 4,
+      "succubus": 5,
+      "demon_spawn": 6
+    },
+    "availability": {
+      "rooms": {
+        "lair": { "available": true, "unlocked": true, "owner": "player" },
+        "hatchery": { "available": true, "unlocked": true, "owner": "player" },
+        "treasury": { "available": true, "unlocked": true, "owner": "player" },
+        "training_hall": { "available": true, "unlocked": true, "owner": "player" },
+        "guard_post": { "available": true, "unlocked": true, "owner": "player" },
+        "library": { "available": true, "unlocked": true, "owner": "player" },
+        "workshop": { "available": true, "unlocked": true, "owner": "player" },
+        "ritual_circle": { "available": true, "unlocked": true, "owner": "player" },
+        "kennel": { "available": true, "unlocked": true, "owner": "player" },
+        "barracks": { "available": true, "unlocked": true, "owner": "player" },
+        "prison": { "available": true, "unlocked": true, "owner": "player" },
+        "temple": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "spells": {
+        "summon_imps": { "available": true, "unlocked": true, "owner": "player" },
+        "reveal_map": { "available": true, "unlocked": true, "owner": "player" },
+        "speed_boost": { "available": true, "unlocked": true, "owner": "player" },
+        "lightning_strike": { "available": true, "unlocked": true, "owner": "player" },
+        "call_to_arms": { "available": true, "unlocked": true, "owner": "player" },
+        "corrupt_land": { "available": true, "unlocked": false, "owner": "player" }
+      },
+      "traps": {
+        "door": { "available": true, "unlocked": true, "owner": "player" },
+        "braced_door": { "available": true, "unlocked": true, "owner": "player" },
+        "blowgun_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "boulder_trap": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "creatures": {
+        "goblin": { "available": true, "unlocked": true, "owner": "player" },
+        "orc": { "available": true, "unlocked": true, "owner": "player" },
+        "warlock": { "available": true, "unlocked": true, "owner": "player" },
+        "succubus": { "available": true, "unlocked": true, "owner": "player" },
+        "demon_spawn": { "available": true, "unlocked": true, "owner": "player" }
+      }
+    },
+    "objectives": [
+      {
+        "type": "survive_time",
+        "seconds": 900.0
+      },
+      {
+        "type": "destroy_all_hero_buildings"
+      }
+    ],
+    "events": [
+      {
+        "id": "sanctify_the_temple",
+        "trigger": {
+          "type": "room_claimed",
+          "room": "temple",
+          "owner": "player"
+        },
+        "actions": [
+          {
+            "action": "unlock_spell",
+            "spell": "corrupt_land",
+            "owner": "player"
+          },
+          {
+            "action": "spawn_creature",
+            "creature": "succubus",
+            "owner": "player",
+            "x": 5,
+            "y": 18,
+            "level": 1
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "inquisition_vanguard",
+        "trigger": {
+          "type": "time_elapsed",
+          "seconds": 180.0
+        },
+        "actions": [
+          {
+            "action": "spawn_hero_party",
+            "party": "inquisition_vanguard",
+            "x": 26,
+            "y": 10
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "holy_inquisition",
+        "trigger": {
+          "type": "time_elapsed",
+          "seconds": 480.0
+        },
+        "actions": [
+          {
+            "action": "spawn_hero_party",
+            "party": "holy_inquisition",
+            "x": 26,
+            "y": 10
+          }
+        ],
+        "once": true
+      }
+    ],
+    "hero_parties": [
+      {
+        "id": "inquisition_vanguard",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "inquisitor", "level": 1, "count": 1 },
+          { "hero": "battle_cleric", "level": 1, "count": 1 },
+          { "hero": "knight", "level": 1, "count": 2 }
+        ]
+      },
+      {
+        "id": "holy_inquisition",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "inquisitor", "level": 2, "count": 1 },
+          { "hero": "high_priest", "level": 1, "count": 1 },
+          { "hero": "wizard", "level": 1, "count": 1 }
+        ]
+      }
+    ],
+    "rival_keepers": [
+      {
+        "owner": {
+          "rival_keeper": 1
+        },
+        "ai_profile": "builder_attacker",
+        "starting_rooms": [
+          "lair",
+          "hatchery",
+          "treasury",
+          "training_hall"
+        ],
+        "preferred_creatures": [
+          "goblin",
+          "orc",
+          "spider"
+        ],
+        "min_garrison": 5,
+        "raid_size": 5,
+        "dig_batch": 6,
+        "room_size": 2,
+        "attack_cooldown": 75.0,
+        "first_attack_delay": 200.0,
+        "attack_cooldown_growth": 1.35
+      }
+    ]
+  }
+]

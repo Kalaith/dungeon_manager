@@ -558,6 +558,38 @@ mod tests {
     }
 
     #[test]
+    fn m7_branch_missions_boot_with_their_signature_tools() {
+        // The Act II branch: M7a (graveyard→vampire) and M7b (temple→demons).
+        // Each is a full, bootable mission with its path's signature room.
+        let game_data = GameData::load().expect("game data should load");
+
+        let graveyard = game_data
+            .scenarios
+            .get("restless_dead")
+            .expect("restless_dead scenario should be loaded");
+        assert!(graveyard.availability.rooms.contains_key("graveyard"));
+
+        let temple = game_data
+            .scenarios
+            .get("pacts_and_sacrifice")
+            .expect("pacts_and_sacrifice scenario should be loaded");
+        assert!(temple.availability.rooms.contains_key("temple"));
+        assert!(temple.availability.creatures.contains_key("demon_spawn"));
+
+        for id in ["restless_dead", "pacts_and_sacrifice"] {
+            let state = crate::state::game_state::GameState::new_for_scenario(&game_data, id);
+            assert!(
+                state.dungeon_heart_health > 0.0,
+                "{id} heart should be live"
+            );
+            assert!(
+                state.hero_base.enabled,
+                "{id} outpost should be live to raze"
+            );
+        }
+    }
+
+    #[test]
     fn default_scenario_starts_with_markable_dig_targets_near_heart() {
         let game_data = GameData::load().expect("game data should load");
         let mut state =

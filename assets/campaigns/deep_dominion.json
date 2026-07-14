@@ -65,8 +65,24 @@
         "scenario_id": "the_kennels",
         "name": "The Kennels",
         "briefing": "An empire needs teeth. Fill the kennels, man the barracks, and keep the pay flowing — a hungry horde turns on the hand that starves it.",
-        "unlocks_after": [],
+        "unlocks_after": ["restless_dead", "pacts_and_sacrifice"],
         "required_completed": ["whispers_in_the_circle"]
+      },
+      {
+        "id": "restless_dead",
+        "scenario_id": "restless_dead",
+        "name": "The Restless Dead",
+        "briefing": "Let no corpse go to waste. Raise the fallen as vampires and drown the surface in a tide that does not tire and does not fear.",
+        "unlocks_after": [],
+        "required_completed": ["the_kennels"]
+      },
+      {
+        "id": "pacts_and_sacrifice",
+        "scenario_id": "pacts_and_sacrifice",
+        "name": "Pacts and Sacrifice",
+        "briefing": "The old powers trade in blood. Feed the temple, bind the succubi and the demon-spawn, and buy an army no mortal treasury could afford.",
+        "unlocks_after": [],
+        "required_completed": ["the_kennels"]
       }
     ]
   }
