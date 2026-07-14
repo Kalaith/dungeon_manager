@@ -308,8 +308,21 @@ everything *around* that engine:
       11 appear in-game. **Follow-on (not blocking):** campaign missions still set availability directly
       via scenario `availability`/`starting_research` (bypassing live research) — a full
       research-gated campaign progression would wire missions to grant *tech* rather than raw unlocks.
-- [ ] Rooms: 15 built; `special_rooms.json` has a single entry. `docs/rooms.md` designs a large
-      future set (Gatehouse, Soul Furnace, Summoning Vault, Legacy Vault…). Pick the commercial set.
+- [x] Rooms: picked the commercial set — `docs/ROOM_SET.md`. The 15 shipped rooms already are a
+      competitive core; the decision doc picks **7 new rooms to build for 1.0** (Vault, Mana Well,
+      Combat Pit, Soul Furnace, Gatehouse, Arcane Archive, Leisure Den), **defers** the subsystem-heavy
+      ones (Summoning Vault, Fate Loom, Cryptorium, Reeducation Chamber, Watch Nexus, Supply Depot,
+      Trap Corridor), and **cuts** the meta rooms (Legacy Vault, Council Chamber, Obelisk of Memory)
+      until the §2 meta-progression build-or-cut fork is taken. Every entry is sized against the engine
+      as it actually is (verified, not from the design docs): **only `gold/mana_storage_capacity` are
+      generic room effects** (`state/rooms.rs`) — everything else (research, mana-gen, corpse-storage,
+      vampire-spawn, torture…) is **room-type-keyed engine code**, and **every new room is art-blocked**
+      (no `assets/sprites/rooms/`, unlike the monster/hero orphans). So the doc tiers each pick
+      Data-only / engine-Hook / new-Subsystem / Cut and gives a build order (start with the two
+      zero-code storage rooms, then generalize the currently-**inert** `happiness_modifier` — a gap this
+      surfaced — to unlock the whole amenity tier). Building the picked rooms is the downstream work
+      (art + the sized mechanics + a `technologies.json` tech to gate each, now that the tree is real);
+      this item is the *pick*, analogous to the campaign-arc design deliverable above.
 - [ ] Spells: 11 built; design docs want more plus miscasts, hero counter-spells,
       research-unlocked modifiers.
 - [ ] Mod/content-pack system exists (`mods/load_order.json`) but ships **empty** — either make
