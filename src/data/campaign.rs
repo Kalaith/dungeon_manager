@@ -198,6 +198,14 @@ mod tests {
             progress.active_mission, "whispers_in_the_circle",
             "completing mission 4 should advance to mission 5"
         );
+
+        // ...and the army-scaling mission gates behind the Act II opener.
+        assert!(campaign.missions.iter().any(|m| m.id == "the_kennels"));
+        progress.complete_mission(campaign, "whispers_in_the_circle");
+        assert_eq!(
+            progress.active_mission, "the_kennels",
+            "completing mission 5 should advance to mission 6"
+        );
     }
 
     #[test]

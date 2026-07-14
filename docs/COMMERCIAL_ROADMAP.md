@@ -47,10 +47,11 @@ everything *around* that engine:
       the next item below.
 - [ ] Author the missions: one map + one scenario JSON + event scripting each. The event system
       (triggers: TimeElapsed, ObjectiveComplete, RoomClaimed, ActionPointReached, DungeonBreached;
-      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 5 of 12
-      authored — Act I (M1–M4) complete + Act II opener (M5)** (`docs/CAMPAIGN_ARC.md` arc). Each
-      mission is a hand-authored 32×32 map + scenario JSON + event scripting, wired into
-      `deep_dominion.json` as a linear `unlocks_after`/`required_completed` chain (M1→…→M5):
+      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 6 of 12
+      authored — Act I (M1–M4) complete + Act II M5–M6** (`docs/CAMPAIGN_ARC.md` arc). Each mission is
+      a hand-authored 32×32 map + scenario JSON + event scripting, wired into `deep_dominion.json` as
+      an `unlocks_after`/`required_completed` chain (M1→…→M6; the M6→{M7a,M7b} branch will be wired
+      when those are authored):
       - **M1 `dark_beginnings`** (pre-existing): dig→build→recruit→survive.
       - **M2 `blood_and_iron`**: survive-720s→raze-outpost; a walled hero outpost w/ single gate;
         training_hall + guard_post + braced_door/blowgun_trap intro; two scripted hero waves
@@ -73,13 +74,20 @@ everything *around* that engine:
         caster + utility spells (reveal_map, speed_boost); a `room_claimed` ritual_circle→unlock
         lightning_strike event (bind the circle to gain offensive magic); wizard-led hero waves
         (t+180/t+450) that punish clumped defense; a mana-crystal-rich map for the mana economy.
+      - **M6 `the_kennels`** (army-scaling): survive-840s→raze a ranged garrison
+        (town_hall/barracks/archery_range/church); introduces kennel + barracks + scavenger rooms and
+        the hellhound/spider/lizard beast roster, with a bumped creature cap (22 vs Act I's 15–18); a
+        `room_claimed` kennel→unlock call_to_arms event; **sustained** pressure via three hero waves
+        (t+150/t+400/t+650). This is the pre-branch mission — M6 completion will unlock **both** M7a
+        and M7b once those are authored (its `unlocks_after` is empty for now).
       Verified end-to-end: every mission boots via `GameState::new_for_scenario` (live heart; hero
-      bases active where applicable; M4's prison/torture + M5's ritual_circle/warlock available), all
-      references validate, campaign progression M1→…→M5 tested, `cargo test` (92 unit incl. 8 new + 28
-      balance) + `clippy -D warnings` pass. The `authored_campaign_scenarios_reference_only_real_content`
-      test guards *every* authored scenario against dangling ids (caught a bad `hobgoblin` ref while
-      authoring M2 — corrected). This completes the 2–3 polished-mission slice the demo build (§8)
-      needs. Remaining: M6–M12 (rest of Acts II–III).
+      bases active where applicable; M4's prison/torture, M5's ritual_circle/warlock, M6's
+      kennel/beasts + cap-22 available), all references validate, campaign progression M1→…→M6 tested,
+      `cargo test` (93 unit incl. 9 new + 28 balance) + `clippy -D warnings` pass. The
+      `authored_campaign_scenarios_reference_only_real_content` test guards *every* authored scenario
+      against dangling ids (caught a bad `hobgoblin` ref while authoring M2 — corrected). This
+      completes the 2–3 polished-mission slice the demo build (§8) needs. Remaining: M7a/M7b–M12
+      (the Act II branch + Act III).
 - [x] **Un-hardcode content loading**: `data/campaign.rs:128` and `data/scenario.rs:350` used to
       `include_str!` exactly one campaign/scenario file. Now manifest-driven: a new `build.rs` scans
       `assets/campaigns/` and `assets/scenarios/` at build time and generates

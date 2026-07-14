@@ -523,6 +523,41 @@ mod tests {
     }
 
     #[test]
+    fn the_kennels_boots_with_beast_roster_and_larger_army_cap() {
+        // M6 scales the army: kennel/barracks/scavenger + hellhound/spider/lizard
+        // and a bigger creature cap. Prove it boots with those tools available.
+        let game_data = GameData::load().expect("game data should load");
+        let scenario = game_data
+            .scenarios
+            .get("the_kennels")
+            .expect("the_kennels scenario should be loaded");
+        for room in ["kennel", "barracks", "scavenger"] {
+            assert!(
+                scenario.availability.rooms.contains_key(room),
+                "army mission should offer the {room}"
+            );
+        }
+        for beast in ["hellhound", "spider", "lizard"] {
+            assert!(
+                scenario.availability.creatures.contains_key(beast),
+                "army mission should offer the {beast}"
+            );
+        }
+        // Meaningfully larger roster cap than the Act I missions (15–18).
+        let player = scenario
+            .players
+            .iter()
+            .find(|p| p.id == "keeper0")
+            .expect("player slot exists");
+        assert!(player.max_creatures.unwrap_or(0) >= 22);
+
+        let state =
+            crate::state::game_state::GameState::new_for_scenario(&game_data, "the_kennels");
+        assert!(state.dungeon_heart_health > 0.0);
+        assert!(state.hero_base.enabled, "the outpost must be live to raze");
+    }
+
+    #[test]
     fn default_scenario_starts_with_markable_dig_targets_near_heart() {
         let game_data = GameData::load().expect("game data should load");
         let mut state =
