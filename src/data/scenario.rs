@@ -417,6 +417,45 @@ mod tests {
     }
 
     #[test]
+    fn authored_campaign_scenarios_reference_only_real_content() {
+        // Every authored mission scenario must reference only ids that exist in
+        // game data — the manifest loader makes adding these a pure-content act,
+        // so this guards content authors against typos across the whole campaign.
+        let game_data = GameData::load().expect("game data should load");
+        for scenario in game_data.scenarios.values() {
+            let errors = scenario.validate_references(&game_data);
+            assert!(
+                errors.is_empty(),
+                "scenario '{}' has dangling references: {:?}",
+                scenario.meta.id,
+                errors
+            );
+        }
+    }
+
+    #[test]
+    fn blood_and_iron_is_wired_and_valid() {
+        let game_data = GameData::load().expect("game data should load");
+        let scenario = game_data
+            .scenarios
+            .get("blood_and_iron")
+            .expect("blood_and_iron scenario should be loaded via the manifest");
+
+        assert!(scenario.validate_references(&game_data).is_empty());
+        // Objectives: survive the assault, then raze the outpost.
+        assert!(scenario
+            .objectives
+            .iter()
+            .any(|o| matches!(o, ScenarioObjective::DestroyAllHeroBuildings)));
+        assert!(scenario
+            .objectives
+            .iter()
+            .any(|o| matches!(o, ScenarioObjective::SurviveTime { .. })));
+        // Two scripted hero waves.
+        assert_eq!(scenario.hero_parties.len(), 2);
+    }
+
+    #[test]
     fn scenario_validation_catches_missing_ids() {
         let mut scenario = load_scenarios()
             .expect("scenario json should parse")

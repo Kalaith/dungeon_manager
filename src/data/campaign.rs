@@ -157,6 +157,23 @@ mod tests {
     }
 
     #[test]
+    fn deep_dominion_unlocks_blood_and_iron_after_dark_beginnings() {
+        let campaigns = load_campaigns().expect("campaign json should parse");
+        let campaign = campaigns.get("deep_dominion").expect("campaign missing");
+
+        // Both authored missions are present and correctly gated.
+        assert!(campaign.missions.iter().any(|m| m.id == "blood_and_iron"));
+        let mut progress = CampaignProgress::new(campaign);
+        assert_eq!(progress.active_mission, "dark_beginnings");
+
+        progress.complete_mission(campaign, "dark_beginnings");
+        assert_eq!(
+            progress.active_mission, "blood_and_iron",
+            "completing the opener should advance to the second authored mission"
+        );
+    }
+
+    #[test]
     fn progress_unlocks_next_mission() {
         let campaign: CampaignDefinition = serde_json::from_str(
             r#"{

@@ -320,6 +320,42 @@ mod tests {
     }
 
     #[test]
+    fn blood_and_iron_map_loads_with_both_hearts_and_hero_base() {
+        let game_data = GameData::load().expect("game data should load");
+        let mut entities = EntityManager::new();
+        let dungeon = load_map("assets/maps/blood_and_iron.json", &game_data, &mut entities)
+            .expect("blood_and_iron map should load");
+
+        assert_eq!(dungeon.width, 32);
+        assert_eq!(dungeon.height, 32);
+        // Player heart claimed for the player.
+        let player_heart = dungeon.find_dungeon_heart().expect("player heart exists");
+        assert_eq!(
+            dungeon.get_tile(player_heart).unwrap().ownership,
+            Ownership::Player
+        );
+        // The walled hero outpost placed its buildings as tiles (town_hall /
+        // barracks / church), the same representation dark_beginnings uses; the
+        // full GameState lifts these into `hero_base` for the destroy objective.
+        let hero_building_tiles = dungeon
+            .grid
+            .iter()
+            .flat_map(|row| row.iter())
+            .filter(|tile| matches!(tile.tile_type.as_str(), "town_hall" | "barracks" | "church"))
+            .count();
+        assert_eq!(
+            hero_building_tiles, 3,
+            "expected town_hall + barracks + church tiles"
+        );
+        // Rival keeper opens with a garrison.
+        let rival_creatures = entities
+            .all()
+            .filter(|e| e.owner == OwnerId::RivalKeeper(1) && e.as_creature().is_some())
+            .count();
+        assert_eq!(rival_creatures, 3);
+    }
+
+    #[test]
     fn file_map_loads_rival_keeper_base_and_ai() {
         let game_data = GameData::load().expect("game data should load");
         let runtime = load_rival_keeper_runtime("assets/maps/level_1.json")
@@ -362,6 +398,36 @@ mod tests {
             .filter(|entity| entity.as_creature().is_some())
             .count();
         assert_eq!(rival_creatures, 2);
+    }
+
+    #[test]
+    fn blood_and_iron_boots_as_a_playable_mission() {
+        // Full GameState construction is the real entry point missions run
+        // through — proves the authored scenario+map load, the hero outpost is
+        // live for the destroy objective, and the player heart is intact.
+        let game_data = GameData::load().expect("game data should load");
+        let state =
+            crate::state::game_state::GameState::new_for_scenario(&game_data, "blood_and_iron");
+
+        assert!(state.find_dungeon_heart_position().is_some());
+        assert!(state.dungeon_heart_health > 0.0);
+        assert!(
+            state.hero_base.enabled,
+            "hero outpost should be active for destroy_all_hero_buildings"
+        );
+        // The three core structures register in the base (the walled ring's
+        // hero_wall/hero_gate tiles also count as buildings, as in level_1).
+        for core in ["town_hall", "barracks", "church"] {
+            assert!(
+                state
+                    .hero_base
+                    .buildings
+                    .iter()
+                    .any(|b| b.building_type == core),
+                "hero base should include a {core}"
+            );
+        }
+        assert!(!state.hero_base.is_defeated(&state.entities));
     }
 
     #[test]

@@ -1,0 +1,202 @@
+[
+  {
+    "meta": {
+      "id": "blood_and_iron",
+      "name": "Blood and Iron",
+      "description": "Drill a real fighting force and wall your approaches before a garrisoned hero outpost marches on your heart.",
+      "author": "Deep Dominion Team",
+      "intro": [
+        "Your first dominion holds, but word of the dark below has reached the barracks above.",
+        "This time the surface does not send frightened militia alone — a garrison waits behind stone walls,",
+        "and a rival keeper to the south has grown bolder, striking sooner and in greater number.",
+        "An armed force is worth ten hungry mouths. Drill your creatures in the training hall,",
+        "seal your corridors with braced doors and guard posts, and break the outpost before it breaks you."
+      ]
+    },
+    "map": {
+      "path": "assets/maps/blood_and_iron.json",
+      "width": 32,
+      "height": 32,
+      "biome": "underground",
+      "above_ground": false
+    },
+    "players": [
+      {
+        "id": "keeper0",
+        "owner": "player",
+        "role": "human",
+        "start_gold": 2200,
+        "start_mana": 500,
+        "max_creatures": 15
+      },
+      {
+        "id": "heroes",
+        "owner": "heroes",
+        "role": "heroes",
+        "start_gold": 0,
+        "start_mana": 0
+      },
+      {
+        "id": "keeper1",
+        "owner": {
+          "rival_keeper": 1
+        },
+        "role": "rival_keeper",
+        "start_gold": 2000,
+        "start_mana": 300,
+        "max_creatures": 12,
+        "ai_profile": "builder_attacker"
+      }
+    ],
+    "rules": {
+      "fog_of_war": true,
+      "starting_research": [
+        "training_tech",
+        "trap_tech"
+      ],
+      "threat_multiplier": 1.1
+    },
+    "creature_pool": {
+      "goblin": 10,
+      "orc": 6,
+      "warlock": 3,
+      "troll": 2
+    },
+    "availability": {
+      "rooms": {
+        "lair": { "available": true, "unlocked": true, "owner": "player" },
+        "hatchery": { "available": true, "unlocked": true, "owner": "player" },
+        "treasury": { "available": true, "unlocked": true, "owner": "player" },
+        "training_hall": { "available": true, "unlocked": true, "owner": "player" },
+        "guard_post": { "available": true, "unlocked": true, "owner": "player" },
+        "workshop": { "available": true, "unlocked": false, "owner": "player" }
+      },
+      "spells": {
+        "summon_imps": { "available": true, "unlocked": true, "owner": "player" },
+        "lightning_strike": { "available": true, "unlocked": false, "owner": "player" }
+      },
+      "traps": {
+        "door": { "available": true, "unlocked": true, "owner": "player" },
+        "braced_door": { "available": true, "unlocked": false, "owner": "player" },
+        "blowgun_trap": { "available": true, "unlocked": false, "owner": "player" }
+      },
+      "creatures": {
+        "goblin": { "available": true, "unlocked": true, "owner": "player" },
+        "orc": { "available": true, "unlocked": true, "owner": "player" }
+      }
+    },
+    "objectives": [
+      {
+        "type": "survive_time",
+        "seconds": 720.0
+      },
+      {
+        "type": "destroy_all_hero_buildings"
+      }
+    ],
+    "events": [
+      {
+        "id": "arm_the_workshop",
+        "trigger": {
+          "type": "room_claimed",
+          "room": "guard_post",
+          "owner": "player"
+        },
+        "actions": [
+          {
+            "action": "unlock_trap",
+            "trap": "braced_door",
+            "owner": "player"
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "first_wave",
+        "trigger": {
+          "type": "time_elapsed",
+          "seconds": 180.0
+        },
+        "actions": [
+          {
+            "action": "spawn_hero_party",
+            "party": "first_wave",
+            "x": 26,
+            "y": 10
+          },
+          {
+            "action": "unlock_trap",
+            "trap": "blowgun_trap",
+            "owner": "player"
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "second_wave",
+        "trigger": {
+          "type": "time_elapsed",
+          "seconds": 420.0
+        },
+        "actions": [
+          {
+            "action": "spawn_hero_party",
+            "party": "second_wave",
+            "x": 26,
+            "y": 10
+          },
+          {
+            "action": "unlock_spell",
+            "spell": "lightning_strike",
+            "owner": "player"
+          }
+        ],
+        "once": true
+      }
+    ],
+    "hero_parties": [
+      {
+        "id": "first_wave",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "peasant_militia", "level": 1, "count": 3 },
+          { "hero": "acolyte", "level": 1, "count": 1 }
+        ]
+      },
+      {
+        "id": "second_wave",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "peasant_militia", "level": 2, "count": 2 },
+          { "hero": "knight", "level": 1, "count": 1 },
+          { "hero": "archer", "level": 1, "count": 1 }
+        ]
+      }
+    ],
+    "rival_keepers": [
+      {
+        "owner": {
+          "rival_keeper": 1
+        },
+        "ai_profile": "builder_attacker",
+        "starting_rooms": [
+          "lair",
+          "hatchery",
+          "treasury",
+          "training_hall"
+        ],
+        "preferred_creatures": [
+          "goblin",
+          "orc"
+        ],
+        "min_garrison": 4,
+        "raid_size": 4,
+        "dig_batch": 5,
+        "room_size": 2,
+        "attack_cooldown": 75.0,
+        "first_attack_delay": 180.0,
+        "attack_cooldown_growth": 1.4
+      }
+    ]
+  }
+]

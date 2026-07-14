@@ -26,7 +26,15 @@
         "scenario_id": "dark_beginnings",
         "name": "Dark Beginnings",
         "briefing": "Carve your first chambers, attract a fighting force, and break the hero foothold before the surface rallies.",
-        "unlocks_after": []
+        "unlocks_after": ["blood_and_iron"]
+      },
+      {
+        "id": "blood_and_iron",
+        "scenario_id": "blood_and_iron",
+        "name": "Blood and Iron",
+        "briefing": "An armed force is worth ten hungry mouths. Drill your creatures, wall your approaches, and let the next patrol break itself on your doors.",
+        "unlocks_after": [],
+        "required_completed": ["dark_beginnings"]
       }
     ]
   }

@@ -40,15 +40,26 @@ everything *around* that engine:
       one that already exists in the codebase (verified against `data/scenario.rs` and the content
       JSON). Includes an authored difficulty curve driven by the five existing scenario dials
       (`threat_multiplier`, `start_gold`, `max_creatures`, hero-party comp, rival aggression), a
-      per-mission mechanic-introduction table (all rooms/traps/techs/spells and 13/14 creatures
+      per-mission mechanic-introduction table (all rooms/traps/techs/spells and all 13 creatures
       introduced by M8; Act III is pure mastery), narrative framing + per-mission briefings, and the
       unlock graph that exercises the never-branched `unlocks_after`/`required_completed` logic. This
       is the design deliverable; *authoring* each mission's map + scenario JSON + event scripting is
       the next item below.
-- [ ] Author the missions: one map + one scenario JSON + event scripting each. Only
-      `dark_beginnings` exists. The event system (triggers: TimeElapsed, ObjectiveComplete,
-      RoomClaimed, ActionPointReached, DungeonBreached; actions: unlocks, spawns, rules) is done —
-      this is pure content work.
+- [ ] Author the missions: one map + one scenario JSON + event scripting each. The event system
+      (triggers: TimeElapsed, ObjectiveComplete, RoomClaimed, ActionPointReached, DungeonBreached;
+      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 2 of 12
+      authored** (`docs/CAMPAIGN_ARC.md` arc). M1 `dark_beginnings` (pre-existing) and **M2
+      `blood_and_iron`** — `assets/maps/blood_and_iron.json` (hand-authored 32×32: player heart,
+      walled hero outpost w/ single gate, rival keeper, contested gold + gem/mana seams) +
+      `assets/scenarios/blood_and_iron.json` (survive-720s→raze-outpost objectives; training_hall +
+      guard_post + braced_door/blowgun_trap intro; two scripted hero waves at t+180/t+420; a
+      `room_claimed` event unlocking braced_door; a more-aggressive rival) + campaign wiring
+      (`deep_dominion.json`: M1 `unlocks_after` M2, M2 `required_completed` M1). Verified end-to-end:
+      the mission boots via `GameState::new_for_scenario` with a live hero base + intact heart, all
+      references validate, `cargo test` (89 unit incl. 5 new + 28 balance) + `clippy -D warnings`
+      pass. A new `authored_campaign_scenarios_reference_only_real_content` test now guards *every*
+      authored scenario against dangling ids (it caught a bad `hobgoblin` ref during authoring —
+      no such creature exists; corrected here and in `CAMPAIGN_ARC.md`). Remaining: M3–M12.
 - [x] **Un-hardcode content loading**: `data/campaign.rs:128` and `data/scenario.rs:350` used to
       `include_str!` exactly one campaign/scenario file. Now manifest-driven: a new `build.rs` scans
       `assets/campaigns/` and `assets/scenarios/` at build time and generates

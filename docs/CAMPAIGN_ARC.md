@@ -43,7 +43,7 @@ content — new *content* is roadmap §1 roster work, tracked separately):
 
 | Category | Available today |
 |----------|-----------------|
-| **Creatures** (13 + imp worker) | imp, goblin, hobgoblin, orc, warlock, troll, skeleton, demon_spawn, spider, lizard, succubus, vampire, hellhound, bile_demon |
+| **Creatures** (12 + imp worker) | imp, goblin, orc, warlock, troll, skeleton, demon_spawn, spider, lizard, succubus, vampire, hellhound, bile_demon |
 | **Rooms** (15) | lair, hatchery, treasury, library, workshop, training_hall, prison, guard_post, ritual_circle, torture_chamber, graveyard, kennel, barracks, temple, scavenger |
 | **Traps** (7) | door, braced_door, magic_door, spike_trap, boulder_trap, alarm_trap, blowgun_trap |
 | **Spells** (11) | summon_imps, lightning_strike, heal, possess, call_to_arms, corrupt_land, reveal_map, make_earth, speed_boost, iron_skin, chickenify |
@@ -104,7 +104,7 @@ authored hero/rival difficulty for this slot.
 
 **M2 · Blood and Iron**
 - **New:** training & melee depth — the training_hall economy, guard_post chokepoints, `door`/`braced_door` placement. Combat becomes something you *prepare for*, not just survive.
-- **Adds:** orc (usable), hobgoblin, blowgun_trap, `training_tech` researched from the start.
+- **Adds:** orc (usable), blowgun_trap, `training_tech` + `trap_tech` researched from the start.
 - **Win:** `survive_time` (longer) + `destroy_all_hero_buildings`. **Lose:** heart destroyed.
 - **Pressure:** two escalating raids (peasant_militia + acolyte, then + archer). Rival raids sooner and larger (`raid_size` up, `attack_cooldown` down). `threat_multiplier` ~1.1.
 - **Briefing:** *"An armed force is worth ten hungry mouths. Drill your creatures, wall your approaches, and let the next patrol break itself on your doors."*
@@ -256,7 +256,7 @@ handled as above).
 | Mission | Rooms | Creatures | Spells | Traps | Tech | Hero threat introduced |
 |---------|-------|-----------|--------|-------|------|------------------------|
 | M1 | lair, hatchery, treasury, training_hall | imp, goblin | summon_imps | spike_trap, door | — | peasant_militia, acolyte |
-| M2 | guard_post | orc, hobgoblin | — | braced_door, blowgun_trap | training_tech | archer |
+| M2 | guard_post | orc | — | braced_door, blowgun_trap | training_tech, trap_tech | archer |
 | M3 | library, workshop | — | — | boulder_trap | trap_tech | (econ; light) |
 | M4 | prison, torture_chamber | skeleton | — | — | prison_tech | knight, battle_cleric |
 | M5 | ritual_circle | warlock | lightning_strike, reveal_map, speed_boost | — | ritual_tech | wizard |
@@ -269,8 +269,9 @@ handled as above).
 | M11 | (mastery) | — | — | — | — | **boss**: knight_commander/high_priest |
 | M12 | (mastery) | — | — | — | — | **boss**: champion_of_light |
 
-By M8 all 15 rooms, all 7 traps, all 4 techs, all 11 spells, and 13 of 14 creatures have been
-introduced; Act III is pure mastery and offense with no new tools — the correct shape for a finale.
+By M8 all 15 rooms, all 7 traps, all 4 techs, all 11 spells, and all 13 creatures (imp + 12 combat,
+counting both M7 branches) have been introduced; Act III is pure mastery and offense with no new
+tools — the correct shape for a finale.
 
 ---
 
