@@ -179,6 +179,14 @@ mod tests {
             progress.active_mission, "the_long_dark",
             "completing mission 2 should advance to mission 3"
         );
+
+        // ...and the Act I finale gates behind the economy mission.
+        assert!(campaign.missions.iter().any(|m| m.id == "no_prisoners"));
+        progress.complete_mission(campaign, "the_long_dark");
+        assert_eq!(
+            progress.active_mission, "no_prisoners",
+            "completing mission 3 should advance to mission 4"
+        );
     }
 
     #[test]

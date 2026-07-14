@@ -1,0 +1,197 @@
+[
+  {
+    "meta": {
+      "id": "no_prisoners",
+      "name": "No Prisoners",
+      "description": "Break a fortified garrison — and take its soldiers alive. The prison and torture chamber turn captured heroes into your own dead.",
+      "author": "Deep Dominion Team",
+      "intro": [
+        "Death wastes a good soldier. The garrison at the crossing is walled and well-drilled,",
+        "but every knight who falls at your gate is a knight who could rise again in your service.",
+        "Raise a prison and a torture chamber, take the heroes alive, and break them in the dark —",
+        "as skeletons and turncoats they will march back against the very banners they once served.",
+        "Then pull down the outpost stone by stone and make the crossing yours."
+      ]
+    },
+    "map": {
+      "path": "assets/maps/no_prisoners.json",
+      "width": 32,
+      "height": 32,
+      "biome": "underground",
+      "above_ground": false
+    },
+    "players": [
+      {
+        "id": "keeper0",
+        "owner": "player",
+        "role": "human",
+        "start_gold": 2000,
+        "start_mana": 500,
+        "max_creatures": 18
+      },
+      {
+        "id": "heroes",
+        "owner": "heroes",
+        "role": "heroes",
+        "start_gold": 0,
+        "start_mana": 0
+      },
+      {
+        "id": "keeper1",
+        "owner": {
+          "rival_keeper": 1
+        },
+        "role": "rival_keeper",
+        "start_gold": 2000,
+        "start_mana": 300,
+        "max_creatures": 12,
+        "ai_profile": "builder_attacker"
+      }
+    ],
+    "rules": {
+      "fog_of_war": true,
+      "starting_research": [
+        "training_tech",
+        "trap_tech",
+        "prison_tech"
+      ],
+      "threat_multiplier": 1.15
+    },
+    "creature_pool": {
+      "goblin": 10,
+      "orc": 6,
+      "warlock": 3,
+      "troll": 3
+    },
+    "availability": {
+      "rooms": {
+        "lair": { "available": true, "unlocked": true, "owner": "player" },
+        "hatchery": { "available": true, "unlocked": true, "owner": "player" },
+        "treasury": { "available": true, "unlocked": true, "owner": "player" },
+        "training_hall": { "available": true, "unlocked": true, "owner": "player" },
+        "guard_post": { "available": true, "unlocked": true, "owner": "player" },
+        "library": { "available": true, "unlocked": true, "owner": "player" },
+        "workshop": { "available": true, "unlocked": true, "owner": "player" },
+        "prison": { "available": true, "unlocked": true, "owner": "player" },
+        "torture_chamber": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "spells": {
+        "summon_imps": { "available": true, "unlocked": true, "owner": "player" },
+        "lightning_strike": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "traps": {
+        "door": { "available": true, "unlocked": true, "owner": "player" },
+        "braced_door": { "available": true, "unlocked": true, "owner": "player" },
+        "blowgun_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "boulder_trap": { "available": true, "unlocked": false, "owner": "player" }
+      },
+      "creatures": {
+        "goblin": { "available": true, "unlocked": true, "owner": "player" },
+        "orc": { "available": true, "unlocked": true, "owner": "player" }
+      }
+    },
+    "objectives": [
+      {
+        "type": "survive_time",
+        "seconds": 780.0
+      },
+      {
+        "type": "destroy_all_hero_buildings"
+      }
+    ],
+    "events": [
+      {
+        "id": "fortify_the_gate",
+        "trigger": {
+          "type": "room_claimed",
+          "room": "guard_post",
+          "owner": "player"
+        },
+        "actions": [
+          {
+            "action": "unlock_trap",
+            "trap": "boulder_trap",
+            "owner": "player"
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "first_assault",
+        "trigger": {
+          "type": "time_elapsed",
+          "seconds": 150.0
+        },
+        "actions": [
+          {
+            "action": "spawn_hero_party",
+            "party": "first_assault",
+            "x": 26,
+            "y": 10
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "garrison_reinforcements",
+        "trigger": {
+          "type": "time_elapsed",
+          "seconds": 450.0
+        },
+        "actions": [
+          {
+            "action": "spawn_hero_party",
+            "party": "reinforcements",
+            "x": 26,
+            "y": 10
+          }
+        ],
+        "once": true
+      }
+    ],
+    "hero_parties": [
+      {
+        "id": "first_assault",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "peasant_militia", "level": 1, "count": 3 },
+          { "hero": "knight", "level": 1, "count": 1 }
+        ]
+      },
+      {
+        "id": "reinforcements",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "knight", "level": 2, "count": 1 },
+          { "hero": "battle_cleric", "level": 1, "count": 1 },
+          { "hero": "archer", "level": 1, "count": 1 }
+        ]
+      }
+    ],
+    "rival_keepers": [
+      {
+        "owner": {
+          "rival_keeper": 1
+        },
+        "ai_profile": "builder_attacker",
+        "starting_rooms": [
+          "lair",
+          "hatchery",
+          "treasury",
+          "training_hall"
+        ],
+        "preferred_creatures": [
+          "goblin",
+          "orc"
+        ],
+        "min_garrison": 4,
+        "raid_size": 4,
+        "dig_batch": 5,
+        "room_size": 2,
+        "attack_cooldown": 80.0,
+        "first_attack_delay": 210.0,
+        "attack_cooldown_growth": 1.4
+      }
+    ]
+  }
+]

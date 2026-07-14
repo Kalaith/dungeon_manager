@@ -41,8 +41,16 @@
         "scenario_id": "the_long_dark",
         "name": "The Long Dark",
         "briefing": "Steel rusts; gold endures. Sink shafts to the deep seams, turn your workshops to war, and out-earn the rival festering to the east — starve him and he falls without a fight.",
-        "unlocks_after": [],
+        "unlocks_after": ["no_prisoners"],
         "required_completed": ["blood_and_iron"]
+      },
+      {
+        "id": "no_prisoners",
+        "scenario_id": "no_prisoners",
+        "name": "No Prisoners",
+        "briefing": "Death wastes a good soldier. Take them alive, break them in the dark, and send them back against their own as skeletons and turncoats.",
+        "unlocks_after": [],
+        "required_completed": ["the_long_dark"]
       }
     ]
   }

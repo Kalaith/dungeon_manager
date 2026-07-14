@@ -458,6 +458,39 @@ mod tests {
     }
 
     #[test]
+    fn no_prisoners_boots_with_prison_tools_and_hero_outpost() {
+        // M4 (Act I finale) introduces the prison→skeleton / torture pipeline
+        // and asks the player to raze a fortified outpost. Prove it boots, the
+        // capture rooms are available, and the outpost is live to destroy.
+        let game_data = GameData::load().expect("game data should load");
+        let scenario = game_data
+            .scenarios
+            .get("no_prisoners")
+            .expect("no_prisoners scenario should be loaded");
+        for room in ["prison", "torture_chamber"] {
+            assert!(
+                scenario.availability.rooms.contains_key(room),
+                "capture mission should offer the {room}"
+            );
+        }
+
+        let state =
+            crate::state::game_state::GameState::new_for_scenario(&game_data, "no_prisoners");
+        assert!(state.dungeon_heart_health > 0.0);
+        assert!(state.hero_base.enabled, "the outpost must be live to raze");
+        for core in ["town_hall", "barracks", "church", "armory"] {
+            assert!(
+                state
+                    .hero_base
+                    .buildings
+                    .iter()
+                    .any(|b| b.building_type == core),
+                "hero outpost should include a {core}"
+            );
+        }
+    }
+
+    #[test]
     fn default_scenario_starts_with_markable_dig_targets_near_heart() {
         let game_data = GameData::load().expect("game data should load");
         let mut state =

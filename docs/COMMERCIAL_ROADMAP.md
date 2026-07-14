@@ -47,10 +47,10 @@ everything *around* that engine:
       the next item below.
 - [ ] Author the missions: one map + one scenario JSON + event scripting each. The event system
       (triggers: TimeElapsed, ObjectiveComplete, RoomClaimed, ActionPointReached, DungeonBreached;
-      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 3 of 12
-      authored — the demo slice (M1–M3) is complete** (`docs/CAMPAIGN_ARC.md` arc). Each mission is a
+      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 4 of 12
+      authored — Act I (M1–M4) is complete** (`docs/CAMPAIGN_ARC.md` arc). Each mission is a
       hand-authored 32×32 map + scenario JSON + event scripting, wired into `deep_dominion.json` as a
-      linear `unlocks_after`/`required_completed` chain (M1→M2→M3):
+      linear `unlocks_after`/`required_completed` chain (M1→M2→M3→M4):
       - **M1 `dark_beginnings`** (pre-existing): dig→build→recruit→survive.
       - **M2 `blood_and_iron`**: survive-720s→raze-outpost; a walled hero outpost w/ single gate;
         training_hall + guard_post + braced_door/blowgun_trap intro; two scripted hero waves
@@ -59,12 +59,22 @@ everything *around* that engine:
         hero base** (heroes only raid via `steal_gold` parties at t+240/t+480); resource-rich map
         (24 gold/gem seams) shared with an economically-competing rival; `room_claimed` events on
         library→unlock lightning_strike and workshop→unlock boulder_trap.
-      Verified end-to-end: every mission boots via `GameState::new_for_scenario` (live heart; M2's
-      hero base active; M3 resource-rich), all references validate, campaign progression M1→M2→M3
-      tested, `cargo test` (90 unit incl. 6 new + 28 balance) + `clippy -D warnings` pass. The
-      `authored_campaign_scenarios_reference_only_real_content` test guards *every* authored scenario
-      against dangling ids (caught a bad `hobgoblin` ref while authoring M2 — corrected). This
-      completes the 2–3 polished-mission slice the demo build (§8) needs. Remaining: M4–M12.
+      - **M4 `no_prisoners`** (Act I finale): survive-780s→raze a fortified 4-building outpost
+        (town_hall/barracks/church/armory); introduces prison + torture_chamber + prison_tech as the
+        mission's power tools with capturable named hero parties (knight, battle_cleric); a
+        `room_claimed` guard_post→boulder_trap unlock. **Note:** the arc's "convert N heroes" *custom*
+        objective was deferred — victory requires *all* objectives complete and a `custom` objective
+        only completes via a `complete_objective` event, but no trigger counts hero conversions, so
+        such an objective is currently unsatisfiable (would make the mission unwinnable). M4 ships
+        with engine-supported objectives; a conversion-count trigger is a future §2 engine feature
+        that would let this (and similar capture/harvest objectives) become hard win conditions.
+      Verified end-to-end: every mission boots via `GameState::new_for_scenario` (live heart; hero
+      bases active where applicable; M4's prison/torture available), all references validate, campaign
+      progression M1→M2→M3→M4 tested, `cargo test` (91 unit incl. 7 new + 28 balance) +
+      `clippy -D warnings` pass. The `authored_campaign_scenarios_reference_only_real_content` test
+      guards *every* authored scenario against dangling ids (caught a bad `hobgoblin` ref while
+      authoring M2 — corrected). This completes the 2–3 polished-mission slice the demo build (§8)
+      needs. Remaining: M5–M12 (Acts II–III).
 - [x] **Un-hardcode content loading**: `data/campaign.rs:128` and `data/scenario.rs:350` used to
       `include_str!` exactly one campaign/scenario file. Now manifest-driven: a new `build.rs` scans
       `assets/campaigns/` and `assets/scenarios/` at build time and generates
