@@ -595,8 +595,14 @@ mod tests {
             .unwrap()
             .get_need("gold");
 
-        assert!(goblin_gold_need < 50.0, "unpaid creature should lose gold satisfaction");
-        assert!(imp_gold_need < 50.0, "unpaid creature should lose gold satisfaction");
+        assert!(
+            goblin_gold_need < 50.0,
+            "unpaid creature should lose gold satisfaction"
+        );
+        assert!(
+            imp_gold_need < 50.0,
+            "unpaid creature should lose gold satisfaction"
+        );
         assert!(
             goblin_gold_need < imp_gold_need,
             "theft-prone creature should resent going unpaid more than a docile one"

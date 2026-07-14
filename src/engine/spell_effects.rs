@@ -562,7 +562,10 @@ mod tests {
             .entities
             .all()
             .any(|e| matches!(&e.entity_type, crate::state::entities::EntityType::Creature(c) if c.creature_id == "goblin"));
-        assert!(goblin_exists, "spawn_entity should support entity ids other than \"imp\"");
+        assert!(
+            goblin_exists,
+            "spawn_entity should support entity ids other than \"imp\""
+        );
     }
 
     #[test]
@@ -570,9 +573,12 @@ mod tests {
         let game_data = GameData::load().expect("game data should load");
         let mut game_state = GameState::new(20, 20, &game_data);
 
-        let creature = crate::state::entities::CreatureState::new("goblin".to_string(), 1, 20.0, 10.0, 1);
+        let creature =
+            crate::state::entities::CreatureState::new("goblin".to_string(), 1, 20.0, 10.0, 1);
         let base_speed = creature.movement_speed;
-        let creature_id = game_state.entities.spawn_creature(TilePos::new(1, 1), creature);
+        let creature_id = game_state
+            .entities
+            .spawn_creature(TilePos::new(1, 1), creature);
 
         let effect = SpellEffect {
             effect_type: "stat_modifier".to_string(),

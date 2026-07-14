@@ -189,9 +189,9 @@ mod data {
 // Test Modules
 // ============================================================================
 
-#[path = "balance_tests/economy.rs"]
-mod economy;
 #[path = "balance_tests/combat.rs"]
 mod combat;
 #[path = "balance_tests/content.rs"]
 mod content;
+#[path = "balance_tests/economy.rs"]
+mod economy;

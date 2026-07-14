@@ -120,7 +120,10 @@ fn in_room_ability_only_fires_in_matching_room_type() {
         .as_creature()
         .unwrap()
         .health;
-    assert_eq!(health_before, 100.0, "sabotage shouldn't fire outside a workshop");
+    assert_eq!(
+        health_before, 100.0,
+        "sabotage shouldn't fire outside a workshop"
+    );
     assert!(game_state
         .entities
         .get(hero_id)
@@ -186,7 +189,10 @@ fn undead_trait_drives_turn_undead_ability() {
         .as_creature()
         .unwrap();
     assert!(
-        skeleton.status_effects.iter().any(|e| e.effect_type == "stun"),
+        skeleton
+            .status_effects
+            .iter()
+            .any(|e| e.effect_type == "stun"),
         "turn_undead should stun a nearby undead creature"
     );
 }

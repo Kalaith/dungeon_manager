@@ -150,8 +150,7 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
                 .filter_map(|trait_id| game_data.traits.get(trait_id))
                 .collect();
             let attack_multiplier: f32 = trait_data.iter().map(|t| t.attack_multiplier).product();
-            let defense_multiplier: f32 =
-                trait_data.iter().map(|t| t.defense_multiplier).product();
+            let defense_multiplier: f32 = trait_data.iter().map(|t| t.defense_multiplier).product();
 
             CombatStats {
                 health: creature_state.health,
@@ -263,8 +262,7 @@ fn calculate_resistance_multiplier(attacker: &CombatStats, defender: &CombatStat
 fn generate_status_effects(abilities: &[String], game_data: &GameData) -> Vec<StatusEffect> {
     let mut effects = Vec::new();
     for ability in abilities {
-        if let Some(ability_effect) = game_data.config.status_effects.ability_effects.get(ability)
-        {
+        if let Some(ability_effect) = game_data.config.status_effects.ability_effects.get(ability) {
             if macroquad_toolkit::rng::gen_range(0.0f32, 1.0) < ability_effect.proc_chance {
                 effects.push(StatusEffect {
                     effect_type: ability_effect.status_type.clone(),

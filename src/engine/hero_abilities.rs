@@ -72,11 +72,7 @@ fn update_single_hero_abilities(
     game_data: &GameData,
     dt: f32,
 ) {
-    let hero_data_id = match game_state
-        .entities
-        .get(hero_id)
-        .and_then(|e| e.as_hero())
-    {
+    let hero_data_id = match game_state.entities.get(hero_id).and_then(|e| e.as_hero()) {
         Some(hero) => hero.hero_id.clone(),
         None => return,
     };
@@ -94,7 +90,8 @@ fn update_single_hero_abilities(
         for remaining in hero.ability_cooldowns.values_mut() {
             *remaining -= dt;
         }
-        hero.ability_cooldowns.retain(|_, remaining| *remaining > 0.0);
+        hero.ability_cooldowns
+            .retain(|_, remaining| *remaining > 0.0);
     }
 
     for ability in &hero_data.abilities {
@@ -163,12 +160,15 @@ fn evaluate_trigger(
         // low-health rally, just a different flavor of ability.
         "on_low_health" | "on_self_low_health" | "defensive" => {
             let hero = hero_entity.as_hero()?;
-            (hero.health / hero.max_health < LOW_HEALTH_THRESHOLD).then_some(AbilityTarget::SelfTarget)
+            (hero.health / hero.max_health < LOW_HEALTH_THRESHOLD)
+                .then_some(AbilityTarget::SelfTarget)
         }
 
         "on_hit" | "on_damaged" => {
             let since_hit = game_state.time_elapsed - hero_entity.last_damage_time;
-            (0.0..RECENT_HIT_WINDOW).contains(&since_hit).then_some(AbilityTarget::SelfTarget)
+            (0.0..RECENT_HIT_WINDOW)
+                .contains(&since_hit)
+                .then_some(AbilityTarget::SelfTarget)
         }
 
         "on_ally_low_health" | "on_party_damaged" => {
@@ -249,7 +249,11 @@ fn nearby_low_health_ally(hero_entity: &Entity, game_state: &GameState) -> Optio
 }
 
 /// Hostile, living entities within scan range, nearest first.
-fn nearby_enemies(hero_entity: &Entity, game_state: &GameState, _game_data: &GameData) -> Vec<EntityId> {
+fn nearby_enemies(
+    hero_entity: &Entity,
+    game_state: &GameState,
+    _game_data: &GameData,
+) -> Vec<EntityId> {
     let mut enemies: Vec<(EntityId, i32)> = game_state
         .entities
         .all()

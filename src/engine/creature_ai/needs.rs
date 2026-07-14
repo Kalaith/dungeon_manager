@@ -76,7 +76,10 @@ pub fn update_mood(creature: &mut CreatureState, monster_data: &MonsterData, gam
     let traits = active_traits(monster_data, game_data);
 
     let anger_threshold = monster_data.ai.anger_threshold
-        + traits.iter().map(|t| t.anger_threshold_modifier).sum::<f32>();
+        + traits
+            .iter()
+            .map(|t| t.anger_threshold_modifier)
+            .sum::<f32>();
     creature.is_angry = creature.mood < anger_threshold;
 
     let desertion_threshold = monster_data.ai.desertion_threshold

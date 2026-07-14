@@ -6,14 +6,14 @@ use super::core::*;
 use image::RgbaImage;
 
 mod basic;
-mod undead;
-mod demon;
 mod beast;
+mod demon;
+mod undead;
 
 pub use basic::*;
-pub use undead::*;
-pub use demon::*;
 pub use beast::*;
+pub use demon::*;
+pub use undead::*;
 
 // ============================================================================
 // SAVE FUNCTION

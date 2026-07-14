@@ -230,13 +230,20 @@ fn freeze_status_effect_slows_movement_and_reverts_on_expiry() {
         .as_creature()
         .unwrap()
         .movement_speed;
-    assert_eq!(slowed_speed, base_speed * 0.5, "freeze should immediately slow movement");
+    assert_eq!(
+        slowed_speed,
+        base_speed * 0.5,
+        "freeze should immediately slow movement"
+    );
 
     // Tick past the freeze's duration: speed should revert exactly to baseline.
     let entity = game_state.entities.get_mut(defender_id).unwrap();
     combat::update_status_effects(entity, 3.0);
     let reverted_speed = entity.as_creature().unwrap().movement_speed;
-    assert_eq!(reverted_speed, base_speed, "speed should revert once freeze expires");
+    assert_eq!(
+        reverted_speed, base_speed,
+        "speed should revert once freeze expires"
+    );
 }
 
 #[test]
@@ -263,7 +270,10 @@ fn stunned_attacker_cannot_land_an_attack() {
     let defender_entity = game_state.entities.get(defender_id).unwrap();
     let result = combat::resolve_combat_tick(attacker_entity, defender_entity, 10.0, &game_data);
 
-    assert_eq!(result.damage_dealt, 0.0, "a stunned attacker cannot deal damage");
+    assert_eq!(
+        result.damage_dealt, 0.0,
+        "a stunned attacker cannot deal damage"
+    );
     assert!(
         result.projectile_spawned.is_none(),
         "a stunned attacker cannot spawn a projectile either"
