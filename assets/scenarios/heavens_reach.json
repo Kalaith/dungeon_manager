@@ -77,17 +77,20 @@
     },
     "objectives": [
       { "type": "survive_time", "seconds": 900.0 },
-      { "type": "destroy_all_hero_buildings" }
+      { "type": "destroy_all_hero_buildings" },
+      { "type": "custom", "id": "defeat_the_commander", "description": "Defeat the Knight-Commander of Heaven's Reach" }
     ],
     "events": [
       { "id": "captains_sortie", "trigger": { "type": "time_elapsed", "seconds": 240.0 },
         "actions": [ { "action": "spawn_hero_party", "party": "captains_sortie", "x": 15, "y": 13 } ], "once": true },
       { "id": "the_relief_column", "trigger": { "type": "time_elapsed", "seconds": 540.0 },
-        "actions": [ { "action": "spawn_hero_party", "party": "relief_column", "x": 23, "y": 13 } ], "once": true }
+        "actions": [ { "action": "spawn_hero_party", "party": "relief_column", "x": 23, "y": 13 } ], "once": true },
+      { "id": "commander_slain", "trigger": { "type": "hero_defeated", "hero": "knight_commander" },
+        "actions": [ { "action": "complete_objective", "objective": "defeat_the_commander" } ], "once": true }
     ],
     "hero_parties": [
       { "id": "captains_sortie", "behavior": "attack_dungeon_heart",
-        "members": [ { "hero": "knight_commander", "level": 2, "count": 1 }, { "hero": "paladin", "level": 2, "count": 1 }, { "hero": "archer", "level": 3, "count": 2 } ] },
+        "members": [ { "hero": "paladin", "level": 2, "count": 2 }, { "hero": "archer", "level": 3, "count": 2 } ] },
       { "id": "relief_column", "behavior": "attack_dungeon_heart",
         "members": [ { "hero": "high_priest", "level": 2, "count": 1 }, { "hero": "archmage", "level": 2, "count": 1 }, { "hero": "knight", "level": 3, "count": 2 } ] }
     ],

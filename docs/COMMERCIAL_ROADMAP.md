@@ -121,13 +121,10 @@ everything *around* that engine:
         knight_commander waves), then break the capital and its **Champion of Light boss** (lvl-3
         champion_of_light + high_priest + knight_commander in the last wave); survive-1020s + raze;
         threat 1.6, cap-30 army. The campaign ends here (`unlocks_after: []`).
-      **Note (boss objectives):** the arc gave M11/M12 a "defeat the named boss" *custom* objective.
-      Like M4/M7's deferrals, there's no "party/entity defeated" trigger to fire a `complete_objective`
-      event, so the boss can't be a *separate* hard objective. Instead each boss is a high-level named
-      hero placed in the capital garrison (+ in the final wave) that must be beaten *in practice* to
-      raze the halls behind it; the win stays survive + `destroy_all_hero_buildings`. A
-      party-defeated trigger is a future §2 engine feature that would promote "defeat the boss" to a
-      first-class objective.
+      **Note (boss objectives — now first-class):** M11/M12 now carry a real "defeat the named boss"
+      objective, enabled by the new `hero_defeated` trigger (see the "Boss heroes / final-mission
+      climax encounters" item below). M11 = defeat the Knight-Commander (made the sole knight_commander
+      on the map); M12 = defeat the Champion of Light (now *wave-only*, its dramatic finale entrance).
       **Note (deferred objectives):** the arc gave M7a a `destroy_heart(rival)` win and M7b a
       "N sacrifices" custom win. Both are currently *unsatisfiable* — a rival keeper's heart is a map
       *tile*, not the `Structure` entity `destroy_heart` scans for (only the player heart has tracked
@@ -207,7 +204,26 @@ everything *around* that engine:
       ships the functional list form), a dedicated pre-mission briefing modal, and carrying campaign
       progress back to the select screen after a mid-campaign win (today NEXT MISSION auto-continues
       linearly; the select screen is the fresh-start entry point).
-- [ ] Boss heroes / final-mission climax encounters (designed in hero_notes/ROADMAP, not built).
+- [x] Boss heroes / final-mission climax encounters (designed in `hero_design.md` "Elite & Boss
+      Heroes"). Built the missing engine mechanic + wired the two climax missions:
+      - **New `hero_defeated` scenario trigger** (`data/scenario.rs` `EventTrigger::HeroDefeated`):
+        fires once every heroes-faction hero of a given id that has *been seen alive* is dead/gone.
+        The "seen" gate (tracked in `ScenarioRuntimeState::seen_hero_ids`, updated each tick in
+        `scenario_events::record_seen_heroes`) means a boss that only arrives in a later wave doesn't
+        count as "defeated" before it appears. This is the general "defeat a named boss" primitive the
+        deferred-objective backlog needed.
+      - **M11 `heavens_reach`** — a real *defeat-the-Knight-Commander* objective (`custom` +
+        `hero_defeated → complete_objective`); the sortie wave's knight_commander was removed so the
+        garrison boss is the **only** knight_commander, making the objective unambiguous.
+      - **M12 `deep_dominion_finale`** — a real *defeat-the-Champion-of-Light* objective; the champion
+        was moved **off the start map into the final `the_last_light` wave only**, so it is a unique,
+        dramatic climax entrance that must be slain to win (on top of survive-1020s + raze).
+      Verified: `cargo test` (103 unit incl. 2 new boss-trigger tests + 28 balance) +
+      `clippy -D warnings` pass — `hero_defeated_trigger_completes_the_climax_boss_objective` slays the
+      boss and asserts the objective completes, `hero_defeated_does_not_fire_before_the_boss_appears`
+      guards the seen-gate. **Polish left (not blocking):** boss-specific *mechanics* (phase changes,
+      enrage, unique boss AI beyond the existing data-driven hero abilities) remain future depth; this
+      ships the defeat-the-boss *encounter* + the reusable trigger.
 - [ ] Skirmish/sandbox mode: `MapType::Rich/Hazardous/Test` and the whole procedural map generator
       exist but are **unreachable from the UI** (`input.rs:93` forces Standard). Add a skirmish
       setup screen (map size/type/seed, rival count, difficulty) — cheap win, the generator with

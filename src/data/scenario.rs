@@ -165,11 +165,30 @@ pub struct ScenarioEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum EventTrigger {
-    TimeElapsed { seconds: f32 },
-    ObjectiveComplete { objective: String },
-    RoomClaimed { room: String, owner: OwnerId },
-    ActionPointReached { id: String, owner: OwnerId },
-    DungeonBreached { owner: OwnerId },
+    TimeElapsed {
+        seconds: f32,
+    },
+    ObjectiveComplete {
+        objective: String,
+    },
+    RoomClaimed {
+        room: String,
+        owner: OwnerId,
+    },
+    ActionPointReached {
+        id: String,
+        owner: OwnerId,
+    },
+    DungeonBreached {
+        owner: OwnerId,
+    },
+    /// Fires once every hero of this `hero` id (heroes faction) that has been
+    /// seen alive is dead/gone — i.e. a named boss has been defeated. The
+    /// "seen" gate means a boss that spawns mid-mission (a later wave) doesn't
+    /// trigger before it ever appears.
+    HeroDefeated {
+        hero: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

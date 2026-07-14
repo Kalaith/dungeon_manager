@@ -28,6 +28,11 @@ pub struct ScenarioRuntimeState {
     pub unlocked_creatures: HashSet<String>,
     #[serde(default)]
     pub reached_action_points: HashSet<String>,
+    /// Hero ids (heroes faction) that have been seen alive at least once; used
+    /// by the `HeroDefeated` trigger so a boss is only "defeated" after it has
+    /// actually appeared.
+    #[serde(default)]
+    pub seen_hero_ids: HashSet<String>,
     #[serde(default)]
     pub active_rules: ScenarioRules,
 }
@@ -54,6 +59,7 @@ impl ScenarioRuntimeState {
             available_creatures,
             unlocked_creatures,
             reached_action_points: HashSet::new(),
+            seen_hero_ids: HashSet::new(),
             active_rules: scenario.rules.clone(),
         }
     }

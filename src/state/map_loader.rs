@@ -691,28 +691,46 @@ mod tests {
     }
 
     #[test]
-    fn climax_missions_boot_with_capital_and_boss_heroes() {
-        // M11–M12: assault a fortified capital defended by a named boss hero.
-        // Prove both boot, the capital is live to raze, and the boss stands in
-        // the garrison (a high-level hero entity owned by the heroes faction).
+    fn climax_missions_boot_with_a_live_capital_garrison() {
+        // M11–M12: assault a fortified capital defended by a hero garrison.
+        // Both boot with a live, razeable capital and a garrison present.
+        // (M11's knight_commander boss stands on the map; M12's Champion of
+        // Light is wave-only and defeated via the `hero_defeated` objective, so
+        // it is deliberately NOT a start-of-mission map entity — see the
+        // scenario_events boss-defeat tests.)
         let game_data = GameData::load().expect("game data should load");
-        for (id, boss) in [
-            ("heavens_reach", "knight_commander"),
-            ("deep_dominion_finale", "champion_of_light"),
-        ] {
+        for id in ["heavens_reach", "deep_dominion_finale"] {
             let state = crate::state::game_state::GameState::new_for_scenario(&game_data, id);
             assert!(state.dungeon_heart_health > 0.0, "{id} player heart live");
             assert!(
                 state.hero_base.enabled,
                 "{id} capital should be live to raze"
             );
-            let has_boss = state.entities.all().any(|e| {
-                e.owner == OwnerId::Heroes
-                    && matches!(&e.entity_type,
-                        crate::state::entities::EntityType::Hero(h) if h.hero_id == boss)
-            });
-            assert!(has_boss, "{id} should field its {boss} boss");
+            let garrison = state
+                .entities
+                .all()
+                .filter(|e| e.owner == OwnerId::Heroes)
+                .filter(|e| matches!(&e.entity_type, crate::state::entities::EntityType::Hero(_)))
+                .count();
+            assert!(
+                garrison >= 4,
+                "{id} should field a hero garrison, got {garrison}"
+            );
         }
+
+        // M11's boss is the sole knight_commander on the map at start.
+        let m11 =
+            crate::state::game_state::GameState::new_for_scenario(&game_data, "heavens_reach");
+        let commanders = m11
+            .entities
+            .all()
+            .filter(|e| e.owner == OwnerId::Heroes)
+            .filter(|e| {
+                matches!(&e.entity_type,
+                    crate::state::entities::EntityType::Hero(h) if h.hero_id == "knight_commander")
+            })
+            .count();
+        assert_eq!(commanders, 1, "the knight_commander boss should be unique");
     }
 
     #[test]

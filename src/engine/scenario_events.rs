@@ -14,6 +14,7 @@ pub fn update_scenario_events(state: &mut GameState, game_data: &GameData) {
     };
 
     update_action_points(state, scenario);
+    record_seen_heroes(state);
 
     let events_to_fire: Vec<ScenarioEvent> = scenario
         .events
@@ -36,6 +37,33 @@ pub fn update_scenario_events(state: &mut GameState, game_data: &GameData) {
         if let Some(runtime) = &mut state.scenario_runtime {
             runtime.mark_event_fired(&event.id);
         }
+    }
+}
+
+/// Living hero ids (heroes faction). Shared by the seen-tracker and the
+/// `HeroDefeated` trigger so both agree on what "alive" means.
+fn living_hero_ids(state: &GameState) -> impl Iterator<Item = &str> {
+    use crate::state::entities::EntityType;
+    use crate::state::faction::OwnerId;
+    state.entities.all().filter_map(|entity| {
+        if entity.owner == OwnerId::Heroes && entity.is_alive() {
+            if let EntityType::Hero(hero) = &entity.entity_type {
+                return Some(hero.hero_id.as_str());
+            }
+        }
+        None
+    })
+}
+
+/// Remember every hero id currently alive so `HeroDefeated` can tell "never
+/// appeared" from "appeared and was slain".
+fn record_seen_heroes(state: &mut GameState) {
+    let seen: Vec<String> = living_hero_ids(state).map(|id| id.to_string()).collect();
+    if seen.is_empty() {
+        return;
+    }
+    if let Some(runtime) = &mut state.scenario_runtime {
+        runtime.seen_hero_ids.extend(seen);
     }
 }
 
@@ -69,6 +97,14 @@ fn trigger_matches(event: &ScenarioEvent, state: &GameState) -> bool {
             };
             tile.owner == *owner
         }),
+        EventTrigger::HeroDefeated { hero } => {
+            let seen = state
+                .scenario_runtime
+                .as_ref()
+                .map(|runtime| runtime.seen_hero_ids.contains(hero))
+                .unwrap_or(false);
+            seen && !living_hero_ids(state).any(|id| id == hero)
+        }
     }
 }
 
@@ -237,6 +273,74 @@ mod tests {
         assert!(runtime.fired_events.contains("first_raid"));
         assert!(runtime.unlocked_traps.contains("spike_trap"));
         assert!(state.player.unlocked_traps.contains("spike_trap"));
+    }
+
+    #[test]
+    fn hero_defeated_trigger_completes_the_climax_boss_objective() {
+        use crate::state::entities::EntityType;
+
+        let game_data = GameData::load().expect("game data should load");
+        let mut state = GameState::new_for_scenario(&game_data, "heavens_reach");
+
+        // The knight-commander boss stands in the capital from the start.
+        let boss_ids: Vec<_> = state
+            .entities
+            .all()
+            .filter(|e| e.owner == OwnerId::Heroes)
+            .filter(|e| {
+                matches!(&e.entity_type,
+                    EntityType::Hero(h) if h.hero_id == "knight_commander")
+            })
+            .map(|e| e.id)
+            .collect();
+        assert_eq!(
+            boss_ids.len(),
+            1,
+            "the boss should be the only knight_commander at start"
+        );
+
+        // While the boss lives, it is seen but the defeat objective is not met.
+        update_scenario_events(&mut state, &game_data);
+        let runtime = state.scenario_runtime.as_ref().unwrap();
+        assert!(runtime.seen_hero_ids.contains("knight_commander"));
+        assert!(!runtime
+            .completed_objectives
+            .contains("defeat_the_commander"));
+
+        // Slay the boss → the HeroDefeated trigger completes the objective.
+        for id in boss_ids {
+            if let Some(hero) = state.entities.get_mut(id).and_then(|e| e.as_hero_mut()) {
+                hero.health = 0.0;
+            }
+        }
+        update_scenario_events(&mut state, &game_data);
+        assert!(
+            state
+                .scenario_runtime
+                .as_ref()
+                .unwrap()
+                .completed_objectives
+                .contains("defeat_the_commander"),
+            "defeating the boss must complete the defeat objective"
+        );
+    }
+
+    #[test]
+    fn hero_defeated_does_not_fire_before_the_boss_appears() {
+        // A boss that only arrives in a later wave (M12's champion) must not
+        // count as "defeated" before it has ever been seen.
+        let game_data = GameData::load().expect("game data should load");
+        let mut state = GameState::new_for_scenario(&game_data, "deep_dominion_finale");
+        update_scenario_events(&mut state, &game_data);
+        let runtime = state.scenario_runtime.as_ref().unwrap();
+        assert!(
+            !runtime.seen_hero_ids.contains("champion_of_light"),
+            "the champion is wave-only and hasn't spawned yet"
+        );
+        assert!(
+            !runtime.completed_objectives.contains("defeat_the_champion"),
+            "the champion objective must not complete before the champion appears"
+        );
     }
 
     #[test]

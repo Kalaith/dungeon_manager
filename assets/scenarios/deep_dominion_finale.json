@@ -79,7 +79,8 @@
     },
     "objectives": [
       { "type": "survive_time", "seconds": 1020.0 },
-      { "type": "destroy_all_hero_buildings" }
+      { "type": "destroy_all_hero_buildings" },
+      { "type": "custom", "id": "defeat_the_champion", "description": "Defeat the Champion of Light" }
     ],
     "events": [
       { "id": "the_fury_1", "trigger": { "type": "time_elapsed", "seconds": 150.0 },
@@ -87,7 +88,9 @@
       { "id": "the_fury_2", "trigger": { "type": "time_elapsed", "seconds": 360.0 },
         "actions": [ { "action": "spawn_hero_party", "party": "the_fury_2", "x": 23, "y": 13 } ], "once": true },
       { "id": "the_last_light", "trigger": { "type": "time_elapsed", "seconds": 660.0 },
-        "actions": [ { "action": "spawn_hero_party", "party": "the_last_light", "x": 19, "y": 13 } ], "once": true }
+        "actions": [ { "action": "spawn_hero_party", "party": "the_last_light", "x": 19, "y": 13 } ], "once": true },
+      { "id": "champion_slain", "trigger": { "type": "hero_defeated", "hero": "champion_of_light" },
+        "actions": [ { "action": "complete_objective", "objective": "defeat_the_champion" } ], "once": true }
     ],
     "hero_parties": [
       { "id": "the_fury_1", "behavior": "attack_dungeon_heart",
