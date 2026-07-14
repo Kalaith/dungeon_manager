@@ -288,5 +288,204 @@
     "visual": {
       "icon": "icons/spells/chicken.png"
     }
-  }
+  },
+    {
+        "id": "fireball",
+        "name": "Fireball",
+        "description": "A roaring ball of flame that scorches all it touches.",
+        "category": "combat",
+        "cost": {
+            "mana": 40
+        },
+        "targeting": {
+            "type": "tile",
+            "range": 12,
+            "area_radius": 2,
+            "requires_visibility": true,
+            "valid_targets": [
+                "enemy"
+            ]
+        },
+        "effects": [
+            {
+                "type": "damage",
+                "amount": 30,
+                "damage_type": "fire"
+            },
+            {
+                "type": "status_apply",
+                "status": "burn",
+                "amount": 4,
+                "duration": 4
+            }
+        ],
+        "cooldown": 3,
+        "visual": {
+            "icon": "icons/spells/fireball.png"
+        }
+    },
+    {
+        "id": "frost_nova",
+        "name": "Frost Nova",
+        "description": "A burst of killing cold that slows everything caught in it.",
+        "category": "combat",
+        "cost": {
+            "mana": 45
+        },
+        "targeting": {
+            "type": "tile",
+            "range": 10,
+            "area_radius": 2,
+            "requires_visibility": true,
+            "valid_targets": [
+                "enemy"
+            ]
+        },
+        "effects": [
+            {
+                "type": "damage",
+                "amount": 18,
+                "damage_type": "ice"
+            },
+            {
+                "type": "status_apply",
+                "status": "freeze",
+                "amount": 1,
+                "duration": 3
+            }
+        ],
+        "cooldown": 3,
+        "visual": {
+            "icon": "icons/spells/frost_nova.png"
+        }
+    },
+    {
+        "id": "chain_lightning",
+        "name": "Chain Lightning",
+        "description": "A forking bolt that leaves its target reeling.",
+        "category": "combat",
+        "cost": {
+            "mana": 50
+        },
+        "targeting": {
+            "type": "tile",
+            "range": 12,
+            "area_radius": 1,
+            "requires_visibility": true,
+            "valid_targets": [
+                "enemy"
+            ]
+        },
+        "effects": [
+            {
+                "type": "damage",
+                "amount": 38,
+                "damage_type": "lightning"
+            },
+            {
+                "type": "status_apply",
+                "status": "stun",
+                "duration": 2
+            }
+        ],
+        "cooldown": 3,
+        "visual": {
+            "icon": "icons/spells/chain_lightning.png"
+        }
+    },
+    {
+        "id": "venom_spray",
+        "name": "Venom Spray",
+        "description": "A cloud of corrosive venom that eats away at flesh.",
+        "category": "combat",
+        "cost": {
+            "mana": 30
+        },
+        "targeting": {
+            "type": "tile",
+            "range": 9,
+            "area_radius": 2,
+            "requires_visibility": true,
+            "valid_targets": [
+                "enemy"
+            ]
+        },
+        "effects": [
+            {
+                "type": "damage",
+                "amount": 8,
+                "damage_type": "poison"
+            },
+            {
+                "type": "status_apply",
+                "status": "poison",
+                "amount": 5,
+                "duration": 6
+            }
+        ],
+        "cooldown": 3,
+        "visual": {
+            "icon": "icons/spells/venom_spray.png"
+        }
+    },
+    {
+        "id": "raise_the_dead",
+        "name": "Raise the Dead",
+        "description": "Claw two shambling zombies up out of the earth.",
+        "category": "summoning",
+        "cost": {
+            "mana": 60
+        },
+        "targeting": {
+            "type": "tile",
+            "range": 8,
+            "area_radius": 0,
+            "requires_visibility": true,
+            "valid_targets": [
+                "ally",
+                "empty"
+            ]
+        },
+        "effects": [
+            {
+                "type": "spawn_entity",
+                "entity": "zombie",
+                "count": 2
+            }
+        ],
+        "cooldown": 3,
+        "visual": {
+            "icon": "icons/spells/raise_the_dead.png"
+        }
+    },
+    {
+        "id": "summon_skeletons",
+        "name": "Summon Skeletons",
+        "description": "Call a squad of tireless skeleton warriors to your side.",
+        "category": "summoning",
+        "cost": {
+            "mana": 55
+        },
+        "targeting": {
+            "type": "tile",
+            "range": 8,
+            "area_radius": 0,
+            "requires_visibility": true,
+            "valid_targets": [
+                "ally",
+                "empty"
+            ]
+        },
+        "effects": [
+            {
+                "type": "spawn_entity",
+                "entity": "skeleton",
+                "count": 3
+            }
+        ],
+        "cooldown": 3,
+        "visual": {
+            "icon": "icons/spells/summon_skeletons.png"
+        }
+    }
 ]

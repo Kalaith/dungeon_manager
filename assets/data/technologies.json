@@ -156,7 +156,10 @@
             "rooms": [
                 "graveyard"
             ],
-            "spells": [],
+            "spells": [
+                "raise_the_dead",
+                "summon_skeletons"
+            ],
             "creatures": [
                 "skeleton",
                 "zombie",
@@ -180,7 +183,8 @@
                 "temple"
             ],
             "spells": [
-                "corrupt_land"
+                "corrupt_land",
+                "venom_spray"
             ],
             "creatures": [
                 "succubus",
@@ -204,7 +208,10 @@
             "spells": [
                 "call_to_arms",
                 "iron_skin",
-                "speed_boost"
+                "speed_boost",
+                "fireball",
+                "frost_nova",
+                "chain_lightning"
             ],
             "creatures": [],
             "traps": []

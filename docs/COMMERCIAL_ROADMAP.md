@@ -323,8 +323,24 @@ everything *around* that engine:
       surfaced — to unlock the whole amenity tier). Building the picked rooms is the downstream work
       (art + the sized mechanics + a `technologies.json` tech to gate each, now that the tree is real);
       this item is the *pick*, analogous to the campaign-arc design deliverable above.
-- [ ] Spells: 11 built; design docs want more plus miscasts, hero counter-spells,
-      research-unlocked modifiers.
+- [x] Spells: **11 → 17 built**, and the new ones are **research-unlocked** (the concrete asks).
+      Added 6 spells that use only effect types the dispatcher (`spell_effects::apply_spell_effect`)
+      *actually executes* — so they genuinely fire, not sit inert: **fireball** (fire damage + burn),
+      **frost_nova** (ice damage + freeze), **chain_lightning** (lightning damage + stun),
+      **venom_spray** (poison damage + poison DoT), **raise_the_dead** (spawn 2 zombies), and
+      **summon_skeletons** (spawn 3 skeletons). Each is gated behind the now-real tech tree —
+      war_magic unlocks the three battle bolts, necromancy unlocks the two summons, demonology unlocks
+      venom_spray (so "research-unlocked" is satisfied via `technologies.json`). Verified: `cargo test`
+      (113 unit incl. 1 new `new_battle_spells_are_wired_with_working_effects` — asserts every new
+      spell's effects are in the dispatcher-supported set and the summons reference real creatures — +
+      28 balance) + `clippy -D warnings` pass; the tech-tree DAG test also covers the new spell unlocks.
+      **Follow-on (need engine hooks, not data):** *miscasts* (a fail/backfire roll at cast time),
+      *hero counter-spells* (heroes already have data-driven abilities, but the dispel/purify ones are
+      inert pending the ritual-detection subsystem — see §2 Hero abilities), and *research-unlocked
+      **modifiers*** (upgrading a spell's numbers via research) all need new engine code. **Incidental
+      finding:** 3 *existing* spells (corrupt_land/make_earth via `tile_transform`, chickenify via
+      `polymorph`) use effect types the dispatcher doesn't handle → they hit the "Unknown spell effect
+      type" fallthrough and are currently inert; wiring those two effect types is a separate small fix.
 - [ ] Mod/content-pack system exists (`mods/load_order.json`) but ships **empty** — either make
       modding a marketed feature (docs, examples, validation) or cut it.
 
