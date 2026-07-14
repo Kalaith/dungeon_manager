@@ -346,13 +346,22 @@ impl ScenarioDefinition {
     }
 }
 
+/// Load every base-game scenario. Sourced from the build-time embedded manifest
+/// (`data::embedded::EMBEDDED_SCENARIOS`), with a native runtime directory scan
+/// of `assets/scenarios/` overlaid so a dropped-in mission loads without a
+/// rebuild. Adding a scenario is pure content work — no code changes.
 pub fn load_scenarios() -> Result<HashMap<String, ScenarioDefinition>, Box<dyn Error>> {
-    let json_content = include_str!("../../assets/scenarios/dark_beginnings.json");
-    let scenarios_vec: Vec<ScenarioDefinition> = serde_json::from_str(json_content)?;
-    Ok(scenarios_vec
-        .into_iter()
-        .map(|scenario| (scenario.meta.id.clone(), scenario))
-        .collect())
+    let mut scenarios = crate::data::content_source::from_embedded(
+        crate::data::embedded::EMBEDDED_SCENARIOS,
+        |scenario: &ScenarioDefinition| scenario.meta.id.clone(),
+    )?;
+    #[cfg(not(target_arch = "wasm32"))]
+    crate::data::content_source::overlay_from_disk(
+        &mut scenarios,
+        "assets/scenarios",
+        |scenario: &ScenarioDefinition| scenario.meta.id.clone(),
+    );
+    Ok(scenarios)
 }
 
 fn check_keys<'a>(

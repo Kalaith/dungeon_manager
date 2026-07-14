@@ -124,13 +124,22 @@ impl CampaignProgress {
     }
 }
 
+/// Load every base-game campaign. Sourced from the build-time embedded manifest
+/// (`data::embedded::EMBEDDED_CAMPAIGNS`), with a native runtime directory scan
+/// of `assets/campaigns/` overlaid so a dropped-in campaign loads without a
+/// rebuild. Adding a campaign is pure content work — no code changes.
 pub fn load_campaigns() -> Result<HashMap<String, CampaignDefinition>, Box<dyn Error>> {
-    let json_content = include_str!("../../assets/campaigns/deep_dominion.json");
-    let campaigns_vec: Vec<CampaignDefinition> = serde_json::from_str(json_content)?;
-    Ok(campaigns_vec
-        .into_iter()
-        .map(|campaign| (campaign.id.clone(), campaign))
-        .collect())
+    let mut campaigns = crate::data::content_source::from_embedded(
+        crate::data::embedded::EMBEDDED_CAMPAIGNS,
+        |campaign: &CampaignDefinition| campaign.id.clone(),
+    )?;
+    #[cfg(not(target_arch = "wasm32"))]
+    crate::data::content_source::overlay_from_disk(
+        &mut campaigns,
+        "assets/campaigns",
+        |campaign: &CampaignDefinition| campaign.id.clone(),
+    );
+    Ok(campaigns)
 }
 
 #[cfg(test)]

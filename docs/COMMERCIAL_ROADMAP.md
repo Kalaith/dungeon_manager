@@ -49,9 +49,21 @@ everything *around* that engine:
       `dark_beginnings` exists. The event system (triggers: TimeElapsed, ObjectiveComplete,
       RoomClaimed, ActionPointReached, DungeonBreached; actions: unlocks, spawns, rules) is done —
       this is pure content work.
-- [ ] **Un-hardcode content loading**: `data/campaign.rs:128` and `data/scenario.rs:350`
-      `include_str!` exactly one campaign/scenario file. Build a manifest-driven loader so missions
-      can be added without code changes (native dir scan + WASM embedded manifest).
+- [x] **Un-hardcode content loading**: `data/campaign.rs:128` and `data/scenario.rs:350` used to
+      `include_str!` exactly one campaign/scenario file. Now manifest-driven: a new `build.rs` scans
+      `assets/campaigns/` and `assets/scenarios/` at build time and generates
+      `EMBEDDED_CAMPAIGNS`/`EMBEDDED_SCENARIOS` (`include_str!`-backed `&[&str]`, the "WASM embedded
+      manifest"), pulled in via `data/embedded.rs`. On **native** builds `data/content_source.rs`
+      overlays a runtime directory scan (`overlay_from_disk`) on top, so a mission JSON dropped into
+      either directory loads *without recompiling*; on **wasm32** the embedded set is authoritative
+      (drop a file + rebuild — no source edit either way). `load_scenarios()`/`load_campaigns()` were
+      rewritten to use `content_source::from_embedded` + the native overlay. Verified: `cargo build`
+      (build.rs runs), `cargo clippy --all-targets -- -D warnings`, `cargo test` (84 unit + 28
+      balance, all pass) incl. 2 new `from_embedded` tests; and an end-to-end check that dropping a
+      new `assets/scenarios/*.json` auto-appears in the generated manifest with zero code changes.
+      Adding a mission is now pure content work. (Maps are still path-referenced and resolved via the
+      content-pack roots — untouched here, as this item is specifically the campaign/scenario
+      loaders.)
 - [ ] Exercise the unlock graph: `required_completed` / `unlocks_after` logic exists but has never
       branched (single linear mission). Add branching or hub structure and test it.
 - [ ] Between-mission screens: mission briefing/debriefing, campaign map / mission-select UI

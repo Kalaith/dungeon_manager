@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Deep Dominion Team"]
 default-run = "dungeon_manager"
+build = "build.rs"
 
 [dependencies]
 macroquad = "0.4"
