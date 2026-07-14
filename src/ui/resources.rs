@@ -142,24 +142,33 @@ impl GraphicsCache {
             }
         }
 
-        // Load unit textures (creatures)
-        let creatures = vec![
-            "imp",
-            "goblin",
-            "orc",
-            "warlock",
-            "troll",
-            "skeleton",
-            "demon_spawn",
-            "spider",
-            "lizard", // Wild/neutral monsters
-        ];
-        for creature in creatures {
+        // Load unit textures (creatures). Data-driven off the monster roster so
+        // every monster in `monsters.json` gets its sprite — adding a monster is
+        // then enough to wire it (no hardcoded list to keep in sync). Falls back
+        // to the core set only when game data isn't available.
+        let creatures: Vec<String> = match game_data {
+            Some(data) => data.monsters.keys().cloned().collect(),
+            None => [
+                "imp",
+                "goblin",
+                "orc",
+                "warlock",
+                "troll",
+                "skeleton",
+                "demon_spawn",
+                "spider",
+                "lizard",
+            ]
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
+        };
+        for creature in &creatures {
             let path = format!("assets/sprites/monsters/{}.png", creature);
             let load_path = resolve_asset_path(game_data, &path);
             match loader.load(&load_path, FilterMode::Nearest).await {
                 Ok(tex) => {
-                    cache.monster_textures.insert(creature.to_string(), tex);
+                    cache.monster_textures.insert(creature.clone(), tex);
                 }
                 Err(e) => println!("Failed to load texture {}: {}", load_path, e),
             }

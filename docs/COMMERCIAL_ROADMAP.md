@@ -263,9 +263,20 @@ everything *around* that engine:
       scales hero *threat* (the primary lever, and the one that was dead).
 
 ### Roster & data content
-- [ ] More monsters: 13 shipped. `docs/monsters.md` designs ~18 more (Lich, Balor, Ogre, Shadow
-      Stalker, etc.). Four finished sprites are already orphaned with no data entry:
-      **zombie, ghost, bat_swarm, dark_elf** — wiring these is near-free.
+- [x] More monsters: the four orphaned sprites are wired — **13 → 17 shipped**. Added full
+      `monsters.json` entries for **zombie** (slow tireless undead tank, poison_bite),
+      **ghost** (fast fragile ethereal caster, magic + physical resist), **bat_swarm** (cheap fast
+      beast skirmisher), and **dark_elf** (fragile high-DPS ranged blademaster, poison_bite, deserts
+      easily) — all using existing traits/ability-procs, and balanced into the roster's wage-efficiency
+      band (health/wage 30–90) so the balance guard test still passes. **Also fixed a latent bug:** the
+      creature sprite loader used a stale *hardcoded* list (only 9 of 13 ids — hellhound/succubus/
+      vampire/bile_demon sprites weren't even loaded); it now iterates `game_data.monsters`, so every
+      monster's sprite loads and adding a monster is genuinely a pure `monsters.json` edit. Verified:
+      `cargo test` (110 unit incl. 2 new — `orphan_sprite_monsters_are_wired` +
+      `every_monster_trait_resolves_against_the_trait_system`, a roster-wide dangling-trait guard — and
+      28 balance) + `clippy -D warnings` pass. **Follow-on (art-blocked, not near-free):** the ~18
+      further `docs/monsters.md` designs (Lich, Balor, Ogre, Shadow Stalker…) need new sprites first
+      (tracked under §4 art); those are data+art, not just a data entry.
 - [ ] More heroes: 17 shipped; orphan sprites **champion, dragon_knight, peasant** ready to wire.
 - [ ] Tech tree: only **4 technologies** exist. A commercial progression system needs a real tree
       (rooms/spells/traps/creatures as unlocks across a campaign). Also fix persistence:

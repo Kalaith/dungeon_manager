@@ -1509,5 +1509,467 @@
       ],
       "voice_set": "demon"
     }
+  },
+  {
+    "id": "zombie",
+    "name": "Zombie",
+    "description": "A shambling corpse \u2014 slow and mindless, but tireless and hard to put down.",
+    "faction": "dungeon",
+    "role": "fighter",
+    "stats": {
+      "health": 150,
+      "mana": 0,
+      "attack": 9,
+      "defense": 3,
+      "speed": 0.7,
+      "carry_capacity": 10,
+      "sight_radius": 5
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 0,
+        "satisfied_by": []
+      },
+      "food": {
+        "decay_per_minute": 0,
+        "satisfied_by": []
+      },
+      "gold": {
+        "decay_per_minute": 0.2,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 15
+      }
+    },
+    "traits": [
+      "undead",
+      "mindless",
+      "slow"
+    ],
+    "ai": {
+      "base_mood": 100,
+      "anger_threshold": 0,
+      "desertion_threshold": 0,
+      "task_preferences": {
+        "guard": 1.8,
+        "fight": 1.6,
+        "wander": 0.1
+      },
+      "room_desires": {},
+      "discipline_response": {
+        "slap": 0,
+        "torture": 0,
+        "reward": 0
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        7,
+        12
+      ],
+      "attack_speed": 0.8,
+      "armor_type": "medium",
+      "resistances": {
+        "poison": 1.0,
+        "necrotic": 0.5
+      },
+      "abilities": [
+        "poison_bite"
+      ]
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        80,
+        200,
+        400,
+        700
+      ],
+      "stat_growth_per_level": {
+        "health": 14,
+        "attack": 1,
+        "defense": 1
+      },
+      "max_level": 8,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 2,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [
+        3,
+        10
+      ]
+    },
+    "spawn": {
+      "source": "ritual",
+      "min_dungeon_reputation": 120,
+      "preferred_rooms": [
+        "graveyard",
+        "ritual_circle"
+      ],
+      "spawn_weight": 0.8,
+      "max_population": 15
+    },
+    "visual": {
+      "sprite": "creatures/zombie.png",
+      "scale": 1.0,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "zombie"
+    }
+  },
+  {
+    "id": "ghost",
+    "name": "Ghost",
+    "description": "A restless spirit \u2014 fast, fragile, and hard to strike, striking from beyond the veil.",
+    "faction": "dungeon",
+    "role": "caster",
+    "stats": {
+      "health": 60,
+      "mana": 40,
+      "attack": 10,
+      "defense": 1,
+      "speed": 1.6,
+      "carry_capacity": 0,
+      "sight_radius": 8
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 0,
+        "satisfied_by": []
+      },
+      "food": {
+        "decay_per_minute": 0,
+        "satisfied_by": []
+      },
+      "gold": {
+        "decay_per_minute": 0.2,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 15
+      }
+    },
+    "traits": [
+      "undead",
+      "fearless"
+    ],
+    "ai": {
+      "base_mood": 100,
+      "anger_threshold": 0,
+      "desertion_threshold": 0,
+      "task_preferences": {
+        "fight": 1.6,
+        "guard": 1.0,
+        "wander": 0.4
+      },
+      "room_desires": {
+        "ritual_circle": 1.2
+      },
+      "discipline_response": {
+        "slap": 0,
+        "torture": 0,
+        "reward": 0
+      }
+    },
+    "combat": {
+      "attack_type": "magic",
+      "damage_range": [
+        8,
+        14
+      ],
+      "attack_speed": 1.0,
+      "armor_type": "none",
+      "resistances": {
+        "poison": 1.0,
+        "necrotic": 0.75,
+        "physical": 0.4
+      },
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        100,
+        250,
+        500,
+        900
+      ],
+      "stat_growth_per_level": {
+        "health": 6,
+        "attack": 2,
+        "defense": 0
+      },
+      "max_level": 8,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 1,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [
+        0,
+        5
+      ]
+    },
+    "spawn": {
+      "source": "ritual",
+      "min_dungeon_reputation": 180,
+      "preferred_rooms": [
+        "graveyard",
+        "ritual_circle"
+      ],
+      "spawn_weight": 0.5,
+      "max_population": 12
+    },
+    "visual": {
+      "sprite": "creatures/ghost.png",
+      "scale": 1.0,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "ghost"
+    }
+  },
+  {
+    "id": "bat_swarm",
+    "name": "Bat Swarm",
+    "description": "A cloud of shrieking cave bats \u2014 individually harmless, together a fast, distracting nuisance.",
+    "faction": "dungeon",
+    "role": "skirmisher",
+    "stats": {
+      "health": 50,
+      "mana": 0,
+      "attack": 5,
+      "defense": 1,
+      "speed": 1.8,
+      "carry_capacity": 0,
+      "sight_radius": 7
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 10.0,
+        "satisfied_by": [
+          "lair"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 20.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      }
+    },
+    "traits": [
+      "beast",
+      "wild",
+      "cowardly"
+    ],
+    "ai": {
+      "base_mood": 55,
+      "anger_threshold": 30,
+      "desertion_threshold": 20,
+      "task_preferences": {
+        "fight": 1.4,
+        "wander": 0.9,
+        "guard": 0.6
+      },
+      "room_desires": {
+        "kennel": 1.2
+      },
+      "discipline_response": {
+        "slap": -6,
+        "torture": -30,
+        "reward": 8
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        3,
+        7
+      ],
+      "attack_speed": 2.2,
+      "armor_type": "none",
+      "resistances": {},
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        60,
+        150,
+        320,
+        560
+      ],
+      "stat_growth_per_level": {
+        "health": 6,
+        "attack": 1,
+        "defense": 0
+      },
+      "max_level": 6,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 1,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [
+        0,
+        5
+      ]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 40,
+      "preferred_rooms": [
+        "kennel"
+      ],
+      "spawn_weight": 1.0,
+      "max_population": 18
+    },
+    "visual": {
+      "sprite": "creatures/bat_swarm.png",
+      "scale": 1.0,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "bat"
+    }
+  },
+  {
+    "id": "dark_elf",
+    "name": "Dark Elf",
+    "description": "A swift, arrogant blademaster \u2014 devastating damage from poisoned blades, but quick to desert a poorly-run dungeon.",
+    "faction": "dungeon",
+    "role": "skirmisher",
+    "stats": {
+      "health": 90,
+      "mana": 10,
+      "attack": 16,
+      "defense": 3,
+      "speed": 1.5,
+      "carry_capacity": 20,
+      "sight_radius": 8
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 14.0,
+        "satisfied_by": [
+          "lair"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 18.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 16.0,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 90
+      },
+      "training": {
+        "decay_per_minute": 8.0,
+        "satisfied_by": [
+          "training_hall"
+        ]
+      }
+    },
+    "traits": [
+      "aggressive",
+      "arrogant",
+      "intelligent"
+    ],
+    "ai": {
+      "base_mood": 50,
+      "anger_threshold": 35,
+      "desertion_threshold": 30,
+      "task_preferences": {
+        "fight": 1.8,
+        "train": 1.2,
+        "guard": 1.0,
+        "wander": 0.4
+      },
+      "room_desires": {
+        "training_hall": 1.2,
+        "barracks": 1.1
+      },
+      "discipline_response": {
+        "slap": -12,
+        "torture": -40,
+        "reward": 14
+      }
+    },
+    "combat": {
+      "attack_type": "ranged",
+      "damage_range": [
+        12,
+        20
+      ],
+      "attack_speed": 1.6,
+      "armor_type": "light",
+      "resistances": {
+        "poison": 0.5
+      },
+      "abilities": [
+        "poison_bite"
+      ]
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        120,
+        300,
+        600,
+        1000
+      ],
+      "stat_growth_per_level": {
+        "health": 8,
+        "attack": 3,
+        "defense": 1
+      },
+      "max_level": 10,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 3,
+      "steals_if_unpaid": true,
+      "drops_gold_on_death": [
+        15,
+        35
+      ]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 140,
+      "preferred_rooms": [
+        "barracks",
+        "training_hall"
+      ],
+      "spawn_weight": 0.6,
+      "max_population": 12
+    },
+    "visual": {
+      "sprite": "creatures/dark_elf.png",
+      "scale": 1.0,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "dark_elf"
+    }
   }
 ]
