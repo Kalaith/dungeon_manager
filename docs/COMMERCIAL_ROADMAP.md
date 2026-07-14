@@ -32,8 +32,19 @@ everything *around* that engine:
 ## 1. Content production (largest single cost)
 
 ### Campaign & missions
-- [ ] Design a full campaign arc (industry norm for the genre: 15–20 missions; minimum viable ~10)
+- [x] Design a full campaign arc (industry norm for the genre: 15–20 missions; minimum viable ~10)
       with a difficulty curve, mechanic-introduction order, and narrative framing/briefings.
+      Done: `docs/CAMPAIGN_ARC.md` — a grounded 12-mission arc (three acts, one branch at M6→M7a/M7b
+      re-merging at M8 via an OR `required_completed` gate, boss climax at M11–M12). Every mechanic,
+      creature, room, spell, trap, hero, objective type, trigger, and event action it references is
+      one that already exists in the codebase (verified against `data/scenario.rs` and the content
+      JSON). Includes an authored difficulty curve driven by the five existing scenario dials
+      (`threat_multiplier`, `start_gold`, `max_creatures`, hero-party comp, rival aggression), a
+      per-mission mechanic-introduction table (all rooms/traps/techs/spells and 13/14 creatures
+      introduced by M8; Act III is pure mastery), narrative framing + per-mission briefings, and the
+      unlock graph that exercises the never-branched `unlocks_after`/`required_completed` logic. This
+      is the design deliverable; *authoring* each mission's map + scenario JSON + event scripting is
+      the next item below.
 - [ ] Author the missions: one map + one scenario JSON + event scripting each. Only
       `dark_beginnings` exists. The event system (triggers: TimeElapsed, ObjectiveComplete,
       RoomClaimed, ActionPointReached, DungeonBreached; actions: unlocks, spawns, rules) is done —
