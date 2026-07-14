@@ -47,12 +47,12 @@ everything *around* that engine:
       the next item below.
 - [ ] Author the missions: one map + one scenario JSON + event scripting each. The event system
       (triggers: TimeElapsed, ObjectiveComplete, RoomClaimed, ActionPointReached, DungeonBreached;
-      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 7 of 12
-      authored — Acts I–II incl. the branch (M1–M6 + M7a/M7b)** (`docs/CAMPAIGN_ARC.md` arc). Each
-      mission is a hand-authored 32×32 map + scenario JSON + event scripting, wired into
-      `deep_dominion.json`. The chain is linear M1→…→M6, then **M6 forks to both M7a and M7b** (the
-      arc's design branch — the first real use of the never-branched unlock graph; see the also-now-
-      relevant "Exercise the unlock graph" item below):
+      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 8 of 12
+      authored — all of Acts I–II (M1–M8), incl. the branch and its re-merge** (`docs/CAMPAIGN_ARC.md`
+      arc). Each mission is a hand-authored 32×32 map + scenario JSON + event scripting, wired into
+      `deep_dominion.json`. The chain is linear M1→…→M6, then **M6 forks to both M7a and M7b**, and
+      **both branches re-merge into M8** (the first real use of the never-branched unlock graph; see
+      the "Exercise the unlock graph" item below):
       - **M1 `dark_beginnings`** (pre-existing): dig→build→recruit→survive.
       - **M2 `blood_and_iron`**: survive-720s→raze-outpost; a walled hero outpost w/ single gate;
         training_hall + guard_post + braced_door/blowgun_trap intro; two scripted hero waves
@@ -86,23 +86,33 @@ everything *around* that engine:
       - **M7b `pacts_and_sacrifice`** (branch — temple path): survive-900s→raze an inquisition
         garrison; the temple/succubus/demon_spawn path against an **inquisitor + high_priest (banish)**
         order; a `room_claimed` temple→unlock corrupt_land + `spawn_creature` succubus event.
+      - **M8 `the_iron_siege`** (Act II climax + branch re-merge): the difficulty knee — survive-960s
+        behind layered defenses (introduces magic_door + alarm_trap, the bile_demon anchor tank, and
+        the iron_skin spell; a map with a bedrock-spur choke corridor) against a **four-wave
+        knight_commander gauntlet** (t+150/380/610/840 with paladin/high_priest/wizard support),
+        *then* raze the garrison. `room_claimed` events unlock magic_door (workshop) and
+        alarm_trap+iron_skin (guard_post). **Both M7 branches `unlocks_after` M8** — this is the
+        re-merge (see below).
       **Note (deferred objectives):** the arc gave M7a a `destroy_heart(rival)` win and M7b a
       "N sacrifices" custom win. Both are currently *unsatisfiable* — a rival keeper's heart is a map
       *tile*, not the `Structure` entity `destroy_heart` scans for (only the player heart has tracked
-      health), and no trigger counts sacrifices (same class of gap as M4's capture objective). Both
-      branch missions therefore ship with engine-supported objectives (survive + raze the themed
+      health), and no trigger counts sacrifices (same class of gap as M4's capture objective). Those
+      two branch missions therefore ship with engine-supported objectives (survive + raze the themed
       outpost); a rival-heart entity + conversion/sacrifice-count triggers are future §2 engine
-      features. Verified end-to-end: every mission boots via `GameState::new_for_scenario` (live
-      heart; hero bases active), all references validate (the guard test auto-covered the new
-      paladin/high_priest/inquisitor/wizard heroes and vampire/succubus/demon_spawn creatures), and
-      **the branch is tested**: completing M6 unlocks *both* M7a and M7b, each gated on `the_kennels`.
-      `cargo test` (94 unit incl. 11 new + 28 balance) + `clippy -D warnings` pass. Remaining:
-      M8–M12 (Act II climax + Act III). **⚠ M8 authoring caveat:** the arc re-merges the branch at M8
-      via an *OR* `required_completed` (either path satisfies it), but the campaign engine's
-      `required_completed` is **AND** (`campaign.rs`: `required_completed.iter().all(...)`). Authoring
-      M8 with both branch ids in `required_completed` would make it unreachable for a player who took
-      only one path — M8 needs either an OR-gate engine tweak or a required_completed of just
-      `the_kennels`.
+      features. **Branch re-merge — solved without an engine change:** the arc rejoins at M8 via an
+      *OR* gate, and `required_completed` is AND-only, so instead of listing both branch ids on M8 the
+      OR-join is routed through the *additive* `unlocks_after` edge: **both** M7a and M7b list
+      `unlocks_after: ["the_iron_siege"]`, and M8 gates only on `required_completed: ["the_kennels"]`
+      (already satisfied on either path). Completing either branch therefore unlocks M8. Verified
+      end-to-end: every mission boots via `GameState::new_for_scenario` (live heart; hero bases
+      active), all references validate (the guard test auto-covers new heroes/creatures incl.
+      knight_commander), the branch is tested (M6 unlocks *both* paths), and **the re-merge is tested
+      from *both* branches** (`either_m7_branch_re_merges_into_the_iron_siege` + the graveyard-path
+      assertion). `cargo test` (96 unit incl. 13 new + 28 balance) + `clippy -D warnings` pass.
+      Remaining: M9–M12 (Act III). **M9–M12 authoring note:** M9 is offense (assault a full hero
+      *town*), M10 needs multiple simultaneous rivals (§2 engine work — currently one rival per
+      scenario is wired), and M11–M12 need boss-hero encounters (can be prototyped as elite named
+      parties via `spawn_hero_party` before any bespoke boss AI).
 - [x] **Un-hardcode content loading**: `data/campaign.rs:128` and `data/scenario.rs:350` used to
       `include_str!` exactly one campaign/scenario file. Now manifest-driven: a new `build.rs` scans
       `assets/campaigns/` and `assets/scenarios/` at build time and generates
@@ -123,11 +133,13 @@ everything *around* that engine:
       now `unlocks_after` **both** `restless_dead` (M7a) and `pacts_and_sacrifice` (M7b), each gated
       `required_completed: ["the_kennels"]` — a real design fork. Tested in
       `deep_dominion_unlocks_blood_and_iron_after_dark_beginnings`: completing M6 puts *both* branch
-      missions in `unlocked_missions`. **Caveat for the re-merge:** the arc rejoins the branch at M8
-      via an *OR* gate (either path satisfies M8), but `CampaignProgress` treats `required_completed`
-      as **AND** (`campaign.rs`: `.all(...)`). So a fork works today; a clean re-merge needs an
-      OR-gate engine tweak (or M8 gating only on `the_kennels`). Flagged in the M8 authoring caveat
-      under "Author the missions" above.
+      missions in `unlocked_missions`. **The re-merge is also done and tested:** the arc rejoins the
+      branch at M8 via an *OR* gate, and although `CampaignProgress` treats `required_completed` as
+      **AND** (`campaign.rs`: `.all(...)`), the OR-join is expressed through the *additive*
+      `unlocks_after` edge instead — both M7a and M7b `unlocks_after` M8, which gates only on
+      `required_completed: ["the_kennels"]`. So completing *either* path unlocks M8, verified from
+      both branches (`either_m7_branch_re_merges_into_the_iron_siege`). No engine change was needed —
+      fork *and* re-merge both work on the existing graph.
 - [ ] Between-mission screens: mission briefing/debriefing, campaign map / mission-select UI
       (currently START GAME jumps straight into the one mission; victory shows "NEXT MISSION" that
       never fires because there is no next mission).

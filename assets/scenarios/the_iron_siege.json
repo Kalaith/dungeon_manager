@@ -1,0 +1,257 @@
+[
+  {
+    "meta": {
+      "id": "the_iron_siege",
+      "name": "The Iron Siege",
+      "description": "The Act II climax. Weather an escalating crusade behind layered doors, alarms, and kill-boxes, then raze the garrison that sent it.",
+      "author": "Deep Dominion Team",
+      "intro": [
+        "They come in their hundreds now, banners high, sure the dark can be dug out like a splinter.",
+        "Seal your corridors with magic doors, string alarm traps and boulders down every approach,",
+        "and anchor the line with a bile demon that will not break. Endure wave after wave of the crusade —",
+        "and when the last knight-commander lies broken at your gate, march out and pull their garrison down."
+      ]
+    },
+    "map": {
+      "path": "assets/maps/the_iron_siege.json",
+      "width": 32,
+      "height": 32,
+      "biome": "underground",
+      "above_ground": false
+    },
+    "players": [
+      {
+        "id": "keeper0",
+        "owner": "player",
+        "role": "human",
+        "start_gold": 2600,
+        "start_mana": 500,
+        "max_creatures": 25
+      },
+      {
+        "id": "heroes",
+        "owner": "heroes",
+        "role": "heroes",
+        "start_gold": 0,
+        "start_mana": 0
+      },
+      {
+        "id": "keeper1",
+        "owner": {
+          "rival_keeper": 1
+        },
+        "role": "rival_keeper",
+        "start_gold": 2200,
+        "start_mana": 400,
+        "max_creatures": 12,
+        "ai_profile": "builder_defender"
+      }
+    ],
+    "rules": {
+      "fog_of_war": true,
+      "starting_research": [
+        "training_tech",
+        "trap_tech",
+        "ritual_tech",
+        "prison_tech"
+      ],
+      "threat_multiplier": 1.35
+    },
+    "creature_pool": {
+      "goblin": 8,
+      "orc": 8,
+      "warlock": 5,
+      "hellhound": 6,
+      "spider": 5,
+      "lizard": 5,
+      "troll": 5,
+      "bile_demon": 4
+    },
+    "availability": {
+      "rooms": {
+        "lair": { "available": true, "unlocked": true, "owner": "player" },
+        "hatchery": { "available": true, "unlocked": true, "owner": "player" },
+        "treasury": { "available": true, "unlocked": true, "owner": "player" },
+        "training_hall": { "available": true, "unlocked": true, "owner": "player" },
+        "guard_post": { "available": true, "unlocked": true, "owner": "player" },
+        "library": { "available": true, "unlocked": true, "owner": "player" },
+        "workshop": { "available": true, "unlocked": true, "owner": "player" },
+        "ritual_circle": { "available": true, "unlocked": true, "owner": "player" },
+        "kennel": { "available": true, "unlocked": true, "owner": "player" },
+        "barracks": { "available": true, "unlocked": true, "owner": "player" },
+        "scavenger": { "available": true, "unlocked": true, "owner": "player" },
+        "prison": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "spells": {
+        "summon_imps": { "available": true, "unlocked": true, "owner": "player" },
+        "reveal_map": { "available": true, "unlocked": true, "owner": "player" },
+        "speed_boost": { "available": true, "unlocked": true, "owner": "player" },
+        "lightning_strike": { "available": true, "unlocked": true, "owner": "player" },
+        "call_to_arms": { "available": true, "unlocked": true, "owner": "player" },
+        "iron_skin": { "available": true, "unlocked": false, "owner": "player" }
+      },
+      "traps": {
+        "door": { "available": true, "unlocked": true, "owner": "player" },
+        "braced_door": { "available": true, "unlocked": true, "owner": "player" },
+        "magic_door": { "available": true, "unlocked": false, "owner": "player" },
+        "blowgun_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "boulder_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "alarm_trap": { "available": true, "unlocked": false, "owner": "player" }
+      },
+      "creatures": {
+        "goblin": { "available": true, "unlocked": true, "owner": "player" },
+        "orc": { "available": true, "unlocked": true, "owner": "player" },
+        "warlock": { "available": true, "unlocked": true, "owner": "player" },
+        "hellhound": { "available": true, "unlocked": true, "owner": "player" },
+        "spider": { "available": true, "unlocked": true, "owner": "player" },
+        "lizard": { "available": true, "unlocked": true, "owner": "player" },
+        "troll": { "available": true, "unlocked": true, "owner": "player" },
+        "bile_demon": { "available": true, "unlocked": true, "owner": "player" }
+      }
+    },
+    "objectives": [
+      {
+        "type": "survive_time",
+        "seconds": 960.0
+      },
+      {
+        "type": "destroy_all_hero_buildings"
+      }
+    ],
+    "events": [
+      {
+        "id": "seal_the_gates",
+        "trigger": {
+          "type": "room_claimed",
+          "room": "workshop",
+          "owner": "player"
+        },
+        "actions": [
+          {
+            "action": "unlock_trap",
+            "trap": "magic_door",
+            "owner": "player"
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "raise_the_alarm",
+        "trigger": {
+          "type": "room_claimed",
+          "room": "guard_post",
+          "owner": "player"
+        },
+        "actions": [
+          {
+            "action": "unlock_trap",
+            "trap": "alarm_trap",
+            "owner": "player"
+          },
+          {
+            "action": "unlock_spell",
+            "spell": "iron_skin",
+            "owner": "player"
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "siege_wave_1",
+        "trigger": { "type": "time_elapsed", "seconds": 150.0 },
+        "actions": [
+          { "action": "spawn_hero_party", "party": "siege_wave_1", "x": 26, "y": 10 }
+        ],
+        "once": true
+      },
+      {
+        "id": "siege_wave_2",
+        "trigger": { "type": "time_elapsed", "seconds": 380.0 },
+        "actions": [
+          { "action": "spawn_hero_party", "party": "siege_wave_2", "x": 26, "y": 10 }
+        ],
+        "once": true
+      },
+      {
+        "id": "siege_wave_3",
+        "trigger": { "type": "time_elapsed", "seconds": 610.0 },
+        "actions": [
+          { "action": "spawn_hero_party", "party": "siege_wave_3", "x": 16, "y": 2 }
+        ],
+        "once": true
+      },
+      {
+        "id": "siege_wave_4",
+        "trigger": { "type": "time_elapsed", "seconds": 840.0 },
+        "actions": [
+          { "action": "spawn_hero_party", "party": "siege_wave_4", "x": 26, "y": 10 }
+        ],
+        "once": true
+      }
+    ],
+    "hero_parties": [
+      {
+        "id": "siege_wave_1",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "knight", "level": 2, "count": 2 },
+          { "hero": "archer", "level": 1, "count": 2 }
+        ]
+      },
+      {
+        "id": "siege_wave_2",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "knight_commander", "level": 1, "count": 1 },
+          { "hero": "battle_cleric", "level": 1, "count": 1 },
+          { "hero": "archer", "level": 2, "count": 2 }
+        ]
+      },
+      {
+        "id": "siege_wave_3",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "knight_commander", "level": 1, "count": 1 },
+          { "hero": "paladin", "level": 2, "count": 1 },
+          { "hero": "wizard", "level": 2, "count": 1 },
+          { "hero": "archer", "level": 2, "count": 2 }
+        ]
+      },
+      {
+        "id": "siege_wave_4",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "knight_commander", "level": 2, "count": 2 },
+          { "hero": "high_priest", "level": 1, "count": 1 },
+          { "hero": "knight", "level": 3, "count": 2 }
+        ]
+      }
+    ],
+    "rival_keepers": [
+      {
+        "owner": {
+          "rival_keeper": 1
+        },
+        "ai_profile": "builder_defender",
+        "starting_rooms": [
+          "lair",
+          "hatchery",
+          "treasury",
+          "training_hall"
+        ],
+        "preferred_creatures": [
+          "goblin",
+          "orc",
+          "troll"
+        ],
+        "min_garrison": 5,
+        "raid_size": 4,
+        "dig_batch": 5,
+        "room_size": 2,
+        "attack_cooldown": 100.0,
+        "first_attack_delay": 300.0,
+        "attack_cooldown_growth": 1.5
+      }
+    ]
+  }
+]

@@ -73,7 +73,7 @@
         "scenario_id": "restless_dead",
         "name": "The Restless Dead",
         "briefing": "Let no corpse go to waste. Raise the fallen as vampires and drown the surface in a tide that does not tire and does not fear.",
-        "unlocks_after": [],
+        "unlocks_after": ["the_iron_siege"],
         "required_completed": ["the_kennels"]
       },
       {
@@ -81,6 +81,14 @@
         "scenario_id": "pacts_and_sacrifice",
         "name": "Pacts and Sacrifice",
         "briefing": "The old powers trade in blood. Feed the temple, bind the succubi and the demon-spawn, and buy an army no mortal treasury could afford.",
+        "unlocks_after": ["the_iron_siege"],
+        "required_completed": ["the_kennels"]
+      },
+      {
+        "id": "the_iron_siege",
+        "scenario_id": "the_iron_siege",
+        "name": "The Iron Siege",
+        "briefing": "They come in their hundreds now, sure the dark can be dug out like a splinter. Turn every corridor into a grave and teach the Kingdoms the cost of digging too deep.",
         "unlocks_after": [],
         "required_completed": ["the_kennels"]
       }

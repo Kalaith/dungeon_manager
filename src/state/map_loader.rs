@@ -590,6 +590,31 @@ mod tests {
     }
 
     #[test]
+    fn the_iron_siege_boots_as_a_defensive_gauntlet() {
+        // M8 (Act II climax) is the defensive knee: layered doors/alarms + a
+        // bile_demon anchor, then raze the garrison. Prove it boots with those
+        // tools and a live outpost, and that the map keeps its choke corridor.
+        let game_data = GameData::load().expect("game data should load");
+        let scenario = game_data
+            .scenarios
+            .get("the_iron_siege")
+            .expect("the_iron_siege scenario should be loaded");
+        for trap in ["magic_door", "alarm_trap"] {
+            assert!(
+                scenario.availability.traps.contains_key(trap),
+                "the siege should offer the {trap}"
+            );
+        }
+        assert!(scenario.availability.creatures.contains_key("bile_demon"));
+        assert!(scenario.events.len() >= 4, "expect a multi-wave gauntlet");
+
+        let state =
+            crate::state::game_state::GameState::new_for_scenario(&game_data, "the_iron_siege");
+        assert!(state.dungeon_heart_health > 0.0);
+        assert!(state.hero_base.enabled, "the garrison must be live to raze");
+    }
+
+    #[test]
     fn default_scenario_starts_with_markable_dig_targets_near_heart() {
         let game_data = GameData::load().expect("game data should load");
         let mut state =

@@ -226,6 +226,43 @@ mod tests {
                 .expect("branch mission present");
             assert_eq!(mission.required_completed, vec!["the_kennels".to_string()]);
         }
+
+        // The re-merge: completing EITHER branch unlocks M8 (the_iron_siege).
+        // Both branches `unlocks_after` M8, so the OR-join is expressed through
+        // the additive unlock edge rather than an (AND-only) required_completed.
+        // (active_mission may point at the still-available other branch until the
+        // player selects — the graph edge is what matters for reachability.)
+        progress.complete_mission(campaign, "restless_dead");
+        assert!(
+            progress.unlocked_missions.contains("the_iron_siege"),
+            "finishing either M7 path should unlock the M8 re-merge"
+        );
+    }
+
+    #[test]
+    fn either_m7_branch_re_merges_into_the_iron_siege() {
+        // Prove the OR-join from the *other* branch too: a fresh playthrough that
+        // takes the temple path still reaches M8.
+        let campaign = load_campaigns()
+            .expect("campaign json should parse")
+            .remove("deep_dominion")
+            .expect("campaign missing");
+        let mut progress = CampaignProgress::new(&campaign);
+        for m in [
+            "dark_beginnings",
+            "blood_and_iron",
+            "the_long_dark",
+            "no_prisoners",
+        ] {
+            progress.complete_mission(&campaign, m);
+        }
+        progress.complete_mission(&campaign, "whispers_in_the_circle");
+        progress.complete_mission(&campaign, "the_kennels");
+        progress.complete_mission(&campaign, "pacts_and_sacrifice");
+        assert!(
+            progress.unlocked_missions.contains("the_iron_siege"),
+            "the temple path must also unlock the M8 re-merge"
+        );
     }
 
     #[test]
