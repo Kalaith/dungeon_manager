@@ -1,0 +1,209 @@
+[
+  {
+    "meta": {
+      "id": "the_long_dark",
+      "name": "The Long Dark",
+      "description": "Out-earn a rival keeper for the deep seams. Throughput, not swords, wins this one.",
+      "author": "Deep Dominion Team",
+      "intro": [
+        "Steel rusts; gold endures. Two hearts now beat in this depth, and only one treasury can grow fat.",
+        "Sink your shafts to the deep seams, turn your workshops to profit, and set your library to research.",
+        "The surface sends only scattered patrols here — the real enemy is the rival keeper to the east,",
+        "digging toward the same veins. Out-earn him, and he starves in the dark without a blade drawn."
+      ]
+    },
+    "map": {
+      "path": "assets/maps/the_long_dark.json",
+      "width": 32,
+      "height": 32,
+      "biome": "underground",
+      "above_ground": false
+    },
+    "players": [
+      {
+        "id": "keeper0",
+        "owner": "player",
+        "role": "human",
+        "start_gold": 1800,
+        "start_mana": 500,
+        "max_creatures": 15
+      },
+      {
+        "id": "heroes",
+        "owner": "heroes",
+        "role": "heroes",
+        "start_gold": 0,
+        "start_mana": 0
+      },
+      {
+        "id": "keeper1",
+        "owner": {
+          "rival_keeper": 1
+        },
+        "role": "rival_keeper",
+        "start_gold": 2200,
+        "start_mana": 300,
+        "max_creatures": 12,
+        "ai_profile": "builder_attacker"
+      }
+    ],
+    "rules": {
+      "fog_of_war": true,
+      "starting_research": [
+        "training_tech",
+        "trap_tech"
+      ],
+      "threat_multiplier": 1.05
+    },
+    "creature_pool": {
+      "goblin": 10,
+      "orc": 6,
+      "warlock": 3,
+      "troll": 2
+    },
+    "availability": {
+      "rooms": {
+        "lair": { "available": true, "unlocked": true, "owner": "player" },
+        "hatchery": { "available": true, "unlocked": true, "owner": "player" },
+        "treasury": { "available": true, "unlocked": true, "owner": "player" },
+        "training_hall": { "available": true, "unlocked": true, "owner": "player" },
+        "guard_post": { "available": true, "unlocked": true, "owner": "player" },
+        "library": { "available": true, "unlocked": true, "owner": "player" },
+        "workshop": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "spells": {
+        "summon_imps": { "available": true, "unlocked": true, "owner": "player" },
+        "lightning_strike": { "available": true, "unlocked": false, "owner": "player" }
+      },
+      "traps": {
+        "door": { "available": true, "unlocked": true, "owner": "player" },
+        "braced_door": { "available": true, "unlocked": true, "owner": "player" },
+        "boulder_trap": { "available": true, "unlocked": false, "owner": "player" }
+      },
+      "creatures": {
+        "goblin": { "available": true, "unlocked": true, "owner": "player" },
+        "orc": { "available": true, "unlocked": true, "owner": "player" }
+      }
+    },
+    "objectives": [
+      {
+        "type": "survive_time",
+        "seconds": 600.0
+      },
+      {
+        "type": "gather_resource",
+        "resource": "gold",
+        "amount": 6000
+      }
+    ],
+    "events": [
+      {
+        "id": "fund_the_workshop",
+        "trigger": {
+          "type": "room_claimed",
+          "room": "workshop",
+          "owner": "player"
+        },
+        "actions": [
+          {
+            "action": "unlock_trap",
+            "trap": "boulder_trap",
+            "owner": "player"
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "research_breakthrough",
+        "trigger": {
+          "type": "room_claimed",
+          "room": "library",
+          "owner": "player"
+        },
+        "actions": [
+          {
+            "action": "unlock_spell",
+            "spell": "lightning_strike",
+            "owner": "player"
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "surface_patrol",
+        "trigger": {
+          "type": "time_elapsed",
+          "seconds": 240.0
+        },
+        "actions": [
+          {
+            "action": "spawn_hero_party",
+            "party": "surface_patrol",
+            "x": 16,
+            "y": 2
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "second_patrol",
+        "trigger": {
+          "type": "time_elapsed",
+          "seconds": 480.0
+        },
+        "actions": [
+          {
+            "action": "spawn_hero_party",
+            "party": "second_patrol",
+            "x": 16,
+            "y": 29
+          }
+        ],
+        "once": true
+      }
+    ],
+    "hero_parties": [
+      {
+        "id": "surface_patrol",
+        "behavior": "steal_gold",
+        "members": [
+          { "hero": "peasant_militia", "level": 1, "count": 2 },
+          { "hero": "acolyte", "level": 1, "count": 1 }
+        ]
+      },
+      {
+        "id": "second_patrol",
+        "behavior": "steal_gold",
+        "members": [
+          { "hero": "peasant_militia", "level": 2, "count": 2 },
+          { "hero": "archer", "level": 1, "count": 1 }
+        ]
+      }
+    ],
+    "rival_keepers": [
+      {
+        "owner": {
+          "rival_keeper": 1
+        },
+        "ai_profile": "builder_attacker",
+        "starting_rooms": [
+          "lair",
+          "hatchery",
+          "treasury",
+          "training_hall"
+        ],
+        "preferred_creatures": [
+          "goblin",
+          "orc"
+        ],
+        "min_garrison": 3,
+        "raid_size": 3,
+        "dig_batch": 6,
+        "room_size": 2,
+        "attack_cooldown": 90.0,
+        "first_attack_delay": 300.0,
+        "attack_cooldown_growth": 1.5
+      }
+    ]
+  }
+]

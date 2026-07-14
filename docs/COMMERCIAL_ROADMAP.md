@@ -47,19 +47,24 @@ everything *around* that engine:
       the next item below.
 - [ ] Author the missions: one map + one scenario JSON + event scripting each. The event system
       (triggers: TimeElapsed, ObjectiveComplete, RoomClaimed, ActionPointReached, DungeonBreached;
-      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 2 of 12
-      authored** (`docs/CAMPAIGN_ARC.md` arc). M1 `dark_beginnings` (pre-existing) and **M2
-      `blood_and_iron`** — `assets/maps/blood_and_iron.json` (hand-authored 32×32: player heart,
-      walled hero outpost w/ single gate, rival keeper, contested gold + gem/mana seams) +
-      `assets/scenarios/blood_and_iron.json` (survive-720s→raze-outpost objectives; training_hall +
-      guard_post + braced_door/blowgun_trap intro; two scripted hero waves at t+180/t+420; a
-      `room_claimed` event unlocking braced_door; a more-aggressive rival) + campaign wiring
-      (`deep_dominion.json`: M1 `unlocks_after` M2, M2 `required_completed` M1). Verified end-to-end:
-      the mission boots via `GameState::new_for_scenario` with a live hero base + intact heart, all
-      references validate, `cargo test` (89 unit incl. 5 new + 28 balance) + `clippy -D warnings`
-      pass. A new `authored_campaign_scenarios_reference_only_real_content` test now guards *every*
-      authored scenario against dangling ids (it caught a bad `hobgoblin` ref during authoring —
-      no such creature exists; corrected here and in `CAMPAIGN_ARC.md`). Remaining: M3–M12.
+      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 3 of 12
+      authored — the demo slice (M1–M3) is complete** (`docs/CAMPAIGN_ARC.md` arc). Each mission is a
+      hand-authored 32×32 map + scenario JSON + event scripting, wired into `deep_dominion.json` as a
+      linear `unlocks_after`/`required_completed` chain (M1→M2→M3):
+      - **M1 `dark_beginnings`** (pre-existing): dig→build→recruit→survive.
+      - **M2 `blood_and_iron`**: survive-720s→raze-outpost; a walled hero outpost w/ single gate;
+        training_hall + guard_post + braced_door/blowgun_trap intro; two scripted hero waves
+        (t+180/t+420); a `room_claimed` event unlocking braced_door; a more-aggressive rival.
+      - **M3 `the_long_dark`**: an economy race — `gather_resource` 6000 gold + survive-600s, **no
+        hero base** (heroes only raid via `steal_gold` parties at t+240/t+480); resource-rich map
+        (24 gold/gem seams) shared with an economically-competing rival; `room_claimed` events on
+        library→unlock lightning_strike and workshop→unlock boulder_trap.
+      Verified end-to-end: every mission boots via `GameState::new_for_scenario` (live heart; M2's
+      hero base active; M3 resource-rich), all references validate, campaign progression M1→M2→M3
+      tested, `cargo test` (90 unit incl. 6 new + 28 balance) + `clippy -D warnings` pass. The
+      `authored_campaign_scenarios_reference_only_real_content` test guards *every* authored scenario
+      against dangling ids (caught a bad `hobgoblin` ref while authoring M2 — corrected). This
+      completes the 2–3 polished-mission slice the demo build (§8) needs. Remaining: M4–M12.
 - [x] **Un-hardcode content loading**: `data/campaign.rs:128` and `data/scenario.rs:350` used to
       `include_str!` exactly one campaign/scenario file. Now manifest-driven: a new `build.rs` scans
       `assets/campaigns/` and `assets/scenarios/` at build time and generates

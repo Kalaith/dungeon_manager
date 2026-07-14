@@ -1,0 +1,130 @@
+{
+    "name": "The Long Dark",
+    "description": "Steel rusts; gold endures. Sink shafts to the deep seams and out-earn the rival keeper.",
+    "width": 32,
+    "height": 32,
+    "tiles": [
+        "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+        "W..............................W",
+        "W..............................W",
+        "W..............................W",
+        "W.............GG...............W",
+        "W.............GG...............W",
+        "W......GG.....GGA......GG......W",
+        "W..............................W",
+        "W..........M........M..........W",
+        "W...............GG.............W",
+        "W...............GG.............W",
+        "W..............................W",
+        "W..............................W",
+        "W..GG......................GG..W",
+        "W..GG.........GGG..........GG..W",
+        "W.............GGG..............W",
+        "W...H.....M..........M.....K...W",
+        "W..............................W",
+        "W..............................W",
+        "W..GG......................GG..W",
+        "W..............GG..............W",
+        "W..............GG..............W",
+        "W..............................W",
+        "W..............................W",
+        "W..........M........M..........W",
+        "W.............GG...............W",
+        "W......GG.....GGA......GG......W",
+        "W..............................W",
+        "W..............................W",
+        "W..............................W",
+        "W..............................W",
+        "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    ],
+    "legend": {
+        "W": "bedrock",
+        ".": "earth",
+        "G": "gold_vein",
+        "M": "gem_seam",
+        "A": "mana_crystal",
+        "H": "dungeon_heart",
+        "K": "dungeon_heart"
+    },
+    "tile_owners": [
+        {
+            "owner": "keeper1",
+            "x": 27,
+            "y": 16,
+            "width": 1,
+            "height": 1
+        }
+    ],
+    "rival_keepers": [
+        {
+            "owner": {
+                "rival_keeper": 1
+            },
+            "ai_profile": "builder_attacker",
+            "desired_rooms": [
+                "lair",
+                "hatchery",
+                "treasury",
+                "training_hall"
+            ],
+            "preferred_creatures": [
+                "goblin",
+                "orc"
+            ],
+            "min_garrison": 3,
+            "raid_size": 3,
+            "dig_batch": 6,
+            "room_size": 2,
+            "attack_cooldown": 90.0,
+            "first_attack_delay": 300.0,
+            "attack_cooldown_growth": 1.5
+        }
+    ],
+    "entities": [
+        {
+            "id": "imp",
+            "x": 5,
+            "y": 16,
+            "owner": "player"
+        },
+        {
+            "id": "imp",
+            "x": 4,
+            "y": 15,
+            "owner": "player"
+        },
+        {
+            "id": "imp",
+            "x": 4,
+            "y": 17,
+            "owner": "player"
+        },
+        {
+            "id": "imp",
+            "x": 6,
+            "y": 16,
+            "owner": "player"
+        },
+        {
+            "id": "goblin",
+            "x": 26,
+            "y": 16,
+            "owner": "keeper1",
+            "level": 1
+        },
+        {
+            "id": "goblin",
+            "x": 28,
+            "y": 16,
+            "owner": "keeper1",
+            "level": 1
+        },
+        {
+            "id": "orc",
+            "x": 27,
+            "y": 17,
+            "owner": "keeper1",
+            "level": 1
+        }
+    ]
+}

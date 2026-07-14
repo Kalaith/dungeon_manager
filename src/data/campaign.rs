@@ -171,6 +171,14 @@ mod tests {
             progress.active_mission, "blood_and_iron",
             "completing the opener should advance to the second authored mission"
         );
+
+        // ...and the demo slice's third mission gates behind the second.
+        assert!(campaign.missions.iter().any(|m| m.id == "the_long_dark"));
+        progress.complete_mission(campaign, "blood_and_iron");
+        assert_eq!(
+            progress.active_mission, "the_long_dark",
+            "completing mission 2 should advance to mission 3"
+        );
     }
 
     #[test]

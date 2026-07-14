@@ -33,8 +33,16 @@
         "scenario_id": "blood_and_iron",
         "name": "Blood and Iron",
         "briefing": "An armed force is worth ten hungry mouths. Drill your creatures, wall your approaches, and let the next patrol break itself on your doors.",
-        "unlocks_after": [],
+        "unlocks_after": ["the_long_dark"],
         "required_completed": ["dark_beginnings"]
+      },
+      {
+        "id": "the_long_dark",
+        "scenario_id": "the_long_dark",
+        "name": "The Long Dark",
+        "briefing": "Steel rusts; gold endures. Sink shafts to the deep seams, turn your workshops to war, and out-earn the rival festering to the east — starve him and he falls without a fight.",
+        "unlocks_after": [],
+        "required_completed": ["blood_and_iron"]
       }
     ]
   }

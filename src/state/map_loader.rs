@@ -431,6 +431,33 @@ mod tests {
     }
 
     #[test]
+    fn the_long_dark_boots_as_an_economy_mission() {
+        // M3 has no hero base (heroes only raid) — its win is gather-gold +
+        // survive. Prove it boots, the player heart is live, and the map is
+        // resource-rich enough to be an economy race (many gold/gem seams).
+        let game_data = GameData::load().expect("game data should load");
+        let state =
+            crate::state::game_state::GameState::new_for_scenario(&game_data, "the_long_dark");
+
+        assert!(state.find_dungeon_heart_position().is_some());
+        assert!(state.dungeon_heart_health > 0.0);
+
+        let mut entities = EntityManager::new();
+        let dungeon = load_map("assets/maps/the_long_dark.json", &game_data, &mut entities)
+            .expect("the_long_dark map should load");
+        let resource_tiles = dungeon
+            .grid
+            .iter()
+            .flat_map(|row| row.iter())
+            .filter(|t| matches!(t.tile_type.as_str(), "gold_vein" | "gem_seam"))
+            .count();
+        assert!(
+            resource_tiles >= 20,
+            "economy map should be resource-rich, found {resource_tiles} seams"
+        );
+    }
+
+    #[test]
     fn default_scenario_starts_with_markable_dig_targets_near_heart() {
         let game_data = GameData::load().expect("game data should load");
         let mut state =
