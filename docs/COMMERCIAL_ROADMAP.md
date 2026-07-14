@@ -288,9 +288,26 @@ everything *around* that engine:
       hero's sprite loads and adding a hero is a pure `heroes.json` edit. Verified: `cargo test` (111
       unit incl. 1 new `orphan_sprite_heroes_are_wired` + 28 balance) + `clippy -D warnings` pass.
       (This clears the "7 orphan sprites wired" note under §4 — 4 monsters + 3 heroes all done.)
-- [ ] Tech tree: only **4 technologies** exist. A commercial progression system needs a real tree
-      (rooms/spells/traps/creatures as unlocks across a campaign). Also fix persistence:
-      `player_state.rs:240` — unlocked techs are inferred, not stored.
+- [x] Tech tree: expanded **4 → 11 technologies** into a real prerequisite graph (`technologies.json`).
+      The `TechData` schema (prerequisites + unlocks: rooms/spells/creatures/traps), the research flow
+      (`start_research`/`update_research`/`complete_research`), and the research UI (which gates each
+      tech on `prerequisites.all(is_tech_completed)`) already existed — the gap was that the tree was a
+      4-tech stub gating only training_hall/prison/workshop/ritual_circle. Added 7 techs so most of the
+      roster is researchable: **beast_handling** (kennel + hellhound/spider/lizard/bat_swarm),
+      **logistics** (barracks + scavenger), **interrogation** (torture_chamber + reveal_map),
+      **necromancy** (graveyard + skeleton/zombie/ghost/vampire), **demonology** (temple + succubus/
+      demon_spawn/bile_demon + corrupt_land), **war_magic** (call_to_arms/iron_skin/speed_boost), and
+      **arcane_mastery** (possess/make_earth/chickenify + troll/dark_elf) — a tree ~4 levels deep off
+      `training_tech`→`prison_tech`→`ritual_tech`. **Persistence: the roadmap's `player_state.rs:240`
+      bug was already fixed in code** — completed techs *are* stored in a serialized
+      `completed_technologies: HashSet` (`is_tech_completed`/`complete_research`); only a long stale
+      comment claimed otherwise (it predated the field). Replaced that comment with an accurate one.
+      Verified: `cargo test` (112 unit incl. 1 new `tech_tree_is_a_real_graph_of_valid_unlocks` — every
+      prereq/unlock references real content and the graph is an acyclic, root-reachable DAG — + 28
+      balance) + `clippy -D warnings` pass; the research sidebar iterates `technologies.values()` so all
+      11 appear in-game. **Follow-on (not blocking):** campaign missions still set availability directly
+      via scenario `availability`/`starting_research` (bypassing live research) — a full
+      research-gated campaign progression would wire missions to grant *tech* rather than raw unlocks.
 - [ ] Rooms: 15 built; `special_rooms.json` has a single entry. `docs/rooms.md` designs a large
       future set (Gatehouse, Soul Furnace, Summoning Vault, Legacy Vault…). Pick the commercial set.
 - [ ] Spells: 11 built; design docs want more plus miscasts, hero counter-spells,

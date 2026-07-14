@@ -81,5 +81,157 @@
             ]
         },
         "icon": "icons/tech/traps.png"
+    },
+    {
+        "id": "beast_handling",
+        "name": "Beast Handling",
+        "description": "Tame the deep's fauna: build the Kennel and command hellhounds, spiders, cave lizards and bat swarms.",
+        "cost": 15,
+        "prerequisites": [
+            "training_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "kennel"
+            ],
+            "spells": [],
+            "creatures": [
+                "hellhound",
+                "spider",
+                "lizard",
+                "bat_swarm"
+            ],
+            "traps": []
+        },
+        "icon": "icons/tech/beast_handling.png"
+    },
+    {
+        "id": "logistics",
+        "name": "War Logistics",
+        "description": "Organize a standing army: the Barracks musters recruits and the Scavenger reclaims the fallen.",
+        "cost": 18,
+        "prerequisites": [
+            "training_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "barracks",
+                "scavenger"
+            ],
+            "spells": [],
+            "creatures": [],
+            "traps": []
+        },
+        "icon": "icons/tech/logistics.png"
+    },
+    {
+        "id": "interrogation",
+        "name": "Interrogation",
+        "description": "Wring secrets from captives in the Torture Chamber, and learn to scry the map.",
+        "cost": 20,
+        "prerequisites": [
+            "prison_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "torture_chamber"
+            ],
+            "spells": [
+                "reveal_map"
+            ],
+            "creatures": [],
+            "traps": []
+        },
+        "icon": "icons/tech/interrogation.png"
+    },
+    {
+        "id": "necromancy",
+        "name": "Necromancy",
+        "description": "Raise the Graveyard and animate the dead \u2014 skeletons, zombies, restless ghosts, and hungry vampires.",
+        "cost": 40,
+        "prerequisites": [
+            "ritual_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "graveyard"
+            ],
+            "spells": [],
+            "creatures": [
+                "skeleton",
+                "zombie",
+                "ghost",
+                "vampire"
+            ],
+            "traps": []
+        },
+        "icon": "icons/tech/necromancy.png"
+    },
+    {
+        "id": "demonology",
+        "name": "Demonology",
+        "description": "Consecrate a Temple and bind the pit's own: succubi, demon-spawn, and bile demons \u2014 and corrupt the very earth.",
+        "cost": 45,
+        "prerequisites": [
+            "ritual_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "temple"
+            ],
+            "spells": [
+                "corrupt_land"
+            ],
+            "creatures": [
+                "succubus",
+                "demon_spawn",
+                "bile_demon"
+            ],
+            "traps": []
+        },
+        "icon": "icons/tech/demonology.png"
+    },
+    {
+        "id": "war_magic",
+        "name": "War Magic",
+        "description": "Battle sorcery to steel your horde: rally them to arms, harden their skin, and quicken their step.",
+        "cost": 35,
+        "prerequisites": [
+            "ritual_tech"
+        ],
+        "unlocks": {
+            "rooms": [],
+            "spells": [
+                "call_to_arms",
+                "iron_skin",
+                "speed_boost"
+            ],
+            "creatures": [],
+            "traps": []
+        },
+        "icon": "icons/tech/war_magic.png"
+    },
+    {
+        "id": "arcane_mastery",
+        "name": "Arcane Mastery",
+        "description": "The keeper's highest art \u2014 possess a hero's body, reshape the earth, hex a foe into a chicken \u2014 and call trolls and dark elves to your banner.",
+        "cost": 55,
+        "prerequisites": [
+            "ritual_tech"
+        ],
+        "unlocks": {
+            "rooms": [],
+            "spells": [
+                "possess",
+                "make_earth",
+                "chickenify"
+            ],
+            "creatures": [
+                "troll",
+                "dark_elf"
+            ],
+            "traps": []
+        },
+        "icon": "icons/tech/arcane_mastery.png"
     }
 ]

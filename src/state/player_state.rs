@@ -236,16 +236,11 @@ impl PlayerState {
         true
     }
 
-    // Check if a technology is unlocked (completed)
-    // For now we don't store "unlocked_techs" explicitly, but we could infer it if needed.
-    // However, it's better to store completed techs to check prerequisites.
-    // We'll add a `completed_research` set to PlayerState in a separate step or just assume unlocks handle it.
-    // Actually, let's just use the unlocks (rooms/spells) as proof of tech completion?
-    // No, tech tree UI needs to know if "Training Tech" is done.
-    // I need to add `completed_technologies` field to PlayerState struct first.
-    // But since I can't easily change struct fields without a full replace, I will use `unlocked_rooms` to infer for now?
-    // No, I should add the field. It's cleaner. But `PlayerState` is serialized.
-    // Let's modify the struct definition first.
+    // Completed technologies are stored explicitly in `completed_technologies`
+    // (persisted with PlayerState) — see `is_tech_completed` / `complete_research`
+    // above. The research UI (`ui/sidebar`) gates each tech on
+    // `prerequisites.all(|req| is_tech_completed(req))`, so the tree is a real
+    // stored graph rather than something inferred from unlocked rooms/spells.
 
     /// Start researching a technology
     pub fn start_research(&mut self, research_id: String) {
