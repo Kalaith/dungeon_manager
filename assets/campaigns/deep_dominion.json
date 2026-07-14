@@ -49,8 +49,16 @@
         "scenario_id": "no_prisoners",
         "name": "No Prisoners",
         "briefing": "Death wastes a good soldier. Take them alive, break them in the dark, and send them back against their own as skeletons and turncoats.",
-        "unlocks_after": [],
+        "unlocks_after": ["whispers_in_the_circle"],
         "required_completed": ["the_long_dark"]
+      },
+      {
+        "id": "whispers_in_the_circle",
+        "scenario_id": "whispers_in_the_circle",
+        "name": "Whispers in the Circle",
+        "briefing": "Power sleeps in the old circles. Bind it, and call down lightning on any hero fool enough to march in the open.",
+        "unlocks_after": [],
+        "required_completed": ["no_prisoners"]
       }
     ]
   }

@@ -1,0 +1,138 @@
+{
+    "name": "Whispers in the Circle",
+    "description": "Bind the power of the old ritual circles and call down lightning on the mage-tower garrison.",
+    "width": 32,
+    "height": 32,
+    "tiles": [
+        "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+        "W..............................W",
+        "W..............................W",
+        "W......................XXXXXXX.W",
+        "W......................XT...PX.W",
+        "W......................X.....X.W",
+        "W...............A......X.....X.W",
+        "W......................XB...CX.W",
+        "W......................X.....X.W",
+        "W......................XXXYXXX.W",
+        "W...............A..............W",
+        "W..............................W",
+        "W.............GGG..............W",
+        "W..GG.........GGG..............W",
+        "W.....A........................W",
+        "W..............................W",
+        "W...H.......M.......M..........W",
+        "W..............................W",
+        "W.....A........................W",
+        "W..GG..........................W",
+        "W..............GG..............W",
+        "W..............GG..............W",
+        "W..............................W",
+        "W..............................W",
+        "W...............A.......GG.....W",
+        "W..............................W",
+        "W...............A..............W",
+        "W....GG.K.GG...................W",
+        "W..............................W",
+        "W..............................W",
+        "W..............................W",
+        "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    ],
+    "legend": {
+        "W": "bedrock",
+        ".": "earth",
+        "G": "gold_vein",
+        "M": "gem_seam",
+        "A": "mana_crystal",
+        "H": "dungeon_heart",
+        "K": "dungeon_heart",
+        "T": "town_hall",
+        "B": "barracks",
+        "P": "mage_tower",
+        "C": "church",
+        "X": "hero_wall",
+        "Y": "hero_gate"
+    },
+    "tile_owners": [
+        {
+            "owner": "heroes",
+            "x": 23,
+            "y": 3,
+            "width": 7,
+            "height": 7
+        },
+        {
+            "owner": "keeper1",
+            "x": 8,
+            "y": 27,
+            "width": 1,
+            "height": 1
+        }
+    ],
+    "rival_keepers": [
+        {
+            "owner": {
+                "rival_keeper": 1
+            },
+            "ai_profile": "builder_attacker",
+            "desired_rooms": [
+                "lair",
+                "hatchery",
+                "treasury",
+                "training_hall"
+            ],
+            "preferred_creatures": [
+                "goblin",
+                "orc",
+                "warlock"
+            ],
+            "min_garrison": 4,
+            "raid_size": 4,
+            "dig_batch": 5,
+            "room_size": 2,
+            "attack_cooldown": 80.0,
+            "first_attack_delay": 200.0,
+            "attack_cooldown_growth": 1.4
+        }
+    ],
+    "entities": [
+        {
+            "id": "imp",
+            "x": 5,
+            "y": 16,
+            "owner": "player"
+        },
+        {
+            "id": "imp",
+            "x": 4,
+            "y": 15,
+            "owner": "player"
+        },
+        {
+            "id": "imp",
+            "x": 4,
+            "y": 17,
+            "owner": "player"
+        },
+        {
+            "id": "goblin",
+            "x": 7,
+            "y": 27,
+            "owner": "keeper1",
+            "level": 1
+        },
+        {
+            "id": "orc",
+            "x": 9,
+            "y": 27,
+            "owner": "keeper1",
+            "level": 1
+        },
+        {
+            "id": "warlock",
+            "x": 8,
+            "y": 26,
+            "owner": "keeper1",
+            "level": 1
+        }
+    ]
+}

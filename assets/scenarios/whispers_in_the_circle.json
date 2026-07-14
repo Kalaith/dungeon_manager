@@ -1,0 +1,200 @@
+[
+  {
+    "meta": {
+      "id": "whispers_in_the_circle",
+      "name": "Whispers in the Circle",
+      "description": "Raise a ritual circle, bind its power, and answer the mage-tower's fire with your own lightning.",
+      "author": "Deep Dominion Team",
+      "intro": [
+        "Power sleeps in the old circles, waiting for a hand bold enough to bind it.",
+        "The garrison ahead is led by a battle-mage, and their tower rains fire on any horde that clumps.",
+        "Raise a ritual circle, recruit warlocks to your cause, and turn the deep magic against them —",
+        "call down lightning on the mage in the open, then pull the tower down around his ears."
+      ]
+    },
+    "map": {
+      "path": "assets/maps/whispers_in_the_circle.json",
+      "width": 32,
+      "height": 32,
+      "biome": "underground",
+      "above_ground": false
+    },
+    "players": [
+      {
+        "id": "keeper0",
+        "owner": "player",
+        "role": "human",
+        "start_gold": 2200,
+        "start_mana": 500,
+        "max_creatures": 18
+      },
+      {
+        "id": "heroes",
+        "owner": "heroes",
+        "role": "heroes",
+        "start_gold": 0,
+        "start_mana": 0
+      },
+      {
+        "id": "keeper1",
+        "owner": {
+          "rival_keeper": 1
+        },
+        "role": "rival_keeper",
+        "start_gold": 2200,
+        "start_mana": 400,
+        "max_creatures": 12,
+        "ai_profile": "builder_attacker"
+      }
+    ],
+    "rules": {
+      "fog_of_war": true,
+      "starting_research": [
+        "training_tech",
+        "trap_tech",
+        "ritual_tech"
+      ],
+      "threat_multiplier": 1.2
+    },
+    "creature_pool": {
+      "goblin": 10,
+      "orc": 6,
+      "warlock": 5,
+      "troll": 3
+    },
+    "availability": {
+      "rooms": {
+        "lair": { "available": true, "unlocked": true, "owner": "player" },
+        "hatchery": { "available": true, "unlocked": true, "owner": "player" },
+        "treasury": { "available": true, "unlocked": true, "owner": "player" },
+        "training_hall": { "available": true, "unlocked": true, "owner": "player" },
+        "guard_post": { "available": true, "unlocked": true, "owner": "player" },
+        "library": { "available": true, "unlocked": true, "owner": "player" },
+        "workshop": { "available": true, "unlocked": true, "owner": "player" },
+        "ritual_circle": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "spells": {
+        "summon_imps": { "available": true, "unlocked": true, "owner": "player" },
+        "reveal_map": { "available": true, "unlocked": true, "owner": "player" },
+        "speed_boost": { "available": true, "unlocked": true, "owner": "player" },
+        "lightning_strike": { "available": true, "unlocked": false, "owner": "player" }
+      },
+      "traps": {
+        "door": { "available": true, "unlocked": true, "owner": "player" },
+        "braced_door": { "available": true, "unlocked": true, "owner": "player" },
+        "blowgun_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "boulder_trap": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "creatures": {
+        "goblin": { "available": true, "unlocked": true, "owner": "player" },
+        "orc": { "available": true, "unlocked": true, "owner": "player" },
+        "warlock": { "available": true, "unlocked": true, "owner": "player" }
+      }
+    },
+    "objectives": [
+      {
+        "type": "survive_time",
+        "seconds": 720.0
+      },
+      {
+        "type": "destroy_all_hero_buildings"
+      }
+    ],
+    "events": [
+      {
+        "id": "bind_the_circle",
+        "trigger": {
+          "type": "room_claimed",
+          "room": "ritual_circle",
+          "owner": "player"
+        },
+        "actions": [
+          {
+            "action": "unlock_spell",
+            "spell": "lightning_strike",
+            "owner": "player"
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "arcane_vanguard",
+        "trigger": {
+          "type": "time_elapsed",
+          "seconds": 180.0
+        },
+        "actions": [
+          {
+            "action": "spawn_hero_party",
+            "party": "arcane_vanguard",
+            "x": 26,
+            "y": 10
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "arcane_assault",
+        "trigger": {
+          "type": "time_elapsed",
+          "seconds": 450.0
+        },
+        "actions": [
+          {
+            "action": "spawn_hero_party",
+            "party": "arcane_assault",
+            "x": 26,
+            "y": 10
+          }
+        ],
+        "once": true
+      }
+    ],
+    "hero_parties": [
+      {
+        "id": "arcane_vanguard",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "wizard", "level": 1, "count": 1 },
+          { "hero": "peasant_militia", "level": 1, "count": 2 },
+          { "hero": "acolyte", "level": 1, "count": 1 }
+        ]
+      },
+      {
+        "id": "arcane_assault",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "wizard", "level": 2, "count": 1 },
+          { "hero": "knight", "level": 1, "count": 1 },
+          { "hero": "archer", "level": 1, "count": 2 }
+        ]
+      }
+    ],
+    "rival_keepers": [
+      {
+        "owner": {
+          "rival_keeper": 1
+        },
+        "ai_profile": "builder_attacker",
+        "starting_rooms": [
+          "lair",
+          "hatchery",
+          "treasury",
+          "training_hall"
+        ],
+        "preferred_creatures": [
+          "goblin",
+          "orc",
+          "warlock"
+        ],
+        "min_garrison": 4,
+        "raid_size": 4,
+        "dig_batch": 5,
+        "room_size": 2,
+        "attack_cooldown": 80.0,
+        "first_attack_delay": 200.0,
+        "attack_cooldown_growth": 1.4
+      }
+    ]
+  }
+]

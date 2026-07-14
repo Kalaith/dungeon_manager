@@ -187,6 +187,17 @@ mod tests {
             progress.active_mission, "no_prisoners",
             "completing mission 3 should advance to mission 4"
         );
+
+        // ...and the Act II opener gates behind the Act I finale.
+        assert!(campaign
+            .missions
+            .iter()
+            .any(|m| m.id == "whispers_in_the_circle"));
+        progress.complete_mission(campaign, "no_prisoners");
+        assert_eq!(
+            progress.active_mission, "whispers_in_the_circle",
+            "completing mission 4 should advance to mission 5"
+        );
     }
 
     #[test]

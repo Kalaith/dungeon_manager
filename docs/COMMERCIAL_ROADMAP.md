@@ -47,10 +47,10 @@ everything *around* that engine:
       the next item below.
 - [ ] Author the missions: one map + one scenario JSON + event scripting each. The event system
       (triggers: TimeElapsed, ObjectiveComplete, RoomClaimed, ActionPointReached, DungeonBreached;
-      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 4 of 12
-      authored — Act I (M1–M4) is complete** (`docs/CAMPAIGN_ARC.md` arc). Each mission is a
-      hand-authored 32×32 map + scenario JSON + event scripting, wired into `deep_dominion.json` as a
-      linear `unlocks_after`/`required_completed` chain (M1→M2→M3→M4):
+      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 5 of 12
+      authored — Act I (M1–M4) complete + Act II opener (M5)** (`docs/CAMPAIGN_ARC.md` arc). Each
+      mission is a hand-authored 32×32 map + scenario JSON + event scripting, wired into
+      `deep_dominion.json` as a linear `unlocks_after`/`required_completed` chain (M1→…→M5):
       - **M1 `dark_beginnings`** (pre-existing): dig→build→recruit→survive.
       - **M2 `blood_and_iron`**: survive-720s→raze-outpost; a walled hero outpost w/ single gate;
         training_hall + guard_post + braced_door/blowgun_trap intro; two scripted hero waves
@@ -68,13 +68,18 @@ everything *around* that engine:
         such an objective is currently unsatisfiable (would make the mission unwinnable). M4 ships
         with engine-supported objectives; a conversion-count trigger is a future §2 engine feature
         that would let this (and similar capture/harvest objectives) become hard win conditions.
+      - **M5 `whispers_in_the_circle`** (Act II opener): survive-720s→raze a mage-tower outpost
+        (town_hall/mage_tower/barracks/church); introduces ritual_circle + ritual_tech + the warlock
+        caster + utility spells (reveal_map, speed_boost); a `room_claimed` ritual_circle→unlock
+        lightning_strike event (bind the circle to gain offensive magic); wizard-led hero waves
+        (t+180/t+450) that punish clumped defense; a mana-crystal-rich map for the mana economy.
       Verified end-to-end: every mission boots via `GameState::new_for_scenario` (live heart; hero
-      bases active where applicable; M4's prison/torture available), all references validate, campaign
-      progression M1→M2→M3→M4 tested, `cargo test` (91 unit incl. 7 new + 28 balance) +
-      `clippy -D warnings` pass. The `authored_campaign_scenarios_reference_only_real_content` test
-      guards *every* authored scenario against dangling ids (caught a bad `hobgoblin` ref while
+      bases active where applicable; M4's prison/torture + M5's ritual_circle/warlock available), all
+      references validate, campaign progression M1→…→M5 tested, `cargo test` (92 unit incl. 8 new + 28
+      balance) + `clippy -D warnings` pass. The `authored_campaign_scenarios_reference_only_real_content`
+      test guards *every* authored scenario against dangling ids (caught a bad `hobgoblin` ref while
       authoring M2 — corrected). This completes the 2–3 polished-mission slice the demo build (§8)
-      needs. Remaining: M5–M12 (Acts II–III).
+      needs. Remaining: M6–M12 (rest of Acts II–III).
 - [x] **Un-hardcode content loading**: `data/campaign.rs:128` and `data/scenario.rs:350` used to
       `include_str!` exactly one campaign/scenario file. Now manifest-driven: a new `build.rs` scans
       `assets/campaigns/` and `assets/scenarios/` at build time and generates

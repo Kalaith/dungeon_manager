@@ -491,6 +491,38 @@ mod tests {
     }
 
     #[test]
+    fn whispers_in_the_circle_boots_with_ritual_tools() {
+        // M5 (Act II opener) introduces the ritual circle + mana economy +
+        // offensive spellcasting. Prove it boots, the ritual circle and warlock
+        // are available, and the mage-tower outpost is live to raze.
+        let game_data = GameData::load().expect("game data should load");
+        let scenario = game_data
+            .scenarios
+            .get("whispers_in_the_circle")
+            .expect("whispers_in_the_circle scenario should be loaded");
+        assert!(scenario.availability.rooms.contains_key("ritual_circle"));
+        assert!(scenario.availability.creatures.contains_key("warlock"));
+
+        let state = crate::state::game_state::GameState::new_for_scenario(
+            &game_data,
+            "whispers_in_the_circle",
+        );
+        assert!(state.dungeon_heart_health > 0.0);
+        assert!(
+            state.hero_base.enabled,
+            "the mage-tower outpost must be live"
+        );
+        assert!(
+            state
+                .hero_base
+                .buildings
+                .iter()
+                .any(|b| b.building_type == "mage_tower"),
+            "the outpost should feature a mage_tower"
+        );
+    }
+
+    #[test]
     fn default_scenario_starts_with_markable_dig_targets_near_heart() {
         let game_data = GameData::load().expect("game data should load");
         let mut state =
