@@ -2,6 +2,7 @@
 pub mod combat;
 pub mod creature_ai;
 mod creature_targets;
+pub mod hero_abilities;
 pub mod hero_ai;
 pub mod hero_parties;
 pub mod hero_spawner;

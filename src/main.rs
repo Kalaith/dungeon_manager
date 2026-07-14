@@ -13,6 +13,10 @@ mod ui;
 
 #[cfg(test)]
 mod combat_tests;
+#[cfg(test)]
+mod hero_abilities_tests;
+#[cfg(test)]
+mod traits_tests;
 
 use data::GameData;
 use engine::action_processor;

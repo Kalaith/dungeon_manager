@@ -95,21 +95,45 @@ everything *around* that engine:
       `charm`) aren't status procs — they need bonus-damage/self-buff/morale mechanics the
       engine doesn't have hooks for yet, so they're still inert; adding more authored monsters
       (`docs/monsters.md`'s ~18) is separately tracked under §1 roster content.
-- [ ] **Hero abilities**: `HeroAbilityData` parsed (`heroes.rs:15,57`), zero engine references.
-      Deliberately not attempted in this pass: ~20 distinct authored hero abilities each have a
-      bespoke `trigger` (`on_ally_low_health`, `on_party_damaged`, `on_sneak_attack`,
-      `in_workshop`, `on_ritual_detected`, `on_undead_nearby`, `on_trapped`, `in_room`, passive
-      auras, …) that would need new hero-side targeting/awareness systems (party state, ritual
-      detection, room-disable) the engine doesn't have. Wiring these shallowly would mean
-      guessing at unspecified mechanics rather than fixing a bug — needs a real design pass
-      before implementation.
-- [ ] **Traits**: parsed `Vec<String>`, no trait logic anywhere. 17 distinct traits are authored
-      across the 13-monster roster (loyal, cowardly, greedy, aggressive, intelligent, strong,
-      slow, undead, mindless, fearless, demonic, wild, sadistic, arrogant, beast, glutton,
-      hard_worker) with no effects table defined anywhere (`docs/monster_design.md` explicitly
-      defers this: "trait effects live in a separate trait definition table" that doesn't exist
-      yet). Same reasoning as hero abilities: needs a design pass to decide what each trait
-      actually does before it's implemented, not a guess per trait.
+- [x] **Hero abilities**: `HeroAbilityData` was parsed (`heroes.rs:15,57`) but `effect` was a bare
+      label string (`"restore_health"`, `"area_damage"`, …) with zero engine references. Now
+      fully data-driven, reusing spells' own schema and dispatcher rather than adding a parallel
+      one: `HeroAbilityData.effects` is `Vec<data::spells::SpellEffect>` — the exact same struct
+      and `spell_effects::apply_spell_effect` (now `pub(crate)`) spells already use. A new
+      `engine::hero_abilities` module evaluates each ability's `trigger` against a small, fixed
+      vocabulary matched by trigger *type* (never by ability id): "passive", "on_low_health" /
+      "on_hit" (self), "on_ally_low_health" (nearest low-health same-owner hero),
+      "on_target" / "on_undead_nearby" (nearest hostile entity, the latter checking the target's
+      trait list — reuses the trait system below), "on_multiple_targets" (nearest hostile's
+      position once ≥2 are in range), "in_room" / "in_room:<type>" (the hero's own tile/room).
+      Several other authored trigger strings are recognized as aliases of these (`on_damaged` →
+      `on_hit`, `on_group`/`on_large_group` → the multi-target family, `on_target_isolated` →
+      exactly one hostile in range, etc.) — see the module doc comment for the full mapping.
+      Rewrote all 28 authored abilities across 17 heroes in `heroes.json` with real `effects`
+      arrays (damage/heal/status_apply/stat_modifier), and fixed `apply_stat_modifier` to also
+      handle `Hero` entities (it only handled `Creature` before, so any hero speed buff would
+      have silently no-op'd). `HeroState` gained `ability_cooldowns: HashMap<String, f32>`.
+      5 of 28 abilities (dispel, purify, backstab, teleport, mass_cleanse) still can't fire —
+      their triggers (`on_ritual_detected`, `on_corruption`, `on_sneak_attack`, `on_trapped`,
+      `on_corruption_detected`) need ritual-detection/stealth/trap-state subsystems that don't
+      exist yet; they're valid data, just inert until those systems exist. Adding a new ability
+      with an already-recognized trigger — or changing an existing one's numbers — is now a pure
+      `heroes.json` edit. Covered by 4 new tests in `hero_abilities_tests.rs`.
+- [x] **Traits**: parsed `Vec<String>`, no trait logic anywhere. Now data-driven via a new
+      `assets/data/traits.json` (array of `{id, ...}` objects, same convention as monsters/
+      spells/etc., with full content-pack/mod merge support) and `TraitData`: a fixed set of
+      generic numeric knobs (`mood_modifier`, `anger_threshold_modifier`,
+      `desertion_threshold_modifier`, `need_decay_multipliers`, `task_preference_multipliers`,
+      `attack_multiplier`, `defense_multiplier`, `discipline_response_multiplier`) that the
+      engine sums/multiplies in wherever it already computes mood
+      (`creature_ai::needs::calculate_mood`/`update_mood`), need decay (`update_needs`), task
+      desirability (`creature_task_logic::calculate_task_desirability`), combat stats
+      (`combat::extract_combat_stats`), and discipline response (`apply_slap`) — the engine never
+      branches on a trait's name. All 17 currently-authored traits (loyal, cowardly, greedy,
+      aggressive, intelligent, strong, slow, undead, mindless, fearless, demonic, wild, sadistic,
+      arrogant, beast, glutton, hard_worker) got real values; adding a new trait, or changing what
+      an existing one does, is now a `traits.json` edit. Covered by 3 new tests in
+      `traits_tests.rs` (attack multiplier, need-decay zeroing, discipline-response damping).
 
 ### Known-broken / dead branches
 - [x] `hero_ai.rs:43` — `threat_level` hardcoded to `Moderate` in `decide_hero_goal`
@@ -246,6 +270,9 @@ Documented, unresolved (BALANCE_TESTING.md + feedback.md):
       thin parent files + sibling submodules (`foo.rs` + `foo/child.rs`, no `mod.rs`), verified with
       `cargo check --all-targets`, `cargo clippy --all-targets`, and `cargo test` (68 unit + 28
       balance tests, all passing, no behavior change). No file in the repo now exceeds 800 lines.
+      Later, adding hero ability cooldowns pushed `state/entities.rs` to exactly 800; split it the
+      same way into `entities.rs` + `entities/{creature,hero}.rs` (CreatureState/HeroState) as
+      part of that change, per the "restructure when a touched file approaches the limit" rule.
 - [ ] Strip debug output: `eprintln!("[DEBUG] …")` throughout hero AI, combat, imp AI, spells,
       traps — hot-path console spam in release. Literal `[DEBUG]`-tagged prints removed from
       `hero_ai.rs` (8 call sites, per-frame per-hero pathfinding spam); ~98 other un-tagged

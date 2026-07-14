@@ -52,6 +52,15 @@ pub fn calculate_task_desirability(
         desirability *= preference;
     }
 
+    // Apply trait-driven task preference multipliers (data-driven; see traits.json)
+    let trait_multiplier: f32 = monster_data
+        .traits
+        .iter()
+        .filter_map(|trait_id| game_data.traits.get(trait_id))
+        .filter_map(|t| t.task_preference_multipliers.get(task_type))
+        .product();
+    desirability *= trait_multiplier;
+
     // Boost desirability based on related needs
     match task {
         Task::Sleep(_) => {

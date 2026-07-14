@@ -11,7 +11,7 @@ use crate::state::entities::{CreatureState, EntityId, EntityManager, Task};
 use crate::state::room_manager::RoomManager;
 use crate::state::tile_state::TilePos;
 
-mod needs;
+pub(crate) mod needs;
 
 pub use needs::{apply_slap, calculate_work_efficiency, satisfy_need};
 
@@ -94,7 +94,7 @@ fn update_single_creature(
         if let Some(monster_data) = game_data.monsters.get(&creature_type) {
             if let Some(entity) = entities.get_mut(creature_id) {
                 if let Some(creature) = entity.as_creature_mut() {
-                    needs::update_needs(creature, dt, monster_data);
+                    needs::update_needs(creature, dt, monster_data, game_data);
                     needs::update_mood(creature, monster_data, game_data);
                 }
             }

@@ -155,8 +155,9 @@ pub fn cast_spell(
     CastResult::Success
 }
 
-/// Apply a single spell effect
-fn apply_spell_effect(
+/// Apply a single spell effect. `pub(crate)` so `engine::hero_abilities` can reuse the exact
+/// same generic effect vocabulary for data-driven hero abilities instead of duplicating it.
+pub(crate) fn apply_spell_effect(
     effect: &SpellEffect,
     game_state: &mut GameState,
     game_data: &GameData,
@@ -290,29 +291,42 @@ fn apply_heal_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &mut
 /// (attack/defense/etc.) are computed from base data + level at combat time and have no mutable
 /// field to modify without a broader data-model change.
 fn apply_stat_modifier(entity_id: EntityId, effect: &SpellEffect, game_state: &mut GameState) {
-    if let Some(entity) = game_state.entities.get_mut(entity_id) {
-        if let crate::state::entities::EntityType::Creature(creature) = &mut entity.entity_type {
-            if effect.stat.as_deref() == Some("speed") {
-                let multiplier = effect.multiplier.unwrap_or(1.0);
-                creature.movement_speed *= multiplier;
-                eprintln!(
-                    "Spell buff: {} speed multiplied by {} (new speed: {})",
-                    creature.creature_id, multiplier, creature.movement_speed
-                );
+    if effect.stat.as_deref() != Some("speed") {
+        return;
+    }
+    let multiplier = effect.multiplier.unwrap_or(1.0);
 
-                // Temporary buffs revert when their status effect expires (see
-                // combat::update_status_effects); permanent buffs omit `duration`.
-                if let Some(duration) = effect.duration {
-                    creature
-                        .status_effects
-                        .push(crate::state::entities::StatusEffect {
-                            effect_type: "speed_modifier".to_string(),
-                            duration,
-                            strength: multiplier,
-                        });
-                }
+    let Some(entity) = game_state.entities.get_mut(entity_id) else {
+        return;
+    };
+
+    // Temporary buffs revert when their status effect expires (see
+    // combat::update_status_effects); permanent buffs omit `duration`.
+    match &mut entity.entity_type {
+        crate::state::entities::EntityType::Creature(creature) => {
+            creature.movement_speed *= multiplier;
+            if let Some(duration) = effect.duration {
+                creature
+                    .status_effects
+                    .push(crate::state::entities::StatusEffect {
+                        effect_type: "speed_modifier".to_string(),
+                        duration,
+                        strength: multiplier,
+                    });
             }
         }
+        crate::state::entities::EntityType::Hero(hero) => {
+            hero.movement_speed *= multiplier;
+            if let Some(duration) = effect.duration {
+                hero.status_effects
+                    .push(crate::state::entities::StatusEffect {
+                        effect_type: "speed_modifier".to_string(),
+                        duration,
+                        strength: multiplier,
+                    });
+            }
+        }
+        _ => {}
     }
 }
 

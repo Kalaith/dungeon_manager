@@ -545,7 +545,7 @@ impl InputHandler {
             None => return false,
         };
 
-        creature_ai::apply_slap(creature, monster_data, state.time_elapsed);
+        creature_ai::apply_slap(creature, monster_data, game_data, state.time_elapsed);
         eprintln!("Slapped creature {}!", creature.creature_id);
         true
     }

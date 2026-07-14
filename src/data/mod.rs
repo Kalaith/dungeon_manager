@@ -9,6 +9,7 @@ pub mod scenario;
 pub mod spells;
 pub mod technologies;
 pub mod tiles;
+pub mod traits;
 pub mod traps;
 
 use std::collections::HashMap;
@@ -25,6 +26,7 @@ pub use scenario::ScenarioDefinition;
 pub use spells::SpellData;
 pub use technologies::TechData;
 pub use tiles::TileData;
+pub use traits::TraitData;
 pub use traps::TrapData;
 
 #[derive(Default)]
@@ -36,6 +38,7 @@ pub struct GameData {
     pub spells: HashMap<String, SpellData>,
     pub traps: HashMap<String, TrapData>,
     pub technologies: HashMap<String, TechData>,
+    pub traits: HashMap<String, TraitData>,
     pub hero_buildings: HashMap<String, HeroBuildingData>,
     pub scenarios: HashMap<String, ScenarioDefinition>,
     pub campaigns: HashMap<String, CampaignDefinition>,
@@ -54,6 +57,7 @@ impl GameData {
         let spells = spells::load_spells()?;
         let traps = traps::load_traps()?;
         let technologies = technologies::load_technologies()?;
+        let traits = traits::load_traits()?;
         let hero_buildings = hero_buildings::load_hero_buildings()?;
         let scenarios = scenario::load_scenarios()?;
         let campaigns = campaign::load_campaigns()?;
@@ -67,6 +71,7 @@ impl GameData {
             spells,
             traps,
             technologies,
+            traits,
             hero_buildings,
             scenarios,
             campaigns,

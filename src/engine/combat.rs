@@ -143,10 +143,20 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
                 + (creature_state.level - 1) as f32
                     * game_data.config.combat.creature_level_multiplier;
 
+            // Trait-driven attack/defense multipliers (data-driven; see traits.json)
+            let trait_data: Vec<_> = creature_data
+                .traits
+                .iter()
+                .filter_map(|trait_id| game_data.traits.get(trait_id))
+                .collect();
+            let attack_multiplier: f32 = trait_data.iter().map(|t| t.attack_multiplier).product();
+            let defense_multiplier: f32 =
+                trait_data.iter().map(|t| t.defense_multiplier).product();
+
             CombatStats {
                 health: creature_state.health,
-                attack: creature_data.stats.attack * level_multiplier,
-                defense: creature_data.stats.defense * level_multiplier,
+                attack: creature_data.stats.attack * level_multiplier * attack_multiplier,
+                defense: creature_data.stats.defense * level_multiplier * defense_multiplier,
                 attack_type: creature_data.combat.attack_type.clone(),
                 damage_range: creature_data.combat.damage_range,
                 attack_speed: creature_data.combat.attack_speed,

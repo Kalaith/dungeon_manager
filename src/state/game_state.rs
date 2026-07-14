@@ -291,6 +291,9 @@ impl GameState {
         // Update spell cooldowns
         crate::engine::spell_effects::update_spell_cooldowns(self, dt);
 
+        // Evaluate and fire data-driven hero abilities
+        crate::engine::hero_abilities::update_hero_abilities(self, game_data, dt);
+
         // Imp spawning is now handled by the Summon Imp spell
 
         // Update imps first (they dig tiles)

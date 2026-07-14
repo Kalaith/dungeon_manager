@@ -117,7 +117,9 @@
         "id": "detect_traps",
         "cooldown": 15,
         "trigger": "passive",
-        "effect": "reveal_traps"
+        "effects": [
+          { "type": "reveal_map" }
+        ]
       }
     ],
     "behavior": {
@@ -198,13 +200,17 @@
         "id": "heal",
         "cooldown": 20,
         "trigger": "on_ally_low_health",
-        "effect": "restore_health"
+        "effects": [
+          { "type": "heal", "amount": 30 }
+        ]
       },
       {
         "id": "dispel",
         "cooldown": 30,
         "trigger": "on_ritual_detected",
-        "effect": "cancel_ritual"
+        "effects": [
+          { "type": "status_apply", "status": "dispelling", "amount": 1, "duration": 3 }
+        ]
       }
     ],
     "behavior": {
@@ -287,7 +293,9 @@
         "id": "shield_block",
         "cooldown": 10,
         "trigger": "on_hit",
-        "effect": "reduce_damage"
+        "effects": [
+          { "type": "status_apply", "status": "shielded", "amount": 1, "duration": 3 }
+        ]
       }
     ],
     "behavior": {
@@ -370,7 +378,9 @@
         "id": "volley",
         "cooldown": 15,
         "trigger": "on_multiple_targets",
-        "effect": "area_damage"
+        "effects": [
+          { "type": "damage", "amount": 12, "damage_type": "physical" }
+        ]
       }
     ],
     "behavior": {
@@ -452,13 +462,17 @@
         "id": "group_heal",
         "cooldown": 25,
         "trigger": "on_party_damaged",
-        "effect": "heal_allies"
+        "effects": [
+          { "type": "heal", "amount": 40 }
+        ]
       },
       {
         "id": "purify",
         "cooldown": 40,
         "trigger": "on_corruption",
-        "effect": "remove_debuffs"
+        "effects": [
+          { "type": "status_apply", "status": "purified", "amount": 1, "duration": 5 }
+        ]
       }
     ],
     "behavior": {
@@ -539,13 +553,17 @@
         "id": "backstab",
         "cooldown": 12,
         "trigger": "on_sneak_attack",
-        "effect": "extra_damage"
+        "effects": [
+          { "type": "damage", "amount": 25, "damage_type": "physical" }
+        ]
       },
       {
         "id": "sabotage",
         "cooldown": 30,
-        "trigger": "in_workshop",
-        "effect": "disable_traps"
+        "trigger": "in_room:workshop",
+        "effects": [
+          { "type": "damage", "amount": 8 }
+        ]
       }
     ],
     "behavior": {
@@ -627,13 +645,17 @@
         "id": "holy_aura",
         "cooldown": 0,
         "trigger": "passive",
-        "effect": "buff_allies_vs_undead"
+        "effects": [
+          { "type": "status_apply", "status": "blessed_vs_undead", "amount": 1, "duration": 2 }
+        ]
       },
       {
         "id": "turn_undead",
         "cooldown": 20,
         "trigger": "on_undead_nearby",
-        "effect": "fear_undead"
+        "effects": [
+          { "type": "status_apply", "status": "stun", "duration": 2 }
+        ]
       }
     ],
     "behavior": {
@@ -715,13 +737,18 @@
         "id": "fireball",
         "cooldown": 8,
         "trigger": "on_target",
-        "effect": "area_damage"
+        "effects": [
+          { "type": "damage", "amount": 20, "damage_type": "fire" },
+          { "type": "status_apply", "status": "burn", "amount": 3, "duration": 4 }
+        ]
       },
       {
         "id": "teleport",
         "cooldown": 25,
         "trigger": "on_trapped",
-        "effect": "escape"
+        "effects": [
+          { "type": "stat_modifier", "stat": "speed", "multiplier": 3.0, "duration": 2 }
+        ]
       }
     ],
     "behavior": {
@@ -803,13 +830,17 @@
         "id": "disable_room",
         "cooldown": 45,
         "trigger": "in_room",
-        "effect": "temporarily_disable_room"
+        "effects": [
+          { "type": "damage", "amount": 6 }
+        ]
       },
       {
         "id": "fear_aura",
         "cooldown": 30,
         "trigger": "passive",
-        "effect": "reduce_creature_morale"
+        "effects": [
+          { "type": "status_apply", "status": "fearsome", "amount": 1, "duration": 2 }
+        ]
       }
     ],
     "behavior": {
@@ -891,13 +922,17 @@
         "id": "rally",
         "cooldown": 30,
         "trigger": "on_low_health",
-        "effect": "buff_allies"
+        "effects": [
+          { "type": "heal", "amount": 15 }
+        ]
       },
       {
         "id": "command",
         "cooldown": 20,
         "trigger": "passive",
-        "effect": "coordinate_party"
+        "effects": [
+          { "type": "status_apply", "status": "commanding", "amount": 1, "duration": 2 }
+        ]
       }
     ],
     "behavior": {
@@ -980,13 +1015,17 @@
         "id": "mass_cleanse",
         "cooldown": 50,
         "trigger": "on_corruption_detected",
-        "effect": "remove_all_debuffs"
+        "effects": [
+          { "type": "status_apply", "status": "cleansed", "amount": 1, "duration": 5 }
+        ]
       },
       {
         "id": "banish_ritual",
         "cooldown": 60,
-        "trigger": "in_ritual_circle",
-        "effect": "destroy_ritual"
+        "trigger": "in_room:ritual_circle",
+        "effects": [
+          { "type": "damage", "amount": 15 }
+        ]
       }
     ],
     "behavior": {
@@ -1068,13 +1107,17 @@
         "id": "meteor",
         "cooldown": 40,
         "trigger": "on_open_area",
-        "effect": "massive_area_damage"
+        "effects": [
+          { "type": "damage", "amount": 35, "damage_type": "fire" }
+        ]
       },
       {
         "id": "teleport_strike",
         "cooldown": 15,
         "trigger": "on_target_isolated",
-        "effect": "teleport_and_attack"
+        "effects": [
+          { "type": "damage", "amount": 22, "damage_type": "physical" }
+        ]
       }
     ],
     "behavior": {
@@ -1154,13 +1197,17 @@
         "id": "divine_rage",
         "cooldown": 60,
         "trigger": "on_damaged",
-        "effect": "temporary_power_boost"
+        "effects": [
+          { "type": "stat_modifier", "stat": "speed", "multiplier": 1.5, "duration": 5 }
+        ]
       },
       {
         "id": "light_blast",
         "cooldown": 25,
         "trigger": "on_creature_nearby",
-        "effect": "repel_creatures"
+        "effects": [
+          { "type": "damage", "amount": 10, "damage_type": "holy" }
+        ]
       }
     ],
     "behavior": {
@@ -1241,7 +1288,9 @@
         "id": "rage",
         "cooldown": 20,
         "trigger": "on_low_health",
-        "effect": "increase_damage_and_speed"
+        "effects": [
+          { "type": "stat_modifier", "stat": "speed", "multiplier": 1.4, "duration": 6 }
+        ]
       }
     ],
     "behavior": {
@@ -1322,13 +1371,18 @@
         "id": "acid_flask",
         "cooldown": 10,
         "trigger": "on_armored_target",
-        "effect": "reduce_armor"
+        "effects": [
+          { "type": "damage", "amount": 14, "damage_type": "acid" },
+          { "type": "status_apply", "status": "corroded", "amount": 1, "duration": 5 }
+        ]
       },
       {
         "id": "explosive_potion",
         "cooldown": 15,
         "trigger": "on_group",
-        "effect": "area_damage"
+        "effects": [
+          { "type": "damage", "amount": 18, "damage_type": "physical" }
+        ]
       }
     ],
     "behavior": {
@@ -1409,13 +1463,17 @@
         "id": "stone_wall",
         "cooldown": 30,
         "trigger": "defensive",
-        "effect": "create_obstacle"
+        "effects": [
+          { "type": "status_apply", "status": "fortified", "amount": 1, "duration": 5 }
+        ]
       },
       {
         "id": "earthquake",
         "cooldown": 45,
         "trigger": "on_large_group",
-        "effect": "area_stun"
+        "effects": [
+          { "type": "damage", "amount": 20, "damage_type": "physical" }
+        ]
       }
     ],
     "behavior": {

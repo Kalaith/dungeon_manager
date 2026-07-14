@@ -53,12 +53,18 @@ pub struct HeroCombatData {
     pub resistances: HashMap<String, f32>,
 }
 
+/// A hero ability: a `trigger` (a small, fixed vocabulary the engine evaluates generically —
+/// see `engine::hero_abilities`) gates a list of `effects` using the exact same data-driven
+/// effect schema spells use (`data::spells::SpellEffect` — heal/damage/status_apply/etc.,
+/// executed by the same `apply_spell_effect` dispatcher). Adding a new ability, or changing what
+/// an existing one does, is a `heroes.json` edit — the engine never branches on an ability's id.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeroAbilityData {
     pub id: String,
     pub cooldown: f32,
     pub trigger: String,
-    pub effect: serde_json::Value,
+    #[serde(default)]
+    pub effects: Vec<crate::data::spells::SpellEffect>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

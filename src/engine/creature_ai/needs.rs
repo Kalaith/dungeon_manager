@@ -1,13 +1,36 @@
 use crate::data::monsters::MonsterData;
+use crate::data::traits::TraitData;
 use crate::data::GameData;
 use crate::state::entities::CreatureState;
 
-pub fn update_needs(creature: &mut CreatureState, dt: f32, monster_data: &MonsterData) {
+/// Look up the `TraitData` for each trait tag a creature was authored with, skipping unknown
+/// ids. Missing an entry is a data-authoring gap, not an engine error — the trait just has no
+/// effect until it's added to `traits.json`.
+fn active_traits<'a>(monster_data: &MonsterData, game_data: &'a GameData) -> Vec<&'a TraitData> {
+    monster_data
+        .traits
+        .iter()
+        .filter_map(|trait_id| game_data.traits.get(trait_id))
+        .collect()
+}
+
+pub fn update_needs(
+    creature: &mut CreatureState,
+    dt: f32,
+    monster_data: &MonsterData,
+    game_data: &GameData,
+) {
     let decay_per_second = dt / 60.0;
+    let traits = active_traits(monster_data, game_data);
 
     for (need_name, need_data) in &monster_data.needs {
         let current = creature.get_need(need_name);
-        let decay = need_data.decay_per_minute * decay_per_second;
+        // product() of an empty iterator is 1.0, so needs with no matching trait are unaffected.
+        let decay_multiplier: f32 = traits
+            .iter()
+            .filter_map(|t| t.need_decay_multipliers.get(need_name))
+            .product();
+        let decay = need_data.decay_per_minute * decay_per_second * decay_multiplier;
         creature.set_need(need_name.clone(), current - decay);
     }
 }
@@ -39,16 +62,28 @@ pub fn calculate_mood(
         mood -= mood_penalties.angry_penalty;
     }
 
+    let trait_mood_modifier: f32 = active_traits(monster_data, game_data)
+        .iter()
+        .map(|t| t.mood_modifier)
+        .sum();
+    mood += trait_mood_modifier;
+
     mood.clamp(0.0, 100.0)
 }
 
 pub fn update_mood(creature: &mut CreatureState, monster_data: &MonsterData, game_data: &GameData) {
     creature.mood = calculate_mood(creature, monster_data, game_data);
+    let traits = active_traits(monster_data, game_data);
 
-    let anger_threshold = monster_data.ai.anger_threshold;
+    let anger_threshold = monster_data.ai.anger_threshold
+        + traits.iter().map(|t| t.anger_threshold_modifier).sum::<f32>();
     creature.is_angry = creature.mood < anger_threshold;
 
-    let desertion_threshold = monster_data.ai.desertion_threshold;
+    let desertion_threshold = monster_data.ai.desertion_threshold
+        + traits
+            .iter()
+            .map(|t| t.desertion_threshold_modifier)
+            .sum::<f32>();
     creature.is_deserting = creature.mood < desertion_threshold;
 }
 
@@ -58,7 +93,12 @@ pub fn satisfy_need(creature: &mut CreatureState, need_name: &str, rate: f32, dt
     creature.set_need(need_name.to_string(), current + increase);
 }
 
-pub fn apply_slap(creature: &mut CreatureState, monster_data: &MonsterData, game_time: f32) {
+pub fn apply_slap(
+    creature: &mut CreatureState,
+    monster_data: &MonsterData,
+    game_data: &GameData,
+    game_time: f32,
+) {
     if game_time - creature.last_slapped < 5.0 {
         return;
     }
@@ -66,7 +106,11 @@ pub fn apply_slap(creature: &mut CreatureState, monster_data: &MonsterData, game
     creature.last_slapped = game_time;
 
     if let Some(&mood_change) = monster_data.ai.discipline_response.get("slap") {
-        creature.mood = (creature.mood + mood_change).clamp(0.0, 100.0);
+        let discipline_multiplier: f32 = active_traits(monster_data, game_data)
+            .iter()
+            .map(|t| t.discipline_response_multiplier)
+            .product();
+        creature.mood = (creature.mood + mood_change * discipline_multiplier).clamp(0.0, 100.0);
     }
 
     creature.current_task = None;

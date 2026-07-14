@@ -1,6 +1,6 @@
 use crate::data::{
     CampaignDefinition, GameData, HeroBuildingData, HeroData, MonsterData, RoomData,
-    ScenarioDefinition, SpellData, TechData, TileData, TrapData,
+    ScenarioDefinition, SpellData, TechData, TileData, TraitData, TrapData,
 };
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -44,6 +44,12 @@ impl Identified for SpellData {
 }
 
 impl Identified for TrapData {
+    fn id(&self) -> &str {
+        &self.id
+    }
+}
+
+impl Identified for TraitData {
     fn id(&self) -> &str {
         &self.id
     }
@@ -105,6 +111,8 @@ pub struct ContentPackDataPaths {
     pub traps: Vec<String>,
     #[serde(default)]
     pub technologies: Vec<String>,
+    #[serde(default)]
+    pub traits: Vec<String>,
     #[serde(default)]
     pub hero_buildings: Vec<String>,
     #[serde(default)]
@@ -217,6 +225,12 @@ pub fn apply_content_pack(
         root,
         &manifest.data.technologies,
         &mut game_data.technologies,
+        &mut report,
+    )?;
+    merge_file_set(
+        root,
+        &manifest.data.traits,
+        &mut game_data.traits,
         &mut report,
     )?;
     merge_file_set(
