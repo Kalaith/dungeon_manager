@@ -4,6 +4,7 @@
 
 use crate::state::entities::EntityId;
 use crate::state::tile_state::TilePos;
+use macroquad_toolkit::timing::Timer;
 use serde::{Deserialize, Serialize};
 
 /// Type of projectile based on attack type
@@ -53,20 +54,16 @@ pub struct Projectile {
     pub start_pos: (f32, f32),
     /// Target position (defender's position)
     pub end_pos: (f32, f32),
-    /// Progress from 0.0 (start) to 1.0 (end)
-    pub progress: f32,
     /// Type of projectile
     pub projectile_type: ProjectileType,
     /// Attacker entity ID (for reference)
     pub attacker_id: EntityId,
     /// Defender entity ID (for reference)
     pub defender_id: EntityId,
-    /// Total duration
-    pub duration: f32,
-    /// Time elapsed
-    pub elapsed: f32,
     /// Damage to deal on impact
     pub damage: f32,
+    /// Travel timer; `timer.progress()` is 0.0 (start) to 1.0 (end)
+    timer: Timer,
 }
 
 impl Projectile {
@@ -83,13 +80,11 @@ impl Projectile {
         Self {
             start_pos,
             end_pos,
-            progress: 0.0,
             projectile_type,
             attacker_id,
             defender_id,
-            duration,
-            elapsed: 0.0,
             damage,
+            timer: Timer::new(duration),
         }
     }
 
@@ -101,7 +96,7 @@ impl Projectile {
             _ => 1.0,
         };
 
-        let effective_progress = self.progress * travel_ratio;
+        let effective_progress = self.timer.progress() * travel_ratio;
 
         let x = self.start_pos.0 + (self.end_pos.0 - self.start_pos.0) * effective_progress;
         let y = self.start_pos.1 + (self.end_pos.1 - self.start_pos.1) * effective_progress;
@@ -110,9 +105,8 @@ impl Projectile {
 
     /// Update projectile, returns true if still active
     pub fn update(&mut self, dt: f32) -> bool {
-        self.elapsed += dt;
-        self.progress = (self.elapsed / self.duration).min(1.0);
-        self.progress < 1.0
+        self.timer.tick(dt);
+        !self.timer.finished()
     }
 }
 

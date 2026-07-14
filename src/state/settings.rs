@@ -1,11 +1,14 @@
-//! Persistent game settings (fullscreen, UI scale)
+//! Persistent game settings (fullscreen, UI scale, difficulty)
 //!
-//! Stored as `settings.json` next to the save slots on native builds and in
-//! localStorage on WASM, mirroring `save_system`.
+//! Wraps the shared `macroquad_toolkit::settings::GameSettings` (fullscreen,
+//! UI text scale, audio/display flags) and adds dungeon_manager's
+//! game-specific `difficulty` field. Persisted via the toolkit's
+//! platform-uniform JSON-key persistence (native app-data file / WASM
+//! localStorage), the same mechanism `save_system` uses.
 
+use macroquad_toolkit::settings::GameSettings as ToolkitSettings;
 use serde::{Deserialize, Serialize};
 
-#[cfg(target_arch = "wasm32")]
 const GAME_NAME: &str = "dungeon_manager";
 const SETTINGS_KEY: &str = "settings";
 
@@ -50,84 +53,43 @@ impl Difficulty {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct GameSettings {
-    #[serde(default)]
-    pub fullscreen: bool,
-    #[serde(default = "default_ui_text_scale")]
-    pub ui_text_scale: f32,
+    /// Shared fullscreen/UI-scale/audio settings from the toolkit.
+    #[serde(flatten)]
+    pub base: ToolkitSettings,
     #[serde(default)]
     pub difficulty: Difficulty,
 }
 
-impl Default for GameSettings {
-    fn default() -> Self {
-        Self {
-            fullscreen: false,
-            ui_text_scale: default_ui_text_scale(),
-            difficulty: Difficulty::default(),
-        }
-    }
-}
-
-fn default_ui_text_scale() -> f32 {
-    1.0
-}
-
 impl GameSettings {
     pub fn load() -> Self {
-        #[cfg(target_arch = "wasm32")]
-        {
-            macroquad_toolkit::persistence::load_json_key(GAME_NAME, SETTINGS_KEY)
-                .unwrap_or_default()
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            macroquad_toolkit::persistence::load_json(format!("{}.json", SETTINGS_KEY))
-                .unwrap_or_default()
-        }
+        macroquad_toolkit::persistence::load_json_key(GAME_NAME, SETTINGS_KEY).unwrap_or_default()
     }
 
     pub fn save(&self) {
-        let result = {
-            #[cfg(target_arch = "wasm32")]
-            {
-                macroquad_toolkit::persistence::save_json_key(GAME_NAME, SETTINGS_KEY, self)
-            }
-
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                macroquad_toolkit::persistence::save_json_atomic(
-                    format!("{}.json", SETTINGS_KEY),
-                    self,
-                )
-            }
-        };
-        if let Err(e) = result {
+        if let Err(e) = macroquad_toolkit::persistence::save_json_key(GAME_NAME, SETTINGS_KEY, self)
+        {
             eprintln!("Failed to save settings: {}", e);
         }
     }
 
     /// Push the current settings into the window and UI systems.
     pub fn apply(&self) {
-        #[cfg(not(target_arch = "wasm32"))]
-        macroquad::window::set_fullscreen(self.fullscreen);
-        macroquad_toolkit::ui::set_ui_text_scale(self.ui_text_scale);
+        self.base.apply_display();
     }
 
     pub fn toggle_fullscreen(&mut self) {
-        self.fullscreen = !self.fullscreen;
-        self.apply();
+        self.base.toggle_fullscreen();
         self.save();
     }
 
     pub fn cycle_ui_text_scale(&mut self) {
         let current = UI_SCALE_STEPS
             .iter()
-            .position(|scale| (scale - self.ui_text_scale).abs() < 0.01)
+            .position(|scale| (scale - self.base.ui_text_scale).abs() < 0.01)
             .unwrap_or(1);
-        self.ui_text_scale = UI_SCALE_STEPS[(current + 1) % UI_SCALE_STEPS.len()];
+        self.base.ui_text_scale = UI_SCALE_STEPS[(current + 1) % UI_SCALE_STEPS.len()];
         self.apply();
         self.save();
     }
@@ -145,20 +107,23 @@ mod tests {
     #[test]
     fn settings_roundtrip_serialization() {
         let settings = GameSettings {
-            fullscreen: true,
-            ui_text_scale: 1.25,
+            base: ToolkitSettings {
+                fullscreen: true,
+                ui_text_scale: 1.25,
+                ..Default::default()
+            },
             difficulty: Difficulty::Hard,
         };
         let json = serde_json::to_string(&settings).expect("settings should serialize");
         let loaded: GameSettings = serde_json::from_str(&json).expect("settings should parse");
-        assert!(loaded.fullscreen);
-        assert_eq!(loaded.ui_text_scale, 1.25);
+        assert!(loaded.base.fullscreen);
+        assert_eq!(loaded.base.ui_text_scale, 1.25);
         assert_eq!(loaded.difficulty, Difficulty::Hard);
 
         // Missing fields fall back to defaults for forward compatibility
         let empty: GameSettings = serde_json::from_str("{}").expect("empty settings should parse");
-        assert!(!empty.fullscreen);
-        assert_eq!(empty.ui_text_scale, 1.0);
+        assert!(!empty.base.fullscreen);
+        assert_eq!(empty.base.ui_text_scale, 1.0);
         assert_eq!(empty.difficulty, Difficulty::Normal);
     }
 
@@ -178,13 +143,13 @@ mod tests {
     #[test]
     fn ui_scale_cycles_through_steps() {
         let mut settings = GameSettings::default();
-        // Note: cycle applies + saves; in tests this writes settings.json to cwd,
-        // so exercise only the pure step selection here.
+        // Note: cycle_ui_text_scale() also applies + saves settings, so exercise
+        // only the pure step selection here.
         let current = UI_SCALE_STEPS
             .iter()
-            .position(|scale| (scale - settings.ui_text_scale).abs() < 0.01)
+            .position(|scale| (scale - settings.base.ui_text_scale).abs() < 0.01)
             .unwrap_or(1);
-        settings.ui_text_scale = UI_SCALE_STEPS[(current + 1) % UI_SCALE_STEPS.len()];
-        assert_eq!(settings.ui_text_scale, 1.25);
+        settings.base.ui_text_scale = UI_SCALE_STEPS[(current + 1) % UI_SCALE_STEPS.len()];
+        assert_eq!(settings.base.ui_text_scale, 1.25);
     }
 }

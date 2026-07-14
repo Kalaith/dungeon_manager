@@ -220,7 +220,7 @@ pub fn draw_settings_menu(settings: &GameSettings) {
     draw_title_block("Settings", "", screen_height() / 2.0 - 140.0);
 
     let layout = menu_layout::settings_menu();
-    let fullscreen_label = if settings.fullscreen {
+    let fullscreen_label = if settings.base.fullscreen {
         "FULLSCREEN: ON"
     } else {
         "FULLSCREEN: OFF"
@@ -232,7 +232,7 @@ pub fn draw_settings_menu(settings: &GameSettings) {
         ButtonTone::Secondary,
     );
 
-    let scale_label = format!("UI SCALE: {:.0}%", settings.ui_text_scale * 100.0);
+    let scale_label = format!("UI SCALE: {:.0}%", settings.base.ui_text_scale * 100.0);
     draw_menu_button(layout.ui_scale, &scale_label, true, ButtonTone::Secondary);
 
     let difficulty_label = format!("DIFFICULTY: {}", settings.difficulty.label());

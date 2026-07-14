@@ -4,6 +4,7 @@
 //! allowing visual diversity without pre-generating many image files.
 
 use macroquad::prelude::*;
+use macroquad_toolkit::colors::{hsv_to_rgb, rgb_to_hsv};
 use std::collections::HashMap;
 
 /// Seed for generating deterministic variations
@@ -357,7 +358,7 @@ fn apply_variation(
             }
 
             // Convert to HSV
-            let (h, s, v) = rgb_to_hsv(pixel.r, pixel.g, pixel.b);
+            let (h, s, v) = rgb_to_hsv(pixel);
 
             // Find which region this pixel belongs to and apply variation
             let mut best_match: Option<(&ColorRegion, &ColorVariation)> = None;
@@ -371,67 +372,22 @@ fn apply_variation(
                 }
             }
 
-            let (new_r, new_g, new_b) = if let Some((_, var)) = best_match {
+            let new_pixel = if let Some((_, var)) = best_match {
                 // Apply the variation
                 let new_h = (h + var.hue_shift).rem_euclid(360.0);
                 let new_s = (s * var.saturation).clamp(0.0, 1.0);
                 let new_v = (v * var.brightness).clamp(0.0, 1.0);
-                hsv_to_rgb(new_h, new_s, new_v)
+                let rgb = hsv_to_rgb(new_h, new_s, new_v);
+                Color::new(rgb.r, rgb.g, rgb.b, pixel.a)
             } else {
-                (pixel.r, pixel.g, pixel.b)
+                pixel
             };
 
-            new_image.set_pixel(x as u32, y as u32, Color::new(new_r, new_g, new_b, pixel.a));
+            new_image.set_pixel(x as u32, y as u32, new_pixel);
         }
     }
 
     Texture2D::from_image(&new_image)
-}
-
-/// Convert RGB to HSV
-fn rgb_to_hsv(r: f32, g: f32, b: f32) -> (f32, f32, f32) {
-    let max = r.max(g).max(b);
-    let min = r.min(g).min(b);
-    let delta = max - min;
-
-    let h = if delta == 0.0 {
-        0.0
-    } else if max == r {
-        60.0 * (((g - b) / delta) % 6.0)
-    } else if max == g {
-        60.0 * (((b - r) / delta) + 2.0)
-    } else {
-        60.0 * (((r - g) / delta) + 4.0)
-    };
-
-    let h = if h < 0.0 { h + 360.0 } else { h };
-    let s = if max == 0.0 { 0.0 } else { delta / max };
-    let v = max;
-
-    (h, s, v)
-}
-
-/// Convert HSV to RGB
-fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (f32, f32, f32) {
-    let c = v * s;
-    let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
-    let m = v - c;
-
-    let (r, g, b) = if h < 60.0 {
-        (c, x, 0.0)
-    } else if h < 120.0 {
-        (x, c, 0.0)
-    } else if h < 180.0 {
-        (0.0, c, x)
-    } else if h < 240.0 {
-        (0.0, x, c)
-    } else if h < 300.0 {
-        (x, 0.0, c)
-    } else {
-        (c, 0.0, x)
-    };
-
-    (r + m, g + m, b + m)
 }
 
 /// Simple deterministic RNG for variation generation
@@ -492,11 +448,21 @@ mod tests {
         ];
 
         for (r, g, b) in test_colors {
-            let (h, s, v) = rgb_to_hsv(r, g, b);
-            let (r2, g2, b2) = hsv_to_rgb(h, s, v);
-            assert!((r - r2).abs() < 0.01, "Red mismatch: {} vs {}", r, r2);
-            assert!((g - g2).abs() < 0.01, "Green mismatch: {} vs {}", g, g2);
-            assert!((b - b2).abs() < 0.01, "Blue mismatch: {} vs {}", b, b2);
+            let (h, s, v) = rgb_to_hsv(Color::new(r, g, b, 1.0));
+            let rgb = hsv_to_rgb(h, s, v);
+            assert!((r - rgb.r).abs() < 0.01, "Red mismatch: {} vs {}", r, rgb.r);
+            assert!(
+                (g - rgb.g).abs() < 0.01,
+                "Green mismatch: {} vs {}",
+                g,
+                rgb.g
+            );
+            assert!(
+                (b - rgb.b).abs() < 0.01,
+                "Blue mismatch: {} vs {}",
+                b,
+                rgb.b
+            );
         }
     }
 
