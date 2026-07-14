@@ -40,6 +40,9 @@ impl InputHandler {
             GamePhase::MissionSelect(_) => {
                 Self::handle_mission_select(phase, game_data);
             }
+            GamePhase::SkirmishSetup(_) => {
+                Self::handle_skirmish_setup(phase, game_data);
+            }
             GamePhase::Playing(state) => {
                 if let Some(ref data) = game_data {
                     // Scenario intro overlay: freeze the game until dismissed so
@@ -129,6 +132,12 @@ impl InputHandler {
             return;
         }
 
+        // Skirmish setup (procedural sandbox)
+        if clicked(layout.skirmish) {
+            *phase = GamePhase::SkirmishSetup(crate::state::skirmish::SkirmishConfig::default());
+            return;
+        }
+
         // Settings
         if clicked(layout.settings) {
             *phase = GamePhase::Settings;
@@ -184,6 +193,38 @@ impl InputHandler {
                     None => GamePhase::MainMenu,
                 };
                 return;
+            }
+        }
+    }
+
+    fn handle_skirmish_setup(phase: &mut GamePhase, game_data: &Option<GameData>) {
+        let GamePhase::SkirmishSetup(config) = phase else {
+            return;
+        };
+        let layout = crate::ui::menu_layout::skirmish_setup();
+        let mouse = mouse_position();
+        let mouse = vec2(mouse.0, mouse.1);
+        let clicked = |rect: macroquad::math::Rect| {
+            is_mouse_button_pressed(MouseButton::Left) && rect.contains(mouse)
+        };
+
+        if is_key_pressed(KeyCode::Escape) || clicked(layout.back) {
+            *phase = GamePhase::MainMenu;
+            return;
+        }
+        if clicked(layout.map_type) {
+            config.cycle_map_type();
+            return;
+        }
+        if clicked(layout.size) {
+            config.cycle_size();
+            return;
+        }
+        if clicked(layout.start) || is_key_pressed(KeyCode::Enter) {
+            if let Some(data) = game_data.as_ref() {
+                let (w, h) = config.dimensions();
+                let state = GameState::new_with_map_type(w, h, data, config.map_type());
+                *phase = GamePhase::Playing(state);
             }
         }
     }

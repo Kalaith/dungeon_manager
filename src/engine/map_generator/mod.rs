@@ -78,13 +78,17 @@ pub fn generate_map(config: &MapConfig, game_data: &GameData) -> Grid {
         features::add_monster_lairs(&mut grid, start_pos, config);
     }
 
-    // Step 10: Create starting area LAST (clears resources to make room)
-    starting_area::create_starting_area(&mut grid, config, start_pos);
-
-    // Step 11: Create Hero Base
+    // Step 10: Create Hero Base first, so the player's starting area always
+    // wins where they overlap (on small/center layouts the hero base's walls
+    // can reach the map centre — placing the start last guarantees the player's
+    // dungeon heart survives).
     if config.hero_base_enabled {
         hero_base_gen::place_hero_base(&mut grid, start_pos, config);
     }
+
+    // Step 11: Create starting area LAST (clears resources + guarantees the
+    // dungeon heart is present and player-owned).
+    starting_area::create_starting_area(&mut grid, config, start_pos);
 
     grid
 }

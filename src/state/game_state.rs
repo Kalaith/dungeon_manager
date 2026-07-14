@@ -178,6 +178,10 @@ impl GameState {
             _ => {
                 dungeon =
                     crate::state::dungeon::Dungeon::new(width, height, game_data, map_type.clone());
+                // Procedurally-generated maps place a dungeon heart but don't
+                // claim it; do so now so the generated map is actually the
+                // player's (the File loader does this inside load_map).
+                crate::state::map_loader::claim_map_heart_areas(&mut dungeon);
             }
         }
 

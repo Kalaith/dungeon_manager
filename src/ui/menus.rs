@@ -76,6 +76,7 @@ pub fn draw_main_menu(graphics_cache: Option<&GraphicsCache>, _selected_map_type
     let save_exists = crate::state::save_system::save_exists("slot_1");
 
     draw_menu_button(layout.start, "START GAME", true, ButtonTone::Primary);
+    draw_menu_button(layout.skirmish, "SKIRMISH", true, ButtonTone::Positive);
     draw_menu_button(layout.load, "LOAD GAME", save_exists, ButtonTone::Positive);
     draw_menu_button(layout.settings, "SETTINGS", true, ButtonTone::Secondary);
     if let Some(exit) = layout.exit {
@@ -163,6 +164,46 @@ pub fn draw_mission_select(
         "BACK",
         true,
         ButtonTone::Muted,
+    );
+}
+
+/// Draw the skirmish/sandbox setup screen. The two option rows show the
+/// current choice and cycle on click (hit-tested by the input layer against
+/// `menu_layout::skirmish_setup`).
+pub fn draw_skirmish_setup(config: &crate::state::skirmish::SkirmishConfig) {
+    draw_rectangle(
+        0.0,
+        0.0,
+        screen_width(),
+        screen_height(),
+        Color::new(0.0, 0.0, 0.0, 0.55),
+    );
+    draw_title_block("SKIRMISH", "Generate a one-off sandbox map", 90.0);
+
+    let layout = menu_layout::skirmish_setup();
+    draw_menu_button(
+        layout.map_type,
+        &format!("MAP: {}", config.map_type_label()),
+        true,
+        ButtonTone::Secondary,
+    );
+    draw_menu_button(
+        layout.size,
+        &format!("SIZE: {}", config.size_label()),
+        true,
+        ButtonTone::Secondary,
+    );
+    draw_menu_button(layout.start, "GENERATE", true, ButtonTone::Primary);
+    draw_menu_button(layout.back, "BACK", true, ButtonTone::Muted);
+
+    let hint = "Click a row to cycle it, then GENERATE";
+    let hint_dims = measure_ui_text(hint, None, 16, 1.0);
+    draw_ui_text(
+        hint,
+        screen_width() / 2.0 - hint_dims.width / 2.0,
+        layout.back.y + layout.back.h + 36.0,
+        16.0,
+        colors::TEXT_DIM,
     );
 }
 

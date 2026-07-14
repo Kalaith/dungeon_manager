@@ -25,18 +25,39 @@ pub fn can_exit() -> bool {
 
 pub struct MainMenuLayout {
     pub start: Rect,
+    pub skirmish: Rect,
     pub load: Rect,
     pub settings: Rect,
     pub exit: Option<Rect>,
 }
 
 pub fn main_menu() -> MainMenuLayout {
-    let start_y = screen_height() / 2.0 - 80.0;
+    let start_y = screen_height() / 2.0 - 110.0;
     MainMenuLayout {
         start: stacked(start_y, 0),
-        load: stacked(start_y, 1),
-        settings: stacked(start_y, 2),
-        exit: can_exit().then(|| stacked(start_y, 3)),
+        skirmish: stacked(start_y, 1),
+        load: stacked(start_y, 2),
+        settings: stacked(start_y, 3),
+        exit: can_exit().then(|| stacked(start_y, 4)),
+    }
+}
+
+/// Skirmish setup screen: two option rows (map type, size) that cycle on
+/// click, plus Start and Back. Consumed by both the renderer and input layer.
+pub struct SkirmishSetupLayout {
+    pub map_type: Rect,
+    pub size: Rect,
+    pub start: Rect,
+    pub back: Rect,
+}
+
+pub fn skirmish_setup() -> SkirmishSetupLayout {
+    let start_y = screen_height() / 2.0 - 90.0;
+    SkirmishSetupLayout {
+        map_type: stacked(start_y, 0),
+        size: stacked(start_y, 1),
+        start: stacked(start_y, 3),
+        back: stacked(start_y, 4),
     }
 }
 

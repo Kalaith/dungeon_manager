@@ -69,6 +69,9 @@ impl GameRenderer {
             GamePhase::MissionSelect(progress) => {
                 crate::ui::menus::draw_mission_select(progress, game_data.as_ref());
             }
+            GamePhase::SkirmishSetup(config) => {
+                crate::ui::menus::draw_skirmish_setup(config);
+            }
             GamePhase::Playing(_) => {
                 if let Some(inner_state) = state {
                     if let Some(ref data) = game_data {

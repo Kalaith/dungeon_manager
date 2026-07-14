@@ -8,6 +8,9 @@ pub enum GamePhase {
     /// to play (needed so the M7 branch is actually choosable). Holds the
     /// campaign progress until a mission is chosen.
     MissionSelect(crate::data::campaign::CampaignProgress),
+    /// Skirmish/sandbox setup: pick a procedural map type + size, then launch a
+    /// generated one-off game (makes the map generator reachable from the UI).
+    SkirmishSetup(crate::state::skirmish::SkirmishConfig),
     Playing(GameState),
 }
 

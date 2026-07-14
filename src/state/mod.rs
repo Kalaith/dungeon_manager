@@ -21,6 +21,7 @@ pub mod save_system;
 mod scenario_setup;
 pub mod scenario_state;
 pub mod settings;
+pub mod skirmish;
 mod spawning;
 pub mod tile_state;
 pub mod tutorial;

@@ -224,11 +224,25 @@ everything *around* that engine:
       guards the seen-gate. **Polish left (not blocking):** boss-specific *mechanics* (phase changes,
       enrage, unique boss AI beyond the existing data-driven hero abilities) remain future depth; this
       ships the defeat-the-boss *encounter* + the reusable trigger.
-- [ ] Skirmish/sandbox mode: `MapType::Rich/Hazardous/Test` and the whole procedural map generator
-      exist but are **unreachable from the UI** (`input.rs:93` forces Standard). Add a skirmish
-      setup screen (map size/type/seed, rival count, difficulty) — cheap win, the generator with
-      biomes/connectivity/resource placement is already built and this is the genre's replayability
-      pillar.
+- [x] Skirmish/sandbox mode: the procedural map generator was unreachable from the UI. Added a
+      **`GamePhase::SkirmishSetup`** screen reached from a new **SKIRMISH** main-menu button. Pieces:
+      - **Model** (`state/skirmish.rs`, tested): `SkirmishConfig` — cycle **map type**
+        (Standard/Rich/Hazardous) and **size** (Small 24² / Medium 32² / Large 48²), mapping to the
+        `(w, h, MapType)` that `GameState::new_with_map_type` already understands.
+      - **Screen/input** (`ui/menus.rs` + `ui/menu_layout.rs` + `engine/input.rs`): click a row to
+        cycle it, GENERATE launches a one-off generated game, BACK returns to the menu.
+      - **Fixed a real generator bug** that made *every* procedural map unplayable: `generate_map`
+        placed the hero base (step 11) *after* the starting area (step 10), and on a **Center** start
+        the "opposite corner" is close enough that the hero base's radius-6 walls overwrote the
+        player's **dungeon heart** — so generated maps had no heart at all. Reordered so the starting
+        area is created **last** (it always wins where they overlap), and made `claim_map_heart_areas`
+        run on the procedural path too so the generated heart is player-owned.
+      Verified: `cargo test` (106 unit incl. 3 new — `every_skirmish_config_generates_a_playable_map`
+      drives all 3×3 type/size combos through the real launch path and asserts a live player heart) +
+      `clippy -D warnings` pass, plus **headless captures** of the SKIRMISH menu button and the setup
+      screen. **Follow-on (not blocking):** seed input (the generator already reads `config.seed`),
+      **rival count** (procedural maps don't yet place rival hearts — needs a small generator add), and
+      difficulty (its own roadmap item below).
 - [ ] Difficulty levels (none exist — no easy/normal/hard anywhere).
 
 ### Roster & data content

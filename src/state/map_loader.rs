@@ -218,7 +218,11 @@ pub fn rival_keeper_runtime_from_map(map_data: &MapFile) -> RivalKeeperRuntime {
     }
 }
 
-fn claim_map_heart_areas(dungeon: &mut Dungeon) {
+/// Claim the tiles around each dungeon-heart for their owner (defaulting a
+/// neutral heart to the player). Called by the map loader, and by the
+/// procedural generator path so a generated skirmish map's heart is actually
+/// the player's.
+pub(crate) fn claim_map_heart_areas(dungeon: &mut Dungeon) {
     let heart_positions: Vec<TilePos> = dungeon
         .grid
         .iter()
