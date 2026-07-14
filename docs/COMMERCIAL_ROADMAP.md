@@ -277,7 +277,17 @@ everything *around* that engine:
       28 balance) + `clippy -D warnings` pass. **Follow-on (art-blocked, not near-free):** the ~18
       further `docs/monsters.md` designs (Lich, Balor, Ogre, Shadow Stalker…) need new sprites first
       (tracked under §4 art); those are data+art, not just a data entry.
-- [ ] More heroes: 17 shipped; orphan sprites **champion, dragon_knight, peasant** ready to wire.
+- [x] More heroes: the three orphaned hero sprites are wired — **17 → 20 shipped**. Added full
+      `heroes.json` entries for **peasant** (tier-1 fodder — weak, cowardly, no abilities),
+      **champion** (tier-4 heavy frontliner — a `second_wind` on-low-health self-heal + a `valor`
+      passive), and **dragon_knight** (tier-4 fire frontliner — near fire-immune, a `dragon_breath`
+      on-multiple-targets fire AoE + burn). The two elites' abilities use *recognized* hero-ability
+      triggers (`on_low_health`, `passive`, `on_multiple_targets` — see the §2 Hero abilities item) so
+      they actually fire. Applied the same **data-driven fix** to the hero sprite loader
+      (`ui/resources.rs`) — it too used a hardcoded list; it now iterates `game_data.heroes`, so every
+      hero's sprite loads and adding a hero is a pure `heroes.json` edit. Verified: `cargo test` (111
+      unit incl. 1 new `orphan_sprite_heroes_are_wired` + 28 balance) + `clippy -D warnings` pass.
+      (This clears the "7 orphan sprites wired" note under §4 — 4 monsters + 3 heroes all done.)
 - [ ] Tech tree: only **4 technologies** exist. A commercial progression system needs a real tree
       (rooms/spells/traps/creatures as unlocks across a campaign). Also fix persistence:
       `player_state.rs:240` — unlocked techs are inferred, not stored.
@@ -434,7 +444,9 @@ everything *around* that engine:
       Includes proper entity render (renderer.rs:503 "full square for now"), sidebar animation
       (sidebar.rs:100 "snap for now"), minimap viewport (minimap.rs:118).
 - [ ] Window icon; title-screen/menu art beyond the single `main_menu_bg.png`.
-- [ ] 7 orphan sprites wired (see content), missing-texture placeholder handling (resources.rs:127).
+- [ ] ~~7 orphan sprites wired~~ **(done — see §1 "More monsters"/"More heroes": 4 monster + 3 hero
+      orphans now have data entries, and the sprite loaders are data-driven)**; still open:
+      missing-texture placeholder handling (resources.rs:127).
 
 ## 5. UI / UX breadth
 

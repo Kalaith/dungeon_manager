@@ -1506,5 +1506,277 @@
       ],
       "voice_set": "geomancer"
     }
+  },
+  {
+    "id": "peasant",
+    "name": "Peasant",
+    "description": "A terrified farmhand pressed into service \u2014 barely armed and quick to flee.",
+    "tier": 1,
+    "role": "fodder",
+    "stats": {
+      "health": 70,
+      "mana": 0,
+      "attack": 6,
+      "defense": 2,
+      "speed": 0.9,
+      "sight_radius": 6,
+      "bravery": 25,
+      "dig_time": 0.9
+    },
+    "ai": {
+      "primary_goal": "destroy_heart",
+      "secondary_goals": [
+        "flee"
+      ],
+      "room_priorities": {
+        "dungeon_heart": 2.0,
+        "treasury": 1.2
+      },
+      "threat_response": {
+        "retreat_below_health": 0.5,
+        "call_for_aid": true
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        4,
+        8
+      ],
+      "attack_speed": 0.9,
+      "armor_type": "none",
+      "resistances": {}
+    },
+    "abilities": [],
+    "behavior": {
+      "trap_awareness": 0.2,
+      "door_break_chance": 0.1,
+      "light_preference": "bright",
+      "fear_resistance": 0.1,
+      "will_fight_to_death": false
+    },
+    "progression": {
+      "level_range": [
+        1,
+        3
+      ],
+      "stat_growth_per_level": {
+        "health": 8,
+        "attack": 1,
+        "defense": 0
+      },
+      "elite_variants": [
+        "peasant_militia"
+      ]
+    },
+    "visual": {
+      "sprite": "heroes/peasant.png",
+      "scale": 1.0,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "peasant"
+    }
+  },
+  {
+    "id": "champion",
+    "name": "Champion",
+    "description": "A veteran hero-of-the-realm \u2014 a walking wall of steel that rallies from the brink.",
+    "tier": 4,
+    "role": "frontliner",
+    "stats": {
+      "health": 260,
+      "mana": 30,
+      "attack": 20,
+      "defense": 11,
+      "speed": 1.05,
+      "sight_radius": 8,
+      "bravery": 90,
+      "dig_time": 0.5
+    },
+    "ai": {
+      "primary_goal": "destroy_heart",
+      "secondary_goals": [
+        "kill_creatures"
+      ],
+      "room_priorities": {
+        "dungeon_heart": 3.0,
+        "treasury": 1.3,
+        "prison": 1.4
+      },
+      "threat_response": {
+        "retreat_below_health": 0.15,
+        "call_for_aid": true
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        18,
+        26
+      ],
+      "attack_speed": 1.1,
+      "armor_type": "heavy",
+      "resistances": {
+        "fire": 0.2,
+        "dark": -0.1,
+        "physical": 0.15
+      }
+    },
+    "abilities": [
+      {
+        "id": "second_wind",
+        "cooldown": 18,
+        "trigger": "on_low_health",
+        "effects": [
+          {
+            "type": "heal",
+            "amount": 40
+          }
+        ]
+      },
+      {
+        "id": "valor",
+        "cooldown": 0,
+        "trigger": "passive",
+        "effects": [
+          {
+            "type": "status_apply",
+            "status": "emboldened",
+            "amount": 1,
+            "duration": 2
+          }
+        ]
+      }
+    ],
+    "behavior": {
+      "trap_awareness": 0.8,
+      "door_break_chance": 0.6,
+      "light_preference": "any",
+      "fear_resistance": 0.9,
+      "will_fight_to_death": true
+    },
+    "progression": {
+      "level_range": [
+        5,
+        10
+      ],
+      "stat_growth_per_level": {
+        "health": 26,
+        "attack": 4,
+        "defense": 2
+      },
+      "elite_variants": [
+        "champion_of_light"
+      ]
+    },
+    "visual": {
+      "sprite": "heroes/champion.png",
+      "scale": 1.2,
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "block"
+      ],
+      "voice_set": "champion"
+    }
+  },
+  {
+    "id": "dragon_knight",
+    "name": "Dragon Knight",
+    "description": "A fire-sworn knight whose breath scours packed corridors \u2014 heavily armoured and near-immune to flame.",
+    "tier": 4,
+    "role": "frontliner",
+    "stats": {
+      "health": 240,
+      "mana": 40,
+      "attack": 18,
+      "defense": 10,
+      "speed": 1.0,
+      "sight_radius": 8,
+      "bravery": 85,
+      "dig_time": 0.5
+    },
+    "ai": {
+      "primary_goal": "destroy_heart",
+      "secondary_goals": [
+        "kill_creatures"
+      ],
+      "room_priorities": {
+        "dungeon_heart": 3.0,
+        "lair": 1.5,
+        "hatchery": 1.3
+      },
+      "threat_response": {
+        "retreat_below_health": 0.2,
+        "call_for_aid": true
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        15,
+        23
+      ],
+      "attack_speed": 1.0,
+      "armor_type": "heavy",
+      "resistances": {
+        "fire": 0.8,
+        "dark": 0.0,
+        "physical": 0.1
+      }
+    },
+    "abilities": [
+      {
+        "id": "dragon_breath",
+        "cooldown": 12,
+        "trigger": "on_multiple_targets",
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 18,
+            "damage_type": "fire"
+          },
+          {
+            "type": "status_apply",
+            "status": "burn",
+            "amount": 3,
+            "duration": 4
+          }
+        ]
+      }
+    ],
+    "behavior": {
+      "trap_awareness": 0.75,
+      "door_break_chance": 0.7,
+      "light_preference": "any",
+      "fear_resistance": 0.85,
+      "will_fight_to_death": true
+    },
+    "progression": {
+      "level_range": [
+        5,
+        10
+      ],
+      "stat_growth_per_level": {
+        "health": 24,
+        "attack": 4,
+        "defense": 2
+      },
+      "elite_variants": []
+    },
+    "visual": {
+      "sprite": "heroes/dragon_knight.png",
+      "scale": 1.2,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "dragon_knight"
+    }
   }
 ]

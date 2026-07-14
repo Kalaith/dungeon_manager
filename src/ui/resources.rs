@@ -175,28 +175,36 @@ impl GraphicsCache {
         }
 
         // Load hero textures
-        let heroes = vec![
-            "peasant_militia",
-            "scout",
-            "acolyte",
-            "knight",
-            "archer",
-            "battle_cleric",
-            "rogue",
-            "paladin",
-            "wizard",
-            "inquisitor",
-            "knight_commander",
-            "high_priest",
-            "archmage",
-            "champion_of_light",
-        ];
-        for hero in heroes {
+        // Data-driven off the hero roster (same rationale as creatures above):
+        // adding a hero to `heroes.json` wires its sprite with no list to update.
+        let heroes: Vec<String> = match game_data {
+            Some(data) => data.heroes.keys().cloned().collect(),
+            None => [
+                "peasant_militia",
+                "scout",
+                "acolyte",
+                "knight",
+                "archer",
+                "battle_cleric",
+                "rogue",
+                "paladin",
+                "wizard",
+                "inquisitor",
+                "knight_commander",
+                "high_priest",
+                "archmage",
+                "champion_of_light",
+            ]
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
+        };
+        for hero in &heroes {
             let path = format!("assets/sprites/heroes/{}.png", hero);
             let load_path = resolve_asset_path(game_data, &path);
             match loader.load(&load_path, FilterMode::Nearest).await {
                 Ok(tex) => {
-                    cache.hero_textures.insert(hero.to_string(), tex);
+                    cache.hero_textures.insert(hero.clone(), tex);
                 }
                 Err(e) => println!("Failed to load texture {}: {}", load_path, e),
             }
