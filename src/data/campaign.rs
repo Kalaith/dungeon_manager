@@ -263,6 +263,15 @@ mod tests {
             progress.unlocked_missions.contains("the_iron_siege"),
             "the temple path must also unlock the M8 re-merge"
         );
+
+        // ...and past the re-merge M8 unlocks the Act III offense mission.
+        // (active_mission may still point at the unplayed M7 branch, which
+        // remains available; reachability is the unlock edge.)
+        progress.complete_mission(&campaign, "the_iron_siege");
+        assert!(
+            progress.unlocked_missions.contains("corruption_rising"),
+            "completing M8 should unlock the Act III offense mission"
+        );
     }
 
     #[test]

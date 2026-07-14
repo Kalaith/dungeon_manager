@@ -89,8 +89,16 @@
         "scenario_id": "the_iron_siege",
         "name": "The Iron Siege",
         "briefing": "They come in their hundreds now, sure the dark can be dug out like a splinter. Turn every corridor into a grave and teach the Kingdoms the cost of digging too deep.",
-        "unlocks_after": [],
+        "unlocks_after": ["corruption_rising"],
         "required_completed": ["the_kennels"]
+      },
+      {
+        "id": "corruption_rising",
+        "scenario_id": "corruption_rising",
+        "name": "Corruption Rising",
+        "briefing": "No more waiting in the dark. March on the border town, corrupt its fields, pull down its church and its mage-spire, and let the surface feel the ground rot beneath them.",
+        "unlocks_after": [],
+        "required_completed": ["the_iron_siege"]
       }
     ]
   }

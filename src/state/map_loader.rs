@@ -615,6 +615,44 @@ mod tests {
     }
 
     #[test]
+    fn corruption_rising_boots_as_an_offense_mission() {
+        // M9 flips the script: the player is the aggressor razing a full hero
+        // TOWN. Its sole objective is destroy-all-buildings (no survive floor),
+        // and the town has more halls than the Act I/II single outposts.
+        let game_data = GameData::load().expect("game data should load");
+        let scenario = game_data
+            .scenarios
+            .get("corruption_rising")
+            .expect("corruption_rising scenario should be loaded");
+        assert_eq!(
+            scenario.objectives.len(),
+            1,
+            "offense: raze the town, no survive floor"
+        );
+        for spell in ["possess", "corrupt_land"] {
+            assert!(scenario.availability.spells.contains_key(spell));
+        }
+
+        let state =
+            crate::state::game_state::GameState::new_for_scenario(&game_data, "corruption_rising");
+        assert!(state.dungeon_heart_health > 0.0);
+        assert!(state.hero_base.enabled, "the town must be live to raze");
+        // A full town: at least the six named halls register as buildings.
+        let halls = state
+            .hero_base
+            .buildings
+            .iter()
+            .filter(|b| {
+                matches!(
+                    b.building_type.as_str(),
+                    "town_hall" | "barracks" | "church" | "mage_tower" | "archery_range" | "armory"
+                )
+            })
+            .count();
+        assert!(halls >= 6, "expected a six-hall town, found {halls}");
+    }
+
+    #[test]
     fn default_scenario_starts_with_markable_dig_targets_near_heart() {
         let game_data = GameData::load().expect("game data should load");
         let mut state =

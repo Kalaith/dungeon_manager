@@ -1,0 +1,215 @@
+[
+  {
+    "meta": {
+      "id": "corruption_rising",
+      "name": "Corruption Rising",
+      "description": "The Act III offensive. Stop defending and march on a full hero town — corrupt its fields and pull down every hall while it sorties against your rear.",
+      "author": "Deep Dominion Team",
+      "intro": [
+        "No more waiting in the dark. The border town of the Sunlit Kingdoms stands fat and proud above you.",
+        "March out, corrupt its fields, and pull down its town hall, its church, its mage-spire, one by one.",
+        "It will not sit still — knights and clerics will sortie for your heart while you press the assault,",
+        "so leave a guard, take your best, and let the surface feel the ground rot beneath their feet."
+      ]
+    },
+    "map": {
+      "path": "assets/maps/corruption_rising.json",
+      "width": 32,
+      "height": 32,
+      "biome": "underground",
+      "above_ground": false
+    },
+    "players": [
+      {
+        "id": "keeper0",
+        "owner": "player",
+        "role": "human",
+        "start_gold": 3000,
+        "start_mana": 600,
+        "max_creatures": 25
+      },
+      {
+        "id": "heroes",
+        "owner": "heroes",
+        "role": "heroes",
+        "start_gold": 0,
+        "start_mana": 0
+      },
+      {
+        "id": "keeper1",
+        "owner": {
+          "rival_keeper": 1
+        },
+        "role": "rival_keeper",
+        "start_gold": 1800,
+        "start_mana": 300,
+        "max_creatures": 10,
+        "ai_profile": "builder_defender"
+      }
+    ],
+    "rules": {
+      "fog_of_war": true,
+      "starting_research": [
+        "training_tech",
+        "trap_tech",
+        "ritual_tech",
+        "prison_tech"
+      ],
+      "threat_multiplier": 1.3
+    },
+    "creature_pool": {
+      "goblin": 8,
+      "orc": 8,
+      "warlock": 5,
+      "hellhound": 6,
+      "spider": 5,
+      "lizard": 5,
+      "troll": 5,
+      "bile_demon": 4
+    },
+    "availability": {
+      "rooms": {
+        "lair": { "available": true, "unlocked": true, "owner": "player" },
+        "hatchery": { "available": true, "unlocked": true, "owner": "player" },
+        "treasury": { "available": true, "unlocked": true, "owner": "player" },
+        "training_hall": { "available": true, "unlocked": true, "owner": "player" },
+        "guard_post": { "available": true, "unlocked": true, "owner": "player" },
+        "library": { "available": true, "unlocked": true, "owner": "player" },
+        "workshop": { "available": true, "unlocked": true, "owner": "player" },
+        "ritual_circle": { "available": true, "unlocked": true, "owner": "player" },
+        "kennel": { "available": true, "unlocked": true, "owner": "player" },
+        "barracks": { "available": true, "unlocked": true, "owner": "player" },
+        "scavenger": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "spells": {
+        "summon_imps": { "available": true, "unlocked": true, "owner": "player" },
+        "reveal_map": { "available": true, "unlocked": true, "owner": "player" },
+        "speed_boost": { "available": true, "unlocked": true, "owner": "player" },
+        "lightning_strike": { "available": true, "unlocked": true, "owner": "player" },
+        "call_to_arms": { "available": true, "unlocked": true, "owner": "player" },
+        "iron_skin": { "available": true, "unlocked": true, "owner": "player" },
+        "corrupt_land": { "available": true, "unlocked": true, "owner": "player" },
+        "possess": { "available": true, "unlocked": true, "owner": "player" },
+        "chickenify": { "available": true, "unlocked": false, "owner": "player" }
+      },
+      "traps": {
+        "door": { "available": true, "unlocked": true, "owner": "player" },
+        "braced_door": { "available": true, "unlocked": true, "owner": "player" },
+        "magic_door": { "available": true, "unlocked": true, "owner": "player" },
+        "blowgun_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "boulder_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "alarm_trap": { "available": true, "unlocked": true, "owner": "player" }
+      },
+      "creatures": {
+        "goblin": { "available": true, "unlocked": true, "owner": "player" },
+        "orc": { "available": true, "unlocked": true, "owner": "player" },
+        "warlock": { "available": true, "unlocked": true, "owner": "player" },
+        "hellhound": { "available": true, "unlocked": true, "owner": "player" },
+        "spider": { "available": true, "unlocked": true, "owner": "player" },
+        "lizard": { "available": true, "unlocked": true, "owner": "player" },
+        "troll": { "available": true, "unlocked": true, "owner": "player" },
+        "bile_demon": { "available": true, "unlocked": true, "owner": "player" }
+      }
+    },
+    "objectives": [
+      {
+        "type": "destroy_all_hero_buildings"
+      }
+    ],
+    "events": [
+      {
+        "id": "research_the_hex",
+        "trigger": {
+          "type": "room_claimed",
+          "room": "library",
+          "owner": "player"
+        },
+        "actions": [
+          {
+            "action": "unlock_spell",
+            "spell": "chickenify",
+            "owner": "player"
+          }
+        ],
+        "once": true
+      },
+      {
+        "id": "town_sortie_1",
+        "trigger": { "type": "time_elapsed", "seconds": 200.0 },
+        "actions": [
+          { "action": "spawn_hero_party", "party": "town_sortie_1", "x": 24, "y": 11 }
+        ],
+        "once": true
+      },
+      {
+        "id": "town_sortie_2",
+        "trigger": { "type": "time_elapsed", "seconds": 450.0 },
+        "actions": [
+          { "action": "spawn_hero_party", "party": "town_sortie_2", "x": 19, "y": 6 }
+        ],
+        "once": true
+      },
+      {
+        "id": "town_sortie_3",
+        "trigger": { "type": "time_elapsed", "seconds": 700.0 },
+        "actions": [
+          { "action": "spawn_hero_party", "party": "town_sortie_3", "x": 24, "y": 11 }
+        ],
+        "once": true
+      }
+    ],
+    "hero_parties": [
+      {
+        "id": "town_sortie_1",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "knight", "level": 2, "count": 2 },
+          { "hero": "archer", "level": 2, "count": 2 }
+        ]
+      },
+      {
+        "id": "town_sortie_2",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "paladin", "level": 2, "count": 1 },
+          { "hero": "wizard", "level": 2, "count": 1 },
+          { "hero": "archer", "level": 2, "count": 2 }
+        ]
+      },
+      {
+        "id": "town_sortie_3",
+        "behavior": "attack_dungeon_heart",
+        "members": [
+          { "hero": "knight_commander", "level": 2, "count": 1 },
+          { "hero": "battle_cleric", "level": 2, "count": 1 },
+          { "hero": "knight", "level": 2, "count": 2 }
+        ]
+      }
+    ],
+    "rival_keepers": [
+      {
+        "owner": {
+          "rival_keeper": 1
+        },
+        "ai_profile": "builder_defender",
+        "starting_rooms": [
+          "lair",
+          "hatchery",
+          "treasury"
+        ],
+        "preferred_creatures": [
+          "goblin",
+          "orc",
+          "troll"
+        ],
+        "min_garrison": 4,
+        "raid_size": 3,
+        "dig_batch": 5,
+        "room_size": 2,
+        "attack_cooldown": 120.0,
+        "first_attack_delay": 420.0,
+        "attack_cooldown_growth": 1.5
+      }
+    ]
+  }
+]

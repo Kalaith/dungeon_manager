@@ -47,12 +47,12 @@ everything *around* that engine:
       the next item below.
 - [ ] Author the missions: one map + one scenario JSON + event scripting each. The event system
       (triggers: TimeElapsed, ObjectiveComplete, RoomClaimed, ActionPointReached, DungeonBreached;
-      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 8 of 12
-      authored — all of Acts I–II (M1–M8), incl. the branch and its re-merge** (`docs/CAMPAIGN_ARC.md`
-      arc). Each mission is a hand-authored 32×32 map + scenario JSON + event scripting, wired into
+      actions: unlocks, spawns, rules) is done — this is pure content work. **Progress: 9 of 12
+      authored — all of Acts I–II (M1–M8) + Act III opener (M9)** (`docs/CAMPAIGN_ARC.md` arc). Each
+      mission is a hand-authored 32×32 map + scenario JSON + event scripting, wired into
       `deep_dominion.json`. The chain is linear M1→…→M6, then **M6 forks to both M7a and M7b**, and
-      **both branches re-merge into M8** (the first real use of the never-branched unlock graph; see
-      the "Exercise the unlock graph" item below):
+      **both branches re-merge into M8**, then linear M8→M9 (the fork/re-merge are the first real use
+      of the never-branched unlock graph; see the "Exercise the unlock graph" item below):
       - **M1 `dark_beginnings`** (pre-existing): dig→build→recruit→survive.
       - **M2 `blood_and_iron`**: survive-720s→raze-outpost; a walled hero outpost w/ single gate;
         training_hall + guard_post + braced_door/blowgun_trap intro; two scripted hero waves
@@ -93,6 +93,14 @@ everything *around* that engine:
         *then* raze the garrison. `room_claimed` events unlock magic_door (workshop) and
         alarm_trap+iron_skin (guard_post). **Both M7 branches `unlocks_after` M8** — this is the
         re-merge (see below).
+      - **M9 `corruption_rising`** (Act III opener — offense): the script flips — the player is the
+        aggressor razing a full hero **town** (a 9×9 walled enclave with *six* halls:
+        town_hall/mage_tower/barracks/archery_range/church/armory, two gates). Sole objective is
+        `destroy_all_hero_buildings` (no survive floor); the town counter-sorties at the player's rear
+        heart (t+200/450/700) so the risk is overextension, not defense. Adds the offense toolkit
+        (corrupt_land, possess, and chickenify via a `room_claimed` library→research event); a mastery
+        mission with no new rooms. (The arc's "raze within a time limit" fail-on-timeout isn't
+        expressible — there's no lose-on-time objective — so M9 uses raze-the-town as the pure win.)
       **Note (deferred objectives):** the arc gave M7a a `destroy_heart(rival)` win and M7b a
       "N sacrifices" custom win. Both are currently *unsatisfiable* — a rival keeper's heart is a map
       *tile*, not the `Structure` entity `destroy_heart` scans for (only the player heart has tracked
@@ -108,11 +116,12 @@ everything *around* that engine:
       active), all references validate (the guard test auto-covers new heroes/creatures incl.
       knight_commander), the branch is tested (M6 unlocks *both* paths), and **the re-merge is tested
       from *both* branches** (`either_m7_branch_re_merges_into_the_iron_siege` + the graveyard-path
-      assertion). `cargo test` (96 unit incl. 13 new + 28 balance) + `clippy -D warnings` pass.
-      Remaining: M9–M12 (Act III). **M9–M12 authoring note:** M9 is offense (assault a full hero
-      *town*), M10 needs multiple simultaneous rivals (§2 engine work — currently one rival per
-      scenario is wired), and M11–M12 need boss-hero encounters (can be prototyped as elite named
-      parties via `spawn_hero_party` before any bespoke boss AI).
+      assertion), and the Act III opener M9 boots as an offense mission (single raze objective + a
+      six-hall town). `cargo test` (97 unit incl. 15 new + 28 balance) + `clippy -D warnings` pass.
+      Remaining: M10–M12. **Authoring note:** M10 (rival-keeper duel) needs multiple simultaneous
+      rivals — §2 engine work; only one rival per scenario is wired today, so M10 either waits on that
+      or ships as a single tougher rival. M11–M12 need boss-hero encounters, which can be prototyped
+      as elite named parties via `spawn_hero_party` before any bespoke boss AI.
 - [x] **Un-hardcode content loading**: `data/campaign.rs:128` and `data/scenario.rs:350` used to
       `include_str!` exactly one campaign/scenario file. Now manifest-driven: a new `build.rs` scans
       `assets/campaigns/` and `assets/scenarios/` at build time and generates
