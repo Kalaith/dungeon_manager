@@ -1,6 +1,7 @@
-use crate::sprite_variation::SpriteVariationCache;
+use crate::sprite_variation::build_variation_cache;
 use macroquad::prelude::*;
 use macroquad_toolkit::assets::AssetManager;
+use macroquad_toolkit::sprite::SpriteVariationCache;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -29,7 +30,7 @@ impl GraphicsCache {
             hero_textures: HashMap::new(),
             ui_textures: HashMap::new(),
             projectile_textures: HashMap::new(),
-            variation_cache: RefCell::new(SpriteVariationCache::new()),
+            variation_cache: RefCell::new(build_variation_cache()),
         }
     }
 

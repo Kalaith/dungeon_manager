@@ -106,13 +106,13 @@ fn test_ranged_monster_spawns_projectile() {
     }
 
     // 5. Verify Projectile Spawned
-    let projectiles = game_state.projectiles.active_projectiles();
+    let projectiles: Vec<_> = game_state.projectiles.active_projectiles().collect();
     assert!(
         !projectiles.is_empty(),
         "Projectile should have been spawned"
     );
 
-    let projectile = &projectiles[0];
+    let projectile = &projectiles[0].payload;
     assert_eq!(projectile.attacker_id, warlock_id);
     assert_eq!(projectile.defender_id, hero_id);
     assert!(projectile.damage > 0.0, "Projectile should carry damage");
@@ -144,9 +144,8 @@ fn test_ranged_monster_spawns_projectile() {
     );
 
     // 8. Verify Projectile Removed
-    let projectiles_after = game_state.projectiles.active_projectiles();
     assert!(
-        projectiles_after.is_empty(),
+        game_state.projectiles.active_projectiles().next().is_none(),
         "Projectile should be removed after impact"
     );
 }

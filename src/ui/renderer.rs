@@ -727,19 +727,21 @@ impl GameRenderer {
 
     fn draw_projectiles(&self, graphics: &GraphicsCache, state: &GameState, camera: &Camera3D) {
         for projectile in state.projectiles.active_projectiles() {
-            let (x, z) = projectile.current_position();
-            let texture_key = projectile.projectile_type.texture_key();
+            let pos = projectile.position();
+            let (x, z) = (pos.x, pos.y);
+            let projectile_type = &projectile.payload.projectile_type;
+            let texture_key = projectile_type.texture_key();
 
             if let Some(tex) = graphics.projectile_textures.get(texture_key) {
                 // Draw projectile slightly above ground level
-                let y_height = match projectile.projectile_type {
+                let y_height = match projectile_type {
                     crate::state::projectiles::ProjectileType::Melee => 0.5, // At entity level
                     crate::state::projectiles::ProjectileType::Arrow => 0.6, // Slightly higher
                     crate::state::projectiles::ProjectileType::Magic => 0.7, // Floating orb
                 };
 
                 // Scale based on projectile type
-                let scale = match projectile.projectile_type {
+                let scale = match projectile_type {
                     crate::state::projectiles::ProjectileType::Melee => vec2(0.6, 0.3),
                     crate::state::projectiles::ProjectileType::Arrow => vec2(0.5, 0.3),
                     crate::state::projectiles::ProjectileType::Magic => vec2(0.4, 0.4),
@@ -754,7 +756,7 @@ impl GameRenderer {
                 );
             } else {
                 // Fallback: simple colored sphere for debugging
-                let color = match projectile.projectile_type {
+                let color = match projectile_type {
                     crate::state::projectiles::ProjectileType::Melee => ORANGE,
                     crate::state::projectiles::ProjectileType::Arrow => BROWN,
                     crate::state::projectiles::ProjectileType::Magic => PURPLE,

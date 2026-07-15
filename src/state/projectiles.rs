@@ -1,10 +1,14 @@
 //! Projectile system for visual attack effects
 //!
-//! Manages short-lived visual projectiles that travel from attacker to defender
+//! Manages short-lived visual projectiles that travel from attacker to defender.
+//! Travel/lerp/lifetime mechanics come from `macroquad_toolkit::fx::ProjectileLayer`;
+//! this module keeps the game-specific projectile types (textures, durations,
+//! melee travel ratio) and the impact payload.
 
 use crate::state::entities::EntityId;
 use crate::state::tile_state::TilePos;
-use macroquad_toolkit::timing::Timer;
+use macroquad::prelude::vec2;
+use macroquad_toolkit::fx::{ProjectileLayer, TravelingProjectile};
 use serde::{Deserialize, Serialize};
 
 /// Type of projectile based on attack type
@@ -45,16 +49,21 @@ impl ProjectileType {
             ProjectileType::Magic => 0.4,  // Slower magic orb
         }
     }
+
+    /// Fraction of the attacker->defender distance the projectile travels
+    /// (melee slashes stay near the attacker)
+    fn travel_ratio(&self) -> f32 {
+        match self {
+            ProjectileType::Melee => 0.3,
+            _ => 1.0,
+        }
+    }
 }
 
-/// A projectile in flight
+/// Payload carried by each projectile: rendering type plus impact data
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Projectile {
-    /// Starting position (attacker's position)
-    pub start_pos: (f32, f32),
-    /// Target position (defender's position)
-    pub end_pos: (f32, f32),
-    /// Type of projectile
+pub struct ProjectilePayload {
+    /// Type of projectile (texture/height/scale selection at render time)
     pub projectile_type: ProjectileType,
     /// Attacker entity ID (for reference)
     pub attacker_id: EntityId,
@@ -62,53 +71,10 @@ pub struct Projectile {
     pub defender_id: EntityId,
     /// Damage to deal on impact
     pub damage: f32,
-    /// Travel timer; `timer.progress()` is 0.0 (start) to 1.0 (end)
-    timer: Timer,
 }
 
-impl Projectile {
-    /// Create a new projectile
-    pub fn new(
-        start_pos: (f32, f32),
-        end_pos: (f32, f32),
-        projectile_type: ProjectileType,
-        attacker_id: EntityId,
-        defender_id: EntityId,
-        damage: f32,
-    ) -> Self {
-        let duration = projectile_type.duration();
-        Self {
-            start_pos,
-            end_pos,
-            projectile_type,
-            attacker_id,
-            defender_id,
-            damage,
-            timer: Timer::new(duration),
-        }
-    }
-
-    /// Get current world position of the projectile
-    pub fn current_position(&self) -> (f32, f32) {
-        // For melee, projectile stays close to attacker (only travels 30% of distance)
-        let travel_ratio = match self.projectile_type {
-            ProjectileType::Melee => 0.3,
-            _ => 1.0,
-        };
-
-        let effective_progress = self.timer.progress() * travel_ratio;
-
-        let x = self.start_pos.0 + (self.end_pos.0 - self.start_pos.0) * effective_progress;
-        let y = self.start_pos.1 + (self.end_pos.1 - self.start_pos.1) * effective_progress;
-        (x, y)
-    }
-
-    /// Update projectile, returns true if still active
-    pub fn update(&mut self, dt: f32) -> bool {
-        self.timer.tick(dt);
-        !self.timer.finished()
-    }
-}
+/// A projectile in flight
+pub type Projectile = TravelingProjectile<ProjectilePayload>;
 
 /// Event generated when projectile hits target
 pub struct Impact {
@@ -118,17 +84,39 @@ pub struct Impact {
 }
 
 /// Manager for all active projectiles
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(transparent)]
 pub struct ProjectileManager {
-    projectiles: Vec<Projectile>,
+    layer: ProjectileLayer<ProjectilePayload>,
+}
+
+impl<'de> Deserialize<'de> for ProjectileManager {
+    /// Accepts the current `ProjectileLayer` shape, and falls back to an
+    /// empty manager for older save formats. Projectiles are transient
+    /// visuals lasting well under a second, so dropping any in flight when
+    /// loading a legacy save is acceptable.
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Compat {
+            Current(ProjectileLayer<ProjectilePayload>),
+            Legacy(serde::de::IgnoredAny),
+        }
+
+        Ok(match Compat::deserialize(deserializer)? {
+            Compat::Current(layer) => Self { layer },
+            Compat::Legacy(_) => Self::default(),
+        })
+    }
 }
 
 impl ProjectileManager {
     /// Create a new projectile manager
     pub fn new() -> Self {
-        Self {
-            projectiles: Vec::new(),
-        }
+        Self::default()
     }
 
     /// Spawn a new projectile targeting an entity
@@ -142,15 +130,23 @@ impl ProjectileManager {
         damage: f32,
     ) {
         let projectile_type = ProjectileType::from_attack_type(attack_type);
-        let projectile = Projectile::new(
-            start_pos,
-            end_pos,
+        let duration = projectile_type.duration();
+        let travel_ratio = projectile_type.travel_ratio();
+        let payload = ProjectilePayload {
             projectile_type,
             attacker_id,
             defender_id,
             damage,
+        };
+        self.layer.push(
+            TravelingProjectile::new(
+                vec2(start_pos.0, start_pos.1),
+                vec2(end_pos.0, end_pos.1),
+                duration,
+                payload,
+            )
+            .with_travel_ratio(travel_ratio),
         );
-        self.projectiles.push(projectile);
     }
 
     /// Spawn a projectile targeting a position (for structures like dungeon heart)
@@ -162,41 +158,87 @@ impl ProjectileManager {
         attacker_id: EntityId,
         damage: f32,
     ) {
-        let projectile_type = ProjectileType::from_attack_type(attack_type);
         let end_pos = (target_pos.x as f32, target_pos.y as f32);
         // Use attacker_id as both since there's no defender entity
-        let projectile = Projectile::new(
+        self.spawn(
             start_pos,
             end_pos,
-            projectile_type,
+            attack_type,
             attacker_id,
             attacker_id,
             damage,
         );
-        self.projectiles.push(projectile);
     }
 
     /// Update all projectiles, removing completed ones and returning impacts
     pub fn update(&mut self, dt: f32) -> Vec<Impact> {
-        let mut impacts = Vec::new();
-
-        self.projectiles.retain_mut(|p| {
-            let still_active = p.update(dt);
-            if !still_active {
-                impacts.push(Impact {
-                    attacker_id: p.attacker_id,
-                    defender_id: p.defender_id,
-                    damage: p.damage,
-                });
-            }
-            still_active
-        });
-
-        impacts
+        self.layer
+            .update(dt)
+            .into_iter()
+            .map(|payload| Impact {
+                attacker_id: payload.attacker_id,
+                defender_id: payload.defender_id,
+                damage: payload.damage,
+            })
+            .collect()
     }
 
     /// Get all active projectiles for rendering
-    pub fn active_projectiles(&self) -> &[Projectile] {
-        &self.projectiles
+    pub fn active_projectiles(&self) -> impl Iterator<Item = &Projectile> {
+        self.layer.iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn current_format_round_trips() {
+        let mut manager = ProjectileManager::new();
+        manager.spawn((0.0, 0.0), (5.0, 5.0), "ranged", 1, 2, 12.5);
+
+        let json = serde_json::to_string(&manager).expect("should serialize");
+        let mut restored: ProjectileManager =
+            serde_json::from_str(&json).expect("should deserialize");
+
+        let impacts = restored.update(1.0);
+        assert_eq!(impacts.len(), 1);
+        assert_eq!(impacts[0].attacker_id, 1);
+        assert_eq!(impacts[0].defender_id, 2);
+        assert!((impacts[0].damage - 12.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn legacy_save_format_loads_as_empty() {
+        // Pre-toolkit shape: per-projectile start_pos/end_pos/etc. fields.
+        let legacy = r#"{"projectiles":[{
+            "start_pos":[0.0,0.0],"end_pos":[3.0,4.0],
+            "projectile_type":"Arrow","attacker_id":7,"defender_id":9,
+            "damage":5.0,"progress":0.5,"elapsed":0.15,"duration":0.3
+        }]}"#;
+        let manager: ProjectileManager =
+            serde_json::from_str(legacy).expect("legacy saves must still load");
+        assert!(
+            manager.active_projectiles().next().is_none(),
+            "legacy in-flight projectiles are dropped, not migrated"
+        );
+    }
+
+    #[test]
+    fn melee_projectile_stays_near_attacker() {
+        let mut manager = ProjectileManager::new();
+        manager.spawn((0.0, 0.0), (10.0, 0.0), "melee", 1, 2, 1.0);
+
+        // Advance almost to the end of the melee duration (0.15s)
+        manager.update(0.14);
+        let projectile = manager
+            .active_projectiles()
+            .next()
+            .expect("projectile still in flight");
+        assert!(
+            projectile.position().x < 3.5,
+            "melee travel should be capped at 30% of the distance"
+        );
     }
 }
