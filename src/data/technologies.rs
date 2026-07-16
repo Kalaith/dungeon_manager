@@ -33,7 +33,9 @@ pub fn load_technologies() -> Result<HashMap<String, TechData>, Box<dyn Error>> 
         }
         #[cfg(not(target_arch = "wasm32"))]
         {
-            std::fs::read_to_string("assets/data/technologies.json")?
+            std::fs::read_to_string("assets/data/technologies.json").unwrap_or_else(|_| {
+                include_str!("../../assets/data/technologies.json").to_string()
+            })
         }
     };
 

@@ -54,7 +54,8 @@ pub fn load_traits() -> Result<HashMap<String, TraitData>, Box<dyn Error>> {
         }
         #[cfg(not(target_arch = "wasm32"))]
         {
-            std::fs::read_to_string("assets/data/traits.json")?
+            std::fs::read_to_string("assets/data/traits.json")
+                .unwrap_or_else(|_| include_str!("../../assets/data/traits.json").to_string())
         }
     };
 

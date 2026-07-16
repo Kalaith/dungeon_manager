@@ -23,6 +23,30 @@
       "output": "assets/ui.zip",
       "entry_root": "assets/ui",
       "delete_source": true
+    },
+    {
+      "source": "assets/data",
+      "output": "assets/data.zip",
+      "entry_root": "assets/data",
+      "delete_source": true
+    },
+    {
+      "source": "assets/maps",
+      "output": "assets/maps.zip",
+      "entry_root": "assets/maps",
+      "delete_source": true
+    },
+    {
+      "source": "assets/campaigns",
+      "output": "assets/campaigns.zip",
+      "entry_root": "assets/campaigns",
+      "delete_source": true
+    },
+    {
+      "source": "assets/scenarios",
+      "output": "assets/scenarios.zip",
+      "entry_root": "assets/scenarios",
+      "delete_source": true
     }
   ]
 }

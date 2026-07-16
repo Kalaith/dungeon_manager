@@ -1,7 +1,7 @@
 pub mod campaign;
 pub mod content_pack;
 pub mod content_source;
-mod embedded;
+pub(crate) mod embedded;
 pub mod game_config;
 pub mod hero_buildings;
 pub mod heroes;

@@ -1,13 +1,18 @@
-//! Build script: generate an embedded manifest of every campaign/scenario JSON.
+//! Build script: generate an embedded manifest of every campaign/scenario/map JSON.
 //!
 //! Base-game content used to be pulled in with a single hardcoded `include_str!`
 //! per loader (one campaign, one scenario), so adding a mission meant editing
-//! Rust. Instead we scan `assets/campaigns/` and `assets/scenarios/` here at
-//! build time and emit `include_str!`-backed arrays. The result:
+//! Rust. Instead we scan `assets/campaigns/`, `assets/scenarios/`, and
+//! `assets/maps/` here at build time and emit `include_str!`-backed arrays. The
+//! result:
 //!   - WASM builds get every file embedded automatically (the "WASM embedded
 //!     manifest") — add a file, rebuild, it ships.
 //!   - Native builds additionally re-scan the directory at runtime (see
 //!     `data::content_source`), so a dropped-in mission loads with no rebuild.
+//!   - The loose `assets/campaigns`, `assets/scenarios`, and `assets/maps`
+//!     source directories can be packed into a zip on publish (see
+//!     `asset_packs.json`) without breaking anything at runtime, since nothing
+//!     needs them to still exist on disk.
 //!
 //! Either way, authoring a mission is pure content work — no code changes.
 
@@ -31,6 +36,12 @@ fn main() {
         &manifest_dir,
         "assets/scenarios",
         "EMBEDDED_SCENARIOS",
+    );
+    emit_dir_by_filename(
+        &mut generated,
+        &manifest_dir,
+        "assets/maps",
+        "EMBEDDED_MAPS",
     );
 
     let dest = Path::new(&out_dir).join("embedded_content.rs");
@@ -58,6 +69,38 @@ fn emit_dir(out: &mut String, manifest_dir: &str, rel: &str, const_name: &str) {
         // include_str! accepts forward slashes on every platform.
         let literal = path.to_string_lossy().replace('\\', "/");
         out.push_str(&format!("    include_str!(\"{literal}\"),\n"));
+    }
+    out.push_str("];\n\n");
+}
+
+/// Same as `emit_dir`, but pairs each file with its filename so callers can
+/// look a specific map up by the path they were asked to load (e.g.
+/// `"assets/maps/level_1.json"` -> embedded entry `"level_1.json"`), rather
+/// than merging everything into one id-keyed set.
+fn emit_dir_by_filename(out: &mut String, manifest_dir: &str, rel: &str, const_name: &str) {
+    let dir = Path::new(manifest_dir).join(rel);
+    println!("cargo:rerun-if-changed={}", dir.display());
+
+    let mut json_files: Vec<PathBuf> = fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("failed to read {}: {e}", dir.display()))
+        .filter_map(|entry| entry.ok().map(|e| e.path()))
+        .filter(|path| path.extension().and_then(|x| x.to_str()) == Some("json"))
+        .collect();
+    json_files.sort();
+
+    out.push_str(&format!(
+        "pub static {const_name}: &[(&str, &str)] = &[\n"
+    ));
+    for path in &json_files {
+        println!("cargo:rerun-if-changed={}", path.display());
+        let filename = path
+            .file_name()
+            .and_then(|f| f.to_str())
+            .expect("map file name");
+        let literal = path.to_string_lossy().replace('\\', "/");
+        out.push_str(&format!(
+            "    (\"{filename}\", include_str!(\"{literal}\")),\n"
+        ));
     }
     out.push_str("];\n\n");
 }

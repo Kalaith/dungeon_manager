@@ -73,12 +73,38 @@ pub struct MapRivalKeeper {
     pub attack_cooldown_growth: f32,
 }
 
+/// Read a map file's JSON, preferring disk (so a content pack's own map root,
+/// or a dropped-in dev edit, wins) and falling back to the build-time
+/// embedded copy keyed by filename. On `wasm32` there is no filesystem at
+/// all, so this goes straight to the embedded copy. This is also what makes
+/// it safe to zip `assets/maps` on publish: nothing needs the loose files to
+/// still exist on disk.
+fn read_map_content(path: &str) -> Result<String, Box<dyn Error>> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            return Ok(content);
+        }
+    }
+
+    let filename = std::path::Path::new(path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| format!("invalid map path: {path}"))?;
+
+    crate::data::embedded::EMBEDDED_MAPS
+        .iter()
+        .find(|(name, _)| *name == filename)
+        .map(|(_, content)| content.to_string())
+        .ok_or_else(|| format!("map not found on disk or embedded: {path}").into())
+}
+
 pub fn load_map(
     path: &str,
     game_data: &GameData,
     entities: &mut EntityManager,
 ) -> Result<Dungeon, Box<dyn Error>> {
-    let json_content = std::fs::read_to_string(path)?;
+    let json_content = read_map_content(path)?;
     let map_data: MapFile = serde_json::from_str(&json_content)?;
 
     // Validate dimensions
@@ -189,7 +215,7 @@ pub fn load_map(
 }
 
 pub fn load_rival_keeper_runtime(path: &str) -> Result<RivalKeeperRuntime, Box<dyn Error>> {
-    let json_content = std::fs::read_to_string(path)?;
+    let json_content = read_map_content(path)?;
     let map_data: MapFile = serde_json::from_str(&json_content)?;
     Ok(rival_keeper_runtime_from_map(&map_data))
 }
