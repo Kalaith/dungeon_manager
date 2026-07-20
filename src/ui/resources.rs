@@ -214,7 +214,9 @@ impl GraphicsCache {
         // Load UI textures
         let ui_textures = vec!["main_menu_bg"];
         for tex_name in ui_textures {
-            let path = format!("assets/ui/{}.png", tex_name);
+            // JPEG: stretched full-screen behind the menu, where lossless PNG
+            // cost 0.8 MB for no visible benefit.
+            let path = format!("assets/ui/{}.jpg", tex_name);
             let load_path = resolve_asset_path(game_data, &path);
             match loader.load(&load_path, FilterMode::Linear).await {
                 Ok(tex) => {
