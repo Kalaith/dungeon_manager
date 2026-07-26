@@ -1,20 +1,44 @@
 {
   "title": "Deep Dominion",
-  "status": { "text": "In Development", "class": "in-development" },
+  "status": {
+    "text": "In Development",
+    "class": "in-development"
+  },
   "canvas_rendering": "pixelated",
   "about": [
-    "A Dungeon Keeper-style god game where you build and manage an evil dungeon, attract creatures, and defend against hero invasions. Indirect control meets emergent behavior in this data-driven dungeon management simulator."
+    "Rule your own evil dungeon. Dig deep, attract sinister creatures, and let chaos unfold as heroes invade a lair with a mind of its own."
   ],
   "controls": [
-    { "key": "WASD", "desc": "Pan Camera" },
-    { "key": "Mouse", "desc": "Select & Build" },
-    { "key": "Scroll", "desc": "Zoom" },
-    { "key": "Space", "desc": "Pause" }
+    {
+      "key": "WASD",
+      "desc": "Pan Camera"
+    },
+    {
+      "key": "Mouse",
+      "desc": "Select & Build"
+    },
+    {
+      "key": "Scroll",
+      "desc": "Zoom"
+    },
+    {
+      "key": "Space",
+      "desc": "Pause"
+    }
   ],
   "details": [
-    { "label": "Genre", "value": "Strategy, Management" },
-    { "label": "Engine", "value": "Macroquad" },
-    { "label": "Platform", "value": "Browser, Windows" }
+    {
+      "label": "Genre",
+      "value": "Strategy, Management"
+    },
+    {
+      "label": "Engine",
+      "value": "Macroquad"
+    },
+    {
+      "label": "Platform",
+      "value": "Browser, Windows"
+    }
   ],
   "download": {
     "href": "dungeon_manager_windows.zip",
