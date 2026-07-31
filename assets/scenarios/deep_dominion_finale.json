@@ -42,6 +42,7 @@
         "training_hall": { "available": true, "unlocked": true, "owner": "player" },
         "combat_pit": { "available": true, "unlocked": false, "owner": "player" },
         "guard_post": { "available": true, "unlocked": true, "owner": "player" },
+        "gatehouse": { "available": true, "unlocked": false, "owner": "player" },
         "library": { "available": true, "unlocked": true, "owner": "player" },
         "arcane_archive": { "available": true, "unlocked": false, "owner": "player" },
         "workshop": { "available": true, "unlocked": true, "owner": "player" },

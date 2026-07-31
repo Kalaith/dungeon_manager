@@ -22,7 +22,8 @@
 
 ## Content
 
-- Build the last 1.0 room from `docs/ROOM_SET.md`: **Gatehouse** — a room-scale door/wall with HP, reusing the door/trap tile logic. The other six (Vault, Mana Well, Leisure Den, Arcane Archive, Combat Pit, Soul Furnace) have shipped.
+- `docs/ROOM_SET.md`'s commit set is **built** — all 7 (Vault, Mana Well, Leisure Den, Arcane Archive, Combat Pit, Soul Furnace, Gatehouse) have art, a `rooms.json` entry, a gating tech and mission availability. Remaining from that doc: the Gatehouse ships as a defensive *bonus* room, not the "gates auto-close under threat" version — that wants a threat-detection subsystem it shares with alarm traps and the fog-of-war item. Decide whether to build it or restate the room as it now is.
+- The room-effect fields are now all live, but four shipped dead and were found one at a time (`happiness_modifier`, `research_rate` under a wrong struct name, `xp_per_minute`, `creature_defense_modifier`). Worth a test that every field of `EffectsData` is read somewhere, so the next one fails loudly instead of being found by accident.
 - The Soul Furnace burns *hero* corpses only, matching the graveyard. Dead creatures still vanish with nothing to show for them — decide whether your own fallen should be renderable, which is a tone question as much as a balance one.
 - The temple is available in only 1 of 13 missions (`pacts_and_sacrifice`), so its `mana_generation_per_second` and the whole prayer loop are nearly unreachable in the campaign. Either widen its availability or accept that the ritual circle is the real mana room.
 - `execute_sleep`, `execute_eat` and `execute_deposit_gold` still test `room_type ==` a specific room. These are *not* the same edit `research` and `train` were — each needs a data decision first, so don't generalize them mechanically:

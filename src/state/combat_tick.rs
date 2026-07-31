@@ -55,7 +55,13 @@ impl GameState {
                 }
 
                 let defender_visual_pos = defender.visual_pos;
-                let result = resolve_combat_tick(attacker, defender, dt, game_data);
+                let defender_room_defense = crate::engine::room_validator::room_defense_at(
+                    defender.pos,
+                    &self.room_manager,
+                    game_data,
+                );
+                let result =
+                    resolve_combat_tick(attacker, defender, dt, game_data, defender_room_defense);
 
                 if let Some((projectile_type, damage)) = result.projectile_spawned.clone() {
                     self.projectiles.spawn(

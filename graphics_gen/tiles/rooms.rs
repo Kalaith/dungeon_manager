@@ -714,3 +714,89 @@ pub fn create_soul_furnace() -> RgbaImage {
     add_noise(&mut img, 7);
     img
 }
+
+/// Gatehouse - a fortified chokepoint
+///
+/// The only room that reads as *architecture* rather than floor: a portcullis
+/// slot cut across the tile with murder-holes either side, so a corridor of
+/// them looks like a wall the heroes have to come through.
+pub fn create_gatehouse() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([62, 62, 68, 255])); // Dressed stone
+    let center_y = TILE_HEIGHT / 2;
+
+    // Ashlar courses, offset row to row so the wall reads as coursed masonry
+    for (course, row_y) in (0..TILE_HEIGHT).step_by(11).enumerate() {
+        draw_rect(&mut img, 0, row_y, TILE_WIDTH, 1, Rgba([44, 44, 50, 255]));
+        let offset = if course % 2 == 0 { 0 } else { 11 };
+        for joint_x in (offset..TILE_WIDTH).step_by(22) {
+            draw_rect(&mut img, joint_x, row_y, 1, 11, Rgba([44, 44, 50, 255]));
+        }
+    }
+
+    // The gate slot: a dark channel across the tile, with a stone lip above it
+    draw_rect(
+        &mut img,
+        0,
+        center_y - 9,
+        TILE_WIDTH,
+        3,
+        Rgba([96, 96, 104, 255]),
+    );
+    draw_rect(
+        &mut img,
+        0,
+        center_y - 6,
+        TILE_WIDTH,
+        13,
+        Rgba([20, 20, 24, 255]),
+    );
+
+    // Portcullis: iron bars dropped into the slot, tipped where they bite
+    for bar_x in (2..TILE_WIDTH).step_by(7) {
+        draw_rect(
+            &mut img,
+            bar_x,
+            center_y - 6,
+            3,
+            13,
+            Rgba([104, 100, 96, 255]),
+        );
+        draw_rect(
+            &mut img,
+            bar_x,
+            center_y - 6,
+            1,
+            13,
+            Rgba([146, 142, 136, 255]),
+        );
+        draw_rect(
+            &mut img,
+            bar_x,
+            center_y + 6,
+            3,
+            1,
+            Rgba([172, 166, 150, 255]),
+        );
+    }
+    // Cross-brace holding the bars together
+    draw_rect(
+        &mut img,
+        0,
+        center_y,
+        TILE_WIDTH,
+        2,
+        Rgba([120, 116, 110, 255]),
+    );
+
+    // Murder-holes above and below — the bit that makes it a gatehouse and not
+    // just a gate.
+    for hole_x in [12u32, 32, 52] {
+        for hole_y in [6u32, TILE_HEIGHT - 10] {
+            draw_rect(&mut img, hole_x, hole_y, 5, 4, Rgba([16, 16, 20, 255]));
+            draw_rect(&mut img, hole_x, hole_y, 5, 1, Rgba([88, 88, 96, 255]));
+        }
+    }
+
+    add_noise(&mut img, 5);
+    img
+}

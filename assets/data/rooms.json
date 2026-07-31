@@ -1613,5 +1613,81 @@
         "flicker": true
       }
     }
+  },
+  {
+    "id": "gatehouse",
+    "name": "Gatehouse",
+    "description": "A fortified chokepoint. Creatures holding one are markedly harder to kill.",
+    "category": "defense",
+    "icon": "icons/rooms/gatehouse.png",
+    "build": {
+      "cost_per_tile": 200,
+      "mana_cost": 0,
+      "min_tiles": 2,
+      "max_tiles": 16,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
+      "construction_time": 0.9
+    },
+    "requirements": {
+      "research": [
+        "fortification"
+      ],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "creature_defense_modifier": 6.0,
+      "happiness_modifier": -1
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        {
+          "tiles": 2,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 8,
+          "multiplier": 1.15
+        }
+      ],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "guard",
+      "desirability": 0.9,
+      "max_creatures": 4,
+      "preferred_creatures": [
+        "orc",
+        "troll",
+        "bile_demon"
+      ],
+      "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/gatehouse.png",
+      "wall_sprite": "tiles/gatehouse.png",
+      "object_spawn": [],
+      "light": {
+        "color": [
+          200,
+          190,
+          170
+        ],
+        "intensity": 0.4,
+        "flicker": false
+      }
+    }
   }
 ]

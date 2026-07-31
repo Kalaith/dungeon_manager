@@ -348,5 +348,23 @@
             "traps": []
         },
         "icon": "icons/tech/soul_rendering.png"
+    },
+    {
+        "id": "fortification",
+        "name": "Fortification",
+        "description": "Unlocks the Gatehouse, a chokepoint that hardens the creatures holding it.",
+        "cost": 24,
+        "prerequisites": [
+            "trap_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "gatehouse"
+            ],
+            "spells": [],
+            "creatures": [],
+            "traps": []
+        },
+        "icon": "icons/tech/fortification.png"
     }
 ]

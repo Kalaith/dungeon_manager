@@ -32,11 +32,17 @@ pub struct CombatStats {
 }
 
 /// Resolve one tick of combat between two entities
+///
+/// `defender_room_defense` is the `creature_defense_modifier` of the room the
+/// defender is standing in (see `room_validator::room_defense_at`). It is
+/// passed in rather than looked up here so combat stays a pure function of its
+/// arguments, the same way `calculate_mood` takes its room modifier.
 pub fn resolve_combat_tick(
     attacker: &Entity,
     defender: &Entity,
     dt: f32,
     game_data: &GameData,
+    defender_room_defense: f32,
 ) -> CombatResult {
     if is_stunned(attacker) {
         return CombatResult {
@@ -48,7 +54,9 @@ pub fn resolve_combat_tick(
     }
 
     let attacker_stats = extract_combat_stats(attacker, game_data);
-    let defender_stats = extract_combat_stats(defender, game_data);
+    let mut defender_stats = extract_combat_stats(defender, game_data);
+    defender_stats.defense =
+        fortified_defense(defender, defender_stats.defense, defender_room_defense);
 
     // Calculate if attack hits this tick
     let attacks_per_second = attacker_stats.attack_speed;
@@ -210,6 +218,18 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
             level: 1,
             abilities: Vec::new(),
         },
+    }
+}
+
+/// A defender's effective defence once the room they stand in is accounted for.
+///
+/// A fortified room protects the keeper's own creatures, and only those: a hero
+/// who fights their way into a gatehouse gets no benefit from the keeper's
+/// stonework, and structures have their own flat defence.
+pub fn fortified_defense(defender: &Entity, defense: f32, room_defense: f32) -> f32 {
+    match defender.entity_type {
+        crate::state::entities::EntityType::Creature(_) => defense + room_defense,
+        _ => defense,
     }
 }
 

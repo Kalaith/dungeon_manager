@@ -483,6 +483,25 @@ pub fn room_data_for<'a>(
         .get(crate::data::rooms::room_data_id(&room.room_type))
 }
 
+/// The `creature_defense_modifier` of the active room covering `pos`, or 0
+/// outside one.
+///
+/// Generic on the effect, like [`room_data_for`]'s other callers: any room
+/// declaring a modifier fortifies the creatures standing in it. The barracks
+/// has authored a value of 2 since it shipped with nothing reading it.
+pub fn room_defense_at(
+    pos: TilePos,
+    room_manager: &crate::state::room_manager::RoomManager,
+    game_data: &crate::data::GameData,
+) -> f32 {
+    room_manager
+        .get_room_at(pos)
+        .filter(|room| room.active)
+        .and_then(|room| room_data_for(room, game_data))
+        .map(|data| data.effects.creature_defense_modifier)
+        .unwrap_or(0.0)
+}
+
 /// Nearest active room whose data declares `ai.task_type == task_type`.
 ///
 /// The sibling of [`find_nearest_room`], keyed on what a room *does* rather

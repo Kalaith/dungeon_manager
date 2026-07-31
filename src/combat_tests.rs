@@ -90,7 +90,7 @@ fn test_ranged_monster_spawns_projectile() {
     // instead of relying on probabilistic fixed-timestep combat.
     let attacker = game_state.entities.get(warlock_id).unwrap().clone();
     let defender = game_state.entities.get(hero_id).unwrap().clone();
-    let result = combat::resolve_combat_tick(&attacker, &defender, 1.0, &game_data);
+    let result = combat::resolve_combat_tick(&attacker, &defender, 1.0, &game_data, 0.0);
 
     if let Some((projectile_type, damage)) = result.projectile_spawned {
         game_state.projectiles.spawn(
@@ -267,7 +267,8 @@ fn stunned_attacker_cannot_land_an_attack() {
 
     let attacker_entity = game_state.entities.get(attacker_id).unwrap();
     let defender_entity = game_state.entities.get(defender_id).unwrap();
-    let result = combat::resolve_combat_tick(attacker_entity, defender_entity, 10.0, &game_data);
+    let result =
+        combat::resolve_combat_tick(attacker_entity, defender_entity, 10.0, &game_data, 0.0);
 
     assert_eq!(
         result.damage_dealt, 0.0,
@@ -277,4 +278,131 @@ fn stunned_attacker_cannot_land_an_attack() {
         result.projectile_spawned.is_none(),
         "a stunned attacker cannot spawn a projectile either"
     );
+}
+
+/// A single active room of `room_type` covering `pos`.
+fn push_room(game_state: &mut GameState, id: usize, room_type: &str, pos: TilePos) {
+    let mut room = crate::engine::room_validator::Room::new(
+        id,
+        room_type.to_string(),
+        [pos].into_iter().collect(),
+        Vec::new(),
+    );
+    room.active = true;
+    game_state.room_manager.rooms.push(room);
+}
+
+fn spawn_goblin(game_state: &mut GameState, game_data: &GameData, pos: TilePos) -> usize {
+    let data = game_data.monsters.get("goblin").expect("goblin");
+    let goblin = CreatureState::new(
+        "goblin".to_string(),
+        1,
+        data.stats.health,
+        data.stats.mana,
+        1,
+    );
+    game_state.entities.spawn_creature(pos, goblin)
+}
+
+fn spawn_knight(game_state: &mut GameState, game_data: &GameData, pos: TilePos) -> usize {
+    let data = game_data.heroes.get("knight").expect("knight");
+    let hero = HeroState::new(
+        "knight".to_string(),
+        1,
+        data.stats.health,
+        data.stats.mana,
+        pos,
+        1.0,
+        0,
+    );
+    game_state.entities.spawn_hero(pos, hero)
+}
+
+#[test]
+fn room_defense_reads_the_authored_modifier() {
+    let game_data = GameData::load().expect("game data should load");
+    let mut game_state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+    let pos = TilePos::new(4, 4);
+    push_room(&mut game_state, 900, "gatehouse", pos);
+
+    let expected = game_data.rooms["gatehouse"]
+        .effects
+        .creature_defense_modifier;
+    assert!(expected > 0.0, "the gatehouse should author a modifier");
+    assert_eq!(
+        crate::engine::room_validator::room_defense_at(pos, &game_state.room_manager, &game_data),
+        expected
+    );
+    assert_eq!(
+        crate::engine::room_validator::room_defense_at(
+            TilePos::new(20, 20),
+            &game_state.room_manager,
+            &game_data
+        ),
+        0.0
+    );
+}
+
+#[test]
+fn the_barracks_modifier_is_no_longer_inert() {
+    // The barracks has authored `creature_defense_modifier: 2` since it
+    // shipped, against a field nothing read.
+    let game_data = GameData::load().expect("game data should load");
+    let mut game_state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+    let pos = TilePos::new(6, 6);
+    push_room(&mut game_state, 902, "barracks", pos);
+
+    assert_eq!(
+        crate::engine::room_validator::room_defense_at(pos, &game_state.room_manager, &game_data),
+        game_data.rooms["barracks"]
+            .effects
+            .creature_defense_modifier
+    );
+}
+
+#[test]
+fn a_fortified_room_absorbs_damage_for_a_creature() {
+    let game_data = GameData::load().expect("game data should load");
+    let mut game_state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+    let attacker_id = spawn_knight(&mut game_state, &game_data, TilePos::new(1, 1));
+    let defender_id = spawn_goblin(&mut game_state, &game_data, TilePos::new(1, 2));
+
+    let attacker = game_state.entities.get(attacker_id).unwrap();
+    let defender = game_state.entities.get(defender_id).unwrap();
+
+    // Damage rolls within a range, so pin the attack and compare the
+    // deterministic defence term rather than two sampled swings.
+    let fixed_attack = combat::CombatStats {
+        damage_range: [1000.0, 1000.0],
+        ..combat::extract_combat_stats(attacker, &game_data)
+    };
+    let bare = combat::extract_combat_stats(defender, &game_data);
+    let room_defense = game_data.rooms["gatehouse"]
+        .effects
+        .creature_defense_modifier;
+    let held = combat::CombatStats {
+        defense: combat::fortified_defense(defender, bare.defense, room_defense),
+        ..bare.clone()
+    };
+
+    let open_damage = combat::calculate_damage(&fixed_attack, &bare, &game_data);
+    let held_damage = combat::calculate_damage(&fixed_attack, &held, &game_data);
+    let expected_drop = room_defense * game_data.config.combat.defense_reduction;
+
+    assert!(
+        (open_damage - held_damage - expected_drop).abs() < 1e-3,
+        "expected the room to absorb {expected_drop}, saw {}",
+        open_damage - held_damage
+    );
+}
+
+#[test]
+fn a_hero_gains_nothing_from_the_keepers_stonework() {
+    let game_data = GameData::load().expect("game data should load");
+    let mut game_state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+    let hero_id = spawn_knight(&mut game_state, &game_data, TilePos::new(4, 4));
+    let hero = game_state.entities.get(hero_id).unwrap();
+
+    let bare = combat::extract_combat_stats(hero, &game_data).defense;
+    assert_eq!(combat::fortified_defense(hero, bare, 999.0), bare);
 }
