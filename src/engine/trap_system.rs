@@ -139,11 +139,35 @@ pub fn process_trap_triggers(
         .into_iter()
         .filter_map(|(pos, trap_type, hero_id)| {
             let trap_data = game_data.traps.get(&trap_type)?;
+            if hero_spots_trap(hero_id, entities, game_data) {
+                // Spotted, so not sprung. The trap stays armed for the next
+                // hero through — a scout leading the way does not clear the
+                // corridor for the militia behind them.
+                return None;
+            }
             trigger_trap(
                 pos, &trap_type, trap_data, hero_id, entities, dungeon, game_data,
             )
         })
         .collect()
+}
+
+/// Whether a hero notices the trap under their feet in time.
+///
+/// `behavior.trap_awareness` is authored per hero — 0.9 for a scout, 0.3 for a
+/// militiaman — and had never been read, so every hero walked into everything
+/// with identical carelessness.
+fn hero_spots_trap(hero_id: EntityId, entities: &EntityManager, game_data: &GameData) -> bool {
+    let awareness = entities
+        .get(hero_id)
+        .and_then(|entity| match &entity.entity_type {
+            EntityType::Hero(hero) => game_data.heroes.get(&hero.hero_id),
+            _ => None,
+        })
+        .map(|data| data.behavior.trap_awareness.clamp(0.0, 1.0))
+        .unwrap_or(0.0);
+
+    awareness > 0.0 && macroquad_toolkit::rng::gen_range(0.0f32, 1.0) < awareness
 }
 
 /// Update cooldowns for all traps

@@ -63,14 +63,14 @@ const UNCONSUMED: &[&str] = &[
     // Traps: magical door locking is unbuilt, and every trap is "pressure".
     "TrapEffects::lockable",
     "TrapEffects::trigger_type",
-    // Hero behaviour model — none of it reaches hero AI.
-    "BehaviorData::trap_awareness",
+    // Hero behaviour model, the part still unreachable. `trap_awareness`,
+    // `fear_resistance`, `will_fight_to_death` and `bravery` are wired.
+    // `door_break_chance` needs heroes to attack doors at all; the lighting
+    // pass has to exist before `light_preference` can mean anything; and
+    // `call_for_aid` needs a hero rally mechanic.
     "BehaviorData::door_break_chance",
     "BehaviorData::light_preference",
-    "BehaviorData::fear_resistance",
-    "BehaviorData::will_fight_to_death",
     "ThreatResponse::call_for_aid",
-    "HeroStatsData::bravery",
     "HeroProgressionData::level_range",
     "HeroProgressionData::elite_variants",
     // Spells: soul cost and targeting restrictions.

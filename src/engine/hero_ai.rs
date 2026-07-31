@@ -23,6 +23,29 @@ pub enum ThreatLevel {
     Overwhelming,
 }
 
+/// How much punishment a hero absorbs before their nerve goes, as a fraction
+/// of max health.
+///
+/// `threat_response.retreat_below_health` is the authored baseline and was the
+/// only part of the hero personality model the engine read. `bravery` and
+/// `fear_resistance` were parsed and ignored, so a peasant militiaman
+/// (bravery 30, fear resistance 0.2) broke on exactly the same terms as a
+/// champion. They now pull the threshold down together, and
+/// `will_fight_to_death` removes it: a hero so authored dies where they stand.
+pub fn effective_retreat_threshold(hero_data: &crate::data::HeroData) -> f32 {
+    if hero_data.behavior.will_fight_to_death {
+        return 0.0;
+    }
+
+    // Bravery is authored 0-100, fear resistance 0-1; weigh them equally.
+    let nerve = (hero_data.stats.bravery / 100.0).clamp(0.0, 1.0) * 0.5
+        + hero_data.behavior.fear_resistance.clamp(0.0, 1.0) * 0.5;
+
+    // Capped at a 60% reduction so even the steadiest hero still has a
+    // breaking point — otherwise `will_fight_to_death` would mean nothing.
+    hero_data.ai.threat_response.retreat_below_health * (1.0 - nerve * 0.6)
+}
+
 /// Decide the current goal for a hero based on their state and dungeon situation
 pub fn decide_hero_goal(
     hero_pos: TilePos,
@@ -36,14 +59,14 @@ pub fn decide_hero_goal(
     };
 
     // Check if hero should retreat
-    if hero_state.should_retreat(hero_data.ai.threat_response.retreat_below_health) {
+    if hero_state.should_retreat(effective_retreat_threshold(hero_data)) {
         return HeroGoal::Retreat;
     }
 
     let threat_level = evaluate_threat(hero_pos, game_state);
 
-    // If under high threat, focus on survival
-    if threat_level == ThreatLevel::Overwhelming {
+    // Even overwhelming odds do not move someone who will not break.
+    if threat_level == ThreatLevel::Overwhelming && !hero_data.behavior.will_fight_to_death {
         return HeroGoal::Retreat;
     }
 
