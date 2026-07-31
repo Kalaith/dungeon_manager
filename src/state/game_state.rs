@@ -314,6 +314,14 @@ impl GameState {
             dt,
         );
 
+        // Drain anything the engine layers wanted the player to know. They
+        // hold `&mut PlayerState` but not the notification manager, so this is
+        // their only route to the screen.
+        let pending: Vec<String> = self.player.pending_messages.drain(..).collect();
+        for message in pending {
+            self.notifications.warning(message);
+        }
+
         // Update creature AI and movement
         self.update_creature_ai_and_movement(game_data, dt);
 

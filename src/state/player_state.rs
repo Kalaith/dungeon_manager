@@ -25,6 +25,18 @@ pub struct PlayerState {
     pub max_food: i32,
     pub materials: i32,
     pub max_materials: i32,
+    /// Whether the player has already been told the treasury is overflowing.
+    #[serde(default)]
+    pub treasury_full_warned: bool,
+    /// Messages from engine layers that hold `&mut PlayerState` but have no
+    /// access to the notification manager — imp digging, task execution.
+    /// `GameState` drains these each tick.
+    ///
+    /// Before this the only way to tell the player anything from down there
+    /// was an `eprintln!` they would never read. Not persisted: a message
+    /// queued at the instant of a save means nothing on load.
+    #[serde(skip)]
+    pub pending_messages: Vec<String>,
 
     // Fractional resource accumulator
     #[serde(default)]
@@ -101,6 +113,8 @@ impl PlayerState {
             max_food: game_data.config.player_initial_capacity.max_food,
             materials: game_data.config.player_starting_resources.materials,
             max_materials: game_data.config.player_initial_capacity.max_materials,
+            treasury_full_warned: false,
+            pending_messages: Vec::new(),
 
             accumulators: ResourceAccumulator::default(),
 
@@ -138,6 +152,33 @@ impl PlayerState {
         self.mana = (self.mana + mana).min(self.max_mana);
         self.food = (self.food + food).min(self.max_food);
         self.materials = (self.materials + materials).min(self.max_materials);
+    }
+
+    /// Queue a message for the player from a layer that cannot reach the
+    /// notification manager directly.
+    pub fn notify(&mut self, message: impl Into<String>) {
+        self.pending_messages.push(message.into());
+    }
+
+    /// True the first time the treasury overflows, and not again until it has
+    /// had room since.
+    ///
+    /// The overflow fires once per dig, so warning unconditionally would bury
+    /// the screen. The player still needs telling once: gold that will not fit
+    /// spills onto the floor as a pile, which looks like gold silently
+    /// vanishing if nobody says so.
+    pub fn should_warn_treasury_full(&mut self) -> bool {
+        if self.treasury_full_warned {
+            return false;
+        }
+        self.treasury_full_warned = true;
+        true
+    }
+
+    /// Called when the treasury demonstrably has room again, so the next
+    /// overflow is worth reporting.
+    pub fn clear_treasury_full_warning(&mut self) {
+        self.treasury_full_warned = false;
     }
 
     /// Check whether the player has enough gold and mana for a purchase.
@@ -319,6 +360,8 @@ mod tests {
             max_food: 1000,
             materials: 100,
             max_materials: 500,
+            treasury_full_warned: false,
+            pending_messages: Vec::new(),
             accumulators: ResourceAccumulator::default(),
             unlocked_rooms: HashSet::new(),
             unlocked_creatures: HashSet::new(),
@@ -362,6 +405,8 @@ mod tests {
             max_food: 100,
             materials: 0,
             max_materials: 100,
+            treasury_full_warned: false,
+            pending_messages: Vec::new(),
             accumulators: ResourceAccumulator::default(),
             unlocked_rooms: HashSet::new(),
             unlocked_creatures: HashSet::new(),
@@ -417,6 +462,8 @@ mod tests {
             max_food: 1000,
             materials: 100,
             max_materials: 500,
+            treasury_full_warned: false,
+            pending_messages: Vec::new(),
             accumulators: ResourceAccumulator::default(),
             unlocked_rooms: HashSet::new(),
             unlocked_creatures: HashSet::new(),
@@ -458,6 +505,8 @@ mod tests {
             max_food: 1000,
             materials: 100,
             max_materials: 500,
+            treasury_full_warned: false,
+            pending_messages: Vec::new(),
             accumulators: ResourceAccumulator::default(),
             unlocked_rooms: HashSet::new(),
             unlocked_creatures: HashSet::new(),

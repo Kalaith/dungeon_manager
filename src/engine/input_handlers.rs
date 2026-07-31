@@ -69,7 +69,9 @@ pub fn handle_build_room(
         .unwrap_or(false);
 
     if !state.player.is_room_unlocked(room_type) {
-        eprintln!("Cannot build {}: Not yet unlocked!", room_type);
+        state
+            .notifications
+            .warning(format!("{} is not researched yet.", room_data.name));
         return;
     }
 
@@ -127,7 +129,9 @@ pub fn handle_build_room_multi(
         .unwrap_or_else(|| panic!("Room type '{}' missing in rooms.json", room_type));
 
     if !state.player.is_room_unlocked(room_type) {
-        eprintln!("Cannot build {}: Not yet unlocked!", room_type);
+        state
+            .notifications
+            .warning(format!("{} is not researched yet.", room_data.name));
         return;
     }
 
@@ -156,17 +160,17 @@ pub fn handle_build_room_multi(
     // Calculate total cost and check if we can afford it
     let (total_cost, mana_cost) = room_build_cost(room_data, valid_tiles.len());
     if state.player.gold < total_cost {
-        eprintln!(
-            "Cannot build {}: Not enough gold! Need {}, have {}",
-            room_type, total_cost, state.player.gold
-        );
+        state.notifications.warning(format!(
+            "{}: needs {total_cost} gold, you have {}.",
+            room_data.name, state.player.gold
+        ));
         return;
     }
     if state.player.mana < mana_cost {
-        eprintln!(
-            "Cannot build {}: Not enough mana! Need {}, have {}",
-            room_type, mana_cost, state.player.mana
-        );
+        state.notifications.warning(format!(
+            "{}: needs {mana_cost} mana, you have {}.",
+            room_data.name, state.player.mana
+        ));
         return;
     }
 
@@ -183,6 +187,15 @@ pub fn handle_build_room_multi(
     }
 }
 
+/// A trap's display name, falling back to its id.
+fn trap_name(trap_type: &str, game_data: &GameData) -> String {
+    game_data
+        .traps
+        .get(trap_type)
+        .map(|trap| trap.name.clone())
+        .unwrap_or_else(|| trap_type.to_string())
+}
+
 pub fn handle_build_trap(
     state: &mut GameState,
     game_data: &GameData,
@@ -190,7 +203,10 @@ pub fn handle_build_trap(
     tile_pos: TilePos,
 ) {
     if !state.player.is_trap_unlocked(trap_type) || !game_data.traps.contains_key(trap_type) {
-        eprintln!("Cannot build trap: {} is not available.", trap_type);
+        state.notifications.warning(format!(
+            "{} is not researched yet.",
+            trap_name(trap_type, game_data)
+        ));
         return;
     }
 
@@ -201,7 +217,9 @@ pub fn handle_build_trap(
         .iter()
         .any(|r| r.active && r.room_type == "workshop");
     if !has_workshop {
-        eprintln!("Cannot build trap: No functioning Workshop!");
+        state
+            .notifications
+            .warning("Traps need a working Workshop.".to_string());
         return;
     }
 
@@ -215,7 +233,10 @@ pub fn handle_build_trap(
     }
 
     if !state.player.consume_trap_inventory(trap_type, 1) {
-        eprintln!("Cannot build trap: No {} crates in inventory.", trap_type);
+        state.notifications.warning(format!(
+            "No {} crates left — the Workshop must build more.",
+            trap_name(trap_type, game_data)
+        ));
         return;
     }
 
@@ -245,7 +266,10 @@ pub fn handle_build_trap_multi(
     tiles: &[TilePos],
 ) {
     if !state.player.is_trap_unlocked(trap_type) || !game_data.traps.contains_key(trap_type) {
-        eprintln!("Cannot build trap: {} is not available.", trap_type);
+        state.notifications.warning(format!(
+            "{} is not researched yet.",
+            trap_name(trap_type, game_data)
+        ));
         return;
     }
 
@@ -256,7 +280,9 @@ pub fn handle_build_trap_multi(
         .iter()
         .any(|r| r.active && r.room_type == "workshop");
     if !has_workshop {
-        eprintln!("Cannot build trap: No functioning Workshop!");
+        state
+            .notifications
+            .warning("Traps need a working Workshop.".to_string());
         return;
     }
 

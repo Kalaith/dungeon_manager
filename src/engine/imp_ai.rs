@@ -598,7 +598,11 @@ pub(crate) fn complete_dig(
                     let pile_state =
                         crate::state::entities::ResourcePileState::new("gold".to_string(), excess);
                     entities_mgr.spawn_resource_pile(marked_pos, pile_state);
-                    eprintln!("Treasury full! Spilled {} gold at {:?}", excess, marked_pos);
+                    if player.should_warn_treasury_full() {
+                        player.notify(
+                            "Treasury full — gold is piling up on the floor. Build more storage.",
+                        );
+                    }
                 } else {
                     eprintln!(
                         "Warning: No EntityManager passed to complete_dig, lost {} gold",
@@ -607,10 +611,9 @@ pub(crate) fn complete_dig(
                 }
             } else {
                 player.add_resources(gold_gained, 0, 0, 0);
-                eprintln!(
-                    "Imp dug gold vein at {:?}, gained {} gold",
-                    marked_pos, gold_gained
-                );
+                // The vault swallowed the whole haul, so the next overflow is
+                // news again.
+                player.clear_treasury_full_warning();
             }
         } else if mana_gained > 0 {
             player.mana = (player.mana + mana_gained).min(player.max_mana);

@@ -22,6 +22,8 @@ mod hero_behaviour_tests;
 #[cfg(test)]
 mod mining_tests;
 #[cfg(test)]
+mod player_feedback_tests;
+#[cfg(test)]
 mod room_mood_tests;
 #[cfg(test)]
 mod room_placement_tests;
