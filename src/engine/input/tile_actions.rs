@@ -29,24 +29,43 @@ pub(super) fn handle_spell_casting(
             let cast_result =
                 spell_effects::cast_spell(&spell_id, state, game_data, target_pos, target_entity);
 
-            match cast_result {
+            // Every refusal used to be an `eprintln!`, so a spell that would
+            // not cast simply did nothing on screen. Deliberately exhaustive:
+            // a new `CastResult` should fail to compile here rather than fall
+            // into a catch-all and become invisible again.
+            let spell_name = game_data
+                .spells
+                .get(&spell_id)
+                .map(|spell| spell.name.clone())
+                .unwrap_or_else(|| spell_id.clone());
+
+            let refusal = match cast_result {
                 spell_effects::CastResult::Success => {
-                    eprintln!("Spell cast successfully: {}", spell_id);
                     state.player.record_spell_cast(spell_id.clone());
+                    None
                 }
                 spell_effects::CastResult::MaxCapReached => {
-                    eprintln!("Cannot cast {}: Maximum unit capacity reached!", spell_id);
+                    Some("already at maximum capacity".to_string())
                 }
-                spell_effects::CastResult::InsufficientMana => {
-                    eprintln!("Cannot cast {}: Not enough mana!", spell_id);
+                spell_effects::CastResult::InsufficientMana => Some("not enough mana".to_string()),
+                spell_effects::CastResult::InsufficientGold => Some("not enough gold".to_string()),
+                spell_effects::CastResult::OnCooldown => Some("still recharging".to_string()),
+                spell_effects::CastResult::OutOfRange => {
+                    Some("that is beyond the heart's reach".to_string())
                 }
-                spell_effects::CastResult::InsufficientGold => {
-                    eprintln!("Cannot cast {}: Not enough gold!", spell_id);
+                spell_effects::CastResult::NotVisible => {
+                    Some("you cannot see that place".to_string())
                 }
-                spell_effects::CastResult::OnCooldown => {
-                    eprintln!("Cannot cast {}: Spell is on cooldown!", spell_id);
+                spell_effects::CastResult::WrongAllegiance => {
+                    Some("not a valid target for that spell".to_string())
                 }
-                _ => eprintln!("Spell cast failed: {:?}", cast_result),
+                spell_effects::CastResult::InvalidTarget => Some("invalid target".to_string()),
+            };
+
+            if let Some(reason) = refusal {
+                state
+                    .notifications
+                    .warning(format!("{spell_name}: {reason}."));
             }
         }
     }

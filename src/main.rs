@@ -26,6 +26,8 @@ mod room_mood_tests;
 #[cfg(test)]
 mod room_placement_tests;
 #[cfg(test)]
+mod spell_targeting_tests;
+#[cfg(test)]
 mod traits_tests;
 
 use data::GameData;

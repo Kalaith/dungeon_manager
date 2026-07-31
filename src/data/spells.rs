@@ -23,8 +23,9 @@ pub struct SpellCost {
     pub gold: i32,
     #[serde(default)]
     pub health: i32,
-    #[serde(default)]
-    pub souls: i32,
+    // `souls` used to sit here: no spell in dungeon_spells.json ever authored
+    // one, and the game has no soul resource for it to spend. Deleted rather
+    // than left as an aspiration (CODE_STANDARDS.md on unused code).
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

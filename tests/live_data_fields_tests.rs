@@ -64,10 +64,6 @@ const UNCONSUMED: &[&str] = &[
     "ThreatResponse::call_for_aid",
     "HeroProgressionData::level_range",
     "HeroProgressionData::elite_variants",
-    // Spells: soul cost and targeting restrictions.
-    "SpellCost::souls",
-    "TargetingData::requires_visibility",
-    "TargetingData::valid_targets",
     // Scenario availability by level.
     "AvailabilityRule::min_level",
     // Config knobs with no consumer.

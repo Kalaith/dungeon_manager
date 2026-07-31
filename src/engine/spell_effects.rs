@@ -17,6 +17,52 @@ pub enum CastResult {
     OnCooldown,
     OutOfRange,
     MaxCapReached,
+    /// The spell declares `requires_visibility` and the target is fogged.
+    NotVisible,
+    /// The target's allegiance is not in the spell's `valid_targets`.
+    WrongAllegiance,
+}
+
+/// Whether `pos` is currently visible to the player.
+///
+/// Mirrors the renderer's condition so a spell cannot be refused for fog the
+/// player cannot see. With fog disabled everything counts as visible.
+fn target_is_visible(game_state: &GameState, game_data: &GameData, pos: TilePos) -> bool {
+    let fog_enabled = game_data.config.fog_of_war.enabled && game_state.cheat_fog_enabled;
+    if !fog_enabled {
+        return true;
+    }
+
+    game_state
+        .get_tile(pos)
+        .map(|tile| tile.fog_state != crate::state::tile_state::FogState::Hidden)
+        .unwrap_or(false)
+}
+
+/// Whether an entity's allegiance satisfies a spell's `valid_targets`.
+///
+/// Authored on 13 of 17 spells and read by nothing, so `heal` — declared
+/// `["friendly"]` — could be cast on an invading knight, and `chickenify`
+/// (`["enemy"]`) on one of your own goblins. Enforced for `creature`-targeted
+/// spells, where there is exactly one definite target; area spells still let
+/// their effects do the faction filtering, because refusing to place a
+/// fireball on an empty tile would stop you catching someone standing beside
+/// it.
+fn allegiance_matches(valid_targets: &[String], owner: &crate::state::OwnerId) -> bool {
+    if valid_targets.is_empty() {
+        return true;
+    }
+
+    let is_players = *owner == crate::state::OwnerId::Player;
+    valid_targets
+        .iter()
+        .any(|category| match category.as_str() {
+            "friendly" | "ally" => is_players,
+            "enemy" => !is_players,
+            // "empty" describes a tile with no occupant, so it can never be
+            // satisfied by an entity.
+            _ => false,
+        })
 }
 
 /// Check if a spell can be cast
@@ -84,6 +130,12 @@ pub fn can_cast_spell(
                     return CastResult::InvalidTarget;
                 }
 
+                if spell.targeting.requires_visibility
+                    && !target_is_visible(game_state, game_data, pos)
+                {
+                    return CastResult::NotVisible;
+                }
+
                 if let Some(heart_pos) = game_state.find_dungeon_heart_position() {
                     let distance =
                         ((pos.x - heart_pos.x).abs() + (pos.y - heart_pos.y).abs()) as u32;
@@ -94,8 +146,19 @@ pub fn can_cast_spell(
             }
         }
         "creature" => {
-            if target_entity.is_none() {
+            let Some(entity_id) = target_entity else {
                 return CastResult::InvalidTarget;
+            };
+            let Some(entity) = game_state.entities.get(entity_id) else {
+                return CastResult::InvalidTarget;
+            };
+            if !allegiance_matches(&spell.targeting.valid_targets, &entity.owner) {
+                return CastResult::WrongAllegiance;
+            }
+            if spell.targeting.requires_visibility
+                && !target_is_visible(game_state, game_data, entity.pos)
+            {
+                return CastResult::NotVisible;
             }
         }
         "room" => {
