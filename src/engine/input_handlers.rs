@@ -1,4 +1,5 @@
 use crate::data::GameData;
+use crate::engine::room_validator;
 use crate::engine::tile_types::{self, types as tt};
 use crate::state::entities::EntityId;
 use crate::state::game_state::GameState;
@@ -62,16 +63,23 @@ pub fn handle_build_room(
     let (gold_cost, mana_cost) = room_build_cost(room_data, 1);
 
     let can_build = state.player.gold >= gold_cost && state.player.mana >= mana_cost;
-    let is_valid_tile = if let Some(tile) = state.get_tile(tile_pos) {
-        tile.ownership == Ownership::Player
-            && tile.room_id.is_none()
-            && tile_types::can_build_room(&tile.tile_type, game_data)
-    } else {
-        false
-    };
+    let is_valid_tile = state
+        .get_tile(tile_pos)
+        .map(|tile| room_validator::tile_permits_room(room_data, tile, game_data))
+        .unwrap_or(false);
 
     if !state.player.is_room_unlocked(room_type) {
         eprintln!("Cannot build {}: Not yet unlocked!", room_type);
+        return;
+    }
+
+    if let Err(refusal) = room_validator::dungeon_permits_room(room_data, &state.room_manager.rooms)
+    {
+        state.notifications.warning(format!(
+            "{}: {}",
+            room_data.name,
+            refusal.message(game_data)
+        ));
         return;
     }
 
@@ -123,17 +131,24 @@ pub fn handle_build_room_multi(
         return;
     }
 
+    if let Err(refusal) = room_validator::dungeon_permits_room(room_data, &state.room_manager.rooms)
+    {
+        state.notifications.warning(format!(
+            "{}: {}",
+            room_data.name,
+            refusal.message(game_data)
+        ));
+        return;
+    }
+
     // Count valid tiles first
     let valid_tiles: Vec<TilePos> = tiles
         .iter()
         .filter(|&&pos| {
-            if let Some(tile) = state.get_tile(pos) {
-                tile.ownership == Ownership::Player
-                    && tile.room_id.is_none()
-                    && tile_types::can_build_room(&tile.tile_type, game_data)
-            } else {
-                false
-            }
+            state
+                .get_tile(pos)
+                .map(|tile| room_validator::tile_permits_room(room_data, tile, game_data))
+                .unwrap_or(false)
         })
         .copied()
         .collect();

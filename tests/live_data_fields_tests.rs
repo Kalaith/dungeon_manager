@@ -28,17 +28,10 @@ use std::path::{Path, PathBuf};
 /// TODO.md. **Shrink this list; do not grow it.** Adding a name here is a
 /// decision to ship data that does nothing, and should be made deliberately.
 const UNCONSUMED: &[&str] = &[
-    // Room build rules: only `cost_per_tile` and `mana_cost` are enforced, so
-    // rooms ignore terrain restrictions, overlap rules and build time, and
-    // appear the instant they are paid for.
-    "BuildData::dig_required",
-    "BuildData::requires_claimed",
-    "BuildData::can_overlap",
-    "BuildData::allowed_terrain",
+    // Rooms still appear the instant they are paid for, rather than taking
+    // `construction_time` to raise.
     "BuildData::construction_time",
-    // Room limits and shape scaling — the "room efficiency mechanics" item.
-    "RequirementsData::max_instances",
-    "RequirementsData::forbidden_if",
+    // Shape scaling — the "room efficiency mechanics" item.
     "ScalingData::per_tile_multiplier",
     // Room AI hints beyond `task_type`/`max_creatures`.
     "AIData::forbidden_creatures",

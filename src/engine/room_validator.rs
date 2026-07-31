@@ -472,6 +472,116 @@ pub fn find_nearest_room(
     best
 }
 
+/// Why the dungeon as a whole will not accept another room of this type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PlacementRefusal {
+    /// `requirements.global_rooms_required` names a room that has not been built.
+    MissingPrerequisite(String),
+    /// `requirements.max_instances` is already satisfied.
+    AlreadyAtLimit(u32),
+    /// `requirements.forbidden_if` names a room that has been built.
+    ForbiddenBy(String),
+}
+
+impl PlacementRefusal {
+    pub fn message(&self, game_data: &GameData) -> String {
+        let name = |id: &str| {
+            game_data
+                .rooms
+                .get(id)
+                .map(|room| room.name.clone())
+                .unwrap_or_else(|| id.to_string())
+        };
+        match self {
+            Self::MissingPrerequisite(id) => format!("Requires a {} first.", name(id)),
+            Self::AlreadyAtLimit(max) => {
+                format!("Already have the maximum of {max}.")
+            }
+            Self::ForbiddenBy(id) => format!("Cannot coexist with a {}.", name(id)),
+        }
+    }
+}
+
+/// Whether the dungeon permits another room of this type at all.
+///
+/// Covers the requirements that are about the *dungeon* rather than a
+/// particular tile. None of the three was enforced:
+/// `global_rooms_required` was read only to draw a tooltip, so the build
+/// button promised "Requires: Library" and the engine let you build without
+/// one; `max_instances` and `forbidden_if` were read nowhere.
+pub fn dungeon_permits_room(room_data: &RoomData, rooms: &[Room]) -> Result<(), PlacementRefusal> {
+    let built: HashSet<&str> = rooms
+        .iter()
+        .filter(|room| room.active)
+        .map(|room| crate::data::rooms::room_data_id(&room.room_type))
+        .collect();
+
+    for required in &room_data.requirements.global_rooms_required {
+        if !built.contains(required.as_str()) {
+            return Err(PlacementRefusal::MissingPrerequisite(required.clone()));
+        }
+    }
+
+    for forbidden in &room_data.requirements.forbidden_if {
+        if built.contains(forbidden.as_str()) {
+            return Err(PlacementRefusal::ForbiddenBy(forbidden.clone()));
+        }
+    }
+
+    // 0 means unlimited, which is how every shipped room is authored.
+    let max = room_data.requirements.max_instances;
+    if max > 0 {
+        let this_id = room_data.id.as_str();
+        let existing = rooms
+            .iter()
+            .filter(|room| room.active)
+            .filter(|room| crate::data::rooms::room_data_id(&room.room_type) == this_id)
+            .count() as u32;
+        if existing >= max {
+            return Err(PlacementRefusal::AlreadyAtLimit(max));
+        }
+    }
+
+    Ok(())
+}
+
+/// Whether one tile can carry this room.
+///
+/// Replaces three hardcoded conditions that happened to match every shipped
+/// room's data exactly — `ownership == Player` for `requires_claimed`,
+/// `room_id.is_none()` for `!can_overlap`, and `supports_rooms` standing in
+/// for `allowed_terrain`. All 22 rooms author the same values, so this changes
+/// nothing today; it means a room that wants to sit on lava, or overlap
+/// another, becomes a data edit rather than a code one.
+pub fn tile_permits_room(
+    room_data: &RoomData,
+    tile: &crate::state::tile_state::TileState,
+    game_data: &GameData,
+) -> bool {
+    if room_data.build.requires_claimed && tile.ownership != Ownership::Player {
+        return false;
+    }
+
+    if !room_data.build.can_overlap && tile.room_id.is_some() {
+        return false;
+    }
+
+    // An empty `allowed_terrain` means "anywhere a room can go at all".
+    if !room_data.build.allowed_terrain.is_empty()
+        && !room_data.build.allowed_terrain.contains(&tile.tile_type)
+    {
+        return false;
+    }
+
+    // `dig_required` is about the tile having been excavated; a tile that
+    // still blocks movement plainly has not been.
+    if room_data.build.dig_required && !tile_types::is_walkable(&tile.tile_type, game_data) {
+        return false;
+    }
+
+    tile_types::can_build_room(&tile.tile_type, game_data)
+}
+
 /// The `rooms.json` entry backing a room instance, resolving the
 /// `training_room`/`training_hall` alias on the way.
 pub fn room_data_for<'a>(

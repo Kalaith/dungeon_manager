@@ -22,6 +22,8 @@ mod hero_behaviour_tests;
 #[cfg(test)]
 mod room_mood_tests;
 #[cfg(test)]
+mod room_placement_tests;
+#[cfg(test)]
 mod traits_tests;
 
 use data::GameData;
