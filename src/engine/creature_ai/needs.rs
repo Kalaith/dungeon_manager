@@ -1,7 +1,10 @@
 use crate::data::monsters::MonsterData;
+use crate::data::rooms::room_data_id;
 use crate::data::traits::TraitData;
 use crate::data::GameData;
 use crate::state::entities::CreatureState;
+use crate::state::room_manager::RoomManager;
+use crate::state::tile_state::TilePos;
 
 /// Look up the `TraitData` for each trait tag a creature was authored with, skipping unknown
 /// ids. Missing an entry is a data-authoring gap, not an engine error — the trait just has no
@@ -35,10 +38,26 @@ pub fn update_needs(
     }
 }
 
+/// The `happiness_modifier` of whatever room covers `pos`, or 0 outside one.
+///
+/// Deliberately keyed on nothing but the effect value: any room that declares a
+/// modifier gets it, with no `room_type` branch. That is what makes the amenity
+/// tier — rooms whose entire mechanic *is* a positive modifier — authorable as
+/// pure data, and it gives the twelve rooms that already carried a tuned value
+/// (lair +10 through torture chamber -10) their first actual effect.
+pub fn room_happiness_at(pos: TilePos, room_manager: &RoomManager, game_data: &GameData) -> f32 {
+    room_manager
+        .get_room_at(pos)
+        .and_then(|room| game_data.rooms.get(room_data_id(&room.room_type)))
+        .map(|data| data.effects.happiness_modifier as f32)
+        .unwrap_or(0.0)
+}
+
 pub fn calculate_mood(
     creature: &CreatureState,
     monster_data: &MonsterData,
     game_data: &GameData,
+    room_happiness: f32,
 ) -> f32 {
     let base_mood = monster_data.ai.base_mood;
     let mood_penalties = &game_data.config.creature_ai.mood_penalties;
@@ -68,11 +87,22 @@ pub fn calculate_mood(
         .sum();
     mood += trait_mood_modifier;
 
+    // Applies while the creature stands in the room and lapses when it leaves,
+    // matching how mood is recomputed from scratch each tick rather than
+    // accumulated. A torture chamber is miserable to be in, not a wound you
+    // carry away from it.
+    mood += room_happiness;
+
     mood.clamp(0.0, 100.0)
 }
 
-pub fn update_mood(creature: &mut CreatureState, monster_data: &MonsterData, game_data: &GameData) {
-    creature.mood = calculate_mood(creature, monster_data, game_data);
+pub fn update_mood(
+    creature: &mut CreatureState,
+    monster_data: &MonsterData,
+    game_data: &GameData,
+    room_happiness: f32,
+) {
+    creature.mood = calculate_mood(creature, monster_data, game_data, room_happiness);
     let traits = active_traits(monster_data, game_data);
 
     let anger_threshold = monster_data.ai.anger_threshold

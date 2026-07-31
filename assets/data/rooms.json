@@ -1299,5 +1299,81 @@
         "flicker": true
       }
     }
+  },
+  {
+    "id": "leisure_den",
+    "name": "Leisure Den",
+    "description": "Rugs, cushions and a candle. Creatures resting here are markedly less inclined to desert you.",
+    "category": "amenity",
+    "icon": "icons/rooms/leisure_den.png",
+    "build": {
+      "cost_per_tile": 120,
+      "mana_cost": 0,
+      "min_tiles": 4,
+      "max_tiles": 36,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
+      "construction_time": 0.5
+    },
+    "requirements": {
+      "research": [
+        "creature_comforts"
+      ],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "happiness_modifier": 12
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        {
+          "tiles": 4,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 16,
+          "multiplier": 1.2
+        }
+      ],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "none",
+      "desirability": 1.5,
+      "max_creatures": 0,
+      "preferred_creatures": [],
+      "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/leisure_den.png",
+      "wall_sprite": "tiles/leisure_den.png",
+      "object_spawn": [
+        {
+          "object": "cushion",
+          "density": 0.15
+        }
+      ],
+      "light": {
+        "color": [
+          255,
+          190,
+          110
+        ],
+        "intensity": 0.55,
+        "flicker": true
+      }
+    }
   }
 ]

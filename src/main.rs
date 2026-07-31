@@ -16,6 +16,8 @@ mod combat_tests;
 #[cfg(test)]
 mod hero_abilities_tests;
 #[cfg(test)]
+mod room_mood_tests;
+#[cfg(test)]
 mod traits_tests;
 
 use data::GameData;

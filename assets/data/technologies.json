@@ -276,5 +276,23 @@
             "traps": []
         },
         "icon": "icons/tech/mana_binding.png"
+    },
+    {
+        "id": "creature_comforts",
+        "name": "Creature Comforts",
+        "description": "Unlocks the Leisure Den, where resting creatures recover their loyalty.",
+        "cost": 22,
+        "prerequisites": [
+            "training_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "leisure_den"
+            ],
+            "spells": [],
+            "creatures": [],
+            "traps": []
+        },
+        "icon": "icons/tech/creature_comforts.png"
     }
 ]

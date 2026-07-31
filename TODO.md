@@ -17,13 +17,14 @@
 - Hand interactions for gold and objects, not only creatures.
 - Formation system and ranged combat improvements.
 - A conversion-count trigger, so "convert N heroes" style `custom` objectives become winnable win conditions.
-- Generalize the inert `happiness_modifier` room effect — one hook unlocks the whole amenity room tier.
 - Map generator: quality metrics with regenerate-on-poor-quality, and chunked generation for large maps.
 - Scope decisions to take (build or cut): possession mode, overworld/surface raiding, meta-progression (faction runs, cross-mission unlocks), creature mutations, trade/hiring economy.
 
 ## Content
 
-- Build the 5 remaining 1.0 rooms from `docs/ROOM_SET.md`. Vault and Mana Well have shipped (art + `rooms.json` + gating tech + mission availability, no Rust changes). The rest each need an engine hook as well as art: **Combat Pit** (a second XP-producing `task_type`), **Arcane Archive** (generalize the library's `room_type == "library"` research key into a task family), **Soul Furnace** (widen `mana_generation_per_second` past its temple/ritual hardcode, plus a death hook), **Gatehouse** (room-scale door/wall with HP), **Leisure Den** (blocked on the inert `happiness_modifier` below).
+- Build the 4 remaining 1.0 rooms from `docs/ROOM_SET.md`. Vault, Mana Well and Leisure Den have shipped (art + `rooms.json` + gating tech + mission availability). The rest each need an engine hook as well as art: **Combat Pit** (a second XP-producing `task_type`), **Arcane Archive** (generalize the library's `room_type == "library"` research key into a task family), **Soul Furnace** (widen `mana_generation_per_second` past its temple/ritual hardcode, plus a death hook), **Gatehouse** (room-scale door/wall with HP).
+- Now that `happiness_modifier` is live, the rest of the amenity tier from `docs/rooms.md` (Mentor's Den, Doctrine Chamber) is pure data — art plus a `rooms.json` entry, no Rust.
+- Creature AI has no *need* that an amenity room satisfies, so creatures only reach the Leisure Den by wandering into it. A `comfort` need in `monsters.json` with `satisfied_by: ["leisure_den"]` would let them seek it out deliberately, the way they already seek food and sleep.
 - Author the remaining `docs/monsters.md` roster (Lich, Balor, Ogre, Shadow Stalker, …). No longer hard-blocked on sprites — un-arted entries render as a placeholder checker, so stats can be authored and playtested first — but each still wants a `graphics_gen/monsters/` generator before it ships.
 - Wire the finished-but-unreachable art: three traps (`fire_trap`, `gas_trap`, `lightning_trap`) need balance entries in `traps.json`, and three hero buildings (`blacksmith`, `guard_tower`, `tavern`) need spawn/destruction rules in `hero_buildings.json`. The allowlist in `tests/asset_manifest_tests.rs` names them.
 - Rooms declare a `visual.wall_sprite` (`tiles/lair_wall.png`, …) that no generator emits and nothing reads. Either generate per-room wall art and render it, or drop the field.

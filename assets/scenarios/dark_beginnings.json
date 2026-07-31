@@ -68,6 +68,11 @@
           "unlocked": true,
           "owner": "player"
         },
+        "leisure_den": {
+          "available": true,
+          "unlocked": false,
+          "owner": "player"
+        },
         "hatchery": {
           "available": true,
           "unlocked": true,

@@ -92,10 +92,11 @@ fn update_single_creature(
     // Update needs and mood (only for dungeon creatures, not wild ones)
     if !is_wild {
         if let Some(monster_data) = game_data.monsters.get(&creature_type) {
+            let room_happiness = needs::room_happiness_at(current_pos, room_manager, game_data);
             if let Some(entity) = entities.get_mut(creature_id) {
                 if let Some(creature) = entity.as_creature_mut() {
                     needs::update_needs(creature, dt, monster_data, game_data);
-                    needs::update_mood(creature, monster_data, game_data);
+                    needs::update_mood(creature, monster_data, game_data, room_happiness);
                 }
             }
         }
@@ -230,6 +231,7 @@ fn update_single_creature(
             task_target,
             dungeon,
             entities,
+            room_manager,
             game_data,
         );
     }
@@ -679,6 +681,7 @@ fn pathfind_to_target(
     mut target_pos: Option<TilePos>,
     dungeon: &Dungeon,
     entities: &mut EntityManager,
+    room_manager: &RoomManager,
     game_data: &GameData,
 ) {
     // Special case for Idle: pick a random wander position
@@ -696,7 +699,7 @@ fn pathfind_to_target(
         };
 
         if is_idle {
-            target_pos = pick_wander_position(dungeon, current_pos, game_data);
+            target_pos = pick_wander_position(dungeon, current_pos, room_manager, game_data);
         }
     }
 

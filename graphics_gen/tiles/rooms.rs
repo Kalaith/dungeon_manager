@@ -418,3 +418,53 @@ pub fn create_mana_well() -> RgbaImage {
 
     img
 }
+
+/// Leisure Den - the amenity room the `happiness_modifier` hook makes possible
+///
+/// Warm and cluttered where the rest of the dungeon is cold and ordered: the
+/// one place on the map that exists purely to be pleasant to stand in.
+pub fn create_leisure_den() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([74, 44, 38, 255])); // Worn timber
+
+    // Plank grain, running one way so the floor has a direction
+    for y in 0..TILE_HEIGHT {
+        for x in 0..TILE_WIDTH {
+            if (x * 5 + y * 13) % 17 < 2 {
+                img.put_pixel(x, y, Rgba([88, 54, 44, 255]));
+            }
+        }
+    }
+    for plank_y in (0..TILE_HEIGHT).step_by(16) {
+        draw_rect(&mut img, 0, plank_y, TILE_WIDTH, 1, Rgba([52, 30, 26, 255]));
+    }
+
+    // A rug, off-centre and overlapping the planks
+    draw_rect(&mut img, 14, 18, 34, 28, Rgba([132, 40, 46, 255]));
+    draw_rect(&mut img, 17, 21, 28, 22, Rgba([158, 58, 58, 255]));
+    draw_rect(&mut img, 21, 25, 20, 14, Rgba([120, 34, 40, 255]));
+    // Fringe
+    for fringe_x in (14..48).step_by(4) {
+        img.put_pixel(fringe_x, 17, Rgba([196, 156, 92, 255]));
+        img.put_pixel(fringe_x, 46, Rgba([196, 156, 92, 255]));
+    }
+
+    // Cushions tossed at two corners of the rug
+    for (cushion_x, cushion_y) in [(20u32, 24u32), (40, 40)] {
+        draw_circle(&mut img, cushion_x, cushion_y, 5, Rgba([64, 52, 118, 255]));
+        draw_circle(
+            &mut img,
+            cushion_x - 1,
+            cushion_y - 1,
+            3,
+            Rgba([90, 76, 156, 255]),
+        );
+    }
+
+    // Candle stub in the corner — the light source that makes the room warm
+    draw_circle(&mut img, 53, 11, 4, Rgba([206, 188, 148, 255]));
+    draw_circle(&mut img, 53, 11, 2, Rgba([255, 214, 120, 255]));
+    img.put_pixel(53, 11, Rgba([255, 250, 220, 255]));
+
+    add_noise(&mut img, 7);
+    img
+}
