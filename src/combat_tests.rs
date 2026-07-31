@@ -90,7 +90,8 @@ fn test_ranged_monster_spawns_projectile() {
     // instead of relying on probabilistic fixed-timestep combat.
     let attacker = game_state.entities.get(warlock_id).unwrap().clone();
     let defender = game_state.entities.get(hero_id).unwrap().clone();
-    let result = combat::resolve_combat_tick(&attacker, &defender, 1.0, &game_data, 0.0);
+    let result =
+        combat::resolve_combat_tick(&attacker, &defender, 1.0, &game_data, 0.0, (0.0, 0.0));
 
     if let Some((projectile_type, damage)) = result.projectile_spawned {
         game_state.projectiles.spawn(
@@ -267,8 +268,14 @@ fn stunned_attacker_cannot_land_an_attack() {
 
     let attacker_entity = game_state.entities.get(attacker_id).unwrap();
     let defender_entity = game_state.entities.get(defender_id).unwrap();
-    let result =
-        combat::resolve_combat_tick(attacker_entity, defender_entity, 10.0, &game_data, 0.0);
+    let result = combat::resolve_combat_tick(
+        attacker_entity,
+        defender_entity,
+        10.0,
+        &game_data,
+        0.0,
+        (0.0, 0.0),
+    );
 
     assert_eq!(
         result.damage_dealt, 0.0,

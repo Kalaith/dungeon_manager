@@ -43,6 +43,7 @@ pub fn resolve_combat_tick(
     dt: f32,
     game_data: &GameData,
     defender_room_defense: f32,
+    hero_supply_penalty: (f32, f32),
 ) -> CombatResult {
     if is_stunned(attacker) {
         return CombatResult {
@@ -53,8 +54,23 @@ pub fn resolve_combat_tick(
         };
     }
 
-    let attacker_stats = extract_combat_stats(attacker, game_data);
+    let (attack_penalty, defense_penalty) = hero_supply_penalty;
+
+    let mut attacker_stats = extract_combat_stats(attacker, game_data);
+    apply_hero_supply_penalty(
+        attacker,
+        &mut attacker_stats,
+        attack_penalty,
+        defense_penalty,
+    );
+
     let mut defender_stats = extract_combat_stats(defender, game_data);
+    apply_hero_supply_penalty(
+        defender,
+        &mut defender_stats,
+        attack_penalty,
+        defense_penalty,
+    );
     defender_stats.defense =
         fortified_defense(defender, defender_stats.defense, defender_room_defense);
 
@@ -219,6 +235,28 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
             abilities: Vec::new(),
         },
     }
+}
+
+/// Attack and defence a hero has lost to razed hero buildings.
+///
+/// Applied to heroes only, and only after their level multiplier, so a burnt
+/// armoury takes the same flat bite out of a veteran as a recruit. Creatures
+/// and structures are unaffected — this is the hero faction's own supply
+/// chain failing.
+pub fn apply_hero_supply_penalty(
+    entity: &Entity,
+    stats: &mut CombatStats,
+    attack_penalty: f32,
+    defense_penalty: f32,
+) {
+    if !matches!(
+        entity.entity_type,
+        crate::state::entities::EntityType::Hero(_)
+    ) {
+        return;
+    }
+    stats.attack = (stats.attack - attack_penalty).max(0.0);
+    stats.defense = (stats.defense - defense_penalty).max(0.0);
 }
 
 /// A defender's effective defence once the room they stand in is accounted for.

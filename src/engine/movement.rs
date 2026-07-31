@@ -1,11 +1,16 @@
 use crate::state::entities::{EntityId, EntityManager};
 use crate::state::tile_state::TilePos;
 
-/// Shared movement logic for entities following a path/timer system
+/// Shared movement logic for entities following a path/timer system.
+///
+/// `speed_multiplier` scales the entity's own speed for effects the mover
+/// itself knows nothing about — heroes slow down when their stables burn, and
+/// this function has no business knowing that, so the caller supplies it.
 pub fn process_entity_movement(
     entities: &mut EntityManager,
     entity_id: EntityId,
     dt: f32,
+    speed_multiplier: f32,
 ) -> Option<TilePos> {
     let movement_data = if let Some(entity) = entities.get(entity_id) {
         match &entity.entity_type {
@@ -30,7 +35,7 @@ pub fn process_entity_movement(
     if let Some(path) = current_path {
         if !path.is_empty() {
             new_move_timer += dt;
-            let move_interval = 1.0 / movement_speed;
+            let move_interval = 1.0 / (movement_speed * speed_multiplier).max(0.01);
 
             if new_move_timer >= move_interval {
                 new_move_timer = 0.0;

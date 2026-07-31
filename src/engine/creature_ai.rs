@@ -163,7 +163,7 @@ fn update_single_creature(
                         creature.current_path = Some(vec![kite_pos]);
                     }
                 }
-                crate::engine::movement::process_entity_movement(entities, creature_id, dt);
+                crate::engine::movement::process_entity_movement(entities, creature_id, dt, 1.0);
                 return;
             }
             CombatMovementResult::TargetLost => {
@@ -237,7 +237,7 @@ fn update_single_creature(
     }
 
     // Handle movement along path (AFTER pathfinding so we can move immediately)
-    crate::engine::movement::process_entity_movement(entities, creature_id, dt);
+    crate::engine::movement::process_entity_movement(entities, creature_id, dt, 1.0);
 }
 
 /// Check if creature should interrupt current task to engage in combat

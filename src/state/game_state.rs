@@ -460,7 +460,12 @@ impl GameState {
 
             // Process movement for hero if not digging
             if should_move {
-                crate::engine::movement::process_entity_movement(&mut self.entities, hero_id, dt);
+                crate::engine::movement::process_entity_movement(
+                    &mut self.entities,
+                    hero_id,
+                    dt,
+                    self.hero_base.hero_speed_multiplier(),
+                );
             }
         }
 
@@ -545,11 +550,17 @@ impl GameState {
                                                            // Usually destroying enemy room makes it neutral or effectively 'floor'
                 }
 
-                // Also remove from hero_base list
+                // Also remove from hero_base list, banking whatever its
+                // destruction was authored to cost the hero faction.
                 if let Some(building_idx) =
                     self.hero_base.buildings.iter().position(|b| b.pos == pos)
                 {
-                    self.hero_base.buildings.remove(building_idx);
+                    let building = self.hero_base.buildings.remove(building_idx);
+                    if let Some(data) = game_data.hero_buildings.get(&building.building_type) {
+                        self.hero_base
+                            .apply_destruction_effect(&data.destruction_effect);
+                        self.notifications.info(format!("{} destroyed.", data.name));
+                    }
                 }
             }
         }

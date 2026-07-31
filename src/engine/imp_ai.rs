@@ -86,7 +86,7 @@ pub fn update_imp_digging(
         update_targeted_tiles(entities, imp_id, imp_pos, &mut targeted_tiles);
 
         // Handle movement along path
-        crate::engine::movement::process_entity_movement(entities, imp_id, dt);
+        crate::engine::movement::process_entity_movement(entities, imp_id, dt, 1.0);
     }
 }
 

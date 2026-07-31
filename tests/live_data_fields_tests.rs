@@ -73,8 +73,6 @@ const UNCONSUMED: &[&str] = &[
     "HeroStatsData::bravery",
     "HeroProgressionData::level_range",
     "HeroProgressionData::elite_variants",
-    // Hero buildings: destruction effects are authored but never applied.
-    "HeroBuildingData::destruction_effect",
     // Spells: soul cost and targeting restrictions.
     "SpellCost::souls",
     "TargetingData::requires_visibility",

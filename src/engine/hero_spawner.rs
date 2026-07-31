@@ -104,8 +104,9 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
         *hero_counts.entry(hero.hero_id.clone()).or_insert(0) += 1;
     }
 
-    // Harder difficulty / higher mission threat replenishes the garrison faster.
-    let threat = state.effective_threat_multiplier();
+    // Harder difficulty / higher mission threat replenishes the garrison faster;
+    // razed spawn buildings slow it back down, permanently.
+    let threat = state.effective_threat_multiplier() / state.hero_base.spawn_interval_multiplier();
 
     // Iterate over buildings to check timers
     for building in &mut state.hero_base.buildings {

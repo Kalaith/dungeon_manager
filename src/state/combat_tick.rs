@@ -22,6 +22,11 @@ fn get_entity_attack_type(entity_type: &EntityType, game_data: &GameData) -> Str
 impl GameState {
     pub(in crate::state) fn resolve_combat(&mut self, game_data: &GameData, dt: f32) {
         let all_entities: Vec<EntityId> = self.entities.all().map(|entity| entity.id).collect();
+        // Razed armouries and forges blunt every hero on the map.
+        let hero_supply_penalty = (
+            self.hero_base.hero_attack_penalty,
+            self.hero_base.hero_defense_penalty,
+        );
 
         for &attacker_id in &all_entities {
             let attacker = match self.entities.get(attacker_id) {
@@ -60,8 +65,14 @@ impl GameState {
                     &self.room_manager,
                     game_data,
                 );
-                let result =
-                    resolve_combat_tick(attacker, defender, dt, game_data, defender_room_defense);
+                let result = resolve_combat_tick(
+                    attacker,
+                    defender,
+                    dt,
+                    game_data,
+                    defender_room_defense,
+                    hero_supply_penalty,
+                );
 
                 if let Some((projectile_type, damage)) = result.projectile_spawned.clone() {
                     self.projectiles.spawn(
