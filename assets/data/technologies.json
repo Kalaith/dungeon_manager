@@ -77,7 +77,9 @@
                 "blowgun_trap",
                 "boulder_trap",
                 "alarm_trap",
-                "braced_door"
+                "braced_door",
+                "gas_trap",
+                "fire_trap"
             ]
         },
         "icon": "icons/tech/traps.png"
@@ -366,5 +368,24 @@
             "traps": []
         },
         "icon": "icons/tech/fortification.png"
+    },
+    {
+        "id": "arcing_current",
+        "name": "Arcing Current",
+        "description": "Unlocks the Lightning Trap, the deadliest single-target trap in the dungeon.",
+        "cost": 34,
+        "prerequisites": [
+            "trap_tech",
+            "war_magic"
+        ],
+        "unlocks": {
+            "rooms": [],
+            "spells": [],
+            "creatures": [],
+            "traps": [
+                "lightning_trap"
+            ]
+        },
+        "icon": "icons/tech/arcing_current.png"
     }
 ]

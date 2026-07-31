@@ -103,6 +103,9 @@
         "magic_door": { "available": true, "unlocked": false, "owner": "player" },
         "blowgun_trap": { "available": true, "unlocked": true, "owner": "player" },
         "boulder_trap": { "available": true, "unlocked": true, "owner": "player" },
+        "lightning_trap": { "available": true, "unlocked": false, "owner": "player" },
+        "fire_trap": { "available": true, "unlocked": false, "owner": "player" },
+        "gas_trap": { "available": true, "unlocked": false, "owner": "player" },
         "alarm_trap": { "available": true, "unlocked": false, "owner": "player" }
       },
       "creatures": {

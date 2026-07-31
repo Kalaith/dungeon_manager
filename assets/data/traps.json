@@ -1,91 +1,134 @@
 [
-    {
-        "id": "door",
-        "name": "Door",
-        "description": "A sturdy door that can be locked to block hero movement.",
-        "category": "door",
-        "cost": 50,
-        "build_time": 5.0,
-        "effects": {
-            "blocks_movement": true,
-            "lockable": true
-        }
-    },
-    {
-        "id": "braced_door",
-        "name": "Braced Door",
-        "description": "A reinforced door that takes longer to manufacture and build but holds chokepoints better.",
-        "category": "door",
-        "cost": 90,
-        "build_time": 8.0,
-        "effects": {
-            "blocks_movement": true,
-            "lockable": true
-        }
-    },
-    {
-        "id": "magic_door",
-        "name": "Magic Door",
-        "description": "A sealed arcane door for late dungeon defenses.",
-        "category": "door",
-        "cost": 140,
-        "build_time": 12.0,
-        "effects": {
-            "blocks_movement": true,
-            "lockable": true
-        }
-    },
-    {
-        "id": "spike_trap",
-        "name": "Spike Trap",
-        "description": "Hidden spikes that damage heroes when triggered.",
-        "category": "offense",
-        "cost": 100,
-        "build_time": 10.0,
-        "effects": {
-            "damage": 25,
-            "trigger_type": "pressure",
-            "cooldown": 5.0
-        }
-    },
-    {
-        "id": "boulder_trap",
-        "name": "Boulder Trap",
-        "description": "Releases a rolling boulder that crushes enemies.",
-        "category": "offense",
-        "cost": 150,
-        "build_time": 15.0,
-        "effects": {
-            "damage": 50,
-            "trigger_type": "pressure",
-            "area": true,
-            "area_radius": 1.5,
-            "single_radius": 0.5
-        }
-    },
-    {
-        "id": "alarm_trap",
-        "name": "Alarm Trap",
-        "description": "Alerts nearby creatures when heroes pass.",
-        "category": "utility",
-        "cost": 30,
-        "build_time": 3.0,
-        "effects": {
-            "alert_radius": 10,
-            "cooldown_multiplier": 2.0
-        }
-    },
-    {
-        "id": "blowgun_trap",
-        "name": "Blowgun Trap",
-        "description": "Shoots a dart at enemies.",
-        "category": "offense",
-        "cost": 75,
-        "build_time": 8.0,
-        "effects": {
-            "damage": 15,
-            "trigger_type": "pressure",
-            "cooldown": 2.5
-        }
+  {
+    "id": "door",
+    "name": "Door",
+    "description": "A sturdy door that can be locked to block hero movement.",
+    "category": "door",
+    "cost": 50,
+    "build_time": 5.0,
+    "effects": {
+      "blocks_movement": true,
+      "lockable": true
     }
+  },
+  {
+    "id": "braced_door",
+    "name": "Braced Door",
+    "description": "A reinforced door that takes longer to manufacture and build but holds chokepoints better.",
+    "category": "door",
+    "cost": 90,
+    "build_time": 8.0,
+    "effects": {
+      "blocks_movement": true,
+      "lockable": true
+    }
+  },
+  {
+    "id": "magic_door",
+    "name": "Magic Door",
+    "description": "A sealed arcane door for late dungeon defenses.",
+    "category": "door",
+    "cost": 140,
+    "build_time": 12.0,
+    "effects": {
+      "blocks_movement": true,
+      "lockable": true
+    }
+  },
+  {
+    "id": "spike_trap",
+    "name": "Spike Trap",
+    "description": "Hidden spikes that damage heroes when triggered.",
+    "category": "offense",
+    "cost": 100,
+    "build_time": 10.0,
+    "effects": {
+      "damage": 25,
+      "trigger_type": "pressure",
+      "cooldown": 5.0
+    }
+  },
+  {
+    "id": "boulder_trap",
+    "name": "Boulder Trap",
+    "description": "Releases a rolling boulder that crushes enemies.",
+    "category": "offense",
+    "cost": 150,
+    "build_time": 15.0,
+    "effects": {
+      "damage": 50,
+      "trigger_type": "pressure",
+      "area": true,
+      "area_radius": 1.5,
+      "single_radius": 0.5
+    }
+  },
+  {
+    "id": "alarm_trap",
+    "name": "Alarm Trap",
+    "description": "Alerts nearby creatures when heroes pass.",
+    "category": "utility",
+    "cost": 30,
+    "build_time": 3.0,
+    "effects": {
+      "alert_radius": 10,
+      "cooldown_multiplier": 2.0
+    }
+  },
+  {
+    "id": "blowgun_trap",
+    "name": "Blowgun Trap",
+    "description": "Shoots a dart at enemies.",
+    "category": "offense",
+    "cost": 75,
+    "build_time": 8.0,
+    "effects": {
+      "damage": 15,
+      "trigger_type": "pressure",
+      "cooldown": 2.5
+    }
+  },
+  {
+    "id": "gas_trap",
+    "name": "Gas Trap",
+    "description": "A grate that vents choking green gas across the corridor.",
+    "category": "offense",
+    "cost": 120,
+    "build_time": 12.0,
+    "effects": {
+      "damage": 20,
+      "trigger_type": "pressure",
+      "area": true,
+      "area_radius": 1.5,
+      "cooldown": 6.0
+    }
+  },
+  {
+    "id": "fire_trap",
+    "name": "Fire Trap",
+    "description": "Four nozzles that fill the tile with flame.",
+    "category": "offense",
+    "cost": 170,
+    "build_time": 16.0,
+    "effects": {
+      "damage": 40,
+      "trigger_type": "pressure",
+      "area": true,
+      "area_radius": 1.2,
+      "cooldown": 8.0
+    }
+  },
+  {
+    "id": "lightning_trap",
+    "name": "Lightning Trap",
+    "description": "Conductors that earth a killing arc through whoever closes the circuit.",
+    "category": "offense",
+    "cost": 200,
+    "build_time": 18.0,
+    "effects": {
+      "damage": 65,
+      "trigger_type": "pressure",
+      "cooldown": 9.0
+    }
+  }
 ]

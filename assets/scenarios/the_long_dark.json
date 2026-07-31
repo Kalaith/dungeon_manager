@@ -83,7 +83,10 @@
       "traps": {
         "door": { "available": true, "unlocked": true, "owner": "player" },
         "braced_door": { "available": true, "unlocked": true, "owner": "player" },
-        "boulder_trap": { "available": true, "unlocked": false, "owner": "player" }
+        "boulder_trap": { "available": true, "unlocked": false, "owner": "player" },
+        "lightning_trap": { "available": true, "unlocked": false, "owner": "player" },
+        "fire_trap": { "available": true, "unlocked": false, "owner": "player" },
+        "gas_trap": { "available": true, "unlocked": false, "owner": "player" }
       },
       "creatures": {
         "goblin": { "available": true, "unlocked": true, "owner": "player" },

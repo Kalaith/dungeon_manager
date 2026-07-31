@@ -161,19 +161,12 @@ fn orphaned_tiles(declared: &[String]) -> Vec<String> {
         "snow",
     ];
     // Art that is finished and waiting on a data entry to become playable —
-    // three traps needing balance numbers in `traps.json`, three hero
-    // buildings needing spawn/destruction rules in `hero_buildings.json`, and
-    // the casino, superseded by the Leisure Den in docs/ROOM_SET.md. Tracked
-    // in TODO.md; shrink this list, don't grow it.
-    const AWAITING_DATA: &[&str] = &[
-        "blacksmith",
-        "casino",
-        "fire_trap",
-        "gas_trap",
-        "guard_tower",
-        "lightning_trap",
-        "tavern",
-    ];
+    // three hero buildings needing spawn/destruction rules in
+    // `hero_buildings.json`, and the casino, superseded by the Leisure Den in
+    // docs/ROOM_SET.md. Tracked in TODO.md; shrink this list, don't grow it.
+    // (The fire, gas and lightning traps came off it once `traps.json` gained
+    // their balance numbers.)
+    const AWAITING_DATA: &[&str] = &["blacksmith", "casino", "guard_tower", "tavern"];
 
     let tiles_dir = project_root().join("assets").join("tiles");
     let mut orphans = Vec::new();

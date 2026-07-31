@@ -126,6 +126,21 @@
           "available": true,
           "unlocked": false,
           "owner": "player"
+        },
+        "lightning_trap": {
+          "available": true,
+          "unlocked": false,
+          "owner": "player"
+        },
+        "fire_trap": {
+          "available": true,
+          "unlocked": false,
+          "owner": "player"
+        },
+        "gas_trap": {
+          "available": true,
+          "unlocked": false,
+          "owner": "player"
         }
       },
       "creatures": {

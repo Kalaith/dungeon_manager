@@ -396,19 +396,16 @@ fn group_barracks_creatures(state: &mut GameState, game_data: &GameData) -> usiz
         return 0;
     };
 
+    // Any room declaring `grouping_point` rallies creatures, not the barracks
+    // by name — the effect had been authored on the barracks and read nowhere.
     let capacity: usize = state
         .room_manager
         .rooms
         .iter()
-        .filter(|room| room.active && room.room_type == "barracks")
-        .map(|room| {
-            game_data
-                .rooms
-                .get(&room.room_type)
-                .map(|room_data| room_data.ai.max_creatures as usize)
-                .unwrap_or(0)
-                .max(1)
-        })
+        .filter(|room| room.active)
+        .filter_map(|room| crate::engine::room_validator::room_data_for(room, game_data))
+        .filter(|room_data| room_data.effects.grouping_point)
+        .map(|room_data| (room_data.ai.max_creatures as usize).max(1))
         .sum();
     if capacity == 0 {
         return 0;

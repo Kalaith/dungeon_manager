@@ -186,19 +186,35 @@ fn trigger_trap(
     dungeon: &mut Dungeon,
     game_data: &GameData,
 ) -> Option<TrapTriggerResult> {
-    match trap_type {
-        "door" => None,
-        "spike_trap" => trigger_damage_trap(pos, trap_data, triggering_entity, entities, dungeon),
-        "blowgun_trap" => trigger_damage_trap(pos, trap_data, triggering_entity, entities, dungeon),
-        "boulder_trap" => trigger_boulder_trap(pos, trap_data, entities, dungeon),
-        "alarm_trap" => {
-            trigger_alarm_trap(pos, trap_data, entities, dungeon, game_data);
-            None
-        }
-        _ => {
-            eprintln!("Unknown trap type: {}", trap_type);
-            None
-        }
+    // Dispatched on what the trap *does*, not which trap it is. Adding a trap
+    // to `traps.json` is content work: three finished trap sprites
+    // (fire/gas/lightning) sat unreachable because reaching them meant editing
+    // this match. Rooms went the same way — see `room_validator`'s task
+    // families.
+    let effects = &trap_data.effects;
+
+    if effects.blocks_movement {
+        // Doors bar the way; they have nothing to fire.
+        return None;
+    }
+
+    if effects.alert_radius > 0.0 {
+        trigger_alarm_trap(pos, trap_data, entities, dungeon, game_data);
+        return None;
+    }
+
+    if effects.damage <= 0.0 {
+        eprintln!(
+            "Trap '{}' has no damage, alert radius or blocking effect — nothing to trigger",
+            trap_type
+        );
+        return None;
+    }
+
+    if effects.area {
+        trigger_area_trap(pos, trap_data, entities, dungeon)
+    } else {
+        trigger_damage_trap(pos, trap_data, triggering_entity, entities, dungeon)
     }
 }
 
@@ -226,7 +242,9 @@ fn trigger_damage_trap(
     })
 }
 
-fn trigger_boulder_trap(
+/// Area-damage trap: hits everything within its radius, not just whoever
+/// stepped on it.
+fn trigger_area_trap(
     pos: TilePos,
     trap_data: &crate::data::traps::TrapData,
     entities: &mut EntityManager,

@@ -142,14 +142,21 @@ fn execute_sleep(
     game_data: &GameData,
     dt: f32,
 ) {
-    // Verify room is a lair
-    if !room_manager
+    // Still keyed on the lair specifically: the `sleep` task family also covers
+    // the kennel, and widening it collides with `count_available_lair_tiles`
+    // setting the creature cap. See TODO.md. The room's own
+    // `sleep_recovery_rate` is honoured either way.
+    let room_rate = room_manager
         .rooms
         .iter()
-        .any(|r| r.id == room_id && r.room_type == "lair")
-    {
+        .find(|r| r.id == room_id && r.room_type == "lair")
+        .and_then(|room| crate::engine::room_validator::room_data_for(room, game_data))
+        .map(|data| data.effects.sleep_recovery_rate);
+
+    let Some(room_rate) = room_rate else {
         return;
-    }
+    };
+
     let creature = match entities
         .get_mut(creature_id)
         .and_then(|e| e.as_creature_mut())
@@ -157,7 +164,7 @@ fn execute_sleep(
         Some(c) => c,
         None => return,
     };
-    let sleep_rate = game_data.config.task_execution.sleep_satisfaction_rate;
+    let sleep_rate = game_data.config.task_execution.sleep_satisfaction_rate * room_rate;
     creature_ai::satisfy_need(creature, "sleep", sleep_rate, dt);
 }
 
