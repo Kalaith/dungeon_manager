@@ -648,11 +648,15 @@ fn decide_task_from_rooms(
         }
     }
 
-    // Add research
+    // Add research — any room in the `research` family, so a second research
+    // room is reachable without naming it here.
     use crate::engine::room_validator;
-    if let Some((room_id, _)) =
-        room_validator::find_nearest_room(&room_manager.rooms, "library", creature_pos, 0.0)
-    {
+    if let Some((room_id, _)) = room_validator::find_nearest_room_for_task(
+        &room_manager.rooms,
+        "research",
+        creature_pos,
+        game_data,
+    ) {
         let task = Task::Research(room_id);
         let desirability = crate::engine::creature_task_logic::calculate_task_desirability(
             &task,

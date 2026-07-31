@@ -138,6 +138,7 @@ fn generate_tile_sprites() {
     tiles::save_tile("vault", tiles::create_vault());
     tiles::save_tile("mana_well", tiles::create_mana_well());
     tiles::save_tile("leisure_den", tiles::create_leisure_den());
+    tiles::save_tile("arcane_archive", tiles::create_arcane_archive());
 
     // Traps and doors
     tiles::save_tile("door", tiles::create_door());

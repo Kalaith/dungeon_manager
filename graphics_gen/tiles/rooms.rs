@@ -468,3 +468,92 @@ pub fn create_leisure_den() -> RgbaImage {
     add_noise(&mut img, 7);
     img
 }
+
+/// Arcane Archive - the research room's elite tier
+///
+/// Reads against [`create_library`]'s plain brown shelving: obsidian and
+/// verdigris rather than wood, with a bound tome on a lectern instead of a
+/// rank of spines. Same job, visibly more serious about it.
+pub fn create_arcane_archive() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([30, 28, 44, 255])); // Obsidian
+    let center_x = TILE_WIDTH / 2;
+    let center_y = TILE_HEIGHT / 2;
+
+    // Inlaid brass channels running to the centre, like a circuit feeding the
+    // lectern — the room's power has somewhere to go.
+    for offset in [-20i32, 20] {
+        draw_rect(
+            &mut img,
+            (center_x as i32 + offset - 1) as u32,
+            6,
+            2,
+            TILE_HEIGHT - 12,
+            Rgba([92, 78, 42, 255]),
+        );
+    }
+    draw_rect(&mut img, 20, center_y - 1, 24, 2, Rgba([92, 78, 42, 255]));
+
+    // Shelf blocks in the corners, cut back so the centre stays clear
+    for (shelf_x, shelf_y) in [(4u32, 4u32), (48, 4), (4, 48), (48, 48)] {
+        draw_rect(&mut img, shelf_x, shelf_y, 12, 12, Rgba([46, 42, 62, 255]));
+        draw_rect(&mut img, shelf_x, shelf_y, 12, 1, Rgba([70, 64, 92, 255]));
+        // Spines, in the verdigris the library's brown never had
+        for spine in 0..4u32 {
+            draw_rect(
+                &mut img,
+                shelf_x + 1 + spine * 3,
+                shelf_y + 3,
+                2,
+                8,
+                Rgba([56, 128, 112, 255]),
+            );
+        }
+    }
+
+    // Lectern and the open tome on it
+    draw_rect(
+        &mut img,
+        center_x - 9,
+        center_y - 7,
+        18,
+        14,
+        Rgba([58, 50, 40, 255]),
+    );
+    draw_rect(
+        &mut img,
+        center_x - 8,
+        center_y - 6,
+        7,
+        12,
+        Rgba([214, 206, 182, 255]),
+    );
+    draw_rect(
+        &mut img,
+        center_x + 1,
+        center_y - 6,
+        7,
+        12,
+        Rgba([196, 188, 164, 255]),
+    );
+    draw_rect(
+        &mut img,
+        center_x - 1,
+        center_y - 6,
+        2,
+        12,
+        Rgba([84, 72, 56, 255]),
+    );
+
+    // The glow coming off the open page
+    draw_circle(
+        &mut img,
+        center_x,
+        center_y - 9,
+        3,
+        Rgba([120, 224, 200, 255]),
+    );
+    img.put_pixel(center_x, center_y - 9, Rgba([232, 255, 248, 255]));
+
+    add_noise(&mut img, 6);
+    img
+}

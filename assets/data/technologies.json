@@ -294,5 +294,23 @@
             "traps": []
         },
         "icon": "icons/tech/creature_comforts.png"
+    },
+    {
+        "id": "codification",
+        "name": "Codification",
+        "description": "Unlocks the Arcane Archive, where research runs far faster than in a library.",
+        "cost": 32,
+        "prerequisites": [
+            "ritual_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "arcane_archive"
+            ],
+            "spells": [],
+            "creatures": [],
+            "traps": []
+        },
+        "icon": "icons/tech/codification.png"
     }
 ]

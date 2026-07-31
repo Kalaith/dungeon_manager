@@ -472,6 +472,60 @@ pub fn find_nearest_room(
     best
 }
 
+/// The `rooms.json` entry backing a room instance, resolving the
+/// `training_room`/`training_hall` alias on the way.
+pub fn room_data_for<'a>(
+    room: &Room,
+    game_data: &'a crate::data::GameData,
+) -> Option<&'a crate::data::RoomData> {
+    game_data
+        .rooms
+        .get(crate::data::rooms::room_data_id(&room.room_type))
+}
+
+/// Nearest active room whose data declares `ai.task_type == task_type`.
+///
+/// The sibling of [`find_nearest_room`], keyed on what a room *does* rather
+/// than which room it is. Research used to mean `room_type == "library"` in
+/// two separate places, so a second research room could be built, staffed and
+/// still produce nothing. Matching the task family instead makes "another room
+/// that researches" an authoring decision rather than a code change.
+pub fn find_nearest_room_for_task(
+    rooms: &[Room],
+    task_type: &str,
+    pos: TilePos,
+    game_data: &crate::data::GameData,
+) -> Option<(usize, f32)> {
+    let mut best: Option<(usize, f32)> = None;
+
+    for room in rooms.iter() {
+        if !room.active {
+            continue;
+        }
+        let matches = room_data_for(room, game_data)
+            .map(|data| data.ai.task_type == task_type)
+            .unwrap_or(false);
+        if !matches {
+            continue;
+        }
+
+        let center = room.get_center();
+        let dx = (center.x - pos.x) as f32;
+        let dy = (center.y - pos.y) as f32;
+        let distance = (dx * dx + dy * dy).sqrt();
+
+        match best {
+            None => best = Some((room.id, distance)),
+            Some((_, best_dist)) if distance < best_dist => {
+                best = Some((room.id, distance));
+            }
+            _ => {}
+        }
+    }
+
+    best
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1375,5 +1375,87 @@
         "flicker": true
       }
     }
+  },
+  {
+    "id": "arcane_archive",
+    "name": "Arcane Archive",
+    "description": "A codified vault of spell theory. Warlocks research far faster here than in a common library.",
+    "category": "research",
+    "icon": "icons/rooms/arcane_archive.png",
+    "build": {
+      "cost_per_tile": 260,
+      "mana_cost": 30,
+      "min_tiles": 9,
+      "max_tiles": 64,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
+      "construction_time": 0.7
+    },
+    "requirements": {
+      "research": [
+        "codification"
+      ],
+      "global_rooms_required": [
+        "library"
+      ],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "research_rate": 1.8,
+      "happiness_modifier": 2
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        {
+          "tiles": 9,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 25,
+          "multiplier": 1.2
+        }
+      ],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "research",
+      "desirability": 1.4,
+      "max_creatures": 6,
+      "preferred_creatures": [
+        "warlock",
+        "dark_elf"
+      ],
+      "forbidden_creatures": [],
+      "work_size": [
+        2,
+        2
+      ],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/arcane_archive.png",
+      "wall_sprite": "tiles/arcane_archive.png",
+      "object_spawn": [
+        {
+          "object": "lectern",
+          "density": 0.1
+        }
+      ],
+      "light": {
+        "color": [
+          120,
+          224,
+          200
+        ],
+        "intensity": 0.6,
+        "flicker": true
+      }
+    }
   }
 ]

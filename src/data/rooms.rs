@@ -38,6 +38,12 @@ pub struct RequirementsData {
     pub forbidden_if: Vec<String>,
 }
 
+/// Rate multipliers default to 1.0 so an unset room runs at the global rate
+/// rather than producing nothing.
+fn default_rate_multiplier() -> f32 {
+    1.0
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EffectsData {
     #[serde(default)]
@@ -52,8 +58,13 @@ pub struct EffectsData {
     pub gold_storage_capacity: i32,
     #[serde(default)]
     pub xp_per_minute: f32,
-    #[serde(default)]
-    pub research_per_minute: f32,
+    /// Multiplier on `config.task_execution.research_production_rate` for a
+    /// room in the `research` task family. Named to match the key `rooms.json`
+    /// has always authored — the struct previously declared
+    /// `research_per_minute`, which no file set, so the library's `1.0` was
+    /// dropped by serde and every research room ran at the global rate.
+    #[serde(default = "default_rate_multiplier")]
+    pub research_rate: f32,
     #[serde(default)]
     pub torture_power: f32,
     #[serde(default)]

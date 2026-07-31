@@ -440,13 +440,21 @@ fn execute_research(
     game_data: &GameData,
     dt: f32,
 ) -> f32 {
-    let is_library = room_manager
+    // Any room in the `research` task family, not just the library — see
+    // `room_validator::find_nearest_room_for_task`. The room's own
+    // `research_rate` scales the global rate, so a dedicated research room is
+    // a data edit rather than a new branch here.
+    let room_rate = room_manager
         .rooms
         .iter()
-        .any(|r| r.id == room_id && r.room_type == "library");
-    if !is_library {
+        .find(|r| r.id == room_id)
+        .and_then(|room| crate::engine::room_validator::room_data_for(room, game_data))
+        .filter(|data| data.ai.task_type == "research")
+        .map(|data| data.effects.research_rate);
+
+    let Some(room_rate) = room_rate else {
         return 0.0;
-    }
+    };
 
     let creature = match entities
         .get_mut(creature_id)
@@ -463,7 +471,7 @@ fn execute_research(
         .unwrap_or(1.0);
 
     let research_rate = game_data.config.task_execution.research_production_rate;
-    research_rate * dt * efficiency
+    research_rate * room_rate * dt * efficiency
 }
 
 #[cfg(test)]
@@ -514,6 +522,94 @@ mod tests {
 
         assert_eq!(result.manufactured_trap, Some("spike_trap".to_string()));
         assert_eq!(result.materials_change, 0.0);
+    }
+
+    /// A single active room of `room_type` with one creature standing in it,
+    /// tasked to research there.
+    fn research_fixture(
+        game_data: &GameData,
+        room_type: &str,
+    ) -> (EntityId, EntityManager, RoomManager) {
+        let mut entities = EntityManager::new();
+        let monster_data = game_data.monsters.get("warlock").unwrap();
+        let mut creature = CreatureState::new(
+            "warlock".to_string(),
+            1,
+            monster_data.stats.health,
+            monster_data.stats.mana,
+            1,
+        );
+        creature.current_task = Some(Task::Research(7));
+        let creature_id = entities.spawn_creature(TilePos::new(2, 2), creature);
+
+        let mut room_manager = RoomManager::new();
+        let mut room = Room::new(
+            7,
+            room_type.to_string(),
+            [TilePos::new(2, 2)].into_iter().collect::<HashSet<_>>(),
+            Vec::new(),
+        );
+        room.active = true;
+        room_manager.rooms.push(room);
+
+        (creature_id, entities, room_manager)
+    }
+
+    fn research_produced(game_data: &GameData, room_type: &str) -> f32 {
+        let (creature_id, mut entities, room_manager) = research_fixture(game_data, room_type);
+        let player = PlayerState::new(game_data);
+        execute_task(
+            creature_id,
+            &mut entities,
+            &room_manager,
+            &player,
+            game_data,
+            1.0,
+        )
+        .research_change
+    }
+
+    #[test]
+    fn any_room_in_the_research_family_produces_research() {
+        // The point of the generalization: research used to mean
+        // `room_type == "library"`, so a second research room produced nothing
+        // no matter how it was staffed.
+        let game_data = GameData::load().expect("game data should load");
+
+        assert!(research_produced(&game_data, "library") > 0.0);
+        assert!(research_produced(&game_data, "arcane_archive") > 0.0);
+    }
+
+    #[test]
+    fn a_room_outside_the_research_family_produces_none() {
+        let game_data = GameData::load().expect("game data should load");
+        assert_eq!(research_produced(&game_data, "treasury"), 0.0);
+    }
+
+    #[test]
+    fn room_research_rate_scales_output() {
+        // `rooms.json` authored the library's `research_rate: 1.0` against a
+        // struct field named `research_per_minute`, so serde dropped it and
+        // every research room ran at the flat global rate. This is the check
+        // that the authored number reaches the engine.
+        let game_data = GameData::load().expect("game data should load");
+
+        let library = research_produced(&game_data, "library");
+        let archive = research_produced(&game_data, "arcane_archive");
+
+        let library_rate = game_data.rooms["library"].effects.research_rate;
+        let archive_rate = game_data.rooms["arcane_archive"].effects.research_rate;
+        assert!(
+            archive_rate > library_rate,
+            "archive should out-research a library"
+        );
+
+        // Same creature, same dt — the only difference is the room's rate.
+        let expected = library * (archive_rate / library_rate);
+        assert!(
+            (archive - expected).abs() < 1e-4,
+            "archive produced {archive}, expected {expected}"
+        );
     }
 
     #[test]

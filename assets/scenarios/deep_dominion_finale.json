@@ -42,6 +42,7 @@
         "training_hall": { "available": true, "unlocked": true, "owner": "player" },
         "guard_post": { "available": true, "unlocked": true, "owner": "player" },
         "library": { "available": true, "unlocked": true, "owner": "player" },
+        "arcane_archive": { "available": true, "unlocked": false, "owner": "player" },
         "workshop": { "available": true, "unlocked": true, "owner": "player" },
         "ritual_circle": { "available": true, "unlocked": true, "owner": "player" },
         "mana_well": { "available": true, "unlocked": false, "owner": "player" },

@@ -87,14 +87,20 @@ impl SpawnSystem {
 
         // Check for specific rooms to unlock other creatures
         let has_workshop = room_manager.rooms.iter().any(|r| r.room_type == "workshop");
-        let has_library = room_manager.rooms.iter().any(|r| r.room_type == "library");
+        // Any research room draws warlocks, not the library by name — building
+        // an Arcane Archive instead would otherwise silently stop them coming.
+        let has_research_room = room_manager.rooms.iter().any(|r| {
+            crate::engine::room_validator::room_data_for(r, game_data)
+                .map(|data| data.ai.task_type == "research")
+                .unwrap_or(false)
+        });
 
         if has_workshop {
             potential_creatures.push("orc");
             potential_creatures.push("troll");
         }
 
-        if has_library {
+        if has_research_room {
             potential_creatures.push("warlock");
         }
 
