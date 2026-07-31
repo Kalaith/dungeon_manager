@@ -1540,5 +1540,78 @@
         "flicker": true
       }
     }
+  },
+  {
+    "id": "soul_furnace",
+    "name": "Soul Furnace",
+    "description": "Renders the fallen down into raw mana. The graveyard takes what it can store first; the furnace burns the rest.",
+    "category": "magic",
+    "icon": "icons/rooms/soul_furnace.png",
+    "build": {
+      "cost_per_tile": 280,
+      "mana_cost": 0,
+      "min_tiles": 9,
+      "max_tiles": 36,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
+      "construction_time": 0.8
+    },
+    "requirements": {
+      "research": [
+        "soul_rendering"
+      ],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "mana_generation_per_second": 0.15,
+      "mana_per_corpse": 45.0,
+      "happiness_modifier": -6
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        {
+          "tiles": 9,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 25,
+          "multiplier": 1.3
+        }
+      ],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "none",
+      "desirability": 0.2,
+      "max_creatures": 0,
+      "preferred_creatures": [],
+      "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/soul_furnace.png",
+      "wall_sprite": "tiles/soul_furnace.png",
+      "object_spawn": [],
+      "light": {
+        "color": [
+          90,
+          235,
+          150
+        ],
+        "intensity": 0.75,
+        "flicker": true
+      }
+    }
   }
 ]

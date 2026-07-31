@@ -22,7 +22,9 @@
 
 ## Content
 
-- Build the 2 remaining 1.0 rooms from `docs/ROOM_SET.md`. Vault, Mana Well, Leisure Den, Arcane Archive and Combat Pit have shipped. Left: **Soul Furnace** (widen `mana_generation_per_second` past its temple/ritual hardcode, plus a death hook), **Gatehouse** (room-scale door/wall with HP).
+- Build the last 1.0 room from `docs/ROOM_SET.md`: **Gatehouse** — a room-scale door/wall with HP, reusing the door/trap tile logic. The other six (Vault, Mana Well, Leisure Den, Arcane Archive, Combat Pit, Soul Furnace) have shipped.
+- The Soul Furnace burns *hero* corpses only, matching the graveyard. Dead creatures still vanish with nothing to show for them — decide whether your own fallen should be renderable, which is a tone question as much as a balance one.
+- The temple is available in only 1 of 13 missions (`pacts_and_sacrifice`), so its `mana_generation_per_second` and the whole prayer loop are nearly unreachable in the campaign. Either widen its availability or accept that the ritual circle is the real mana room.
 - `execute_sleep`, `execute_eat` and `execute_deposit_gold` still test `room_type ==` a specific room. These are *not* the same edit `research` and `train` were — each needs a data decision first, so don't generalize them mechanically:
   - **sleep** — the `sleep` family is `lair` *and* `kennel`, so widening it lets creatures sleep in kennels. Probably right (a kennel is where beasts sleep), but it interacts with `count_available_lair_tiles`, which sets the creature cap. Decide the cap question first.
   - **eat** — the hatchery is `task_type: "work"`, so there is no `eat` family to match on. Needs a `task_type` reassignment, which changes what `execute_work` sees.

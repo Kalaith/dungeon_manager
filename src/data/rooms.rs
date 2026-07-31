@@ -81,6 +81,10 @@ pub struct EffectsData {
     pub hero_conversion_rate: f32,
     #[serde(default)]
     pub corpse_storage: i32,
+    /// Mana yielded per body rendered down, scaled by room efficiency. A room
+    /// declaring this is a Soul Furnace as far as the engine is concerned.
+    #[serde(default)]
+    pub mana_per_corpse: f32,
     #[serde(default)]
     pub spawns_vampires: bool,
     #[serde(default)]

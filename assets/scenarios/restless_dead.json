@@ -78,6 +78,7 @@
         "arcane_archive": { "available": true, "unlocked": false, "owner": "player" },
         "workshop": { "available": true, "unlocked": true, "owner": "player" },
         "ritual_circle": { "available": true, "unlocked": true, "owner": "player" },
+        "soul_furnace": { "available": true, "unlocked": false, "owner": "player" },
         "mana_well": { "available": true, "unlocked": false, "owner": "player" },
         "kennel": { "available": true, "unlocked": true, "owner": "player" },
         "barracks": { "available": true, "unlocked": true, "owner": "player" },

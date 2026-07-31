@@ -330,5 +330,23 @@
             "traps": []
         },
         "icon": "icons/tech/blood_sport.png"
+    },
+    {
+        "id": "soul_rendering",
+        "name": "Soul Rendering",
+        "description": "Unlocks the Soul Furnace, which burns the fallen for mana.",
+        "cost": 42,
+        "prerequisites": [
+            "demonology"
+        ],
+        "unlocks": {
+            "rooms": [
+                "soul_furnace"
+            ],
+            "spells": [],
+            "creatures": [],
+            "traps": []
+        },
+        "icon": "icons/tech/soul_rendering.png"
     }
 ]

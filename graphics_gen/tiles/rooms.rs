@@ -624,3 +624,93 @@ pub fn create_combat_pit() -> RgbaImage {
     add_noise(&mut img, 9);
     img
 }
+
+/// Soul Furnace - bodies rendered down into mana
+///
+/// Reads against [`create_temple`]'s violet devotional rings: this is industry,
+/// not worship. Iron grate, ash, and a firebox burning the wrong colour.
+pub fn create_soul_furnace() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([42, 38, 40, 255])); // Soot-blackened stone
+    let center_x = TILE_WIDTH / 2;
+    let center_y = TILE_HEIGHT / 2;
+
+    // Drifted ash, heavier at the corners where nobody sweeps
+    for y in 0..TILE_HEIGHT {
+        for x in 0..TILE_WIDTH {
+            let edge = (x.min(TILE_WIDTH - 1 - x)).min(y.min(TILE_HEIGHT - 1 - y));
+            let hash = (x.wrapping_mul(2654435761) ^ y.wrapping_mul(3266489917)) as i32;
+            if edge < 14 && hash % 9 < 2 {
+                img.put_pixel(x, y, Rgba([86, 82, 84, 255]));
+            }
+        }
+    }
+
+    // Iron plate surround, riveted
+    draw_rect(
+        &mut img,
+        8,
+        8,
+        TILE_WIDTH - 16,
+        TILE_HEIGHT - 16,
+        Rgba([64, 60, 62, 255]),
+    );
+    draw_rect(
+        &mut img,
+        8,
+        8,
+        TILE_WIDTH - 16,
+        1,
+        Rgba([104, 100, 102, 255]),
+    );
+    for rivet in (12..TILE_WIDTH - 10).step_by(10) {
+        img.put_pixel(rivet, 10, Rgba([132, 128, 130, 255]));
+        img.put_pixel(rivet, TILE_HEIGHT - 11, Rgba([96, 92, 94, 255]));
+    }
+
+    // The firebox: bars over a heat gradient, so the glow reads as *contained*
+    draw_rect(&mut img, 18, 18, 28, 28, Rgba([22, 18, 20, 255]));
+    for y in 19..45u32 {
+        for x in 19..45u32 {
+            let dx = x as i32 - center_x as i32;
+            let dy = y as i32 - center_y as i32;
+            let falloff = 1.0 - ((dx * dx + dy * dy) as f32).sqrt() / 20.0;
+            if falloff <= 0.0 {
+                continue;
+            }
+            // Raised to a power so the core stays tight and the surround stays
+            // dark — a linear ramp greys out into the iron and reads as fog.
+            let heat = falloff.powf(1.8);
+            // Sickly green at the core over a violet bed: soul-fire, not the
+            // orange the workshop forge already uses.
+            img.put_pixel(
+                x,
+                y,
+                Rgba([
+                    (14.0 + 210.0 * heat) as u8,
+                    (10.0 + 245.0 * heat) as u8,
+                    (26.0 + 180.0 * heat) as u8,
+                    255,
+                ]),
+            );
+        }
+    }
+
+    // Grate bars across the opening
+    for bar_x in (20..46).step_by(6) {
+        draw_rect(&mut img, bar_x, 18, 2, 28, Rgba([34, 30, 32, 255]));
+    }
+
+    // Flue mouths top and bottom, venting what is left of them
+    draw_rect(&mut img, center_x - 4, 2, 8, 5, Rgba([28, 26, 28, 255]));
+    draw_rect(
+        &mut img,
+        center_x - 4,
+        TILE_HEIGHT - 7,
+        8,
+        5,
+        Rgba([28, 26, 28, 255]),
+    );
+
+    add_noise(&mut img, 7);
+    img
+}

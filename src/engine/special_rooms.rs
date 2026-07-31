@@ -14,6 +14,9 @@ pub struct SpecialRoomReport {
     pub mana_generated: f32,
     pub sacrificed_creatures: usize,
     pub corpses_collected: usize,
+    /// Bodies rendered down by a Soul Furnace, over and above what the
+    /// graveyard could store.
+    pub corpses_burned: usize,
     pub vampires_spawned: usize,
     pub scavenged_creatures: usize,
     pub scavenger_progressed: usize,
@@ -27,16 +30,31 @@ pub fn process_special_rooms(
     dt: f32,
 ) -> SpecialRoomReport {
     let mut report = SpecialRoomReport {
-        mana_generated: generate_temple_mana(state, game_data, dt),
+        mana_generated: generate_room_mana(state, game_data, dt),
         ..Default::default()
     };
+
+    report.corpses_collected = collect_graveyard_corpses(state, game_data);
+
+    // After the graveyard, so the furnace only gets the surplus.
+    let (burned, soul_mana) = burn_corpses_in_furnaces(state, game_data);
+    report.corpses_burned = burned;
+    report.mana_generated += soul_mana;
+    if burned > 0 {
+        state.notifications.info(format!(
+            "The Soul Furnace rendered {} {} into {:.0} mana.",
+            burned,
+            if burned == 1 { "body" } else { "bodies" },
+            soul_mana
+        ));
+    }
+
     if report.mana_generated > 0.0 {
         state
             .player
             .add_resources_precise(0.0, report.mana_generated, 0.0, 0.0);
     }
 
-    report.corpses_collected = collect_graveyard_corpses(state, game_data);
     report.vampires_spawned = spawn_vampires_from_corpses(state, game_data);
     if report.vampires_spawned > 0 {
         state.notifications.info(format!(
@@ -108,16 +126,19 @@ pub fn room_object_capacity(room: &Room, game_data: &GameData, object_id: &str) 
     room.tiles.len().max(1)
 }
 
-fn generate_temple_mana(state: &GameState, game_data: &GameData, dt: f32) -> f32 {
+/// Passive mana from every room that declares it.
+///
+/// Used to test `room_type == "temple" || == "ritual_circle"`, so a third
+/// mana-generating room could carry a rate in `rooms.json` and produce
+/// nothing. The effect is the qualifier now, not the room name.
+fn generate_room_mana(state: &GameState, game_data: &GameData, dt: f32) -> f32 {
     state
         .room_manager
         .rooms
         .iter()
-        .filter(|room| {
-            room.active && (room.room_type == "temple" || room.room_type == "ritual_circle")
-        })
+        .filter(|room| room.active)
         .filter_map(|room| {
-            game_data.rooms.get(&room.room_type).map(|room_data| {
+            crate::engine::room_validator::room_data_for(room, game_data).map(|room_data| {
                 room.tiles.len() as f32
                     * room.efficiency
                     * room_data.effects.mana_generation_per_second
@@ -125,6 +146,52 @@ fn generate_temple_mana(state: &GameState, game_data: &GameData, dt: f32) -> f32
             })
         })
         .sum()
+}
+
+/// Bodies left on the floor rendered down into mana by a Soul Furnace.
+///
+/// Runs *after* the graveyard has taken what it can store, so a keeper with
+/// both rooms fills the graveyard first — bodies there become vampires — and
+/// burns only the surplus. The two rooms competing for the same corpses is the
+/// point; it makes the choice between them a real one.
+///
+/// Any room declaring `mana_per_corpse` does this. Where several exist the
+/// best-run one does the work, since a corpse can only burn once.
+fn burn_corpses_in_furnaces(state: &mut GameState, game_data: &GameData) -> (usize, f32) {
+    let mana_per_corpse = state
+        .room_manager
+        .rooms
+        .iter()
+        .filter(|room| room.active)
+        .filter_map(|room| {
+            crate::engine::room_validator::room_data_for(room, game_data)
+                .map(|data| data.effects.mana_per_corpse * room.efficiency)
+        })
+        .fold(0.0f32, f32::max);
+
+    if mana_per_corpse <= 0.0 {
+        return (0, 0.0);
+    }
+
+    let dead_heroes: Vec<EntityId> = state
+        .entities
+        .heroes()
+        .filter(|(_, hero)| hero.health <= 0.0 && !hero.is_captured && !hero.is_converted)
+        .map(|(id, _)| id)
+        .collect();
+
+    if dead_heroes.is_empty() {
+        return (0, 0.0);
+    }
+
+    for hero_id in &dead_heroes {
+        state.entities.remove(*hero_id);
+    }
+
+    (
+        dead_heroes.len(),
+        dead_heroes.len() as f32 * mana_per_corpse,
+    )
 }
 
 fn temple_sacrifice_mana(creature: &CreatureState, game_data: &GameData) -> f32 {
@@ -483,6 +550,108 @@ mod tests {
             .entities
             .creatures()
             .any(|(_, creature)| creature.creature_id == "vampire"));
+    }
+
+    /// `count` dead knights lying on the floor.
+    fn spawn_dead_heroes(state: &mut GameState, count: u32) {
+        for index in 0..count {
+            let mut hero = HeroState::new(
+                "knight".to_string(),
+                1,
+                100.0,
+                10.0,
+                TilePos::new(index as i32, 1),
+                1.0,
+                index as u64,
+            );
+            hero.health = 0.0;
+            state
+                .entities
+                .spawn_hero(TilePos::new(index as i32, 1), hero);
+        }
+    }
+
+    #[test]
+    fn soul_furnace_renders_bodies_into_mana() {
+        let game_data = GameData::load().expect("game data should load");
+        let mut state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+        state
+            .room_manager
+            .rooms
+            .push(active_room(997, "soul_furnace", &[TilePos::new(9, 9)]));
+        state.player.mana = 0;
+        spawn_dead_heroes(&mut state, 3);
+
+        let report = process_special_rooms(&mut state, &game_data, 1.0);
+
+        assert_eq!(report.corpses_burned, 3);
+        let per_corpse = game_data.rooms["soul_furnace"].effects.mana_per_corpse;
+        assert!(report.mana_generated >= per_corpse * 3.0);
+        assert!(state.player.mana > 0);
+        // The bodies are consumed, not left lying.
+        assert_eq!(state.entities.heroes().count(), 0);
+    }
+
+    #[test]
+    fn the_graveyard_takes_bodies_before_the_furnace_burns_them() {
+        // Both rooms want the same corpses. The graveyard stores what it can
+        // and the furnace only gets the surplus — if that order flipped, a
+        // keeper with both rooms could never raise a vampire.
+        let game_data = GameData::load().expect("game data should load");
+        let mut state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+        state
+            .room_manager
+            .rooms
+            .push(active_room(999, "graveyard", &[TilePos::new(5, 5)]));
+        state
+            .room_manager
+            .rooms
+            .push(active_room(997, "soul_furnace", &[TilePos::new(9, 9)]));
+
+        let capacity = graveyard_corpse_capacity(&state, &game_data);
+        assert!(capacity > 0, "the graveyard fixture should store something");
+        spawn_dead_heroes(&mut state, capacity + 2);
+
+        let report = process_special_rooms(&mut state, &game_data, 1.0);
+
+        assert_eq!(report.corpses_collected, capacity as usize);
+        assert_eq!(report.corpses_burned, 2);
+    }
+
+    #[test]
+    fn a_room_without_mana_per_corpse_burns_nothing() {
+        let game_data = GameData::load().expect("game data should load");
+        let mut state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+        state
+            .room_manager
+            .rooms
+            .push(active_room(996, "treasury", &[TilePos::new(9, 9)]));
+        spawn_dead_heroes(&mut state, 3);
+
+        let report = process_special_rooms(&mut state, &game_data, 1.0);
+
+        assert_eq!(report.corpses_burned, 0);
+        assert_eq!(state.entities.heroes().count(), 3);
+    }
+
+    #[test]
+    fn passive_mana_comes_from_the_effect_not_the_room_name() {
+        // `generate_room_mana` used to test for temple/ritual_circle by name,
+        // so a third room could declare a rate and produce nothing.
+        let game_data = GameData::load().expect("game data should load");
+        let mut state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+        state
+            .room_manager
+            .rooms
+            .push(active_room(995, "soul_furnace", &[TilePos::new(9, 9)]));
+
+        let report = process_special_rooms(&mut state, &game_data, 1.0);
+
+        let rate = game_data.rooms["soul_furnace"]
+            .effects
+            .mana_generation_per_second;
+        assert!(rate > 0.0, "the furnace should declare a passive rate");
+        assert!(report.mana_generated > 0.0);
     }
 
     #[test]
