@@ -607,7 +607,7 @@ pub fn print_recommendations(
     }
 
     println!("\n{}", "-".repeat(60));
-    println!("Suggested Changes (from BALANCE_TESTING.md):");
+    println!("Suggested Changes (see TODO.md, balance):");
     println!("  • Room Sell Refund: 5% → 25-50%");
     println!("  • Mana Max Capacity: 0 → 10,000+");
     println!("  • Wave Scaling: 1.5x → 1.25x");

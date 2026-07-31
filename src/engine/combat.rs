@@ -184,7 +184,7 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
                 resistances: hero_data.combat.resistances.clone(),
                 level: hero_state.level,
                 // Hero abilities (HeroAbilityData) have a richer trigger/effect shape than
-                // simple on-hit procs and aren't wired into combat yet; see COMMERCIAL_ROADMAP.md.
+                // simple on-hit procs and aren't wired into combat yet; see TODO.md.
                 abilities: Vec::new(),
             }
         }

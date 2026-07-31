@@ -24,7 +24,7 @@
 //! Some authored triggers ("on_ritual_detected", "on_corruption", "on_corruption_detected",
 //! "on_sneak_attack", "on_trapped") need subsystems this engine doesn't have yet (ritual
 //! detection, corruption, stealth, trap state) — they're valid data but never fire. See
-//! `docs/COMMERCIAL_ROADMAP.md`.
+//! `TODO.md`.
 
 use crate::data::GameData;
 use crate::engine::spell_effects::apply_spell_effect;
