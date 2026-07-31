@@ -23,7 +23,7 @@
 
 ## Content
 
-- Build the 7 picked 1.0 rooms from `docs/ROOM_SET.md` (Vault, Mana Well, Combat Pit, Soul Furnace, Gatehouse, Arcane Archive, Leisure Den) — each needs art, a `rooms.json` entry and a gating tech.
+- Build the 5 remaining 1.0 rooms from `docs/ROOM_SET.md`. Vault and Mana Well have shipped (art + `rooms.json` + gating tech + mission availability, no Rust changes). The rest each need an engine hook as well as art: **Combat Pit** (a second XP-producing `task_type`), **Arcane Archive** (generalize the library's `room_type == "library"` research key into a task family), **Soul Furnace** (widen `mana_generation_per_second` past its temple/ritual hardcode, plus a death hook), **Gatehouse** (room-scale door/wall with HP), **Leisure Den** (blocked on the inert `happiness_modifier` below).
 - Author the remaining `docs/monsters.md` roster (Lich, Balor, Ogre, Shadow Stalker, …). No longer hard-blocked on sprites — un-arted entries render as a placeholder checker, so stats can be authored and playtested first — but each still wants a `graphics_gen/monsters/` generator before it ships.
 - Wire the finished-but-unreachable art: three traps (`fire_trap`, `gas_trap`, `lightning_trap`) need balance entries in `traps.json`, and three hero buildings (`blacksmith`, `guard_tower`, `tavern`) need spawn/destruction rules in `hero_buildings.json`. The allowlist in `tests/asset_manifest_tests.rs` names them.
 - Rooms declare a `visual.wall_sprite` (`tiles/lair_wall.png`, …) that no generator emits and nothing reads. Either generate per-room wall art and render it, or drop the field.

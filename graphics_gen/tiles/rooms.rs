@@ -307,3 +307,114 @@ pub fn create_scavenger() -> RgbaImage {
     add_noise(&mut img, 8);
     img
 }
+
+/// Vault - dense, armoured gold storage
+///
+/// Deliberately unlike [`create_treasury`], which is a bright scatter of loose
+/// coin: the vault is dark plate steel with gold stacked in disciplined rows,
+/// so a glance tells the two storage rooms apart on the map.
+pub fn create_vault() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([58, 60, 68, 255])); // Gunmetal plate
+
+    // Riveted floor plates, quartered
+    for edge in [0u32, TILE_WIDTH / 2] {
+        draw_rect(&mut img, edge, 0, 2, TILE_HEIGHT, Rgba([40, 42, 48, 255]));
+        draw_rect(&mut img, 0, edge, TILE_WIDTH, 2, Rgba([40, 42, 48, 255]));
+    }
+    for rivet_y in (6..TILE_HEIGHT).step_by(16) {
+        for rivet_x in (6..TILE_WIDTH).step_by(16) {
+            img.put_pixel(rivet_x, rivet_y, Rgba([104, 108, 118, 255]));
+        }
+    }
+
+    // Two stacks of ingots, offset so the tile does not read as a grid when
+    // repeated across a room.
+    for (origin_x, origin_y) in [(10u32, 12u32), (36, 38)] {
+        for row in 0..3u32 {
+            // Each row is inset, so the stack reads as a pyramid from above.
+            let inset = row * 3;
+            let bar_y = origin_y + row * 6;
+            draw_rect(
+                &mut img,
+                origin_x + inset,
+                bar_y,
+                18 - inset * 2,
+                4,
+                Rgba([176, 132, 24, 255]),
+            );
+            // Lit top edge and shadowed underside give the bar its thickness.
+            draw_rect(
+                &mut img,
+                origin_x + inset,
+                bar_y,
+                18 - inset * 2,
+                1,
+                Rgba([255, 214, 92, 255]),
+            );
+            draw_rect(
+                &mut img,
+                origin_x + inset,
+                bar_y + 3,
+                18 - inset * 2,
+                1,
+                Rgba([116, 84, 12, 255]),
+            );
+        }
+    }
+
+    add_noise(&mut img, 6);
+    img
+}
+
+/// Mana Well - a stone-rimmed shaft of stored mana
+pub fn create_mana_well() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([34, 36, 52, 255])); // Cold shadowed stone
+    add_noise(&mut img, 10);
+
+    let center_x = TILE_WIDTH / 2;
+    let center_y = TILE_HEIGHT / 2;
+
+    // Rim blocks, then the shaft: successively deeper and bluer toward the
+    // middle so the tile reads as a hole rather than a painted disc.
+    for (radius, color) in [
+        (28u32, Rgba([72, 74, 92, 255])),
+        (25, Rgba([46, 48, 66, 255])),
+        (22, Rgba([22, 30, 58, 255])),
+        (17, Rgba([28, 62, 130, 255])),
+        (12, Rgba([48, 118, 200, 255])),
+        (7, Rgba([120, 200, 245, 255])),
+        (3, Rgba([225, 248, 255, 255])),
+    ] {
+        draw_circle(&mut img, center_x, center_y, radius, color);
+    }
+
+    // Rune notches cut into the rim at the compass points
+    for (dx, dy) in [(0i32, -26i32), (0, 26), (-26, 0), (26, 0)] {
+        draw_rect(
+            &mut img,
+            (center_x as i32 + dx - 2) as u32,
+            (center_y as i32 + dy - 2) as u32,
+            4,
+            4,
+            Rgba([140, 190, 255, 255]),
+        );
+    }
+
+    // Surface glimmer, off-centre so the pool does not look like a target
+    draw_circle(
+        &mut img,
+        center_x - 5,
+        center_y - 6,
+        2,
+        Rgba([200, 235, 255, 255]),
+    );
+    draw_circle(
+        &mut img,
+        center_x + 6,
+        center_y + 4,
+        1,
+        Rgba([190, 228, 255, 255]),
+    );
+
+    img
+}

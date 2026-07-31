@@ -72,11 +72,13 @@
         "lair": { "available": true, "unlocked": true, "owner": "player" },
         "hatchery": { "available": true, "unlocked": true, "owner": "player" },
         "treasury": { "available": true, "unlocked": true, "owner": "player" },
+        "vault": { "available": true, "unlocked": false, "owner": "player" },
         "training_hall": { "available": true, "unlocked": true, "owner": "player" },
         "guard_post": { "available": true, "unlocked": true, "owner": "player" },
         "library": { "available": true, "unlocked": true, "owner": "player" },
         "workshop": { "available": true, "unlocked": true, "owner": "player" },
         "ritual_circle": { "available": true, "unlocked": true, "owner": "player" },
+        "mana_well": { "available": true, "unlocked": false, "owner": "player" },
         "kennel": { "available": true, "unlocked": true, "owner": "player" },
         "barracks": { "available": true, "unlocked": true, "owner": "player" },
         "scavenger": { "available": true, "unlocked": true, "owner": "player" }

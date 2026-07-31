@@ -134,6 +134,9 @@ fn generate_tile_sprites() {
     tiles::save_tile("casino", tiles::create_casino());
     tiles::save_tile("temple", tiles::create_temple());
     tiles::save_tile("scavenger", tiles::create_scavenger());
+    // docs/ROOM_SET.md "Commit" set
+    tiles::save_tile("vault", tiles::create_vault());
+    tiles::save_tile("mana_well", tiles::create_mana_well());
 
     // Traps and doors
     tiles::save_tile("door", tiles::create_door());

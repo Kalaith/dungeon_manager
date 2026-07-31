@@ -78,6 +78,11 @@
           "unlocked": true,
           "owner": "player"
         },
+        "vault": {
+          "available": true,
+          "unlocked": false,
+          "owner": "player"
+        },
         "training_hall": {
           "available": true,
           "unlocked": true,

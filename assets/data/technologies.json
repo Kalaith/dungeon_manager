@@ -147,7 +147,7 @@
     {
         "id": "necromancy",
         "name": "Necromancy",
-        "description": "Raise the Graveyard and animate the dead \u2014 skeletons, zombies, restless ghosts, and hungry vampires.",
+        "description": "Raise the Graveyard and animate the dead — skeletons, zombies, restless ghosts, and hungry vampires.",
         "cost": 40,
         "prerequisites": [
             "ritual_tech"
@@ -173,7 +173,7 @@
     {
         "id": "demonology",
         "name": "Demonology",
-        "description": "Consecrate a Temple and bind the pit's own: succubi, demon-spawn, and bile demons \u2014 and corrupt the very earth.",
+        "description": "Consecrate a Temple and bind the pit's own: succubi, demon-spawn, and bile demons — and corrupt the very earth.",
         "cost": 45,
         "prerequisites": [
             "ritual_tech"
@@ -221,7 +221,7 @@
     {
         "id": "arcane_mastery",
         "name": "Arcane Mastery",
-        "description": "The keeper's highest art \u2014 possess a hero's body, reshape the earth, hex a foe into a chicken \u2014 and call trolls and dark elves to your banner.",
+        "description": "The keeper's highest art — possess a hero's body, reshape the earth, hex a foe into a chicken — and call trolls and dark elves to your banner.",
         "cost": 55,
         "prerequisites": [
             "ritual_tech"
@@ -240,5 +240,41 @@
             "traps": []
         },
         "icon": "icons/tech/arcane_mastery.png"
+    },
+    {
+        "id": "deep_coffers",
+        "name": "Deep Coffers",
+        "description": "Unlocks the Vault, storing far more gold per tile than a treasury.",
+        "cost": 18,
+        "prerequisites": [
+            "training_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "vault"
+            ],
+            "spells": [],
+            "creatures": [],
+            "traps": []
+        },
+        "icon": "icons/tech/deep_coffers.png"
+    },
+    {
+        "id": "mana_binding",
+        "name": "Mana Binding",
+        "description": "Unlocks the Mana Well, deepening your reservoir of mana.",
+        "cost": 28,
+        "prerequisites": [
+            "ritual_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "mana_well"
+            ],
+            "spells": [],
+            "creatures": [],
+            "traps": []
+        },
+        "icon": "icons/tech/mana_binding.png"
     }
 ]

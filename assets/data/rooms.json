@@ -733,7 +733,7 @@
     },
     "requirements": {
       "research": [
-        "torture_tech"
+        "interrogation"
       ],
       "global_rooms_required": [
         "prison"
@@ -1154,6 +1154,148 @@
           160
         ],
         "intensity": 0.6,
+        "flicker": true
+      }
+    }
+  },
+  {
+    "id": "vault",
+    "name": "Vault",
+    "description": "Armoured coffers that hold three times the gold of a treasury in the same floor space, and tempt no one.",
+    "category": "storage",
+    "icon": "icons/rooms/vault.png",
+    "build": {
+      "cost_per_tile": 200,
+      "mana_cost": 0,
+      "min_tiles": 4,
+      "max_tiles": 36,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
+      "construction_time": 0.8
+    },
+    "requirements": {
+      "research": [
+        "deep_coffers"
+      ],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "gold_storage_capacity": 150
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        {
+          "tiles": 4,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 16,
+          "multiplier": 1.2
+        }
+      ],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "none",
+      "desirability": 0.1,
+      "max_creatures": 0,
+      "preferred_creatures": [],
+      "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/vault.png",
+      "wall_sprite": "tiles/vault.png",
+      "object_spawn": [],
+      "light": {
+        "color": [
+          255,
+          200,
+          60
+        ],
+        "intensity": 0.35,
+        "flicker": false
+      }
+    }
+  },
+  {
+    "id": "mana_well",
+    "name": "Mana Well",
+    "description": "A bound shaft that deepens your reservoir of mana.",
+    "category": "magic",
+    "icon": "icons/rooms/mana_well.png",
+    "build": {
+      "cost_per_tile": 180,
+      "mana_cost": 20,
+      "min_tiles": 4,
+      "max_tiles": 36,
+      "dig_required": true,
+      "requires_claimed": true,
+      "can_overlap": false,
+      "allowed_terrain": [
+        "claimed_floor"
+      ],
+      "construction_time": 0.9
+    },
+    "requirements": {
+      "research": [
+        "mana_binding"
+      ],
+      "global_rooms_required": [],
+      "max_instances": 0,
+      "forbidden_if": []
+    },
+    "effects": {
+      "mana_storage_capacity": 60
+    },
+    "scaling": {
+      "per_tile_multiplier": 1.0,
+      "size_thresholds": [
+        {
+          "tiles": 4,
+          "multiplier": 1.0
+        },
+        {
+          "tiles": 16,
+          "multiplier": 1.2
+        }
+      ],
+      "shape_penalties": {}
+    },
+    "ai": {
+      "task_type": "none",
+      "desirability": 0.1,
+      "max_creatures": 0,
+      "preferred_creatures": [],
+      "forbidden_creatures": [],
+      "work_size": [
+        1,
+        1
+      ],
+      "entry_conditions": {}
+    },
+    "visual": {
+      "floor_sprite": "tiles/mana_well.png",
+      "wall_sprite": "tiles/mana_well.png",
+      "object_spawn": [],
+      "light": {
+        "color": [
+          80,
+          160,
+          255
+        ],
+        "intensity": 0.7,
         "flicker": true
       }
     }
