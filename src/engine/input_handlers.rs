@@ -55,13 +55,13 @@ pub fn handle_build_room(
         return;
     }
 
-    let cost = game_data
+    let room_data = game_data
         .rooms
         .get(room_type)
-        .map(|data| data.build.cost_per_tile)
         .unwrap_or_else(|| panic!("Room type '{}' missing in rooms.json", room_type));
+    let (gold_cost, mana_cost) = room_build_cost(room_data, 1);
 
-    let can_build = state.player.gold >= cost;
+    let can_build = state.player.gold >= gold_cost && state.player.mana >= mana_cost;
     let is_valid_tile = if let Some(tile) = state.get_tile(tile_pos) {
         tile.ownership == Ownership::Player
             && tile.room_id.is_none()
@@ -76,12 +76,28 @@ pub fn handle_build_room(
     }
 
     if can_build && is_valid_tile {
-        state.player.gold -= cost;
+        state.player.gold -= gold_cost;
+        state.player.mana -= mana_cost;
         if let Some(tile) = state.get_tile_mut(tile_pos) {
             tile.tile_type = room_type.to_string();
         }
         state.detect_and_update_rooms(game_data);
     }
+}
+
+/// Gold and mana a build action costs.
+///
+/// `cost_per_tile` scales with the footprint, as its name says. `mana_cost`
+/// does not: it is a one-off for consecrating the room, so a nine-tile Mana
+/// Well does not cost nine times the mana of a one-tile one. The field had
+/// never been read at all, so every room with a mana price — temple, ritual
+/// circle, scavenger, Mana Well, Arcane Archive — was being bought with gold
+/// alone.
+fn room_build_cost(room_data: &crate::data::RoomData, tiles: usize) -> (i32, i32) {
+    (
+        room_data.build.cost_per_tile * tiles as i32,
+        room_data.build.mana_cost,
+    )
 }
 
 pub fn handle_build_room_multi(
@@ -97,10 +113,9 @@ pub fn handle_build_room_multi(
         return;
     }
 
-    let cost_per_tile = game_data
+    let room_data = game_data
         .rooms
         .get(room_type)
-        .map(|data| data.build.cost_per_tile)
         .unwrap_or_else(|| panic!("Room type '{}' missing in rooms.json", room_type));
 
     if !state.player.is_room_unlocked(room_type) {
@@ -124,7 +139,7 @@ pub fn handle_build_room_multi(
         .collect();
 
     // Calculate total cost and check if we can afford it
-    let total_cost = cost_per_tile * valid_tiles.len() as i32;
+    let (total_cost, mana_cost) = room_build_cost(room_data, valid_tiles.len());
     if state.player.gold < total_cost {
         eprintln!(
             "Cannot build {}: Not enough gold! Need {}, have {}",
@@ -132,10 +147,18 @@ pub fn handle_build_room_multi(
         );
         return;
     }
+    if state.player.mana < mana_cost {
+        eprintln!(
+            "Cannot build {}: Not enough mana! Need {}, have {}",
+            room_type, mana_cost, state.player.mana
+        );
+        return;
+    }
 
     // Apply the build to all valid tiles
     if !valid_tiles.is_empty() {
         state.player.gold -= total_cost;
+        state.player.mana -= mana_cost;
         for tile_pos in valid_tiles {
             if let Some(tile) = state.get_tile_mut(tile_pos) {
                 tile.tile_type = room_type.to_string();

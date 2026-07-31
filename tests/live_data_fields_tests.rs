@@ -1,117 +1,143 @@
 //! Guards against content-data fields that are parsed and then never read.
 //!
-//! Ten such fields have been found so far, and every one of them turned up by
-//! accident while building something else: six on `EffectsData`
-//! (`happiness_modifier` — twelve rooms carried tuned values that did nothing;
-//! `research_rate`, declared under a name no JSON used, so serde silently
-//! dropped the authored value; `xp_per_minute`; `creature_defense_modifier`;
-//! `sleep_recovery_rate`; `grouping_point`), plus `lockable`, `trigger_type`,
-//! `durability` and `damage_per_second`. The failure mode is always silence:
-//! the data looks authored, the entity looks configured, and nothing reports
-//! that the number goes nowhere.
+//! Ten such fields were found one at a time while building other things, each
+//! by accident: `happiness_modifier` (twelve rooms carried tuned values that
+//! did nothing), `research_rate` (declared under a name no JSON used, so serde
+//! silently dropped the authored value), `xp_per_minute`,
+//! `creature_defense_modifier`, `sleep_recovery_rate`, `grouping_point`,
+//! `lockable`, `trigger_type`, `durability`, `damage_per_second`. The failure
+//! mode is always silence: the data looks authored, the entity looks
+//! configured, and nothing reports that the number goes nowhere.
 //!
-//! Each guarded struct is checked field by field against the rest of `src/`.
-//! That is a coarse signal — it proves a field is referenced, not that the
-//! reference is correct — but it is precisely the signal that was missing, and
-//! it costs nothing.
+//! So this sweeps **every** `pub struct` under `src/data/` rather than a
+//! hand-kept list — a new struct cannot quietly arrive with dead fields. A
+//! field counts as read if its name appears anywhere in `src/` beyond its own
+//! declaration. That is a coarse signal: it proves a field is referenced, not
+//! that the reference is correct. It is still exactly the signal that was
+//! missing, and it costs nothing to keep.
 //!
 //! Run with: cargo test --test live_data_fields_tests
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-/// A content struct whose fields must all be read somewhere.
-struct Guarded {
-    decl: &'static str,
-    struct_name: &'static str,
-    /// Fields knowingly parsed but not yet consumed, each with the reason.
-    /// Shrink these lists; do not grow them. A field belongs here only when the
-    /// subsystem that would read it does not exist yet — every entry below
-    /// corresponds to a named item in TODO.md.
-    unconsumed: &'static [(&'static str, &'static str)],
-}
-
-const GUARDED: &[Guarded] = &[
-    Guarded {
-        decl: "src/data/rooms.rs",
-        struct_name: "EffectsData",
-        unconsumed: &[(
-            "hero_conversion_rate",
-            "prison hero->creature conversion is not built",
-        )],
-    },
-    Guarded {
-        decl: "src/data/traps.rs",
-        struct_name: "TrapEffects",
-        unconsumed: &[
-            (
-                "lockable",
-                "all three doors author it; magical door locking is not built",
-            ),
-            (
-                "trigger_type",
-                "every trap is \"pressure\"; decorative until a second trigger exists",
-            ),
-        ],
-    },
-    Guarded {
-        decl: "src/data/tiles.rs",
-        struct_name: "TileData",
-        unconsumed: &[
-            (
-                "durability",
-                "dig cost comes from config; per-tile durability is a balance change",
-            ),
-            (
-                "damage_per_second",
-                "lava authors 25 but also blocks movement, so nothing can stand in it",
-            ),
-        ],
-    },
-    Guarded {
-        decl: "src/data/monsters.rs",
-        struct_name: "MonsterData",
-        unconsumed: &[],
-    },
+/// Fields parsed but not yet consumed, as `Struct::field`.
+///
+/// Every entry is a real gap rather than an oversight — the subsystem that
+/// would read it does not exist yet — and each maps to a named item in
+/// TODO.md. **Shrink this list; do not grow it.** Adding a name here is a
+/// decision to ship data that does nothing, and should be made deliberately.
+const UNCONSUMED: &[&str] = &[
+    // Room build rules: only `cost_per_tile` and `mana_cost` are enforced, so
+    // rooms ignore terrain restrictions, overlap rules and build time, and
+    // appear the instant they are paid for.
+    "BuildData::dig_required",
+    "BuildData::requires_claimed",
+    "BuildData::can_overlap",
+    "BuildData::allowed_terrain",
+    "BuildData::construction_time",
+    // Room limits and shape scaling — the "room efficiency mechanics" item.
+    "RequirementsData::max_instances",
+    "RequirementsData::forbidden_if",
+    "ScalingData::per_tile_multiplier",
+    // Room AI hints beyond `task_type`/`max_creatures`.
+    "AIData::forbidden_creatures",
+    "AIData::entry_conditions",
+    // Prison hero->creature conversion is not built.
+    "EffectsData::hero_conversion_rate",
+    // Per-room wall art is authored but never generated or drawn.
+    "RoomVisualData::wall_sprite",
+    // Lighting and atmosphere pass.
+    "LightEffect::flicker",
+    // Tiles: dig cost comes from config, and lava blocks movement so nothing
+    // can stand in it to take `damage_per_second`. Fog art is not generated.
+    "TileData::durability",
+    "TileData::damage_per_second",
+    "VisualData::fogged_sprite",
+    "VisualData::animated",
+    "SpecialData::aura",
+    "SpecialData::cannot_be_modified",
+    "SpecialData::triggers_event",
+    // Gem seams pay a flat hardcoded 25 rather than reading this.
+    "ResourceData::mine_value",
+    // Traps: magical door locking is unbuilt, and every trap is "pressure".
+    "TrapEffects::lockable",
+    "TrapEffects::trigger_type",
+    // Hero behaviour model — none of it reaches hero AI.
+    "BehaviorData::trap_awareness",
+    "BehaviorData::door_break_chance",
+    "BehaviorData::light_preference",
+    "BehaviorData::fear_resistance",
+    "BehaviorData::will_fight_to_death",
+    "ThreatResponse::call_for_aid",
+    "HeroStatsData::bravery",
+    "HeroProgressionData::level_range",
+    "HeroProgressionData::elite_variants",
+    // Hero buildings: destruction effects are authored but never applied.
+    "HeroBuildingData::destruction_effect",
+    // Spells: soul cost and targeting restrictions.
+    "SpellCost::souls",
+    "TargetingData::requires_visibility",
+    "TargetingData::valid_targets",
+    // Scenario availability by level.
+    "AvailabilityRule::min_level",
+    // Config knobs with no consumer.
+    "CombatConfig::creature_health_per_level",
+    "CombatConfig::hero_health_per_level",
+    "CombatConfig::counterattack_death_chance",
+    "CombatConfig::counterattack_level_threshold",
+    "CombatConfig::xp_requirement_base",
+    "CreatureAIConfig::mood_attention_threshold",
+    "CreatureAIConfig::need_attention_threshold",
+    "CreatureAIConfig::slap_cooldown",
+    "CreatureAIConfig::base_mood_efficiency",
+    "SpawningConfig::monster_spawner_interval",
+    "TimingConfig::initial_creature_spawn_delay",
 ];
 
 fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-/// Field names declared in `struct <name>` in `rel`.
-fn struct_fields(rel: &str, struct_name: &str) -> Vec<String> {
-    let source = std::fs::read_to_string(project_root().join(rel))
-        .unwrap_or_else(|e| panic!("failed to read {rel}: {e}"));
+/// `(struct name, field name)` for every `pub struct` under `src/data/`.
+fn declared_fields() -> Vec<(String, String)> {
+    let data_dir = project_root().join("src").join("data");
+    let mut files: Vec<PathBuf> = Vec::new();
+    collect_rs(&data_dir, &mut files);
+    files.sort();
 
-    let start = source
-        .find(&format!("struct {struct_name} {{"))
-        .unwrap_or_else(|| panic!("{struct_name} not found in {rel}"));
-    let body_start = start + source[start..].find('{').expect("opening brace");
-    let body_end = body_start
-        + source[body_start..]
-            .find("\n}")
-            .expect("closing brace on its own line");
-    let body = &source[body_start..body_end];
-
-    body.lines()
-        .filter_map(|line| {
-            let line = line.trim();
-            let rest = line.strip_prefix("pub ")?;
-            let name = rest.split(':').next()?.trim();
-            (!name.is_empty() && name.chars().all(|c| c.is_ascii_lowercase() || c == '_'))
-                .then(|| name.to_string())
-        })
-        .collect()
-}
-
-/// Every `.rs` file under `src/`, excluding the one declaring the struct.
-fn source_files_excluding(declaring: &str) -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    collect_rs(&project_root().join("src"), &mut files);
-    let declaring = project_root().join(declaring);
-    files.retain(|path| path != &declaring);
-    files
+    let mut out = Vec::new();
+    for path in files {
+        let source = std::fs::read_to_string(&path).expect("read data source");
+        let mut rest = source.as_str();
+        while let Some(start) = rest.find("pub struct ") {
+            let after = &rest[start + "pub struct ".len()..];
+            let Some(brace) = after.find('{') else { break };
+            let name = after[..brace].trim().to_string();
+            let body = &after[brace..];
+            // Structs are formatted with the closing brace in column 0.
+            let end = body.find("\n}").unwrap_or(body.len());
+            for line in body[..end].lines() {
+                let line = line.trim();
+                let Some(decl) = line.strip_prefix("pub ") else {
+                    continue;
+                };
+                let Some(field) = decl.split(':').next() else {
+                    continue;
+                };
+                let field = field.trim();
+                if !field.is_empty()
+                    && field
+                        .chars()
+                        .all(|c| c.is_ascii_lowercase() || c == '_' || c.is_ascii_digit())
+                {
+                    out.push((name.clone(), field.to_string()));
+                }
+            }
+            rest = &body[end.min(body.len())..];
+        }
+    }
+    out
 }
 
 fn collect_rs(dir: &Path, out: &mut Vec<PathBuf>) {
@@ -127,63 +153,96 @@ fn collect_rs(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-#[test]
-fn every_guarded_data_field_is_read_somewhere() {
-    let mut failures = Vec::new();
+/// The whole of `src/`, concatenated.
+fn all_source() -> String {
+    let mut files = Vec::new();
+    collect_rs(&project_root().join("src"), &mut files);
+    files.sort();
+    files
+        .iter()
+        .map(|path| std::fs::read_to_string(path).expect("read source"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
 
-    for guarded in GUARDED {
-        let fields = struct_fields(guarded.decl, guarded.struct_name);
-        assert!(
-            !fields.is_empty(),
-            "parsed no fields from {}; the struct layout must have changed",
-            guarded.struct_name
-        );
-
-        let sources: Vec<String> = source_files_excluding(guarded.decl)
-            .iter()
-            .map(|path| std::fs::read_to_string(path).expect("read source"))
-            .collect();
-
-        let allowed: BTreeSet<&str> = guarded.unconsumed.iter().map(|(name, _)| *name).collect();
-
-        for field in &fields {
-            let read = sources.iter().any(|source| source.contains(field.as_str()));
-            match (read, allowed.contains(field.as_str())) {
-                (false, false) => failures.push(format!(
-                    "{}::{field} is parsed but read nowhere. Wire it up, delete it \
-(CODE_STANDARDS.md on unused code), or add it to `unconsumed` with a reason.",
-                    guarded.struct_name
-                )),
-                (true, true) => failures.push(format!(
-                    "{}::{field} is listed as unconsumed but is now read. Drop it from the list.",
-                    guarded.struct_name
-                )),
-                _ => {}
-            }
+/// Occurrences of `field` as a whole word. One is the declaration itself.
+fn occurrences(source: &str, field: &str) -> usize {
+    let bytes = source.as_bytes();
+    let mut count = 0;
+    let mut from = 0;
+    while let Some(idx) = source[from..].find(field) {
+        let at = from + idx;
+        let before_ok = at == 0 || !is_word_byte(bytes[at - 1]);
+        let after = at + field.len();
+        let after_ok = after >= bytes.len() || !is_word_byte(bytes[after]);
+        if before_ok && after_ok {
+            count += 1;
         }
+        from = at + field.len();
     }
+    count
+}
 
-    assert!(failures.is_empty(), "\n  {}", failures.join("\n  "));
+fn is_word_byte(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_'
 }
 
 #[test]
-fn unconsumed_lists_name_fields_that_exist() {
-    // Keeps each allowlist from outliving the fields it excuses.
-    let mut stale = Vec::new();
+fn every_data_field_is_read_somewhere() {
+    let fields = declared_fields();
+    assert!(
+        fields.len() > 100,
+        "expected to sweep the whole of src/data, parsed only {} fields",
+        fields.len()
+    );
 
-    for guarded in GUARDED {
-        let fields: BTreeSet<String> = struct_fields(guarded.decl, guarded.struct_name)
-            .into_iter()
-            .collect();
-        for (name, _) in guarded.unconsumed {
-            if !fields.contains(*name) {
-                stale.push(format!("{}::{name}", guarded.struct_name));
-            }
+    let source = all_source();
+    let allowed: BTreeSet<&str> = UNCONSUMED.iter().copied().collect();
+
+    let mut dead = Vec::new();
+    let mut stale_allowance = Vec::new();
+
+    for (struct_name, field) in &fields {
+        let qualified = format!("{struct_name}::{field}");
+        let read = occurrences(&source, field) > 1;
+        match (read, allowed.contains(qualified.as_str())) {
+            (false, false) => dead.push(qualified),
+            (true, true) => stale_allowance.push(qualified),
+            _ => {}
         }
     }
 
+    let mut problems = Vec::new();
+    for name in dead {
+        problems.push(format!(
+            "{name} is parsed but read nowhere. Wire it up, delete it (CODE_STANDARDS.md \
+on unused code), or add it to UNCONSUMED with a reason."
+        ));
+    }
+    for name in stale_allowance {
+        problems.push(format!(
+            "{name} is listed in UNCONSUMED but is now read. Drop it from the list."
+        ));
+    }
+
+    assert!(problems.is_empty(), "\n  {}", problems.join("\n  "));
+}
+
+#[test]
+fn unconsumed_entries_name_fields_that_exist() {
+    // Stops the allowlist outliving the fields it excuses.
+    let declared: BTreeSet<String> = declared_fields()
+        .into_iter()
+        .map(|(s, f)| format!("{s}::{f}"))
+        .collect();
+
+    let stale: Vec<&&str> = UNCONSUMED
+        .iter()
+        .filter(|name| !declared.contains(**name))
+        .collect();
+
     assert!(
         stale.is_empty(),
-        "`unconsumed` names fields that no longer exist: {stale:?}"
+        "UNCONSUMED names fields that no longer exist: {stale:?}"
     );
 }
