@@ -246,7 +246,7 @@ pub fn place_hero_portals(grid: &mut Grid, start_pos: TilePos, config: &MapConfi
             let px = pos.x as usize;
             let py = pos.y as usize;
             if px > 0 && px < width - 1 && py > 0 && py < height - 1 {
-                grid[py][px].tile_type = "hero_portal".to_string();
+                grid[py][px].tile_type = "hero_entrance".to_string();
                 portal_positions.push(pos);
             }
         }

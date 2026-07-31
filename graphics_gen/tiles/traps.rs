@@ -41,6 +41,120 @@ pub fn create_door() -> RgbaImage {
     img
 }
 
+/// Braced door - the plain door reinforced with iron bands and rivets
+pub fn create_braced_door() -> RgbaImage {
+    let mut img = create_door();
+
+    // Two horizontal iron braces across the planks
+    for band_y in [TILE_HEIGHT / 4, TILE_HEIGHT * 3 / 4] {
+        draw_rect(
+            &mut img,
+            4,
+            band_y - 3,
+            TILE_WIDTH - 8,
+            6,
+            Rgba([70, 72, 78, 255]),
+        );
+        // Top edge catches the light, bottom edge falls into shadow
+        draw_rect(
+            &mut img,
+            4,
+            band_y - 3,
+            TILE_WIDTH - 8,
+            1,
+            Rgba([120, 124, 132, 255]),
+        );
+        draw_rect(
+            &mut img,
+            4,
+            band_y + 2,
+            TILE_WIDTH - 8,
+            1,
+            Rgba([40, 42, 46, 255]),
+        );
+        // Rivets
+        for rivet_x in (8..TILE_WIDTH - 8).step_by(12) {
+            img.put_pixel(rivet_x, band_y, Rgba([160, 164, 172, 255]));
+        }
+    }
+
+    img
+}
+
+/// Magic door - a warded door; the planks are barely visible behind the sigil
+pub fn create_magic_door() -> RgbaImage {
+    let mut img = create_door();
+    let cx = TILE_WIDTH / 2;
+    let cy = TILE_HEIGHT / 2;
+
+    // Wash the wood violet so the ward reads as *covering* the door
+    for y in 0..TILE_HEIGHT {
+        for x in 0..TILE_WIDTH {
+            let px = img.get_pixel(x, y).0;
+            img.put_pixel(
+                x,
+                y,
+                Rgba([px[0] / 2 + 30, px[1] / 2 + 15, px[2] / 2 + 55, 255]),
+            );
+        }
+    }
+
+    // Ward: a ring with a bound rune inside
+    for y in 0..TILE_HEIGHT {
+        for x in 0..TILE_WIDTH {
+            let dx = x as i32 - cx as i32;
+            let dy = y as i32 - cy as i32;
+            let dist_sq = dx * dx + dy * dy;
+            if (280..340).contains(&dist_sq) {
+                img.put_pixel(x, y, Rgba([170, 110, 240, 255]));
+            }
+        }
+    }
+    draw_line(
+        &mut img,
+        cx as i32 - 8,
+        cy as i32 - 8,
+        cx as i32 + 8,
+        cy as i32 + 8,
+        Rgba([210, 170, 255, 255]),
+    );
+    draw_line(
+        &mut img,
+        cx as i32 + 8,
+        cy as i32 - 8,
+        cx as i32 - 8,
+        cy as i32 + 8,
+        Rgba([210, 170, 255, 255]),
+    );
+    draw_circle(&mut img, cx, cy, 3, Rgba([245, 225, 255, 255]));
+
+    img
+}
+
+/// Blowgun trap - dart tubes set into the floor around a firing slot
+pub fn create_blowgun_trap() -> RgbaImage {
+    let mut img = create_solid_rock();
+    let cx = TILE_WIDTH / 2;
+    let cy = TILE_HEIGHT / 2;
+
+    // The firing slot: a narrow dark recess
+    draw_rect(&mut img, cx - 14, cy - 4, 28, 8, Rgba([25, 25, 28, 255]));
+    draw_rect(&mut img, cx - 14, cy - 4, 28, 1, Rgba([95, 95, 100, 255]));
+
+    // Three brass tube mouths inside the slot
+    for offset in [-9i32, 0, 9] {
+        let tube_x = (cx as i32 + offset) as u32;
+        draw_circle(&mut img, tube_x, cy, 3, Rgba([120, 95, 45, 255]));
+        draw_circle(&mut img, tube_x, cy, 1, Rgba([15, 15, 15, 255]));
+    }
+
+    // Spent darts scattered on the stone
+    draw_line(&mut img, 12, 50, 20, 46, Rgba([180, 180, 160, 255]));
+    draw_line(&mut img, 44, 14, 52, 18, Rgba([180, 180, 160, 255]));
+
+    img
+}
+
 pub fn create_spike_trap() -> RgbaImage {
     let mut img = create_solid_rock();
     for y in (10..TILE_HEIGHT - 10).step_by(10) {

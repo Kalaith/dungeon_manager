@@ -225,7 +225,7 @@ fn calculate_tile_danger(grid: &Grid, pos: TilePos, radius: f32) -> f32 {
                 } else if tile_type == "water" {
                     let dist = ((dx * dx + dy * dy) as f32).sqrt();
                     danger += 1.0 / (dist + 1.0); // Water is mildly dangerous
-                } else if tile_type == "hero_portal" {
+                } else if tile_type == "hero_entrance" {
                     let dist = ((dx * dx + dy * dy) as f32).sqrt();
                     danger += 5.0 / (dist + 1.0); // Portals are very dangerous
                 }
@@ -244,7 +244,7 @@ fn place_mana_near_portals(grid: &mut Grid) {
     // Find all hero portals
     let portal_positions: Vec<TilePos> = (0..height)
         .flat_map(|y| (0..width).map(move |x| (x, y)))
-        .filter(|&(x, y)| grid[y][x].tile_type == "hero_portal")
+        .filter(|&(x, y)| grid[y][x].tile_type == "hero_entrance")
         .map(|(x, y)| TilePos::new(x as i32, y as i32))
         .collect();
 

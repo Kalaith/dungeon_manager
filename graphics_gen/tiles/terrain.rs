@@ -229,3 +229,75 @@ pub fn create_mana_crystal() -> RgbaImage {
 
     img
 }
+
+/// Hero entrance - the surface breach heroes pour in through
+///
+/// The map generator drops these on the far side of the map and the danger
+/// heuristic treats them as the scariest thing on it, so the tile has to read
+/// as a threat at a glance: a bright cold gate mouth punched through the rock.
+pub fn create_hero_entrance() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([48, 46, 52, 255]));
+    add_fbm_noise(&mut img, 10.0, 4, 18, 909);
+
+    let center_x = TILE_WIDTH / 2;
+    let center_y = TILE_HEIGHT / 2;
+
+    // Stone arch framing the breach, cut back in three receding steps so the
+    // opening reads as a tunnel rather than a painted disc.
+    // Kept dark on purpose: the glow below is the only bright thing on the
+    // tile, so the arch has to stay well under it or the two merge into one
+    // flat disc at 64px.
+    for (radius, color) in [
+        (26u32, Rgba([96, 92, 100, 255])),
+        (22, Rgba([58, 55, 63, 255])),
+        (18, Rgba([26, 24, 30, 255])),
+    ] {
+        draw_circle(&mut img, center_x, center_y, radius, color);
+    }
+
+    // The light beyond: a warm glow falling off sharply toward the arch, so
+    // the mouth of the tunnel keeps a dark rim against the bright centre.
+    for y in 0..TILE_HEIGHT {
+        for x in 0..TILE_WIDTH {
+            let dx = x as i32 - center_x as i32;
+            let dy = y as i32 - center_y as i32;
+            let dist_sq = (dx * dx + dy * dy) as f32;
+            if dist_sq >= 256.0 {
+                continue;
+            }
+            // Squared falloff concentrates the light in the middle instead of
+            // smearing it evenly across the opening.
+            let falloff = (1.0 - dist_sq.sqrt() / 16.0).powi(2);
+            img.put_pixel(
+                x,
+                y,
+                Rgba([
+                    (40.0 + 215.0 * falloff) as u8,
+                    (32.0 + 208.0 * falloff) as u8,
+                    (26.0 + 175.0 * falloff) as u8,
+                    255,
+                ]),
+            );
+        }
+    }
+
+    // Banner pegs at the arch shoulders — someone claimed this doorway
+    draw_rect(
+        &mut img,
+        center_x - 22,
+        center_y - 26,
+        3,
+        9,
+        Rgba([170, 40, 40, 255]),
+    );
+    draw_rect(
+        &mut img,
+        center_x + 19,
+        center_y - 26,
+        3,
+        9,
+        Rgba([170, 40, 40, 255]),
+    );
+
+    img
+}

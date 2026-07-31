@@ -254,3 +254,56 @@ pub fn create_temple() -> RgbaImage {
     add_noise(&mut img, 5);
     img
 }
+
+/// Scavenger room - a lure sigil that draws enemy minions in to defect
+pub fn create_scavenger() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([38, 46, 44, 255])); // Damp green-grey stone
+    let center_x = TILE_WIDTH / 2;
+    let center_y = TILE_HEIGHT / 2;
+
+    // Spokes of inward-marching dashes: the "pull" of the lure. Each arm starts
+    // near the tile edge and closes on the focus crystal, brightening as it
+    // goes, so the eye is dragged to the centre the way the room drags
+    // creatures.
+    for arm in 0..8 {
+        let angle = arm as f32 * std::f32::consts::TAU / 8.0;
+        let (sin_a, cos_a) = angle.sin_cos();
+        for step in 6..30 {
+            // Dashes, not a solid ray — a dotted pull line reads better at 64px.
+            if step % 5 >= 3 {
+                continue;
+            }
+            let radius = step as f32;
+            let px = center_x as f32 + cos_a * radius;
+            let py = center_y as f32 + sin_a * radius;
+            if px < 0.0 || py < 0.0 || px >= TILE_WIDTH as f32 || py >= TILE_HEIGHT as f32 {
+                continue;
+            }
+            // Closer to the centre -> brighter teal.
+            let closeness = 1.0 - (radius / 30.0);
+            let g = (110.0 + 110.0 * closeness) as u8;
+            let b = (100.0 + 90.0 * closeness) as u8;
+            img.put_pixel(px as u32, py as u32, Rgba([40, g, b, 255]));
+        }
+    }
+
+    // Containment ring the sigil is bound inside
+    for y in 0..TILE_HEIGHT {
+        for x in 0..TILE_WIDTH {
+            let dx = x as i32 - center_x as i32;
+            let dy = y as i32 - center_y as i32;
+            let dist_sq = dx * dx + dy * dy;
+            if (600..700).contains(&dist_sq) {
+                img.put_pixel(x, y, Rgba([70, 150, 135, 255]));
+            }
+        }
+    }
+
+    // Focus crystal at the centre (the room's `object_spawn`), lit from within
+    draw_circle(&mut img, center_x, center_y, 7, Rgba([30, 70, 65, 255]));
+    draw_circle(&mut img, center_x, center_y, 5, Rgba([90, 200, 180, 255]));
+    draw_circle(&mut img, center_x, center_y, 2, Rgba([210, 255, 245, 255]));
+
+    add_noise(&mut img, 8);
+    img
+}

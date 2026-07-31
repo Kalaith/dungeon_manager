@@ -101,6 +101,7 @@ fn generate_tile_sprites() {
     tiles::save_tile("water", tiles::create_water());
     tiles::save_tile("bridge", tiles::create_bridge());
     tiles::save_tile("gold_pile", tiles::create_gold_pile());
+    tiles::save_tile("hero_entrance", tiles::create_hero_entrance());
 
     // Floor variations
     tiles::save_tile("corrupted_floor", tiles::create_corrupted_floor());
@@ -132,9 +133,13 @@ fn generate_tile_sprites() {
     tiles::save_tile("torture_chamber", tiles::create_torture_chamber());
     tiles::save_tile("casino", tiles::create_casino());
     tiles::save_tile("temple", tiles::create_temple());
+    tiles::save_tile("scavenger", tiles::create_scavenger());
 
     // Traps and doors
     tiles::save_tile("door", tiles::create_door());
+    tiles::save_tile("braced_door", tiles::create_braced_door());
+    tiles::save_tile("magic_door", tiles::create_magic_door());
+    tiles::save_tile("blowgun_trap", tiles::create_blowgun_trap());
     tiles::save_tile("spike_trap", tiles::create_spike_trap());
     tiles::save_tile("boulder_trap", tiles::create_boulder_trap());
     tiles::save_tile("alarm_trap", tiles::create_alarm_trap());

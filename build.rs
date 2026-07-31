@@ -88,9 +88,7 @@ fn emit_dir_by_filename(out: &mut String, manifest_dir: &str, rel: &str, const_n
         .collect();
     json_files.sort();
 
-    out.push_str(&format!(
-        "pub static {const_name}: &[(&str, &str)] = &[\n"
-    ));
+    out.push_str(&format!("pub static {const_name}: &[(&str, &str)] = &[\n"));
     for path in &json_files {
         println!("cargo:rerun-if-changed={}", path.display());
         let filename = path

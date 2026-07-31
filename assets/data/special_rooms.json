@@ -44,7 +44,7 @@
             "entry_conditions": {}
         },
         "visual": {
-            "floor_sprite": "tiles/dungeon_heart_floor.png",
+            "floor_sprite": "tiles/dungeon_heart.png",
             "wall_sprite": "tiles/dungeon_heart_wall.png",
             "object_spawn": [
                 {

@@ -24,7 +24,9 @@
 ## Content
 
 - Build the 7 picked 1.0 rooms from `docs/ROOM_SET.md` (Vault, Mana Well, Combat Pit, Soul Furnace, Gatehouse, Arcane Archive, Leisure Den) — each needs art, a `rooms.json` entry and a gating tech.
-- Author the remaining `docs/monsters.md` roster (Lich, Balor, Ogre, Shadow Stalker, …) — blocked on new sprites.
+- Author the remaining `docs/monsters.md` roster (Lich, Balor, Ogre, Shadow Stalker, …). No longer hard-blocked on sprites — un-arted entries render as a placeholder checker, so stats can be authored and playtested first — but each still wants a `graphics_gen/monsters/` generator before it ships.
+- Wire the finished-but-unreachable art: three traps (`fire_trap`, `gas_trap`, `lightning_trap`) need balance entries in `traps.json`, and three hero buildings (`blacksmith`, `guard_tower`, `tavern`) need spawn/destruction rules in `hero_buildings.json`. The allowlist in `tests/asset_manifest_tests.rs` names them.
+- Rooms declare a `visual.wall_sprite` (`tiles/lair_wall.png`, …) that no generator emits and nothing reads. Either generate per-room wall art and render it, or drop the field.
 - Spell depth that needs engine hooks: miscasts, hero counter-spells, research-unlocked spell modifiers.
 - Decide the fate of the mod/content-pack system: `mods/load_order.json` ships empty — market it (docs, examples, validation) or cut it.
 - Wire campaign missions to grant *technologies* rather than raw unlocks, so research gates progression.
@@ -44,7 +46,6 @@
 - Lighting and atmosphere pass; the GDD's "warped evil" theming.
 - UI art overhaul — playtest feedback calls the UI dated and Rust-default. Includes real entity rendering, sidebar animation and the minimap viewport.
 - Window icon and title/menu art beyond the single `main_menu_bg.png`.
-- Missing-texture placeholder handling in the resource loader.
 
 ## UI & UX
 

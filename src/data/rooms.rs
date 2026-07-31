@@ -119,6 +119,28 @@ pub struct LightEffect {
     pub flicker: bool,
 }
 
+/// The `rooms.json` id a runtime `room_type` string refers to.
+///
+/// The two agree for every room but the training hall, which the build UI, the
+/// task system and the tile grid all know as `training_room` while the data
+/// calls it `training_hall`. Three call sites used to re-derive this inline;
+/// keep it here so the next place that needs it finds one answer.
+pub fn room_data_id(room_type: &str) -> &str {
+    match room_type {
+        "training_room" => "training_hall",
+        other => other,
+    }
+}
+
+/// The runtime `room_type` / `tile_type` a `rooms.json` id is placed on the
+/// grid as. The inverse of [`room_data_id`].
+pub fn room_tile_type(data_id: &str) -> &str {
+    match data_id {
+        "training_hall" => "training_room",
+        other => other,
+    }
+}
+
 pub fn load_rooms() -> Result<HashMap<String, RoomData>, Box<dyn Error>> {
     let json_content = include_str!("../../assets/data/rooms.json");
     let rooms_vec: Vec<RoomData> = serde_json::from_str(json_content)?;

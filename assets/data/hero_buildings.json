@@ -11,7 +11,7 @@
             "type": "win_game"
         },
         "visual": {
-            "tile": "tiles/town_hall.png"
+            "tile": "tiles/hero_buildings/town_hall.png"
         }
     },
     {
@@ -38,7 +38,7 @@
             "percent": 50
         },
         "visual": {
-            "tile": "tiles/barracks.png"
+            "tile": "tiles/hero_buildings/barracks.png"
         }
     },
     {
@@ -65,7 +65,7 @@
             "percent": 50
         },
         "visual": {
-            "tile": "tiles/archery_range.png"
+            "tile": "tiles/hero_buildings/archery_range.png"
         }
     },
     {
@@ -92,7 +92,7 @@
             "percent": 50
         },
         "visual": {
-            "tile": "tiles/church.png"
+            "tile": "tiles/hero_buildings/church.png"
         }
     },
     {
@@ -119,7 +119,7 @@
             "percent": 50
         },
         "visual": {
-            "tile": "tiles/mage_tower.png"
+            "tile": "tiles/hero_buildings/mage_tower.png"
         }
     },
     {
@@ -135,7 +135,7 @@
             "percent": 20
         },
         "visual": {
-            "tile": "tiles/stable.png"
+            "tile": "tiles/hero_buildings/stable.png"
         }
     },
     {
@@ -152,7 +152,7 @@
             "defense": 2
         },
         "visual": {
-            "tile": "tiles/armory.png"
+            "tile": "tiles/hero_buildings/armory.png"
         }
     },
     {
@@ -167,7 +167,7 @@
             "type": "open_path"
         },
         "visual": {
-            "tile": "tiles/hero_wall.png"
+            "tile": "tiles/hero_buildings/hero_wall.png"
         }
     },
     {
@@ -182,7 +182,7 @@
             "type": "open_path"
         },
         "visual": {
-            "tile": "tiles/hero_gate.png"
+            "tile": "tiles/hero_buildings/hero_gate.png"
         }
     }
 ]

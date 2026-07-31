@@ -32,7 +32,7 @@ pub fn draw_entities(
         }
 
         if let crate::state::entities::EntityType::Structure(structure) = &entity.entity_type {
-            if let Some(texture) = graphics.tile_textures.get(&structure.building_id) {
+            if let Some(texture) = graphics.building_texture(&structure.building_id) {
                 crate::draw_utils::draw_billboard(
                     vec3(x, 0.5, z),
                     vec2(1.0, 1.0),

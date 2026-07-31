@@ -203,11 +203,7 @@ impl GameRenderer {
             InteractionMode::None => "Mode: None (Select tab below)".to_string(),
             InteractionMode::Dig => "Mode: Dig (FREE)".to_string(),
             InteractionMode::BuildRoom(ref room_type) => {
-                let lookup_id = if room_type == "training_room" {
-                    "training_hall"
-                } else {
-                    room_type
-                };
+                let lookup_id = crate::data::rooms::room_data_id(room_type);
                 let cost = self.get_room_cost(lookup_id, game_data.as_ref());
                 format!("Mode: Build {} ({}g)", room_type, cost)
             }
@@ -301,7 +297,7 @@ impl GameRenderer {
                             creature_state.visual_seed,
                         ),
                     crate::state::entities::EntityType::Structure(s) => {
-                        graphics.tile_textures.get(&s.building_id).cloned()
+                        graphics.building_texture(&s.building_id).cloned()
                     }
                     crate::state::entities::EntityType::ResourcePile(_) => {
                         graphics.tile_textures.get("gold_pile").cloned()
@@ -418,8 +414,19 @@ impl GameRenderer {
                     continue;
                 }
 
-                // Get texture for this tile type
-                let texture_opt = graphics.tile_textures.get(&tile.tile_type);
+                // Get texture for this tile type. `barracks` names both a
+                // player room and a hero-base building, so ownership is what
+                // picks the art — the tile type alone cannot tell them apart.
+                let texture_opt = if tile.ownership == Ownership::Enemy {
+                    graphics
+                        .building_texture(&tile.tile_type)
+                        .or_else(|| graphics.tile_textures.get(&tile.tile_type))
+                } else {
+                    graphics
+                        .tile_textures
+                        .get(&tile.tile_type)
+                        .or_else(|| graphics.building_texture(&tile.tile_type))
+                };
 
                 // Determine visible color based on Fog of War settings
                 let fog_enabled = game_data.config.fog_of_war.enabled && state.cheat_fog_enabled;
@@ -496,14 +503,31 @@ impl GameRenderer {
                             WHITE
                         };
 
+                        let is_door = matches!(
+                            trap.trap_type.as_str(),
+                            "door" | "braced_door" | "magic_door"
+                        );
+
                         if let Some(trap_texture) = graphics.tile_textures.get(&trap.trap_type) {
-                            // Draw trap slightly above floor, smaller size to fit well
-                            draw_plane(
-                                vec3(pos_x, 0.05, pos_z),
-                                vec2(0.6, 0.6), // Reduced from 0.8
-                                Some(trap_texture),
-                                trap_color,
-                            );
+                            if is_door {
+                                // A door fills the corridor it blocks, so it
+                                // keeps the full block the untextured fallback
+                                // always drew rather than lying flat like a trap.
+                                draw_cube(
+                                    vec3(pos_x, 0.5, pos_z),
+                                    vec3(1.0, 1.0, 1.0),
+                                    Some(trap_texture),
+                                    trap_color,
+                                );
+                            } else {
+                                // Draw trap slightly above floor, smaller size to fit well
+                                draw_plane(
+                                    vec3(pos_x, 0.05, pos_z),
+                                    vec2(0.6, 0.6), // Reduced from 0.8
+                                    Some(trap_texture),
+                                    trap_color,
+                                );
+                            }
                         } else {
                             // Fallback if texture missing (e.g. doors)
                             // Draw a colored box - User requested "full square" for now

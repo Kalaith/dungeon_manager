@@ -238,11 +238,7 @@ pub fn draw_drag_tooltip(
                         && tile.room_id.is_none()
                         && tile_types::can_build_room(&tile.tile_type, game_data)
                     {
-                        let lookup_id = if room_type == "training_room" {
-                            "training_hall"
-                        } else {
-                            room_type
-                        };
+                        let lookup_id = crate::data::rooms::room_data_id(room_type);
                         let cost = get_room_cost(lookup_id, Some(game_data));
                         total_cost += cost;
                         tile_count += 1;
@@ -277,11 +273,7 @@ pub fn draw_drag_tooltip(
                         if let Some(room) =
                             state.room_manager.rooms.iter().find(|r| r.id == room_id)
                         {
-                            let lookup_id = if room.room_type == "training_room" {
-                                "training_hall"
-                            } else {
-                                &room.room_type
-                            };
+                            let lookup_id = crate::data::rooms::room_data_id(&room.room_type);
                             let cost = get_room_cost(lookup_id, Some(game_data));
                             total_cost -= cost / 2; // Negative cost = Gain
                             tile_count += 1;

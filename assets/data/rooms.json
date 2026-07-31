@@ -59,7 +59,7 @@
       }
     },
     "visual": {
-      "floor_sprite": "tiles/lair_floor.png",
+      "floor_sprite": "tiles/lair.png",
       "wall_sprite": "tiles/lair_wall.png",
       "object_spawn": [
         {
@@ -138,7 +138,7 @@
       "entry_conditions": {}
     },
     "visual": {
-      "floor_sprite": "tiles/hatchery_floor.png",
+      "floor_sprite": "tiles/hatchery.png",
       "wall_sprite": "tiles/hatchery_wall.png",
       "object_spawn": [
         {
@@ -213,7 +213,7 @@
       "entry_conditions": {}
     },
     "visual": {
-      "floor_sprite": "tiles/treasury_floor.png",
+      "floor_sprite": "tiles/treasury.png",
       "wall_sprite": "tiles/treasury_wall.png",
       "object_spawn": [
         {
@@ -290,7 +290,7 @@
       "entry_conditions": {}
     },
     "visual": {
-      "floor_sprite": "tiles/library_floor.png",
+      "floor_sprite": "tiles/library.png",
       "wall_sprite": "tiles/library_wall.png",
       "object_spawn": [
         {
@@ -368,7 +368,7 @@
       "entry_conditions": {}
     },
     "visual": {
-      "floor_sprite": "tiles/workshop_floor.png",
+      "floor_sprite": "tiles/workshop.png",
       "wall_sprite": "tiles/workshop_wall.png",
       "object_spawn": [
         {
@@ -458,7 +458,7 @@
       }
     },
     "visual": {
-      "floor_sprite": "tiles/training_hall_floor.png",
+      "floor_sprite": "tiles/training_room.png",
       "wall_sprite": "tiles/training_hall_wall.png",
       "object_spawn": [
         {
@@ -533,7 +533,7 @@
       "entry_conditions": {}
     },
     "visual": {
-      "floor_sprite": "tiles/prison_floor.png",
+      "floor_sprite": "tiles/prison.png",
       "wall_sprite": "tiles/prison_wall.png",
       "object_spawn": [
         {
@@ -607,7 +607,7 @@
       "entry_conditions": {}
     },
     "visual": {
-      "floor_sprite": "tiles/guard_post_floor.png",
+      "floor_sprite": "tiles/guard_post.png",
       "wall_sprite": "tiles/guard_post_wall.png",
       "object_spawn": [
         {
@@ -693,7 +693,7 @@
       }
     },
     "visual": {
-      "floor_sprite": "tiles/ritual_circle_floor.png",
+      "floor_sprite": "tiles/ritual_circle.png",
       "wall_sprite": "tiles/ritual_circle_wall.png",
       "object_spawn": [
         {
@@ -770,7 +770,7 @@
       "entry_conditions": {}
     },
     "visual": {
-      "floor_sprite": "tiles/torture_floor.png",
+      "floor_sprite": "tiles/torture_chamber.png",
       "wall_sprite": "tiles/torture_wall.png",
       "object_spawn": [
         {
@@ -968,7 +968,7 @@
       "entry_conditions": {}
     },
     "visual": {
-      "floor_sprite": "tiles/barracks.png",
+      "floor_sprite": "tiles/dungeon_barracks.png",
       "wall_sprite": "tiles/barracks_wall.png",
       "object_spawn": [],
       "light": {
