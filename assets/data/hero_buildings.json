@@ -1,188 +1,259 @@
 [
-    {
-        "id": "town_hall",
-        "name": "Town Hall",
-        "description": "The heart of the hero base. Destroy it to win the game!",
-        "hp": 500,
-        "width": 3,
-        "height": 3,
-        "spawn_triggers": [],
-        "destruction_effect": {
-            "type": "win_game"
-        },
-        "visual": {
-            "tile": "tiles/hero_buildings/town_hall.png"
-        }
+  {
+    "id": "town_hall",
+    "name": "Town Hall",
+    "description": "The heart of the hero base. Destroy it to win the game!",
+    "hp": 500,
+    "width": 3,
+    "height": 3,
+    "spawn_triggers": [],
+    "destruction_effect": {
+      "type": "win_game"
     },
-    {
-        "id": "barracks",
-        "name": "Barracks",
-        "description": "Spawns melee infantry to assault your dungeon.",
-        "hp": 200,
-        "width": 3,
-        "height": 3,
-        "spawn_triggers": [
-            {
-                "hero_id": "knight",
-                "spawn_rate_seconds": 120,
-                "max_active": 2
-            },
-            {
-                "hero_id": "peasant_militia",
-                "spawn_rate_seconds": 60,
-                "max_active": 5
-            }
-        ],
-        "destruction_effect": {
-            "type": "reduce_spawn_rate",
-            "percent": 50
-        },
-        "visual": {
-            "tile": "tiles/hero_buildings/barracks.png"
-        }
-    },
-    {
-        "id": "archery_range",
-        "name": "Archery Range",
-        "description": "Spawns ranged units to harass your minions.",
-        "hp": 150,
-        "width": 3,
-        "height": 3,
-        "spawn_triggers": [
-            {
-                "hero_id": "archer",
-                "spawn_rate_seconds": 90,
-                "max_active": 2
-            },
-            {
-                "hero_id": "scout",
-                "spawn_rate_seconds": 80,
-                "max_active": 3
-            }
-        ],
-        "destruction_effect": {
-            "type": "reduce_spawn_rate",
-            "percent": 50
-        },
-        "visual": {
-            "tile": "tiles/hero_buildings/archery_range.png"
-        }
-    },
-    {
-        "id": "church",
-        "name": "Church",
-        "description": "Spawns healers and holy warriors.",
-        "hp": 200,
-        "width": 3,
-        "height": 3,
-        "spawn_triggers": [
-            {
-                "hero_id": "acolyte",
-                "spawn_rate_seconds": 100,
-                "max_active": 2
-            },
-            {
-                "hero_id": "battle_cleric",
-                "spawn_rate_seconds": 180,
-                "max_active": 1
-            }
-        ],
-        "destruction_effect": {
-            "type": "reduce_spawn_rate",
-            "percent": 50
-        },
-        "visual": {
-            "tile": "tiles/hero_buildings/church.png"
-        }
-    },
-    {
-        "id": "mage_tower",
-        "name": "Mage Tower",
-        "description": "Spawns powerful spellcasters.",
-        "hp": 250,
-        "width": 3,
-        "height": 3,
-        "spawn_triggers": [
-            {
-                "hero_id": "wizard",
-                "spawn_rate_seconds": 240,
-                "max_active": 1
-            },
-            {
-                "hero_id": "archmage",
-                "spawn_rate_seconds": 600,
-                "max_active": 1
-            }
-        ],
-        "destruction_effect": {
-            "type": "reduce_spawn_rate",
-            "percent": 50
-        },
-        "visual": {
-            "tile": "tiles/hero_buildings/mage_tower.png"
-        }
-    },
-    {
-        "id": "stable",
-        "name": "Stables",
-        "description": "Increases the movement speed of invading heroes.",
-        "hp": 150,
-        "width": 2,
-        "height": 2,
-        "spawn_triggers": [],
-        "destruction_effect": {
-            "type": "reduce_hero_speed",
-            "percent": 20
-        },
-        "visual": {
-            "tile": "tiles/hero_buildings/stable.png"
-        }
-    },
-    {
-        "id": "armory",
-        "name": "Armory",
-        "description": "Provides better equipment to heroes.",
-        "hp": 175,
-        "width": 2,
-        "height": 2,
-        "spawn_triggers": [],
-        "destruction_effect": {
-            "type": "reduce_hero_stats",
-            "attack": 2,
-            "defense": 2
-        },
-        "visual": {
-            "tile": "tiles/hero_buildings/armory.png"
-        }
-    },
-    {
-        "id": "hero_wall",
-        "name": "Wall",
-        "description": "A sturdy fortification blocking movement.",
-        "hp": 100,
-        "width": 1,
-        "height": 1,
-        "spawn_triggers": [],
-        "destruction_effect": {
-            "type": "open_path"
-        },
-        "visual": {
-            "tile": "tiles/hero_buildings/hero_wall.png"
-        }
-    },
-    {
-        "id": "hero_gate",
-        "name": "Gate",
-        "description": "A reinforced gate allowing heroes to pass.",
-        "hp": 300,
-        "width": 3,
-        "height": 1,
-        "spawn_triggers": [],
-        "destruction_effect": {
-            "type": "open_path"
-        },
-        "visual": {
-            "tile": "tiles/hero_buildings/hero_gate.png"
-        }
+    "visual": {
+      "tile": "tiles/hero_buildings/town_hall.png"
     }
+  },
+  {
+    "id": "barracks",
+    "name": "Barracks",
+    "description": "Spawns melee infantry to assault your dungeon.",
+    "hp": 200,
+    "width": 3,
+    "height": 3,
+    "spawn_triggers": [
+      {
+        "hero_id": "knight",
+        "spawn_rate_seconds": 120,
+        "max_active": 2
+      },
+      {
+        "hero_id": "peasant_militia",
+        "spawn_rate_seconds": 60,
+        "max_active": 5
+      }
+    ],
+    "destruction_effect": {
+      "type": "reduce_spawn_rate",
+      "percent": 50
+    },
+    "visual": {
+      "tile": "tiles/hero_buildings/barracks.png"
+    }
+  },
+  {
+    "id": "archery_range",
+    "name": "Archery Range",
+    "description": "Spawns ranged units to harass your minions.",
+    "hp": 150,
+    "width": 3,
+    "height": 3,
+    "spawn_triggers": [
+      {
+        "hero_id": "archer",
+        "spawn_rate_seconds": 90,
+        "max_active": 2
+      },
+      {
+        "hero_id": "scout",
+        "spawn_rate_seconds": 80,
+        "max_active": 3
+      }
+    ],
+    "destruction_effect": {
+      "type": "reduce_spawn_rate",
+      "percent": 50
+    },
+    "visual": {
+      "tile": "tiles/hero_buildings/archery_range.png"
+    }
+  },
+  {
+    "id": "church",
+    "name": "Church",
+    "description": "Spawns healers and holy warriors.",
+    "hp": 200,
+    "width": 3,
+    "height": 3,
+    "spawn_triggers": [
+      {
+        "hero_id": "acolyte",
+        "spawn_rate_seconds": 100,
+        "max_active": 2
+      },
+      {
+        "hero_id": "battle_cleric",
+        "spawn_rate_seconds": 180,
+        "max_active": 1
+      }
+    ],
+    "destruction_effect": {
+      "type": "reduce_spawn_rate",
+      "percent": 50
+    },
+    "visual": {
+      "tile": "tiles/hero_buildings/church.png"
+    }
+  },
+  {
+    "id": "mage_tower",
+    "name": "Mage Tower",
+    "description": "Spawns powerful spellcasters.",
+    "hp": 250,
+    "width": 3,
+    "height": 3,
+    "spawn_triggers": [
+      {
+        "hero_id": "wizard",
+        "spawn_rate_seconds": 240,
+        "max_active": 1
+      },
+      {
+        "hero_id": "archmage",
+        "spawn_rate_seconds": 600,
+        "max_active": 1
+      }
+    ],
+    "destruction_effect": {
+      "type": "reduce_spawn_rate",
+      "percent": 50
+    },
+    "visual": {
+      "tile": "tiles/hero_buildings/mage_tower.png"
+    }
+  },
+  {
+    "id": "stable",
+    "name": "Stables",
+    "description": "Increases the movement speed of invading heroes.",
+    "hp": 150,
+    "width": 2,
+    "height": 2,
+    "spawn_triggers": [],
+    "destruction_effect": {
+      "type": "reduce_hero_speed",
+      "percent": 20
+    },
+    "visual": {
+      "tile": "tiles/hero_buildings/stable.png"
+    }
+  },
+  {
+    "id": "armory",
+    "name": "Armory",
+    "description": "Provides better equipment to heroes.",
+    "hp": 175,
+    "width": 2,
+    "height": 2,
+    "spawn_triggers": [],
+    "destruction_effect": {
+      "type": "reduce_hero_stats",
+      "attack": 2,
+      "defense": 2
+    },
+    "visual": {
+      "tile": "tiles/hero_buildings/armory.png"
+    }
+  },
+  {
+    "id": "hero_wall",
+    "name": "Wall",
+    "description": "A sturdy fortification blocking movement.",
+    "hp": 100,
+    "width": 1,
+    "height": 1,
+    "spawn_triggers": [],
+    "destruction_effect": {
+      "type": "open_path"
+    },
+    "visual": {
+      "tile": "tiles/hero_buildings/hero_wall.png"
+    }
+  },
+  {
+    "id": "hero_gate",
+    "name": "Gate",
+    "description": "A reinforced gate allowing heroes to pass.",
+    "hp": 300,
+    "width": 3,
+    "height": 1,
+    "spawn_triggers": [],
+    "destruction_effect": {
+      "type": "open_path"
+    },
+    "visual": {
+      "tile": "tiles/hero_buildings/hero_gate.png"
+    }
+  },
+  {
+    "id": "guard_tower",
+    "name": "Guard Tower",
+    "description": "Watches the approach and drips a steady trickle of archers and scouts.",
+    "hp": 220,
+    "width": 2,
+    "height": 2,
+    "spawn_triggers": [
+      {
+        "hero_id": "archer",
+        "spawn_rate_seconds": 150,
+        "max_active": 2
+      },
+      {
+        "hero_id": "scout",
+        "spawn_rate_seconds": 75,
+        "max_active": 3
+      }
+    ],
+    "destruction_effect": {
+      "type": "reduce_spawn_rate",
+      "percent": 30
+    },
+    "visual": {
+      "tile": "tiles/hero_buildings/guard_tower.png"
+    }
+  },
+  {
+    "id": "blacksmith",
+    "name": "Blacksmith",
+    "description": "Forges the arms the armory hands out. Breaking it dulls every blade above.",
+    "hp": 190,
+    "width": 2,
+    "height": 2,
+    "spawn_triggers": [],
+    "destruction_effect": {
+      "type": "reduce_hero_stats",
+      "attack": 3,
+      "defense": 1
+    },
+    "visual": {
+      "tile": "tiles/hero_buildings/blacksmith.png"
+    }
+  },
+  {
+    "id": "tavern",
+    "name": "Tavern",
+    "description": "Where the levy is recruited over a drink. Cheap heroes, and a lot of them.",
+    "hp": 140,
+    "width": 2,
+    "height": 2,
+    "spawn_triggers": [
+      {
+        "hero_id": "peasant_militia",
+        "spawn_rate_seconds": 45,
+        "max_active": 6
+      },
+      {
+        "hero_id": "rogue",
+        "spawn_rate_seconds": 180,
+        "max_active": 1
+      }
+    ],
+    "destruction_effect": {
+      "type": "reduce_spawn_rate",
+      "percent": 40
+    },
+    "visual": {
+      "tile": "tiles/hero_buildings/tavern.png"
+    }
+  }
 ]

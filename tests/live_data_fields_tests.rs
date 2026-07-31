@@ -1,31 +1,79 @@
-//! Guards against room-effect fields that are parsed and then never read.
+//! Guards against content-data fields that are parsed and then never read.
 //!
-//! Six `EffectsData` fields have shipped dead so far, and every one was found
-//! by accident while building something else: `happiness_modifier` (twelve
-//! rooms carried tuned values that did nothing), `research_rate` (declared
-//! under a name no JSON used, so serde silently dropped the authored value),
-//! `xp_per_minute`, `creature_defense_modifier`, `sleep_recovery_rate` and
-//! `grouping_point`. The failure mode is always silence: the data looks
-//! authored, the room looks configured, and nothing reports that the number
-//! goes nowhere.
+//! Ten such fields have been found so far, and every one of them turned up by
+//! accident while building something else: six on `EffectsData`
+//! (`happiness_modifier` — twelve rooms carried tuned values that did nothing;
+//! `research_rate`, declared under a name no JSON used, so serde silently
+//! dropped the authored value; `xp_per_minute`; `creature_defense_modifier`;
+//! `sleep_recovery_rate`; `grouping_point`), plus `lockable`, `trigger_type`,
+//! `durability` and `damage_per_second`. The failure mode is always silence:
+//! the data looks authored, the entity looks configured, and nothing reports
+//! that the number goes nowhere.
 //!
-//! This reads the struct definition and checks each field is mentioned
-//! somewhere outside it. That is a coarse signal — it proves a field is
-//! referenced, not that the reference is correct — but it is exactly the
-//! signal that was missing, and it costs nothing.
+//! Each guarded struct is checked field by field against the rest of `src/`.
+//! That is a coarse signal — it proves a field is referenced, not that the
+//! reference is correct — but it is precisely the signal that was missing, and
+//! it costs nothing.
 //!
 //! Run with: cargo test --test live_data_fields_tests
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-/// Fields knowingly parsed but not yet consumed, with the reason. Shrink this
-/// list; do not grow it. A field belongs here only when the subsystem that
-/// would read it does not exist yet.
-const KNOWN_UNCONSUMED: &[(&str, &str)] = &[(
-    "hero_conversion_rate",
-    "prison hero->creature conversion is not built; see TODO.md",
-)];
+/// A content struct whose fields must all be read somewhere.
+struct Guarded {
+    decl: &'static str,
+    struct_name: &'static str,
+    /// Fields knowingly parsed but not yet consumed, each with the reason.
+    /// Shrink these lists; do not grow them. A field belongs here only when the
+    /// subsystem that would read it does not exist yet — every entry below
+    /// corresponds to a named item in TODO.md.
+    unconsumed: &'static [(&'static str, &'static str)],
+}
+
+const GUARDED: &[Guarded] = &[
+    Guarded {
+        decl: "src/data/rooms.rs",
+        struct_name: "EffectsData",
+        unconsumed: &[(
+            "hero_conversion_rate",
+            "prison hero->creature conversion is not built",
+        )],
+    },
+    Guarded {
+        decl: "src/data/traps.rs",
+        struct_name: "TrapEffects",
+        unconsumed: &[
+            (
+                "lockable",
+                "all three doors author it; magical door locking is not built",
+            ),
+            (
+                "trigger_type",
+                "every trap is \"pressure\"; decorative until a second trigger exists",
+            ),
+        ],
+    },
+    Guarded {
+        decl: "src/data/tiles.rs",
+        struct_name: "TileData",
+        unconsumed: &[
+            (
+                "durability",
+                "dig cost comes from config; per-tile durability is a balance change",
+            ),
+            (
+                "damage_per_second",
+                "lava authors 25 but also blocks movement, so nothing can stand in it",
+            ),
+        ],
+    },
+    Guarded {
+        decl: "src/data/monsters.rs",
+        struct_name: "MonsterData",
+        unconsumed: &[],
+    },
+];
 
 fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -80,63 +128,62 @@ fn collect_rs(dir: &Path, out: &mut Vec<PathBuf>) {
 }
 
 #[test]
-fn every_room_effect_field_is_read_somewhere() {
-    const DECL: &str = "src/data/rooms.rs";
-    let fields = struct_fields(DECL, "EffectsData");
-    assert!(
-        fields.len() > 10,
-        "expected to parse the EffectsData fields, got {fields:?}"
-    );
+fn every_guarded_data_field_is_read_somewhere() {
+    let mut failures = Vec::new();
 
-    let sources: Vec<String> = source_files_excluding(DECL)
-        .iter()
-        .map(|path| std::fs::read_to_string(path).expect("read source"))
-        .collect();
+    for guarded in GUARDED {
+        let fields = struct_fields(guarded.decl, guarded.struct_name);
+        assert!(
+            !fields.is_empty(),
+            "parsed no fields from {}; the struct layout must have changed",
+            guarded.struct_name
+        );
 
-    let allowed: BTreeSet<&str> = KNOWN_UNCONSUMED.iter().map(|(name, _)| *name).collect();
+        let sources: Vec<String> = source_files_excluding(guarded.decl)
+            .iter()
+            .map(|path| std::fs::read_to_string(path).expect("read source"))
+            .collect();
 
-    let mut dead = Vec::new();
-    let mut needlessly_allowed = Vec::new();
+        let allowed: BTreeSet<&str> = guarded.unconsumed.iter().map(|(name, _)| *name).collect();
 
-    for field in &fields {
-        let read = sources.iter().any(|source| source.contains(field.as_str()));
-        match (read, allowed.contains(field.as_str())) {
-            (false, false) => dead.push(field.clone()),
-            // An allowlisted field that is now read: the note is stale.
-            (true, true) => needlessly_allowed.push(field.clone()),
-            _ => {}
+        for field in &fields {
+            let read = sources.iter().any(|source| source.contains(field.as_str()));
+            match (read, allowed.contains(field.as_str())) {
+                (false, false) => failures.push(format!(
+                    "{}::{field} is parsed but read nowhere. Wire it up, delete it \
+(CODE_STANDARDS.md on unused code), or add it to `unconsumed` with a reason.",
+                    guarded.struct_name
+                )),
+                (true, true) => failures.push(format!(
+                    "{}::{field} is listed as unconsumed but is now read. Drop it from the list.",
+                    guarded.struct_name
+                )),
+                _ => {}
+            }
+        }
+    }
+
+    assert!(failures.is_empty(), "\n  {}", failures.join("\n  "));
+}
+
+#[test]
+fn unconsumed_lists_name_fields_that_exist() {
+    // Keeps each allowlist from outliving the fields it excuses.
+    let mut stale = Vec::new();
+
+    for guarded in GUARDED {
+        let fields: BTreeSet<String> = struct_fields(guarded.decl, guarded.struct_name)
+            .into_iter()
+            .collect();
+        for (name, _) in guarded.unconsumed {
+            if !fields.contains(*name) {
+                stale.push(format!("{}::{name}", guarded.struct_name));
+            }
         }
     }
 
     assert!(
-        dead.is_empty(),
-        "room effects parsed from rooms.json but read nowhere — either wire \
-         them up or delete the field (see CODE_STANDARDS.md on unused code):\n  {}",
-        dead.join("\n  ")
-    );
-    assert!(
-        needlessly_allowed.is_empty(),
-        "these are listed in KNOWN_UNCONSUMED but are now read — drop them \
-         from the list:\n  {}",
-        needlessly_allowed.join("\n  ")
-    );
-}
-
-#[test]
-fn known_unconsumed_fields_still_exist() {
-    // Keeps the allowlist from outliving the fields it excuses.
-    let fields: BTreeSet<String> = struct_fields("src/data/rooms.rs", "EffectsData")
-        .into_iter()
-        .collect();
-
-    let stale: Vec<&str> = KNOWN_UNCONSUMED
-        .iter()
-        .map(|(name, _)| *name)
-        .filter(|name| !fields.contains(*name))
-        .collect();
-
-    assert!(
         stale.is_empty(),
-        "KNOWN_UNCONSUMED names fields that no longer exist: {stale:?}"
+        "`unconsumed` names fields that no longer exist: {stale:?}"
     );
 }
