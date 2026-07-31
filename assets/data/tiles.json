@@ -71,7 +71,8 @@
     "supports_rooms": false,
     "resources": {
       "type": "gold",
-      "amount": 750
+      "amount": 750,
+      "mine_value": 100
     },
     "durability": 150,
     "visual": {
@@ -108,7 +109,8 @@
     "supports_rooms": false,
     "resources": {
       "type": "mana",
-      "amount": 250
+      "amount": 250,
+      "mine_value": 20
     },
     "durability": 200,
     "visual": {

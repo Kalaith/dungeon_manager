@@ -496,8 +496,34 @@ fn process_digging(
     }
 }
 
+/// What one dig of this tile type yields.
+///
+/// Read from the tile's own `resources.mine_value` in `tiles.json`, falling
+/// back to the `imp_behavior.*_reward` config constant for tiles that do not
+/// declare one. The gem seam authored `mine_value: 25` while the config
+/// authored `gem_seam_reward: 25` — the same number in two files, which is the
+/// duplication behind every drift found in this codebase so far. The tile's
+/// own number wins, so a richer seam becomes a data edit instead of a
+/// second global constant.
+fn mine_yield_per_dig(tile_type: &str, game_data: &GameData) -> i32 {
+    let config = &game_data.config.imp_behavior;
+    let fallback = match tile_type {
+        x if x == tt::GOLD_VEIN => config.gold_vein_reward,
+        x if x == tt::GEM_SEAM => config.gem_seam_reward,
+        x if x == tt::MANA_CRYSTAL => config.mana_crystal_reward,
+        _ => 0,
+    };
+
+    game_data
+        .tiles
+        .get(tile_type)
+        .and_then(|tile| tile.resources.as_ref())
+        .and_then(|resources| resources.mine_value)
+        .unwrap_or(fallback)
+}
+
 /// Complete digging a tile and award resources
-fn complete_dig(
+pub(crate) fn complete_dig(
     dungeon: &mut Dungeon,
     entities: Option<&mut EntityManager>,
     player: &mut PlayerState,
@@ -509,23 +535,24 @@ fn complete_dig(
             return;
         }
 
-        let gold_vein_reward = game_data.config.imp_behavior.gold_vein_reward;
-        let gem_seam_reward = game_data.config.imp_behavior.gem_seam_reward;
-        let mana_crystal_reward = game_data.config.imp_behavior.mana_crystal_reward;
+        // Per-dig yield comes from the tile's own data where it declares one.
+        let per_dig = mine_yield_per_dig(&tile.tile_type, game_data);
 
         // Check if tile has resources
         let (gold_gained, mana_gained, is_gem_seam) = match tile.tile_type.as_str() {
             x if x == tt::GOLD_VEIN => {
                 let gold = tile
                     .resources_remaining
-                    .map_or(gold_vein_reward, |r| gold_vein_reward.min(r as i32));
+                    .map_or(per_dig, |r| per_dig.min(r as i32));
                 (gold, 0, false)
             }
-            x if x == tt::GEM_SEAM => (gem_seam_reward, 0, true),
+            // Infinite: the seam is never consumed, which is what makes gems
+            // the slow-but-endless gold source rather than a richer vein.
+            x if x == tt::GEM_SEAM => (per_dig, 0, true),
             x if x == tt::MANA_CRYSTAL => {
                 let mana = tile
                     .resources_remaining
-                    .map_or(mana_crystal_reward, |r| mana_crystal_reward.min(r as i32));
+                    .map_or(per_dig, |r| per_dig.min(r as i32));
                 (0, mana, false)
             }
             _ => (0, 0, false),

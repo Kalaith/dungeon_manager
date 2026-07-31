@@ -51,8 +51,6 @@ const UNCONSUMED: &[&str] = &[
     "SpecialData::aura",
     "SpecialData::cannot_be_modified",
     "SpecialData::triggers_event",
-    // Gem seams pay a flat hardcoded 25 rather than reading this.
-    "ResourceData::mine_value",
     // Traps: magical door locking is unbuilt, and every trap is "pressure".
     "TrapEffects::lockable",
     "TrapEffects::trigger_type",
