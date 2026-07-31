@@ -70,6 +70,7 @@
         "treasury": { "available": true, "unlocked": true, "owner": "player" },
         "vault": { "available": true, "unlocked": false, "owner": "player" },
         "training_hall": { "available": true, "unlocked": true, "owner": "player" },
+        "combat_pit": { "available": true, "unlocked": false, "owner": "player" },
         "guard_post": { "available": true, "unlocked": true, "owner": "player" },
         "workshop": { "available": true, "unlocked": false, "owner": "player" }
       },

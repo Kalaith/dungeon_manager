@@ -22,8 +22,11 @@
 
 ## Content
 
-- Build the 3 remaining 1.0 rooms from `docs/ROOM_SET.md`. Vault, Mana Well, Leisure Den and Arcane Archive have shipped. The rest still need an engine hook as well as art: **Combat Pit** (the `train` task is still keyed on `room_type == "training_room"` — generalize it the way `research` now is, and wire the dead `effects.xp_per_minute`), **Soul Furnace** (widen `mana_generation_per_second` past its temple/ritual hardcode, plus a death hook), **Gatehouse** (room-scale door/wall with HP).
-- `execute_sleep`, `execute_eat`, `execute_deposit_gold` and `execute_train` still test `room_type ==` a specific room, so lair/hatchery/treasury/training-hall each remain a room set of exactly one. `find_nearest_room_for_task` and the `research` family show the shape; the other four are the same edit.
+- Build the 2 remaining 1.0 rooms from `docs/ROOM_SET.md`. Vault, Mana Well, Leisure Den, Arcane Archive and Combat Pit have shipped. Left: **Soul Furnace** (widen `mana_generation_per_second` past its temple/ritual hardcode, plus a death hook), **Gatehouse** (room-scale door/wall with HP).
+- `execute_sleep`, `execute_eat` and `execute_deposit_gold` still test `room_type ==` a specific room. These are *not* the same edit `research` and `train` were — each needs a data decision first, so don't generalize them mechanically:
+  - **sleep** — the `sleep` family is `lair` *and* `kennel`, so widening it lets creatures sleep in kennels. Probably right (a kennel is where beasts sleep), but it interacts with `count_available_lair_tiles`, which sets the creature cap. Decide the cap question first.
+  - **eat** — the hatchery is `task_type: "work"`, so there is no `eat` family to match on. Needs a `task_type` reassignment, which changes what `execute_work` sees.
+  - **deposit** — the treasury is `task_type: "none"`, shared with graveyard, vault, mana_well and leisure_den. Keying on it would make the graveyard a treasury. Needs its own task type.
 - Now that `happiness_modifier` is live, the rest of the amenity tier from `docs/rooms.md` (Mentor's Den, Doctrine Chamber) is pure data — art plus a `rooms.json` entry, no Rust.
 - Creature AI has no *need* that an amenity room satisfies, so creatures only reach the Leisure Den by wandering into it. A `comfort` need in `monsters.json` with `satisfied_by: ["leisure_den"]` would let them seek it out deliberately, the way they already seek food and sleep.
 - Author the remaining `docs/monsters.md` roster (Lich, Balor, Ogre, Shadow Stalker, …). No longer hard-blocked on sprites — un-arted entries render as a placeholder checker, so stats can be authored and playtested first — but each still wants a `graphics_gen/monsters/` generator before it ships.

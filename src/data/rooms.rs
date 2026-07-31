@@ -56,8 +56,11 @@ pub struct EffectsData {
     pub food_generation_per_second: f32,
     #[serde(default)]
     pub gold_storage_capacity: i32,
-    #[serde(default)]
-    pub xp_per_minute: f32,
+    /// Multiplier on `config.task_execution.xp_per_training` for a room in the
+    /// `train` task family. Replaces a dead `xp_per_minute` that no file set
+    /// and nothing read; mirrors [`EffectsData::research_rate`].
+    #[serde(default = "default_rate_multiplier")]
+    pub training_rate: f32,
     /// Multiplier on `config.task_execution.research_production_rate` for a
     /// room in the `research` task family. Named to match the key `rooms.json`
     /// has always authored — the struct previously declared

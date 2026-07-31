@@ -557,3 +557,70 @@ pub fn create_arcane_archive() -> RgbaImage {
     add_noise(&mut img, 6);
     img
 }
+
+/// Combat Pit - the training family's brutal tier
+///
+/// Where [`create_training_room`] is upright practice posts, this is a sunken
+/// sand floor with a blood-dark ring: creatures do not drill here, they fight
+/// each other.
+pub fn create_combat_pit() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([116, 96, 62, 255])); // Packed sand
+    let center_x = TILE_WIDTH / 2;
+    let center_y = TILE_HEIGHT / 2;
+
+    // Raked sand, swept in arcs by whatever was dragged across it
+    for y in 0..TILE_HEIGHT {
+        for x in 0..TILE_WIDTH {
+            if (x * 3 + y * 7) % 13 < 3 {
+                img.put_pixel(x, y, Rgba([132, 110, 74, 255]));
+            }
+        }
+    }
+
+    // The pit rim: stone kerb, then a drop into shadow
+    for y in 0..TILE_HEIGHT {
+        for x in 0..TILE_WIDTH {
+            let dx = x as i32 - center_x as i32;
+            let dy = y as i32 - center_y as i32;
+            let dist_sq = dx * dx + dy * dy;
+            if (676..=900).contains(&dist_sq) {
+                img.put_pixel(x, y, Rgba([84, 78, 68, 255]));
+            } else if (576..676).contains(&dist_sq) {
+                img.put_pixel(x, y, Rgba([54, 44, 34, 255]));
+            }
+        }
+    }
+
+    // Fighting ring stained into the sand
+    for y in 0..TILE_HEIGHT {
+        for x in 0..TILE_WIDTH {
+            let dx = x as i32 - center_x as i32;
+            let dy = y as i32 - center_y as i32;
+            let dist_sq = dx * dx + dy * dy;
+            if (256..324).contains(&dist_sq) {
+                img.put_pixel(x, y, Rgba([104, 34, 28, 255]));
+            }
+        }
+    }
+
+    // Spilled blood, spattered rather than pooled
+    for y in 0..TILE_HEIGHT {
+        for x in 0..TILE_WIDTH {
+            let hash = (x.wrapping_mul(2246822519) ^ y.wrapping_mul(3266489917)) as i32;
+            let dx = x as i32 - center_x as i32;
+            let dy = y as i32 - center_y as i32;
+            if dx * dx + dy * dy < 400 && hash % 23 < 2 {
+                img.put_pixel(x, y, Rgba([88, 26, 22, 255]));
+            }
+        }
+    }
+
+    // A pair of notched weapons left in the sand
+    draw_line(&mut img, 22, 38, 32, 26, Rgba([176, 176, 184, 255]));
+    draw_rect(&mut img, 20, 38, 4, 3, Rgba([72, 52, 34, 255]));
+    draw_line(&mut img, 42, 40, 34, 28, Rgba([160, 160, 170, 255]));
+    draw_rect(&mut img, 41, 39, 4, 3, Rgba([72, 52, 34, 255]));
+
+    add_noise(&mut img, 9);
+    img
+}

@@ -312,5 +312,23 @@
             "traps": []
         },
         "icon": "icons/tech/codification.png"
+    },
+    {
+        "id": "blood_sport",
+        "name": "Blood Sport",
+        "description": "Unlocks the Combat Pit, where creatures level far faster than in a training hall.",
+        "cost": 26,
+        "prerequisites": [
+            "training_tech"
+        ],
+        "unlocks": {
+            "rooms": [
+                "combat_pit"
+            ],
+            "spells": [],
+            "creatures": [],
+            "traps": []
+        },
+        "icon": "icons/tech/blood_sport.png"
     }
 ]

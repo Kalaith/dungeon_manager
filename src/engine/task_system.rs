@@ -241,13 +241,20 @@ fn execute_train(
     game_data: &GameData,
     dt: f32,
 ) {
-    let is_training_room = room_manager
+    // Any room in the `train` task family, scaled by its own `training_rate` —
+    // the same shape as `execute_research`, so a second training room is a
+    // data edit rather than another branch here.
+    let room_rate = room_manager
         .rooms
         .iter()
-        .any(|r| r.id == room_id && r.room_type == "training_room");
-    if !is_training_room {
+        .find(|r| r.id == room_id)
+        .and_then(|room| crate::engine::room_validator::room_data_for(room, game_data))
+        .filter(|data| data.ai.task_type == "train")
+        .map(|data| data.effects.training_rate);
+
+    let Some(room_rate) = room_rate else {
         return;
-    }
+    };
 
     let creature = match entities
         .get_mut(creature_id)
@@ -266,7 +273,7 @@ fn execute_train(
     }
 
     creature.training_timer = 0.0;
-    creature.experience += task_config.xp_per_training;
+    creature.experience += task_config.xp_per_training * room_rate;
 
     if creature.level >= combat_config.max_creature_level {
         creature.experience = creature.max_experience;
@@ -609,6 +616,82 @@ mod tests {
         assert!(
             (archive - expected).abs() < 1e-4,
             "archive produced {archive}, expected {expected}"
+        );
+    }
+
+    /// XP a level-1 goblin gains from one training tick in `room_type`.
+    fn xp_from_one_training_tick(game_data: &GameData, room_type: &str) -> f32 {
+        let mut entities = EntityManager::new();
+        let monster_data = game_data.monsters.get("goblin").unwrap();
+        let mut creature = CreatureState::new(
+            "goblin".to_string(),
+            1,
+            monster_data.stats.health,
+            monster_data.stats.mana,
+            1,
+        );
+        creature.current_task = Some(Task::Train(9));
+        // High enough that a single level-up cannot reset experience to 0 and
+        // hide the difference between rooms.
+        creature.max_experience = 10_000.0;
+        let creature_id = entities.spawn_creature(TilePos::new(2, 2), creature);
+
+        let mut room_manager = RoomManager::new();
+        let mut room = Room::new(
+            9,
+            room_type.to_string(),
+            [TilePos::new(2, 2)].into_iter().collect::<HashSet<_>>(),
+            Vec::new(),
+        );
+        room.active = true;
+        room_manager.rooms.push(room);
+
+        let player = PlayerState::new(game_data);
+        execute_task(
+            creature_id,
+            &mut entities,
+            &room_manager,
+            &player,
+            game_data,
+            game_data.config.task_execution.training_timer_threshold * 2.0,
+        );
+
+        entities
+            .get(creature_id)
+            .and_then(|e| e.as_creature())
+            .map(|c| c.experience)
+            .unwrap_or(0.0)
+    }
+
+    #[test]
+    fn any_room_in_the_train_family_grants_experience() {
+        let game_data = GameData::load().expect("game data should load");
+
+        assert!(xp_from_one_training_tick(&game_data, "training_room") > 0.0);
+        assert!(xp_from_one_training_tick(&game_data, "combat_pit") > 0.0);
+    }
+
+    #[test]
+    fn a_room_outside_the_train_family_grants_none() {
+        let game_data = GameData::load().expect("game data should load");
+        assert_eq!(xp_from_one_training_tick(&game_data, "library"), 0.0);
+    }
+
+    #[test]
+    fn room_training_rate_scales_experience() {
+        let game_data = GameData::load().expect("game data should load");
+
+        let hall = xp_from_one_training_tick(&game_data, "training_room");
+        let pit = xp_from_one_training_tick(&game_data, "combat_pit");
+
+        let hall_rate = game_data.rooms["training_hall"].effects.training_rate;
+        let pit_rate = game_data.rooms["combat_pit"].effects.training_rate;
+        assert!(pit_rate > hall_rate, "the pit should out-train the hall");
+
+        let expected = hall * (pit_rate / hall_rate);
+        assert!(
+            (pit - expected).abs() < 1e-4,
+            "pit granted {pit}, expected {expected}"
         );
     }
 

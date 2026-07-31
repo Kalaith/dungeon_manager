@@ -631,11 +631,11 @@ fn decide_task_from_rooms(
         && creature.level < game_data.config.combat.max_creature_level
     {
         use crate::engine::room_validator;
-        if let Some((room_id, _)) = room_validator::find_nearest_room(
+        if let Some((room_id, _)) = room_validator::find_nearest_room_for_task(
             &room_manager.rooms,
-            "training_room",
+            "train",
             creature_pos,
-            0.0,
+            game_data,
         ) {
             let task = Task::Train(room_id);
             let desirability = crate::engine::creature_task_logic::calculate_task_desirability(

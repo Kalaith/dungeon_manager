@@ -93,6 +93,11 @@
           "unlocked": true,
           "owner": "player"
         },
+        "combat_pit": {
+          "available": true,
+          "unlocked": false,
+          "owner": "player"
+        },
         "workshop": {
           "available": true,
           "unlocked": false,
