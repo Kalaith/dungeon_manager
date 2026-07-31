@@ -32,7 +32,10 @@ pub struct BuildData {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequirementsData {
-    pub research: Vec<String>,
+    // `research` used to live here: a parallel list of tech ids that nothing
+    // enforced and the sidebar displayed, so it drifted from the tech tree in
+    // 7 of 18 rooms. The unlock lives in `technologies.json`'s `unlocks.rooms`
+    // and is read via `technologies::tech_unlocking_room`.
     pub global_rooms_required: Vec<String>,
     pub max_instances: u32,
     pub forbidden_if: Vec<String>,

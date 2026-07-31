@@ -378,14 +378,14 @@ fn draw_build_content(
                 lines.push("LOCKED".to_string());
 
                 if let Some(room_data) = game_data.rooms.get(room_id) {
-                    // Research Requirements
-                    for tech_id in &room_data.requirements.research {
-                        let tech_name = game_data
-                            .technologies
-                            .get(tech_id)
-                            .map(|t| t.name.clone())
-                            .unwrap_or(tech_id.clone());
-                        lines.push(format!("Requires: {}", tech_name));
+                    // Research requirement, read off the tech that actually
+                    // unlocks the room rather than a parallel list that could
+                    // name a different tech (the scavenger room did).
+                    if let Some(tech) = crate::data::technologies::tech_unlocking_room(
+                        room_id,
+                        &game_data.technologies,
+                    ) {
+                        lines.push(format!("Requires: {}", tech.name));
                     }
 
                     // Room requirements

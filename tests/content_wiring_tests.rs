@@ -95,31 +95,22 @@ fn every_tech_prerequisite_exists() {
 }
 
 #[test]
-fn every_room_research_requirement_names_a_real_tech() {
-    let techs = ids("assets/data/technologies.json");
-    let mut problems = Vec::new();
-    for room in load("assets/data/rooms.json") {
-        let room_id = room["id"].as_str().expect("room id");
-        for required in room["requirements"]["research"]
-            .as_array()
-            .expect("requirements.research")
-        {
-            let id = required.as_str().expect("research id");
-            if !techs.contains(id) {
-                problems.push(format!("room `{room_id}` requires unknown tech `{id}`"));
-            }
-        }
-    }
-    assert_empty(
-        problems,
-        "room research requirements reference techs that do not exist",
-    );
-}
+fn every_room_not_unlocked_by_default_has_a_tech_that_grants_it() {
+    // Rooms used to carry a `requirements.research` list beside the tech tree.
+    // Nothing enforced it and the sidebar displayed it, so it drifted: six
+    // rooms showed no requirement while being tech-locked, and the scavenger
+    // room named `ritual_tech` when `logistics` was the real gate. The field
+    // is gone; this is the check that replaces it — a room the player does not
+    // start with must be reachable through research, or it can never be built.
+    const UNLOCKED_AT_START: &[&str] = &[
+        // Mirrors `PlayerState::new`.
+        "lair",
+        "hatchery",
+        "treasury",
+        "library",
+        "dungeon_heart",
+    ];
 
-#[test]
-fn every_research_gated_room_has_a_tech_that_unlocks_it() {
-    // The inverse of the check above, and the one that actually bites: a room
-    // gated on research that no tech grants can never be built.
     let mut unlocked_by_tech: HashSet<String> = HashSet::new();
     for tech in load("assets/data/technologies.json") {
         for room in tech["unlocks"]["rooms"].as_array().expect("unlocks.rooms") {
@@ -127,20 +118,18 @@ fn every_research_gated_room_has_a_tech_that_unlocks_it() {
         }
     }
 
-    let mut problems = Vec::new();
+    let mut unreachable = Vec::new();
     for room in load("assets/data/rooms.json") {
-        let room_id = room["id"].as_str().expect("room id");
-        let gated = !room["requirements"]["research"]
-            .as_array()
-            .expect("requirements.research")
-            .is_empty();
-        if gated && !unlocked_by_tech.contains(room_id) {
-            problems.push(format!(
-                "room `{room_id}` is research-gated but no technology unlocks it"
-            ));
+        let id = room["id"].as_str().expect("room id");
+        if UNLOCKED_AT_START.contains(&id) || unlocked_by_tech.contains(id) {
+            continue;
         }
+        unreachable.push(format!(
+            "room `{id}` is neither unlocked at start nor granted by any technology"
+        ));
     }
-    assert_empty(problems, "research-gated rooms that nothing can unlock");
+
+    assert_empty(unreachable, "rooms the player can never build");
 }
 
 #[test]

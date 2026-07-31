@@ -19,7 +19,6 @@
       "construction_time": 0.3
     },
     "requirements": {
-      "research": [],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -98,7 +97,6 @@
       "construction_time": 0.4
     },
     "requirements": {
-      "research": [],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -177,7 +175,6 @@
       "construction_time": 0.5
     },
     "requirements": {
-      "research": [],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -252,7 +249,6 @@
       "construction_time": 0.5
     },
     "requirements": {
-      "research": [],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -329,7 +325,6 @@
       "construction_time": 0.6
     },
     "requirements": {
-      "research": [],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -407,9 +402,6 @@
       "construction_time": 0.5
     },
     "requirements": {
-      "research": [
-        "training_tech"
-      ],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -497,9 +489,6 @@
       "construction_time": 0.4
     },
     "requirements": {
-      "research": [
-        "prison_tech"
-      ],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -572,7 +561,6 @@
       "construction_time": 0.3
     },
     "requirements": {
-      "research": [],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -646,9 +634,6 @@
       "construction_time": 1.0
     },
     "requirements": {
-      "research": [
-        "ritual_tech"
-      ],
       "global_rooms_required": [
         "library"
       ],
@@ -732,9 +717,6 @@
       "construction_time": 0.8
     },
     "requirements": {
-      "research": [
-        "interrogation"
-      ],
       "global_rooms_required": [
         "prison"
       ],
@@ -813,7 +795,6 @@
       "construction_time": 0.5
     },
     "requirements": {
-      "research": [],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -874,7 +855,6 @@
       "construction_time": 0.3
     },
     "requirements": {
-      "research": [],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -937,7 +917,6 @@
       "construction_time": 0.4
     },
     "requirements": {
-      "research": [],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -1002,7 +981,6 @@
       "construction_time": 0.6
     },
     "requirements": {
-      "research": [],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -1092,9 +1070,6 @@
       "construction_time": 0.8
     },
     "requirements": {
-      "research": [
-        "ritual_tech"
-      ],
       "global_rooms_required": [
         "temple"
       ],
@@ -1178,9 +1153,6 @@
       "construction_time": 0.8
     },
     "requirements": {
-      "research": [
-        "deep_coffers"
-      ],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -1249,9 +1221,6 @@
       "construction_time": 0.9
     },
     "requirements": {
-      "research": [
-        "mana_binding"
-      ],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -1320,9 +1289,6 @@
       "construction_time": 0.5
     },
     "requirements": {
-      "research": [
-        "creature_comforts"
-      ],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -1396,9 +1362,6 @@
       "construction_time": 0.7
     },
     "requirements": {
-      "research": [
-        "codification"
-      ],
       "global_rooms_required": [
         "library"
       ],
@@ -1478,9 +1441,6 @@
       "construction_time": 0.7
     },
     "requirements": {
-      "research": [
-        "blood_sport"
-      ],
       "global_rooms_required": [
         "training_hall"
       ],
@@ -1561,9 +1521,6 @@
       "construction_time": 0.8
     },
     "requirements": {
-      "research": [
-        "soul_rendering"
-      ],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []
@@ -1634,9 +1591,6 @@
       "construction_time": 0.9
     },
     "requirements": {
-      "research": [
-        "fortification"
-      ],
       "global_rooms_required": [],
       "max_instances": 0,
       "forbidden_if": []

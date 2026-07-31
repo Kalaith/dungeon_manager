@@ -19,7 +19,6 @@
             "construction_time": 0
         },
         "requirements": {
-            "research": [],
             "global_rooms_required": [],
             "max_instances": 1,
             "forbidden_if": []

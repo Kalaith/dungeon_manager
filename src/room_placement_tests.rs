@@ -158,3 +158,53 @@ fn every_shipped_room_can_still_be_built_on_ordinary_claimed_floor() {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// What the build tooltip promises
+// ---------------------------------------------------------------------------
+
+#[test]
+fn every_locked_room_can_name_the_tech_that_unlocks_it() {
+    // The tooltip reads this. If it returns None for a locked room, the player
+    // sees "LOCKED" with no way to learn what to research.
+    let game_data = GameData::load().expect("game data should load");
+    let starting = crate::state::player_state::PlayerState::new(&game_data);
+
+    let mut mute = Vec::new();
+    for id in game_data.rooms.keys() {
+        if id == "bridge" || starting.is_room_unlocked(id) {
+            continue;
+        }
+        if crate::data::technologies::tech_unlocking_room(id, &game_data.technologies).is_none() {
+            mute.push(id.clone());
+        }
+    }
+
+    assert!(
+        mute.is_empty(),
+        "these rooms are locked with no tech to point the player at: {mute:?}"
+    );
+}
+
+#[test]
+fn the_named_tech_is_the_one_that_actually_grants_the_room() {
+    // The defect this replaced: the scavenger room's tooltip named
+    // `ritual_tech` while `logistics` was the real gate. Deriving the name
+    // from `unlocks.rooms` makes the two the same fact by construction — this
+    // pins that they stay so.
+    let game_data = GameData::load().expect("game data should load");
+
+    for (id, room) in &game_data.rooms {
+        let Some(tech) =
+            crate::data::technologies::tech_unlocking_room(id, &game_data.technologies)
+        else {
+            continue;
+        };
+        assert!(
+            tech.unlocks.rooms.contains(id),
+            "`{}` is named as {id}'s gate but does not unlock it",
+            tech.id
+        );
+        let _ = room;
+    }
+}

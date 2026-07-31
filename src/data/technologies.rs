@@ -25,6 +25,24 @@ pub struct UnlockData {
     pub traps: Vec<String>,
 }
 
+/// The technology that unlocks `room_id`, if any.
+///
+/// `unlocks.rooms` is what `PlayerState::complete_research` actually acts on,
+/// so it is the only honest answer to "what does this room need?". Rooms used
+/// to carry a parallel `requirements.research` list that nothing enforced and
+/// the sidebar displayed: six rooms showed no requirement while being
+/// tech-locked, and the scavenger room named `ritual_tech` when `logistics` was
+/// the real gate. Deriving the answer from the tech tree means the tooltip
+/// cannot drift away from the rule.
+pub fn tech_unlocking_room<'a>(
+    room_id: &str,
+    technologies: &'a HashMap<String, TechData>,
+) -> Option<&'a TechData> {
+    technologies
+        .values()
+        .find(|tech| tech.unlocks.rooms.iter().any(|room| room == room_id))
+}
+
 pub fn load_technologies() -> Result<HashMap<String, TechData>, Box<dyn Error>> {
     let json_content = {
         #[cfg(target_arch = "wasm32")]
