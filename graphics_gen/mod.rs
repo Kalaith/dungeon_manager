@@ -18,6 +18,7 @@
 pub mod buildings;
 pub mod core;
 pub mod heroes;
+pub mod icon;
 pub mod monsters;
 pub mod primitives;
 pub mod projectiles;
@@ -84,6 +85,12 @@ pub fn generate_all_graphics() {
 
     println!("\n--- Generating Projectile Sprites ---");
     projectiles::generate_projectile_sprites();
+
+    println!(
+        "
+--- Generating Window Icon ---"
+    );
+    generate_window_icon();
 
     println!("\n=== Graphics Generation Complete ===");
 }
@@ -248,4 +255,11 @@ fn generate_building_sprites() {
     buildings::save_hero_building("guard_tower", buildings::create_guard_tower());
     buildings::save_hero_building("blacksmith", buildings::create_blacksmith());
     buildings::save_hero_building("tavern", buildings::create_tavern());
+}
+
+/// The three sizes `miniquad::conf::Icon` requires.
+fn generate_window_icon() {
+    for size in [16u32, 32, 64] {
+        icon::save_icon(size, icon::create_window_icon(size));
+    }
 }

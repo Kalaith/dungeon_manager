@@ -205,3 +205,30 @@ fn collect_orphans(root: &Path, dir: &Path, declared: &[String], out: &mut Vec<S
         }
     }
 }
+
+/// The window icon is embedded with `include_bytes!` and decoded at startup,
+/// so a regenerated icon of the wrong size would panic in a player's launch
+/// rather than in CI. These are the sizes `miniquad::conf::Icon` requires.
+#[test]
+fn the_window_icon_exists_at_every_required_size() {
+    for size in [16u32, 32, 64] {
+        let path = project_root()
+            .join("assets")
+            .join("ui")
+            .join(format!("icon_{size}.png"));
+        let bytes = std::fs::read(&path)
+            .unwrap_or_else(|e| panic!("missing window icon {}: {e}", path.display()));
+
+        let decoded = image::load_from_memory(&bytes)
+            .unwrap_or_else(|e| panic!("icon_{size}.png does not decode: {e}"))
+            .to_rgba8();
+
+        assert_eq!(
+            (decoded.width(), decoded.height()),
+            (size, size),
+            "icon_{size}.png is {}x{}",
+            decoded.width(),
+            decoded.height()
+        );
+    }
+}

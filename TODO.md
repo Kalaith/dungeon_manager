@@ -24,7 +24,7 @@
 
 - `docs/ROOM_SET.md`'s commit set is **built** — all 7 (Vault, Mana Well, Leisure Den, Arcane Archive, Combat Pit, Soul Furnace, Gatehouse) have art, a `rooms.json` entry, a gating tech and mission availability. Remaining from that doc: the Gatehouse ships as a defensive *bonus* room, not the "gates auto-close under threat" version — that wants a threat-detection subsystem it shares with alarm traps and the fog-of-war item. Decide whether to build it or restate the room as it now is.
 - `tests/live_data_fields_tests.rs` sweeps **every** `pub struct` under `src/data/` for fields that are parsed and read nowhere, so a new struct cannot arrive with dead fields unnoticed. The first full sweep found **48**, now listed in `UNCONSUMED` with reasons. That list is the honest inventory of authored-but-inert content data; the biggest clusters are worth their own items:
-  - **Room build time** — `construction_time` is still ignored, so rooms appear the instant they are paid for rather than being raised. The rest of the build rules (`allowed_terrain`, `requires_claimed`, `can_overlap`, `dig_required`, `max_instances`, `forbidden_if`) now go through `room_validator::tile_permits_room` / `dungeon_permits_room`.
+  - **Room build time** — `construction_time` is still ignored, so rooms appear the instant they are paid for rather than being raised. Note before building this: the authored values are 0.4–0.9s, so wiring them as written buys a sub-second delay in exchange for a save-format change (per-tile progress) and renderer work to show a part-built room. Either re-scope the numbers to something a player would notice, or drop the field. The rest of the build rules (`allowed_terrain`, `requires_claimed`, `can_overlap`, `dig_required`, `max_instances`, `forbidden_if`) now go through `room_validator::tile_permits_room` / `dungeon_permits_room`.
   - **The rest of the hero behaviour model** — `trap_awareness`, `fear_resistance`, `will_fight_to_death` and `bravery` are wired. Still inert: `door_break_chance` (heroes never attack doors — they path around them, so there is nothing to roll against), `light_preference` (needs the lighting pass to exist), `call_for_aid` (needs a hero rally mechanic; the natural shape is a threatened hero pulling nearby allies onto their attacker).
   - **Spell `souls` cost and targeting restrictions** (`requires_visibility`, `valid_targets`).
 - Per-dig mining yields are now read from each tile's `resources.mine_value` in `tiles.json`, with the `imp_behavior.*_reward` config constants as fallback for tiles that declare none. All three resource tiles author their own, and a test requires that — otherwise a value silently reverts to the global constant, which is how the gem seam's 25 came to exist in two files at once.
@@ -41,7 +41,7 @@
 - Creature AI has no *need* that an amenity room satisfies, so creatures only reach the Leisure Den by wandering into it. A `comfort` need in `monsters.json` with `satisfied_by: ["leisure_den"]` would let them seek it out deliberately, the way they already seek food and sleep.
 - Author the remaining `docs/monsters.md` roster (Lich, Balor, Ogre, Shadow Stalker, …). No longer hard-blocked on sprites — un-arted entries render as a placeholder checker, so stats can be authored and playtested first — but each still wants a `graphics_gen/monsters/` generator before it ships.
 - All generated art is now reachable from data except the casino tile, kept only until the Leisure Den's supersession of it (docs/ROOM_SET.md) is confirmed — at which point delete `create_casino` too. `AWAITING_DATA` in `tests/asset_manifest_tests.rs` is down to that one name.
-- Rooms declare a `visual.wall_sprite` (`tiles/lair_wall.png`, …) that no generator emits and nothing reads. Either generate per-room wall art and render it, or drop the field.
+- Rooms declare a `visual.wall_sprite` (`tiles/lair_wall.png`, …) that no generator emits and nothing reads. Deciding this needs a renderer answer, not a data one: walls are `solid_rock`/`earth` tiles, so drawing a room's own wall art means a per-wall-tile adjacency lookup every frame — which collides with the O(n) scan problem already flagged under Code quality. Treat it as part of the lighting/atmosphere pass, or drop the field.
 - Spell depth that needs engine hooks: miscasts, hero counter-spells, research-unlocked spell modifiers.
 - Decide the fate of the mod/content-pack system: `mods/load_order.json` ships empty — market it (docs, examples, validation) or cut it.
 - Wire campaign missions to grant *technologies* rather than raw unlocks, so research gates progression.
@@ -60,7 +60,7 @@
 - Particles and feedback: hit flashes, damage numbers, death poofs, spell VFX, trap triggers, dig debris, gold sparkle, heart-damage screen shake — none exist.
 - Lighting and atmosphere pass; the GDD's "warped evil" theming.
 - UI art overhaul — playtest feedback calls the UI dated and Rust-default. Includes real entity rendering, sidebar animation and the minimap viewport.
-- Window icon and title/menu art beyond the single `main_menu_bg.png`.
+- Title/menu art beyond the single `main_menu_bg.png`. (The window icon ships — `graphics_gen/icon.rs` draws the dungeon heart at 16/32/64 and `main.rs` embeds it.)
 
 ## UI & UX
 

@@ -227,8 +227,33 @@ impl Game {
     }
 }
 
+/// Decode a generated icon PNG into the flat RGBA array miniquad wants.
+///
+/// The three sizes are drawn separately by `graphics_gen::icon` rather than
+/// downscaled from one, because a resampled dungeon heart is mud at 16px.
+fn icon_rgba<const N: usize>(png: &[u8], size: u32) -> [u8; N] {
+    let decoded = image::load_from_memory(png)
+        .unwrap_or_else(|e| panic!("window icon {size}px failed to decode: {e}"))
+        .to_rgba8();
+    assert_eq!(
+        (decoded.width(), decoded.height()),
+        (size, size),
+        "window icon should be {size}x{size}"
+    );
+
+    let mut out = [0u8; N];
+    out.copy_from_slice(decoded.as_raw());
+    out
+}
+
 fn window_conf() -> Conf {
-    capture::capture_window_conf("DUNGEON_MANAGER", "Deep Dominion", 1280, 720)
+    let mut conf = capture::capture_window_conf("DUNGEON_MANAGER", "Deep Dominion", 1280, 720);
+    conf.icon = Some(macroquad::miniquad::conf::Icon {
+        small: icon_rgba(include_bytes!("../assets/ui/icon_16.png"), 16),
+        medium: icon_rgba(include_bytes!("../assets/ui/icon_32.png"), 32),
+        big: icon_rgba(include_bytes!("../assets/ui/icon_64.png"), 64),
+    });
+    conf
 }
 
 #[macroquad::main(window_conf)]
