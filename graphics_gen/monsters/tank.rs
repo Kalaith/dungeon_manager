@@ -151,3 +151,97 @@ pub fn create_ironbound_sprite() -> RgbaImage {
 
     img
 }
+
+/// Stone Warden — a slow, durable worker that shores walls into rock heroes
+/// cannot dig. Deliberately *rounded* stone against the Ironbound's boxes:
+/// both are inanimate-looking, so the silhouettes have to disagree or the two
+/// read as the same creature. Moss on the shoulders says "has stood here a
+/// long time" in a way no amount of grey can.
+pub fn create_stone_warden_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+
+    let stone = Material::stone(126, 122, 112);
+    let dark_stone = Material::stone(92, 88, 82);
+    let moss = Material::matte(74, 104, 56);
+    let glow = Material::glowing(255, 176, 72);
+
+    draw_shadow(&mut img, cx, 59.0, 17.0, 6.0);
+
+    for side in [-1.0f32, 1.0] {
+        draw_cylinder_3d(
+            &mut img,
+            &mut depth,
+            cx + side * 8.0,
+            46.0,
+            58.0,
+            5.0,
+            5.0,
+            &dark_stone,
+        );
+        draw_cylinder_3d(
+            &mut img,
+            &mut depth,
+            cx + side * 16.0,
+            32.0,
+            46.0,
+            7.0,
+            3.5,
+            &dark_stone,
+        );
+        // Broad mason's fists
+        draw_sphere_3d(
+            &mut img,
+            &mut depth,
+            cx + side * 16.0,
+            48.0,
+            7.0,
+            4.5,
+            &stone,
+        );
+        draw_sphere_3d(
+            &mut img,
+            &mut depth,
+            cx + side * 13.0,
+            30.0,
+            9.0,
+            7.0,
+            &stone,
+        );
+        // Moss riding the shoulders
+        draw_ellipsoid_3d(
+            &mut img,
+            &mut depth,
+            cx + side * 13.0,
+            26.0,
+            12.0,
+            4.5,
+            1.8,
+            3.0,
+            &moss,
+        );
+    }
+
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 40.0, 8.0, 13.0, 11.0, 10.0, &stone,
+    );
+
+    // Squat head with a lit fissure instead of eyes
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx,
+        21.0,
+        12.0,
+        7.0,
+        5.5,
+        6.0,
+        &dark_stone,
+    );
+    // cy compensates for cz: a higher z shifts a feature *up* the screen by
+    // z * TILT, so matching the head's cy would put the fissure on its brow.
+    draw_box_3d(&mut img, &mut depth, cx, 24.0, 18.0, 4.0, 0.8, 0.5, &glow);
+
+    img
+}

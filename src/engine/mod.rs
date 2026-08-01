@@ -30,6 +30,7 @@ pub mod scenario_events;
 pub mod spawner;
 pub mod spawner_logic;
 pub mod special_rooms;
+pub mod wall_reinforcement;
 
 pub mod input;
 pub mod input_handlers;

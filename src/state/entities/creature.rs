@@ -74,6 +74,11 @@ pub struct CreatureState {
 
     /// Time accumulator for work production
     pub work_timer: f32,
+
+    /// Time accumulator for wall reinforcement (see the `stonebinding` trait).
+    /// Serde-defaulted so saves written before the Stone Warden existed load.
+    #[serde(default)]
+    pub reinforce_timer: f32,
 }
 
 impl CreatureState {
@@ -115,6 +120,7 @@ impl CreatureState {
             movement_speed: 2.0, // 2 tiles per second default
             move_timer: 0.0,
             work_timer: 0.0,
+            reinforce_timer: 0.0,
         }
     }
 

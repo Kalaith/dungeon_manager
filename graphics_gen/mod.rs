@@ -176,6 +176,11 @@ fn generate_monster_sprites() {
     monsters::save_sprite("monsters", "troll", monsters::create_troll_sprite());
     monsters::save_sprite("monsters", "ogre", monsters::create_ogre_sprite());
     monsters::save_sprite("monsters", "ironbound", monsters::create_ironbound_sprite());
+    monsters::save_sprite(
+        "monsters",
+        "stone_warden",
+        monsters::create_stone_warden_sprite(),
+    );
 
     // Undead
     monsters::save_sprite("monsters", "skeleton", monsters::create_skeleton_sprite());

@@ -33,6 +33,8 @@ mod room_placement_tests;
 mod spell_targeting_tests;
 #[cfg(test)]
 mod traits_tests;
+#[cfg(test)]
+mod wall_reinforcement_tests;
 
 use data::GameData;
 use engine::action_processor;

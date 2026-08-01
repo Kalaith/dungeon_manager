@@ -3150,5 +3150,124 @@
       ],
       "voice_set": "kobold"
     }
+  },
+  {
+    "id": "stone_warden",
+    "name": "Stone Warden",
+    "description": "A slow, patient worker that shores up the rock it stands beside. Walls it has tended cannot be tunnelled through.",
+    "faction": "dungeon",
+    "role": "worker_tank",
+    "stats": {
+      "health": 300,
+      "mana": 0,
+      "attack": 8,
+      "defense": 20,
+      "speed": 0.5,
+      "carry_capacity": 80,
+      "sight_radius": 6
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 8.0,
+        "satisfied_by": [
+          "lair"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 16.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 6.0,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 40
+      }
+    },
+    "traits": [
+      "stonebinding",
+      "slow",
+      "loyal"
+    ],
+    "ai": {
+      "base_mood": 70,
+      "anger_threshold": 20,
+      "desertion_threshold": 5,
+      "task_preferences": {
+        "work": 2.4,
+        "guard": 1.6,
+        "fight": 0.6
+      },
+      "room_desires": {
+        "workshop": 1.6,
+        "guard_post": 1.4,
+        "treasury": 1.1
+      },
+      "discipline_response": {
+        "slap": -6,
+        "torture": -25,
+        "reward": 12
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        6,
+        12
+      ],
+      "attack_speed": 0.6,
+      "armor_type": "heavy",
+      "resistances": {
+        "physical": 0.3,
+        "fire": 0.4
+      },
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        180,
+        440,
+        880,
+        1400
+      ],
+      "stat_growth_per_level": {
+        "health": 28,
+        "attack": 1,
+        "defense": 4
+      },
+      "max_level": 5,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 4,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [
+        10,
+        30
+      ]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 100,
+      "preferred_rooms": [
+        "workshop",
+        "lair"
+      ],
+      "spawn_weight": 0.3,
+      "max_population": 4
+    },
+    "visual": {
+      "scale": 1.2,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "stone"
+    }
   }
 ]

@@ -50,6 +50,12 @@ pub struct TraitData {
     /// `trap_damage_multiplier`.
     #[serde(default)]
     pub trap_tending_radius: f32,
+    /// Seconds a creature with this trait takes to convert one adjacent plain
+    /// wall into `reinforced_wall`, which heroes cannot tunnel through. Zero
+    /// (the default) means the creature never does this. Like the trap fields
+    /// above, this acts on the world rather than on its holder.
+    #[serde(default)]
+    pub wall_reinforce_seconds: f32,
 }
 
 fn one() -> f32 {

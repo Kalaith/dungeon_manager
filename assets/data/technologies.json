@@ -367,7 +367,7 @@
     {
         "id": "fortification",
         "name": "Fortification",
-        "description": "Unlocks the Gatehouse, a chokepoint that hardens the creatures holding it - and the ironbound that never leave their post.",
+        "description": "Unlocks the Gatehouse, a chokepoint that hardens the creatures holding it - plus ironbound that never leave their post and stone wardens who seal the rock itself.",
         "cost": 24,
         "prerequisites": [
             "trap_tech"
@@ -378,7 +378,8 @@
             ],
             "spells": [],
             "creatures": [
-                "ironbound"
+                "ironbound",
+                "stone_warden"
             ],
             "traps": []
         },

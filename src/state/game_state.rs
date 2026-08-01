@@ -519,6 +519,9 @@ impl GameState {
         // Process room-specific mechanics that are not generic work tasks
         crate::engine::special_rooms::process_special_rooms(self, game_data, dt);
 
+        // Stone Wardens shoring up walls into rock heroes cannot tunnel
+        crate::engine::wall_reinforcement::reinforce_walls(self, game_data, dt);
+
         // Remove dead entities and release their lair space (but not captured heroes)
         let dead_ids: Vec<EntityId> = self
             .entities
