@@ -255,3 +255,89 @@ pub fn create_void_touched_sprite() -> RgbaImage {
 
     img
 }
+
+/// Shadow Stalker — stronger the darker the ground it stands on. Drawn as a
+/// near-black cutout with only the eyes and a blade catching light: the whole
+/// creature is a silhouette on purpose, since a creature defined by darkness
+/// should look like an absence rather than a thing. Tall and narrow so it still
+/// separates from the Void-Touched's heavy lopsided mass.
+pub fn create_shadow_stalker_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+
+    let shadow_mat = Material::shadow();
+    let deeper = Material::matte(12, 12, 20);
+    let eye = Material::glowing(150, 245, 255);
+    let blade = Material::metallic(140, 160, 180);
+
+    draw_shadow(&mut img, cx, 58.0, 10.0, 4.0);
+
+    // Long thin limbs — the silhouette is the whole read
+    for side in [-1.0f32, 1.0] {
+        draw_cylinder_3d(
+            &mut img,
+            &mut depth,
+            cx + side * 4.0,
+            42.0,
+            58.0,
+            5.0,
+            2.4,
+            &deeper,
+        );
+        draw_cylinder_3d(
+            &mut img,
+            &mut depth,
+            cx + side * 10.0,
+            26.0,
+            44.0,
+            7.0,
+            2.0,
+            &deeper,
+        );
+    }
+
+    // Narrow torso and hunched shoulders
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx,
+        34.0,
+        8.0,
+        6.0,
+        11.0,
+        6.0,
+        &shadow_mat,
+    );
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 24.0, 9.0, 8.5, 3.5, 5.0, &deeper);
+
+    // Featureless head; only the eyes exist
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx,
+        18.0,
+        11.0,
+        4.5,
+        5.5,
+        4.5,
+        &shadow_mat,
+    );
+    draw_sphere_3d(&mut img, &mut depth, cx - 2.0, 18.0, 16.0, 1.2, &eye);
+    draw_sphere_3d(&mut img, &mut depth, cx + 2.0, 18.0, 16.0, 1.2, &eye);
+
+    // A thin blade, the only thing on it that catches light
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 15.0,
+        30.0,
+        11.0,
+        1.4,
+        12.0,
+        1.2,
+        &blade,
+    );
+
+    img
+}

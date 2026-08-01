@@ -113,3 +113,31 @@ pub fn build_light_map(state: &GameState, game_data: &GameData) -> LightMap {
 
     map
 }
+
+/// Cache how dark each creature's tile is, for combat to read later.
+///
+/// Same shape as `command_aura`: `combat::extract_combat_stats` is handed a
+/// creature and the game data, never the dungeon, so anything positional has to
+/// be resolved beforehand and stored.
+pub fn cache_creature_darkness(state: &mut GameState) {
+    let readings: Vec<(crate::state::entities::EntityId, f32)> = state
+        .entities
+        .creatures()
+        .filter_map(|(id, _)| {
+            let pos = state.entities.get(id)?.pos;
+            let lit = state.light_map.multiplier_at(pos);
+            let brightness = (lit[0] + lit[1] + lit[2]) / 3.0;
+            Some((id, (1.0 - brightness).clamp(0.0, 1.0)))
+        })
+        .collect();
+
+    for (id, darkness) in readings {
+        if let Some(creature) = state
+            .entities
+            .get_mut(id)
+            .and_then(|entity| entity.as_creature_mut())
+        {
+            creature.darkness = darkness;
+        }
+    }
+}

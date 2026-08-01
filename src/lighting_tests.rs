@@ -137,3 +137,74 @@ fn every_authored_room_light_has_a_usable_intensity() {
     }
     assert!(lit >= 20, "expected most rooms to author light, saw {lit}");
 }
+
+/// The Shadow Stalker's whole identity: the same creature hits harder in the
+/// dark. This is the first thing that makes the keeper's *lighting* a tactical
+/// decision — building a lit room beside a corridor now weakens the creature
+/// patrolling it.
+#[cfg(test)]
+mod darkness_combat {
+    use super::*;
+    use crate::engine::combat;
+    use crate::engine::lighting::cache_creature_darkness;
+    use crate::state::entities::{CreatureState, EntityId};
+
+    const STAND_AT: TilePos = TilePos { x: 4, y: 4 };
+
+    fn attack_of(creature_id: &str, lit_room: Option<&str>) -> f32 {
+        let game_data = GameData::load().expect("game data should load");
+        let mut state = if let Some(room_type) = lit_room {
+            let mut s = state_with_room(&game_data, room_type);
+            // Put the room under the creature rather than off at ROOM_AT.
+            s.room_manager.rooms.clear();
+            let mut tiles = HashSet::new();
+            tiles.insert(STAND_AT);
+            let mut room = Room::new(1, room_type.to_string(), tiles, Vec::new());
+            room.active = true;
+            s.room_manager.rooms.push(room);
+            s
+        } else {
+            state_with_room(&game_data, "treasury")
+        };
+        if lit_room.is_none() {
+            state.room_manager.rooms.clear();
+        }
+
+        let data = &game_data.monsters[creature_id];
+        let creature = CreatureState::new(
+            creature_id.to_string(),
+            1,
+            data.stats.health,
+            data.stats.mana,
+            1,
+        );
+        let id: EntityId = state.entities.spawn_creature(STAND_AT, creature);
+
+        state.light_map = build_light_map(&state, &game_data);
+        cache_creature_darkness(&mut state);
+
+        combat::extract_combat_stats(state.entities.get(id).unwrap(), &game_data).attack
+    }
+
+    #[test]
+    fn a_shadow_stalker_hits_harder_in_the_dark() {
+        let in_the_dark = attack_of("shadow_stalker", None);
+        let under_a_lamp = attack_of("shadow_stalker", Some("treasury"));
+
+        assert!(
+            in_the_dark > under_a_lamp,
+            "darkness should raise its attack: {in_the_dark} vs {under_a_lamp}"
+        );
+    }
+
+    /// The control: an ordinary creature is indifferent to the light, so the
+    /// effect is the `lightless` trait rather than the lighting model leaking
+    /// into everyone's combat stats.
+    #[test]
+    fn an_ordinary_creature_fights_the_same_either_way() {
+        let dark = attack_of("orc", None);
+        let lit = attack_of("orc", Some("treasury"));
+
+        assert_eq!(dark, lit, "only `lightless` should care about the light");
+    }
+}

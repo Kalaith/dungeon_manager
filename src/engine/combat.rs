@@ -178,11 +178,25 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
                 game_data,
             );
             let attack_multiplier: f32 = trait_data.iter().map(|t| t.attack_multiplier).product();
+
+            // Darkness bonus, scaled by how dark this creature's tile actually
+            // is (cached by `lighting::cache_creature_darkness`). A Shadow
+            // Stalker in a lit treasury is an ordinary skirmisher; the same
+            // creature in an unlit corridor is not.
+            let darkness_multiplier: f32 = 1.0
+                + trait_data
+                    .iter()
+                    .map(|t| t.darkness_attack_bonus)
+                    .sum::<f32>()
+                    * creature_state.darkness;
             let defense_multiplier: f32 = trait_data.iter().map(|t| t.defense_multiplier).product();
 
             CombatStats {
                 health: creature_state.health,
-                attack: creature_data.stats.attack * level_multiplier * attack_multiplier,
+                attack: creature_data.stats.attack
+                    * level_multiplier
+                    * attack_multiplier
+                    * darkness_multiplier,
                 defense: creature_data.stats.defense * level_multiplier * defense_multiplier,
                 attack_type: creature_data.combat.attack_type.clone(),
                 damage_range: creature_data.combat.damage_range,

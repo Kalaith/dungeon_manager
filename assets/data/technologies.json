@@ -250,7 +250,8 @@
             ],
             "creatures": [
                 "troll",
-                "dark_elf"
+                "dark_elf",
+                "shadow_stalker"
             ],
             "traps": []
         },

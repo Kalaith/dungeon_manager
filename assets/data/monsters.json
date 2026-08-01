@@ -3998,5 +3998,122 @@
       ],
       "voice_set": "amalgam"
     }
+  },
+  {
+    "id": "shadow_stalker",
+    "name": "Shadow Stalker",
+    "description": "Fights best where nothing can see it. Its base attack is modest on purpose - in an unlit corridor it is nearly double.",
+    "faction": "dungeon",
+    "role": "skirmisher",
+    "stats": {
+      "health": 130,
+      "mana": 20,
+      "attack": 12,
+      "defense": 5,
+      "speed": 1.4,
+      "carry_capacity": 30,
+      "sight_radius": 10
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 12.0,
+        "satisfied_by": [
+          "lair"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 26.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 14.0,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 100
+      }
+    },
+    "traits": [
+      "lightless",
+      "aggressive",
+      "arrogant"
+    ],
+    "ai": {
+      "base_mood": 50,
+      "anger_threshold": 25,
+      "desertion_threshold": 12,
+      "task_preferences": {
+        "scout": 2.2,
+        "fight": 1.8,
+        "guard": 1.4
+      },
+      "room_desires": {
+        "guard_post": 1.4,
+        "prison": 1.2
+      },
+      "discipline_response": {
+        "slap": -14,
+        "torture": -38,
+        "reward": 18
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        9,
+        16
+      ],
+      "attack_speed": 1.5,
+      "armor_type": "light",
+      "resistances": {
+        "dark": 0.6
+      },
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        140,
+        340,
+        700,
+        1150
+      ],
+      "stat_growth_per_level": {
+        "health": 12,
+        "attack": 3,
+        "speed": 0.03
+      },
+      "max_level": 5,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 6,
+      "steals_if_unpaid": true,
+      "drops_gold_on_death": [
+        30,
+        80
+      ]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 180,
+      "preferred_rooms": [
+        "lair",
+        "guard_post"
+      ],
+      "spawn_weight": 0.3,
+      "max_population": 5
+    },
+    "visual": {
+      "scale": 1.0,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "shadow"
+    }
   }
 ]

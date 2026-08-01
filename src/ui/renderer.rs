@@ -118,7 +118,6 @@ impl GameRenderer {
 
         set_camera(&camera);
 
-        let light_map = crate::engine::lighting::build_light_map(state, game_data);
         tiles::draw_tiles(
             graphics,
             state,
@@ -126,7 +125,7 @@ impl GameRenderer {
             hovered_tile,
             game_data,
             drag_selection,
-            &light_map,
+            &state.light_map,
         );
         crate::ui::entity_renderer::draw_entities(graphics, state, &camera, game_data);
         self.draw_projectiles(graphics, state, &camera);

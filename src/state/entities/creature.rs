@@ -87,6 +87,13 @@ pub struct CreatureState {
     #[serde(default)]
     pub extra_traits: Vec<String>,
 
+    /// How dark the tile this creature stands on is, 0.0 (fully lit) to 1.0.
+    /// Cached each tick by `lighting::cache_creature_darkness` for the same
+    /// reason `command_bonus` is: `combat::extract_combat_stats` has the
+    /// creature but not the dungeon.
+    #[serde(default)]
+    pub darkness: f32,
+
     /// Work-efficiency multiplier granted by a nearby commanding creature.
     /// Recomputed every tick by `command_aura::apply_command_auras`, so it is
     /// a cache rather than authored state; it lives on the creature because
@@ -141,6 +148,7 @@ impl CreatureState {
             work_timer: 0.0,
             extra_traits: Vec::new(),
             reinforce_timer: 0.0,
+            darkness: 0.0,
             command_bonus: 1.0,
         }
     }

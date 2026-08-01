@@ -35,6 +35,13 @@ pub struct GameState {
 
     pub entities: EntityManager,
     pub player: PlayerState,
+
+    /// Where the dungeon is lit, rebuilt each tick from rooms and glowing
+    /// tiles. Derived state, so it is not persisted — and shared rather than
+    /// rebuilt separately by the renderer and the simulation, which both need
+    /// it now that darkness affects combat.
+    #[serde(skip)]
+    pub light_map: crate::engine::lighting::LightMap,
     pub next_hero_spawn_time: f32,
     pub next_creature_spawn_time: f32,
     pub pay_day_timer: f32,
@@ -209,6 +216,7 @@ impl GameState {
 
             entities,
             player: PlayerState::new(game_data),
+            light_map: crate::engine::lighting::LightMap::default(),
             next_hero_spawn_time: 0.0,
             next_creature_spawn_time: 0.0,
             pay_day_timer: 0.0,
@@ -518,6 +526,11 @@ impl GameState {
 
         // Process room-specific mechanics that are not generic work tasks
         crate::engine::special_rooms::process_special_rooms(self, game_data, dt);
+
+        // Where the dungeon is lit. Rebuilt before anything reads it, since
+        // both the renderer and darkness-sensitive creatures consume it.
+        self.light_map = crate::engine::lighting::build_light_map(self, game_data);
+        crate::engine::lighting::cache_creature_darkness(self);
 
         // Overseers raising the work rate of whoever is standing near them.
         // Must run before task execution reads command_bonus.

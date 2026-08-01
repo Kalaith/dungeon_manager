@@ -185,5 +185,16 @@
     "attack_multiplier": 1.15,
     "defense_multiplier": 1.1,
     "anger_threshold_modifier": -10
+  },
+  {
+    "id": "lightless",
+    "description": "Fights best where nothing can see it. Every torch you light is one it fights worse under.",
+    "darkness_attack_bonus": 0.9,
+    "task_preference_multipliers": {
+      "scout": 1.4,
+      "fight": 1.2,
+      "work": 0.6
+    },
+    "graftable": false
   }
 ]

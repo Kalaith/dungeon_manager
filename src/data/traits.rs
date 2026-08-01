@@ -72,6 +72,12 @@ pub struct TraitData {
     /// once, on first sight. Zero means it is not a grafting trait.
     #[serde(default)]
     pub graft_count: u32,
+    /// Extra attack, as a fraction, at full darkness — scaled by how dark the
+    /// creature's tile actually is. The Shadow Stalker's "stronger in
+    /// darkness", and the first thing that makes the keeper's *lighting*
+    /// choices a tactical decision rather than decoration.
+    #[serde(default)]
+    pub darkness_attack_bonus: f32,
     /// How much this creature raises the surface world's interest in the
     /// dungeon. Added into `GameState::effective_threat_multiplier`, which sets
     /// both the gap between hero waves and how fast the garrison replenishes —
