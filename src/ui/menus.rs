@@ -73,7 +73,7 @@ pub fn draw_main_menu(graphics_cache: Option<&GraphicsCache>, _selected_map_type
     );
 
     let layout = menu_layout::main_menu();
-    let save_exists = crate::state::save_system::save_exists("slot_1");
+    let save_exists = crate::state::save_system::any_save_exists();
 
     draw_menu_button(layout.start, "START GAME", true, ButtonTone::Primary);
     draw_menu_button(layout.skirmish, "SKIRMISH", true, ButtonTone::Positive);
@@ -271,7 +271,7 @@ pub fn draw_pause_menu() {
 
     draw_title_block("PAUSED", "", layout.resume.y - 60.0);
 
-    let save_exists = crate::state::save_system::save_exists("slot_1");
+    let save_exists = crate::state::save_system::any_save_exists();
     draw_menu_button(layout.resume, "RESUME", true, ButtonTone::Positive);
     draw_menu_button(layout.save, "SAVE GAME", true, ButtonTone::Primary);
     draw_menu_button(layout.load, "LOAD GAME", save_exists, ButtonTone::Secondary);

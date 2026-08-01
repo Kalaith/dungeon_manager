@@ -64,7 +64,8 @@ fn process_single_action(
         }
 
         UiAction::SaveGame => {
-            if let Err(e) = crate::state::save_system::save_game(game_state, "slot_1") {
+            let slot = game_state.active_slot;
+            if let Err(e) = crate::state::save_system::save_game(game_state, slot) {
                 eprintln!("Failed to save game: {}", e);
                 game_state
                     .notifications
@@ -75,8 +76,9 @@ fn process_single_action(
         }
 
         UiAction::LoadGame => {
-            if crate::state::save_system::save_exists("slot_1") {
-                match crate::state::save_system::load_game("slot_1") {
+            let slot = game_state.active_slot;
+            if crate::state::save_system::save_exists(slot) {
+                match crate::state::save_system::load_game(slot) {
                     Ok(loaded_state) => {
                         *game_state = loaded_state;
                         game_state.notifications.success("Game Loaded!");

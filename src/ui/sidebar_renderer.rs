@@ -186,7 +186,7 @@ fn draw_utils_content(sidebar: &Sidebar, current_mode: &InteractionMode) {
     let load_x = save_x + btn_width + spacing;
     let load_y = start_y;
 
-    let save_exists = crate::state::save_system::save_exists("slot_1");
+    let save_exists = crate::state::save_system::any_save_exists();
 
     let load_color = if save_exists {
         Color::new(0.3, 0.4, 0.6, 1.0)

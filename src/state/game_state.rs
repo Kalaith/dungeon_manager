@@ -85,6 +85,14 @@ pub struct GameState {
     /// top of the mission's authored `threat_multiplier`.
     #[serde(default)]
     pub difficulty: crate::state::settings::Difficulty,
+
+    /// The slot this session saves to and loads from — the single owner of
+    /// slot identity, replacing the `"slot_1"` literal that used to sit at
+    /// eleven call sites. Skipped rather than serialized: which drawer a game
+    /// was filed in is a property of the session, not of the game, and storing
+    /// it would let a save copied into slot 2 insist it belongs in slot 1.
+    #[serde(skip)]
+    pub active_slot: crate::state::save_system::SaveSlot,
 }
 
 impl GameState {
@@ -206,6 +214,7 @@ impl GameState {
         let mut state = Self {
             dungeon,
             room_manager,
+            active_slot: crate::state::save_system::SaveSlot::default(),
             time_elapsed: 0.0,
             tick_accumulator: 0.0,
             camera: crate::state::camera_state::CameraState::new(

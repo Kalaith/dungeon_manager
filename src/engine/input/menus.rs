@@ -43,11 +43,16 @@ pub(super) fn handle_main_menu(
         return;
     }
 
-    // Load Game
-    if clicked(layout.load) && crate::state::save_system::save_exists("slot_1") {
-        match crate::state::save_system::load_game("slot_1") {
+    // Load Game. The main menu has no session yet, so there is no active slot to
+    // read — offer the most recently written one. Resolved on the click rather
+    // than in the button's enabled test, which runs every frame.
+    if clicked(layout.load) {
+        let Some(slot) = crate::state::save_system::most_recent_slot() else {
+            return;
+        };
+        match crate::state::save_system::load_game(slot) {
             Ok(loaded_state) => {
-                println!("Game loaded successfully!");
+                println!("Game loaded successfully from {slot}!");
                 *phase = GamePhase::Playing(loaded_state);
             }
             Err(e) => {

@@ -10,21 +10,36 @@ describes.
 
 ### 1. Save slots
 
-`"slot_1"` is a string literal at **eleven call sites across five files**
-(`engine/action_processor.rs`, `engine/input/menus.rs`, `engine/input/playing.rs`,
-`ui/menus.rs`, `ui/sidebar_renderer.rs`), so there is exactly one save and every
-new game silently overwrites it.
+**The slot has one owner now.** `SaveSlot` is a newtype in `state/save_system.rs`,
+the session's choice lives on `GameState::active_slot`, and the eleven `"slot_1"`
+literals are gone. `SaveMeta` (mission, wave, in-game time, wall-clock stamp) is
+written beside the state and can be read *without* deserializing a dungeon, which
+is what a picker needs.
 
-Done means: a slot is chosen once and threaded through, a save/load UI that lists
-slots with enough metadata to tell them apart (mission, in-game time, wave), and
-autosave. Out of scope for now: quicksave/quickload keys, and format
-versioning/migration — the second matters but nothing ships that needs migrating
-yet, so it stays in the backlog until the save format is otherwise stable.
+**A worse bug was underneath it.** The native path wrote `save_slot_1.json` at a
+**relative** path — into whatever directory the process started in. Launched from
+a shortcut, from Explorer, or from a store client, the save went somewhere else or
+the directory was not writable at all. Saves now go through
+`macroquad_toolkit::persistence::slots`, which this project had never adopted
+despite the toolkit carrying it: `{app_data}/dungeon_manager/` on native, a
+game-qualified key in the browser. Old saves are read once from the old location
+and move forward on the next write.
 
-The first move is to stop the literal spreading, not to build the UI: replace the
-eleven sites with a single accessor so the slot has one owner. Note that
-`TutorialState` is serialized into the save, so slot work and tutorial work touch
-the same format.
+What remains:
+
+- **The picker UI.** Nothing yet lets the player *choose* a slot — the main menu
+  loads the most recent, and in-game save/load use the active one. This is the
+  half that makes three slots visible instead of merely present.
+- **Autosave.** Reach for the toolkit's `persistence::AutoSaveManager` before
+  writing one; it is the same "already carried, never adopted" shape the slot API
+  turned out to be.
+
+Still out of scope: quicksave/quickload keys, and format versioning/migration —
+though the toolkit's `load_from_slot_with_migration` and `peek_slot_version` are
+sitting there for when that comes.
+
+Note that `TutorialState` is serialized into the save, so slot work and tutorial
+work touch the same format.
 
 ### 2. Tutorial coverage
 
@@ -172,6 +187,8 @@ competent player has standing by then. Notes for taking that measurement:
 - Scenario fixtures for room placement, resource flow, encounters and progression milestones.
 - Separate model mutation from the renderer and sidebar modules so UI actions call explicit domain commands.
 - Performance on large maps: O(n) entity-position scans need a spatial index; cache pathfinding and room detection; profile the sidebar and renderer paths that recompute layout every frame. `effective_threat_multiplier` belongs on this list too — it is called twice per tick in `hero_spawner` and each call scans the creature list.
+- **Per-frame filesystem IO in the menus.** `any_save_exists()` runs while the main menu, pause menu and sidebar are on screen, and now stats up to six paths per frame (three slots × current + legacy locations) where it used to stat one. Existence checks are cheap and this was already the shape before slots, but it is real IO in a draw path — the fix is to resolve it on menu entry rather than per frame, which wants the menus to hold state they currently do not.
+- **The toolkit is under-adopted here, and the save system was the proof.** `persistence::slots` had the slot enumeration, app-data pathing, browser key qualification, versioning and migration hooks this project needed, and `save_system.rs` had reimplemented a thinner version against the lower-level `files`/`keys` API instead. Worth a sweep for the same shape elsewhere: `AutoSaveManager`, `SaveRoot` and `peek_slot_version` are all carried and all unused.
 - Data-driven stragglers: hardcoded imp claim delay, loose spawn-placement validation.
 - Decide on the GDD's determinism/replay aspiration while it is still cheap.
 - Fix `docs/gdd.md`'s stale "Bevy ECS" claim.

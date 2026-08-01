@@ -75,10 +75,12 @@ pub(super) fn handle_playing(
         }
 
         if clicked(layout.save) {
-            match crate::state::save_system::save_game(state, "slot_1") {
+            let slot = state.active_slot;
+            match crate::state::save_system::save_game(state, slot) {
                 Ok(_) => {
-                    state.notifications.success("Game saved successfully!");
-                    eprintln!("Game saved to slot_1");
+                    state
+                        .notifications
+                        .success(format!("Game saved to {slot}!"));
                 }
                 Err(e) => {
                     state.notifications.danger(format!("Save failed: {}", e));
@@ -87,12 +89,14 @@ pub(super) fn handle_playing(
             }
         }
 
-        if clicked(layout.load) && crate::state::save_system::save_exists("slot_1") {
-            match crate::state::save_system::load_game("slot_1") {
+        let load_slot = state.active_slot;
+        if clicked(layout.load) && crate::state::save_system::save_exists(load_slot) {
+            match crate::state::save_system::load_game(load_slot) {
                 Ok(loaded_state) => {
                     *state = loaded_state;
-                    state.notifications.success("Game loaded!");
-                    eprintln!("Game loaded from slot_1");
+                    state
+                        .notifications
+                        .success(format!("Game loaded from {load_slot}!"));
                 }
                 Err(e) => {
                     state.notifications.danger(format!("Load failed: {}", e));
