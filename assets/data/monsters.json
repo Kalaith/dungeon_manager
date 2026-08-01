@@ -1513,7 +1513,7 @@
   {
     "id": "zombie",
     "name": "Zombie",
-    "description": "A shambling corpse \u2014 slow and mindless, but tireless and hard to put down.",
+    "description": "A shambling corpse — slow and mindless, but tireless and hard to put down.",
     "faction": "dungeon",
     "role": "fighter",
     "stats": {
@@ -1627,7 +1627,7 @@
   {
     "id": "ghost",
     "name": "Ghost",
-    "description": "A restless spirit \u2014 fast, fragile, and hard to strike, striking from beyond the veil.",
+    "description": "A restless spirit — fast, fragile, and hard to strike, striking from beyond the veil.",
     "faction": "dungeon",
     "role": "caster",
     "stats": {
@@ -1741,7 +1741,7 @@
   {
     "id": "bat_swarm",
     "name": "Bat Swarm",
-    "description": "A cloud of shrieking cave bats \u2014 individually harmless, together a fast, distracting nuisance.",
+    "description": "A cloud of shrieking cave bats — individually harmless, together a fast, distracting nuisance.",
     "faction": "dungeon",
     "role": "skirmisher",
     "stats": {
@@ -1848,7 +1848,7 @@
   {
     "id": "dark_elf",
     "name": "Dark Elf",
-    "description": "A swift, arrogant blademaster \u2014 devastating damage from poisoned blades, but quick to desert a poorly-run dungeon.",
+    "description": "A swift, arrogant blademaster — devastating damage from poisoned blades, but quick to desert a poorly-run dungeon.",
     "faction": "dungeon",
     "role": "skirmisher",
     "stats": {
@@ -1970,6 +1970,239 @@
         "attack"
       ],
       "voice_set": "dark_elf"
+    }
+  },
+  {
+    "id": "lich",
+    "name": "Lich",
+    "description": "An archmage who traded their body for a soul-lantern. Research and ruin in equal measure.",
+    "faction": "dungeon",
+    "role": "elite_caster",
+    "stats": {
+      "health": 130,
+      "mana": 220,
+      "attack": 10,
+      "defense": 6,
+      "speed": 0.9,
+      "carry_capacity": 30,
+      "sight_radius": 11
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 6.0,
+        "satisfied_by": [
+          "graveyard"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 12.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 15.0,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 120
+      }
+    },
+    "traits": [
+      "undead",
+      "arrogant"
+    ],
+    "ai": {
+      "base_mood": 60,
+      "anger_threshold": 25,
+      "desertion_threshold": 8,
+      "task_preferences": {
+        "research": 2.0,
+        "ritual": 1.6
+      },
+      "room_desires": {
+        "graveyard": 2.0,
+        "library": 2.0,
+        "arcane_archive": 2.2
+      },
+      "discipline_response": {
+        "slap": -8,
+        "torture": -18,
+        "reward": 5
+      }
+    },
+    "combat": {
+      "attack_type": "magic",
+      "damage_range": [
+        14,
+        22
+      ],
+      "attack_speed": 0.8,
+      "armor_type": "light",
+      "resistances": {
+        "dark": 0.7,
+        "ice": 0.3
+      },
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        200,
+        500,
+        900,
+        1500
+      ],
+      "stat_growth_per_level": {
+        "health": 20,
+        "mana": 10,
+        "attack": 2
+      },
+      "max_level": 10,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 7,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [
+        15,
+        40
+      ]
+    },
+    "spawn": {
+      "source": "room",
+      "min_dungeon_reputation": 250,
+      "preferred_rooms": [
+        "graveyard"
+      ],
+      "spawn_weight": 0.2,
+      "max_population": 2
+    },
+    "visual": {
+      "sprite": "monsters/lich.png",
+      "scale": 1.0,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "lich"
+    }
+  },
+  {
+    "id": "grave_hulk",
+    "name": "Grave Hulk",
+    "description": "Stitched from whatever the graveyard had spare. Slow, immensely durable, and hungry for corpses.",
+    "faction": "dungeon",
+    "role": "tank",
+    "stats": {
+      "health": 420,
+      "mana": 0,
+      "attack": 16,
+      "defense": 12,
+      "speed": 0.6,
+      "carry_capacity": 90,
+      "sight_radius": 6
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 6.0,
+        "satisfied_by": [
+          "graveyard"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 12.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 15.0,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 120
+      }
+    },
+    "traits": [
+      "undead",
+      "strong"
+    ],
+    "ai": {
+      "base_mood": 60,
+      "anger_threshold": 25,
+      "desertion_threshold": 8,
+      "task_preferences": {
+        "guard": 1.8,
+        "train": 1.2
+      },
+      "room_desires": {
+        "graveyard": 2.0,
+        "barracks": 1.6
+      },
+      "discipline_response": {
+        "slap": -8,
+        "torture": -18,
+        "reward": 5
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        16,
+        26
+      ],
+      "attack_speed": 0.6,
+      "armor_type": "heavy",
+      "resistances": {
+        "dark": 0.6,
+        "physical": 0.2
+      },
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        200,
+        500,
+        900,
+        1500
+      ],
+      "stat_growth_per_level": {
+        "health": 20,
+        "mana": 10,
+        "attack": 2
+      },
+      "max_level": 10,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 6,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [
+        15,
+        40
+      ]
+    },
+    "spawn": {
+      "source": "room",
+      "min_dungeon_reputation": 250,
+      "preferred_rooms": [
+        "graveyard"
+      ],
+      "spawn_weight": 0.25,
+      "max_population": 3
+    },
+    "visual": {
+      "sprite": "monsters/grave_hulk.png",
+      "scale": 1.0,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "grave_hulk"
     }
   }
 ]

@@ -166,7 +166,9 @@
                 "skeleton",
                 "zombie",
                 "ghost",
-                "vampire"
+                "vampire",
+                "lich",
+                "grave_hulk"
             ],
             "traps": []
         },

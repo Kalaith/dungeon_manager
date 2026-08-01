@@ -176,6 +176,12 @@ fn generate_monster_sprites() {
     monsters::save_sprite("monsters", "vampire", monsters::create_vampire_sprite());
     monsters::save_sprite("monsters", "zombie", monsters::create_zombie_sprite());
     monsters::save_sprite("monsters", "ghost", monsters::create_ghost_sprite());
+    monsters::save_sprite("monsters", "lich", monsters::create_lich_sprite());
+    monsters::save_sprite(
+        "monsters",
+        "grave_hulk",
+        monsters::create_grave_hulk_sprite(),
+    );
 
     // Demons
     monsters::save_sprite(
