@@ -1,5 +1,72 @@
 # TODO — Deep Dominion
 
+## In scope
+
+Everything below this section is a backlog. **These three items are the committed
+work**, and the target that binds them is one player finishing one mission
+start-to-finish without a developer sitting next to them. Each is scoped to the
+smallest version that clears that bar — not to the full item the backlog
+describes.
+
+### 1. Save slots
+
+`"slot_1"` is a string literal at **eleven call sites across five files**
+(`engine/action_processor.rs`, `engine/input/menus.rs`, `engine/input/playing.rs`,
+`ui/menus.rs`, `ui/sidebar_renderer.rs`), so there is exactly one save and every
+new game silently overwrites it.
+
+Done means: a slot is chosen once and threaded through, a save/load UI that lists
+slots with enough metadata to tell them apart (mission, in-game time, wave), and
+autosave. Out of scope for now: quicksave/quickload keys, and format
+versioning/migration — the second matters but nothing ships that needs migrating
+yet, so it stays in the backlog until the save format is otherwise stable.
+
+The first move is to stop the literal spreading, not to build the UI: replace the
+eleven sites with a single accessor so the slot has one owner. Note that
+`TutorialState` is serialized into the save, so slot work and tutorial work touch
+the same format.
+
+### 2. Tutorial coverage
+
+`STEPS` in `engine/tutorial_system.rs` is six steps — dig, claim, Lair, Hatchery,
+Treasury, recruit — and stops there. A player who finishes it has never met
+combat, traps, spells, research, wages, moods, the minimap, or a hero wave, which
+is everything that decides whether they survive the mission they are in.
+
+Done means: coverage through the first hero wave, so the tutorial hands off at the
+point the player has something to defend and knows how to defend it. Priority
+order is defence-critical first — hero waves and combat, then traps, then
+wages/moods (creatures desert and the player never learns why), then research.
+Spells, prison/torture and the temple can wait; they are not on the path to
+surviving.
+
+**Note before starting:** `STEPS` is a hardcoded Rust `const`, which contradicts
+this project's data-driven rule. Roughly doubling its length is the wrong moment
+to keep it in Rust — move it to `assets/` first, then author. That also makes step
+text reachable by the localization item later.
+
+### 3. Wave 1
+
+The loudest playtest complaint, and the one with a concrete finding behind it:
+`hero_waves.initial_delay` is **600s (10 minutes)**, and `HeroBase::new` takes it
+raw. Threat is applied *only* to later waves (`hero_spawner.rs:40`) and to
+garrison replenishment (`hero_spawner.rs:114`) — so **wave 1 lands at exactly
+10:00 on every mission at every difficulty**, identically for the tutorial map on
+Easy and the hardest mission on Hard. It is the one wave with no scaling at all.
+
+Done means: wave 1 scales by mission and difficulty like every other wave, and its
+timing is reconciled against what a player can actually build in that window.
+
+Two corrections to what this file used to say: the old entry claimed the balance
+numbers assert a **~33-minute** first wave — config says 600s, and the only
+assertion in `balance_calculator` is `initial_delay >= 30.0` *seconds*, so that
+figure came from somewhere else and should not be trusted. And this is not purely
+a pacing dial: the starting-gold item under Balance is the same complaint from the
+other side, since more setup time and faster setup are interchangeable fixes. Take
+the measurement before turning either.
+
+---
+
 ## Engine & simulation
 
 - Wire the 4 non-proc monster abilities (`charge`, `smash`, `berserk`, `charm`) — they need bonus-damage / self-buff / morale hooks the engine lacks.
@@ -72,8 +139,8 @@
 ## UI & UX
 
 - Settings menu breadth: resolution and window modes, volume sliders, keybind remapping (keys are hardcoded in `engine/input.rs`), camera/scroll options, autosave toggle.
-- Save system: every call site hardcodes `"slot_1"`. Needs a multi-slot UI, autosave, quicksave/quickload, save metadata, and format versioning/migration.
-- Tutorial: 6 steps cover only dig→rooms→recruit. Extend to combat, traps, spells, research, prison/torture, temple, wages/moods/slapping, hero waves and the minimap, plus contextual hints and an intro.
+- Save system, beyond the slots in scope above: quicksave/quickload, and save format versioning/migration.
+- Tutorial, beyond the coverage in scope above: spells, prison/torture, the temple, contextual hints and an intro.
 - Hotkey overlay / help screen.
 - Localization: no i18n layer, all strings hardcoded English — externalize strings before it gets expensive.
 - Accessibility: colorblind-safe faction palettes, text scaling beyond 3 steps, hold-vs-toggle options, screen-shake toggle.
@@ -82,8 +149,8 @@
 ## Balance
 
 - Hero/creature level asymmetry: heroes gain +15%/level to cap 10, creatures +10% to cap 5 — the late game mathematically favours heroes.
-- Wave pacing: players are killed before they can set up, while the balance numbers claim a ~33-minute first wave. Reconcile config against the shipped build and scale pacing by difficulty.
-- Starting gold scarcity near the dungeon core — the loudest playtest complaint.
+- Wave pacing beyond wave 1 (in scope above): reconcile the shipped `wave_interval` and scaling curve against the balance numbers across a full mission.
+- Starting gold scarcity near the dungeon core. Couples to the wave-1 item in scope above — more setup time and faster setup are interchangeable fixes, so measure before turning either.
 - Room sell refund is 5%; 25–50% would make experimentation viable.
 - Creature value outliers: Bile Demon overpriced, Hellhound free, Succubus mood loop, treasury desirability clustering.
 - Creature wage and need decay rates still untuned.
