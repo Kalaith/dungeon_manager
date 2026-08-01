@@ -60,7 +60,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/peasant_militia.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -142,7 +141,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/scout.png",
       "scale": 0.9,
       "animations": [
         "idle",
@@ -233,7 +231,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/acolyte.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -320,7 +317,6 @@
       ]
     },
     "visual": {
-      "sprite": "heroes/knight.png",
       "scale": 1.1,
       "animations": [
         "idle",
@@ -403,7 +399,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/archer.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -495,7 +490,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/battle_cleric.png",
       "scale": 1.1,
       "animations": [
         "idle",
@@ -586,7 +580,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/rogue.png",
       "scale": 0.95,
       "animations": [
         "idle",
@@ -678,7 +671,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/paladin.png",
       "scale": 1.2,
       "animations": [
         "idle",
@@ -771,7 +763,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/wizard.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -863,7 +854,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/inquisitor.png",
       "scale": 1.05,
       "animations": [
         "idle",
@@ -955,7 +945,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/knight_commander.png",
       "scale": 1.15,
       "animations": [
         "idle",
@@ -1048,7 +1037,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/high_priest.png",
       "scale": 1.1,
       "animations": [
         "idle",
@@ -1140,7 +1128,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/archmage.png",
       "scale": 1.05,
       "animations": [
         "idle",
@@ -1230,7 +1217,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/champion_of_light.png",
       "scale": 1.3,
       "animations": [
         "idle",
@@ -1312,7 +1298,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/barbarian.png",
       "scale": 1.15,
       "animations": [
         "idle",
@@ -1405,7 +1390,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/alchemist.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -1496,7 +1480,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/geomancer.png",
       "scale": 1.1,
       "animations": [
         "idle",
@@ -1570,7 +1553,6 @@
       ]
     },
     "visual": {
-      "sprite": "heroes/peasant.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -1673,7 +1655,6 @@
       ]
     },
     "visual": {
-      "sprite": "heroes/champion.png",
       "scale": 1.2,
       "animations": [
         "idle",
@@ -1769,7 +1750,6 @@
       "elite_variants": []
     },
     "visual": {
-      "sprite": "heroes/dragon_knight.png",
       "scale": 1.2,
       "animations": [
         "idle",

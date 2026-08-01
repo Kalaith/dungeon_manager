@@ -85,7 +85,10 @@ pub struct HeroProgressionData {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeroVisualData {
-    pub sprite: String,
+    // No `sprite` field: the texture loader derives `sprites/heroes/{id}.png`
+    // from the roster key, so an authored path was never read. All twenty
+    // entries had drifted to `heroes/{id}.png` — a directory that does not
+    // exist — without anything noticing. Same for `MonsterVisualData`.
     pub scale: f32,
     pub animations: Vec<String>,
     pub voice_set: String,

@@ -95,7 +95,8 @@ pub struct SpawnData {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MonsterVisualData {
-    pub sprite: String,
+    // No `sprite` field — see the note on `HeroVisualData`. Twelve of nineteen
+    // entries pointed at `creatures/{id}.png`, which has never existed.
     pub scale: f32,
     pub animations: Vec<String>,
     pub voice_set: String,

@@ -196,6 +196,12 @@ fn generate_monster_sprites() {
     );
     monsters::save_sprite("monsters", "succubus", monsters::create_succubus_sprite());
     monsters::save_sprite("monsters", "hellhound", monsters::create_hellhound_sprite());
+    monsters::save_sprite("monsters", "balor", monsters::create_balor_sprite());
+    monsters::save_sprite(
+        "monsters",
+        "infernal_hound",
+        monsters::create_infernal_hound_sprite(),
+    );
 
     // Beasts
     monsters::save_sprite("monsters", "spider", monsters::create_spider_sprite());

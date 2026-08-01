@@ -193,7 +193,8 @@
             "creatures": [
                 "succubus",
                 "demon_spawn",
-                "bile_demon"
+                "bile_demon",
+                "infernal_hound"
             ],
             "traps": []
         },
@@ -338,7 +339,7 @@
     {
         "id": "soul_rendering",
         "name": "Soul Rendering",
-        "description": "Unlocks the Soul Furnace, which burns the fallen for mana.",
+        "description": "Unlocks the Soul Furnace, which burns the fallen for mana - and the rite that binds a Balor to the dungeon.",
         "cost": 42,
         "prerequisites": [
             "demonology"
@@ -348,7 +349,9 @@
                 "soul_furnace"
             ],
             "spells": [],
-            "creatures": [],
+            "creatures": [
+                "balor"
+            ],
             "traps": []
         },
         "icon": "icons/tech/soul_rendering.png"

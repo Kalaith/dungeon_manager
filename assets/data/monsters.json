@@ -105,7 +105,6 @@
       "summon_cost_per_existing": 5
     },
     "visual": {
-      "sprite": "creatures/imp.png",
       "scale": 0.8,
       "animations": [
         "idle",
@@ -234,7 +233,6 @@
       "max_population": 20
     },
     "visual": {
-      "sprite": "creatures/goblin.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -359,7 +357,6 @@
       "max_population": 10
     },
     "visual": {
-      "sprite": "creatures/orc.png",
       "scale": 1.2,
       "animations": [
         "idle",
@@ -486,7 +483,6 @@
       "max_population": 5
     },
     "visual": {
-      "sprite": "creatures/warlock.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -604,7 +600,6 @@
       "max_population": 3
     },
     "visual": {
-      "sprite": "creatures/troll.png",
       "scale": 1.5,
       "animations": [
         "idle",
@@ -716,7 +711,6 @@
       "max_population": 15
     },
     "visual": {
-      "sprite": "creatures/skeleton.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -844,7 +838,6 @@
       "max_population": 2
     },
     "visual": {
-      "sprite": "creatures/demon_spawn.png",
       "scale": 1.3,
       "animations": [
         "idle",
@@ -940,7 +933,6 @@
       "max_population": 10
     },
     "visual": {
-      "sprite": "creatures/spider.png",
       "scale": 0.9,
       "animations": [
         "idle",
@@ -1033,7 +1025,6 @@
       "max_population": 10
     },
     "visual": {
-      "sprite": "creatures/lizard.png",
       "scale": 1.2,
       "animations": [
         "idle",
@@ -1155,7 +1146,6 @@
       "max_population": 4
     },
     "visual": {
-      "sprite": "creatures/succubus.png",
       "scale": 1.1,
       "animations": [
         "idle",
@@ -1271,7 +1261,6 @@
       "max_population": 3
     },
     "visual": {
-      "sprite": "monsters/vampire.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -1383,7 +1372,6 @@
       "max_population": 8
     },
     "visual": {
-      "sprite": "monsters/hellhound.png",
       "scale": 0.9,
       "animations": [
         "idle",
@@ -1499,7 +1487,6 @@
       "max_population": 4
     },
     "visual": {
-      "sprite": "monsters/bile_demon.png",
       "scale": 1.4,
       "animations": [
         "idle",
@@ -1614,7 +1601,6 @@
       "max_population": 15
     },
     "visual": {
-      "sprite": "creatures/zombie.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -1728,7 +1714,6 @@
       "max_population": 12
     },
     "visual": {
-      "sprite": "creatures/ghost.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -1835,7 +1820,6 @@
       "max_population": 18
     },
     "visual": {
-      "sprite": "creatures/bat_swarm.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -1962,7 +1946,6 @@
       "max_population": 12
     },
     "visual": {
-      "sprite": "creatures/dark_elf.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -2079,7 +2062,6 @@
       "max_population": 2
     },
     "visual": {
-      "sprite": "monsters/lich.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -2195,7 +2177,6 @@
       "max_population": 3
     },
     "visual": {
-      "sprite": "monsters/grave_hulk.png",
       "scale": 1.0,
       "animations": [
         "idle",
@@ -2203,6 +2184,252 @@
         "attack"
       ],
       "voice_set": "grave_hulk"
+    }
+  },
+  {
+    "id": "balor",
+    "name": "Balor",
+    "description": "The pit's own general, wreathed in its own fire. Immense, immensely expensive, and utterly without fear.",
+    "faction": "dungeon",
+    "role": "elite_fighter",
+    "stats": {
+      "health": 550,
+      "mana": 250,
+      "attack": 38,
+      "defense": 22,
+      "speed": 0.95,
+      "carry_capacity": 60,
+      "sight_radius": 10
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 8.0,
+        "satisfied_by": [
+          "lair"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 35.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 20.0,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 400
+      },
+      "training": {
+        "decay_per_minute": 5.0,
+        "satisfied_by": [
+          "combat_pit",
+          "training_hall"
+        ]
+      }
+    },
+    "traits": [
+      "demonic",
+      "fearless",
+      "arrogant"
+    ],
+    "ai": {
+      "base_mood": 35,
+      "anger_threshold": 15,
+      "desertion_threshold": 5,
+      "task_preferences": {
+        "fight": 3.0,
+        "guard": 1.2,
+        "train": 0.8
+      },
+      "room_desires": {
+        "ritual_circle": 1.6,
+        "combat_pit": 1.4,
+        "temple": 1.2
+      },
+      "discipline_response": {
+        "slap": -20,
+        "torture": -60,
+        "reward": 25
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        30,
+        48
+      ],
+      "attack_speed": 0.8,
+      "armor_type": "heavy",
+      "resistances": {
+        "fire": 1.0,
+        "magic": 0.4,
+        "physical": 0.2
+      },
+      "abilities": [
+        "fire_breath"
+      ]
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        500,
+        1200,
+        2400,
+        4000
+      ],
+      "stat_growth_per_level": {
+        "health": 55,
+        "attack": 7,
+        "defense": 4
+      },
+      "max_level": 10,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 15,
+      "steals_if_unpaid": true,
+      "drops_gold_on_death": [
+        200,
+        400
+      ]
+    },
+    "spawn": {
+      "source": "ritual",
+      "min_dungeon_reputation": 500,
+      "preferred_rooms": [
+        "ritual_circle"
+      ],
+      "spawn_weight": 0.05,
+      "max_population": 1
+    },
+    "visual": {
+      "scale": 1.5,
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "rage"
+      ],
+      "voice_set": "demon"
+    }
+  },
+  {
+    "id": "infernal_hound",
+    "name": "Infernal Hound",
+    "description": "A bound hunting beast that runs down anything entering the dungeon. Sees further than anything else in the pit.",
+    "faction": "dungeon",
+    "role": "scout_fighter",
+    "stats": {
+      "health": 160,
+      "mana": 0,
+      "attack": 18,
+      "defense": 6,
+      "speed": 1.7,
+      "carry_capacity": 20,
+      "sight_radius": 14
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 14.0,
+        "satisfied_by": [
+          "kennel"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 34.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 0.0,
+        "satisfied_by": [],
+        "stash_amount": 0
+      }
+    },
+    "traits": [
+      "demonic",
+      "beast",
+      "aggressive"
+    ],
+    "ai": {
+      "base_mood": 70,
+      "anger_threshold": 30,
+      "desertion_threshold": 0,
+      "task_preferences": {
+        "guard": 2.0,
+        "scout": 2.0,
+        "fight": 1.5
+      },
+      "room_desires": {
+        "kennel": 1.8,
+        "ritual_circle": 1.2
+      },
+      "discipline_response": {
+        "slap": 0,
+        "torture": -15,
+        "reward": 12
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        14,
+        22
+      ],
+      "attack_speed": 1.5,
+      "armor_type": "light",
+      "resistances": {
+        "fire": 0.9
+      },
+      "abilities": [
+        "fire_breath"
+      ]
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        130,
+        320,
+        640,
+        1000
+      ],
+      "stat_growth_per_level": {
+        "health": 18,
+        "attack": 3,
+        "speed": 0.04
+      },
+      "max_level": 5,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 4,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [
+        0,
+        0
+      ]
+    },
+    "spawn": {
+      "source": "ritual",
+      "min_dungeon_reputation": 150,
+      "preferred_rooms": [
+        "kennel",
+        "ritual_circle"
+      ],
+      "spawn_weight": 0.3,
+      "max_population": 4
+    },
+    "visual": {
+      "scale": 1.0,
+      "animations": [
+        "idle",
+        "run",
+        "attack"
+      ],
+      "voice_set": "beast"
     }
   }
 ]
