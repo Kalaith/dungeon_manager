@@ -26,6 +26,8 @@ mod hero_base_tests;
 #[cfg(test)]
 mod hero_behaviour_tests;
 #[cfg(test)]
+mod lighting_tests;
+#[cfg(test)]
 mod mining_tests;
 #[cfg(test)]
 mod mutation_tests;

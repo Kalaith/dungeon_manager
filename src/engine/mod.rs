@@ -15,6 +15,7 @@ pub mod tile_grid;
 
 pub mod action_processor;
 pub mod imp_ai;
+pub mod lighting;
 pub mod map_generator;
 pub mod spell_effects;
 pub mod task_system;
