@@ -150,7 +150,11 @@ pub fn apply_slap(
     creature.task_time = 0.0;
 }
 
-pub fn calculate_work_efficiency(creature: &CreatureState, _monster_data: &MonsterData) -> f32 {
+pub fn calculate_work_efficiency(
+    creature: &CreatureState,
+    monster_data: &MonsterData,
+    game_data: &GameData,
+) -> f32 {
     let base_efficiency = 1.0;
     let mood_multiplier = 0.5 + (creature.mood / 100.0);
 
@@ -161,5 +165,18 @@ pub fn calculate_work_efficiency(creature: &CreatureState, _monster_data: &Monst
         1.0
     };
 
-    base_efficiency * mood_multiplier * health_multiplier
+    // `monster_data` was previously accepted and ignored. Traits now use it:
+    // the Archivist's `scholarship` raises its own output, which reaches
+    // research as well as work because `execute_research` scales by this
+    // same term.
+    let trait_multiplier: f32 = active_traits(monster_data, game_data)
+        .iter()
+        .map(|t| t.work_efficiency_multiplier)
+        .product();
+
+    // Set by `command_aura::apply_command_auras` from whichever overseer is
+    // standing near this creature; 1.0 when none is.
+    let command_multiplier = creature.command_bonus.max(0.0);
+
+    base_efficiency * mood_multiplier * health_multiplier * trait_multiplier * command_multiplier
 }

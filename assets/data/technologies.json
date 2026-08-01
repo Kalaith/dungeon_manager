@@ -125,7 +125,9 @@
                 "scavenger"
             ],
             "spells": [],
-            "creatures": [],
+            "creatures": [
+                "overseer"
+            ],
             "traps": []
         },
         "icon": "icons/tech/logistics.png"
@@ -319,7 +321,9 @@
                 "arcane_archive"
             ],
             "spells": [],
-            "creatures": [],
+            "creatures": [
+                "archivist"
+            ],
             "traps": []
         },
         "icon": "icons/tech/codification.png"

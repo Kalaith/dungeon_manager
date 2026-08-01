@@ -1,5 +1,6 @@
 // Engine module - stateless game logic services
 pub mod combat;
+pub mod command_aura;
 pub mod creature_ai;
 mod creature_targets;
 pub mod hero_abilities;

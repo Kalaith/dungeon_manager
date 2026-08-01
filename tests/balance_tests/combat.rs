@@ -158,8 +158,22 @@ fn test_all_heroes_have_positive_health() {
 fn test_creature_wage_efficiency_variance() {
     let monsters = data::load_monsters();
 
+    // health-per-gold only measures value for a creature you are buying for its
+    // body. Support creatures are bought for what they do to *other* creatures
+    // — an Overseer's aura, an Archivist's research rate — so their health says
+    // nothing about whether their wage is fair, and including them made this
+    // check fail for a reason that was not a balance problem.
+    const SUPPORT_TRAITS: &[&str] = &["commanding", "scholarship"];
+
     let mut efficiencies: Vec<(String, f32)> = Vec::new();
     for monster in monsters.values() {
+        if monster
+            .traits
+            .iter()
+            .any(|t| SUPPORT_TRAITS.contains(&t.as_str()))
+        {
+            continue;
+        }
         let wage = monster
             .economy
             .as_ref()

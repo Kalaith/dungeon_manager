@@ -16,6 +16,8 @@ mod ui;
 #[cfg(test)]
 mod combat_tests;
 #[cfg(test)]
+mod command_aura_tests;
+#[cfg(test)]
 mod hero_abilities_tests;
 #[cfg(test)]
 mod hero_base_tests;
@@ -31,6 +33,8 @@ mod room_mood_tests;
 mod room_placement_tests;
 #[cfg(test)]
 mod spell_targeting_tests;
+#[cfg(test)]
+mod task_system_tests;
 #[cfg(test)]
 mod traits_tests;
 #[cfg(test)]

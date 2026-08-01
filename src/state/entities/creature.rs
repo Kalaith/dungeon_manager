@@ -79,6 +79,18 @@ pub struct CreatureState {
     /// Serde-defaulted so saves written before the Stone Warden existed load.
     #[serde(default)]
     pub reinforce_timer: f32,
+
+    /// Work-efficiency multiplier granted by a nearby commanding creature.
+    /// Recomputed every tick by `command_aura::apply_command_auras`, so it is
+    /// a cache rather than authored state; it lives on the creature because
+    /// `calculate_work_efficiency` runs while `entities` is mutably borrowed
+    /// and cannot scan for neighbours itself.
+    #[serde(default = "one")]
+    pub command_bonus: f32,
+}
+
+fn one() -> f32 {
+    1.0
 }
 
 impl CreatureState {
@@ -121,6 +133,7 @@ impl CreatureState {
             move_timer: 0.0,
             work_timer: 0.0,
             reinforce_timer: 0.0,
+            command_bonus: 1.0,
         }
     }
 

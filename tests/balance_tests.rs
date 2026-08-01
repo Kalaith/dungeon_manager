@@ -24,6 +24,10 @@ mod data {
         pub id: String,
         pub name: String,
         pub stats: CreatureStats,
+        /// Trait tags. Needed so balance checks can tell a creature bought for
+        /// its body from one bought for an aura or a research multiplier.
+        #[serde(default)]
+        pub traits: Vec<String>,
         #[serde(default)]
         pub combat: Option<CombatData>,
         #[serde(default)]

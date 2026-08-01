@@ -16,6 +16,12 @@
 //! that the reference is correct. It is still exactly the signal that was
 //! missing, and it costs nothing to keep.
 //!
+//! **Comments are stripped before counting.** They were not, and it mattered:
+//! writing "the aura is for the workers" in an unrelated doc comment was
+//! enough to make `SpecialData::aura` — genuinely dead — look alive and fail
+//! the stale-allowance check. Prose about a feature is not an implementation
+//! of it.
+//!
 //! Run with: cargo test --test live_data_fields_tests
 
 use std::collections::BTreeSet;
@@ -51,6 +57,12 @@ const UNCONSUMED: &[&str] = &[
     "SpecialData::aura",
     "SpecialData::cannot_be_modified",
     "SpecialData::triggers_event",
+    // The parent of the three above: nothing reads the block at all. Surfaced
+    // only once comments were stripped from the sweep.
+    "TileData::special",
+    // Creature mutations are an undecided scope item; every monster ships
+    // `mutations: []`, so the condition vocabulary has never been exercised.
+    "MutationData::conditions",
     // Traps: magical door locking is unbuilt, and every trap is "pressure".
     "TrapEffects::lockable",
     "TrapEffects::trigger_type",
@@ -150,7 +162,40 @@ fn all_source() -> String {
         .join("\n")
 }
 
-/// Occurrences of `field` as a whole word. One is the declaration itself.
+/// Blank out `//` line comments and `/* */` block comments so prose cannot
+/// keep a dead field alive. Replaces them with spaces rather than deleting, so
+/// nothing on either side is accidentally joined into one token.
+fn strip_comments(source: &str) -> String {
+    let bytes = source.as_bytes();
+    let mut out = String::with_capacity(source.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'/' && i + 1 < bytes.len() && bytes[i + 1] == b'/' {
+            while i < bytes.len() && bytes[i] != b'\n' {
+                out.push(' ');
+                i += 1;
+            }
+        } else if bytes[i] == b'/' && i + 1 < bytes.len() && bytes[i + 1] == b'*' {
+            out.push_str("  ");
+            i += 2;
+            while i < bytes.len()
+                && !(bytes[i] == b'*' && i + 1 < bytes.len() && bytes[i + 1] == b'/')
+            {
+                out.push(if bytes[i] == b'\n' { '\n' } else { ' ' });
+                i += 1;
+            }
+            if i < bytes.len() {
+                out.push_str("  ");
+                i += 2;
+            }
+        } else {
+            out.push(source[i..].chars().next().unwrap_or(' '));
+            i += source[i..].chars().next().map_or(1, |c| c.len_utf8());
+        }
+    }
+    out
+}
+
 fn occurrences(source: &str, field: &str) -> usize {
     let bytes = source.as_bytes();
     let mut count = 0;
@@ -181,7 +226,7 @@ fn every_data_field_is_read_somewhere() {
         fields.len()
     );
 
-    let source = all_source();
+    let source = strip_comments(&all_source());
     let allowed: BTreeSet<&str> = UNCONSUMED.iter().copied().collect();
 
     let mut dead = Vec::new();

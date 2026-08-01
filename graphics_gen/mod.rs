@@ -173,6 +173,8 @@ fn generate_monster_sprites() {
     monsters::save_sprite("monsters", "warlock", monsters::create_warlock_sprite());
     monsters::save_sprite("monsters", "cultist", monsters::create_cultist_sprite());
     monsters::save_sprite("monsters", "hexbinder", monsters::create_hexbinder_sprite());
+    monsters::save_sprite("monsters", "overseer", monsters::create_overseer_sprite());
+    monsters::save_sprite("monsters", "archivist", monsters::create_archivist_sprite());
     monsters::save_sprite("monsters", "troll", monsters::create_troll_sprite());
     monsters::save_sprite("monsters", "ogre", monsters::create_ogre_sprite());
     monsters::save_sprite("monsters", "ironbound", monsters::create_ironbound_sprite());

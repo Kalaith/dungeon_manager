@@ -107,6 +107,25 @@
     }
   },
   {
+    "id": "commanding",
+    "description": "Directs the work of everyone nearby, and gets more out of them than they would manage alone.",
+    "command_efficiency_bonus": 1.35,
+    "command_radius": 5.0,
+    "task_preference_multipliers": {
+      "guard": 1.3,
+      "work": 0.7
+    }
+  },
+  {
+    "id": "scholarship",
+    "description": "Reads faster than it fights. Turns time in a library into far more research than anyone else would.",
+    "work_efficiency_multiplier": 1.6,
+    "task_preference_multipliers": {
+      "research": 1.8,
+      "fight": 0.5
+    }
+  },
+  {
     "id": "stonebinding",
     "description": "Shores up the rock it stands beside, turning plain wall into stone no hero can tunnel through.",
     "wall_reinforce_seconds": 20.0,

@@ -56,6 +56,18 @@ pub struct TraitData {
     /// above, this acts on the world rather than on its holder.
     #[serde(default)]
     pub wall_reinforce_seconds: f32,
+    /// Multiplies the *work efficiency of other creatures* within
+    /// `command_radius`. The Overseer's aura: it acts on neighbours rather
+    /// than on itself or on the map.
+    #[serde(default = "one")]
+    pub command_efficiency_bonus: f32,
+    /// How far that aura reaches, in tiles.
+    #[serde(default)]
+    pub command_radius: f32,
+    /// Multiplies this creature's *own* work efficiency, which covers research
+    /// output too since `execute_research` scales by the same term.
+    #[serde(default = "one")]
+    pub work_efficiency_multiplier: f32,
 }
 
 fn one() -> f32 {
