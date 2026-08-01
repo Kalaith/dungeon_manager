@@ -552,7 +552,7 @@ impl GameState {
             if let Some(pos) = structure_pos {
                 if let Some(tile) = self.dungeon.get_tile_mut(pos) {
                     // Turn into rubble or floor
-                    eprintln!("Structure at {:?} destroyed!", pos);
+                    trace_log!("combat", "Structure at {:?} destroyed", pos);
                     tile.tile_type = "claimed_floor".to_string(); // Or specific rubble tile if exists
                     tile.ownership = Ownership::Unclaimed; // Reset ownership? Or keep Player/Hero?
                                                            // Usually destroying enemy room makes it neutral or effectively 'floor'
@@ -567,7 +567,11 @@ impl GameState {
                     if let Some(data) = game_data.hero_buildings.get(&building.building_type) {
                         self.hero_base
                             .apply_destruction_effect(&data.destruction_effect);
-                        self.notifications.info(format!("{} destroyed.", data.name));
+                        let message = match data.destruction_effect.describe() {
+                            Some(effect) => format!("{} destroyed — {effect}.", data.name),
+                            None => format!("{} destroyed.", data.name),
+                        };
+                        self.notifications.success(message);
                     }
                 }
             }

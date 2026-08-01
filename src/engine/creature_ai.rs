@@ -514,8 +514,8 @@ fn decide_and_assign_task(
     // Apply the new task
     if let Some(entity) = entities.get_mut(creature_id) {
         if let Some(creature) = entity.as_creature_mut() {
-            if new_task.is_some() {
-                // eprintln!("[AI] Creature {} decided new task: {:?}", creature.creature_id, new_task);
+            if let Some(ref task) = new_task {
+                trace_log!("creatures", "{} took task {:?}", creature.creature_id, task);
             }
             creature.current_task = new_task;
         }

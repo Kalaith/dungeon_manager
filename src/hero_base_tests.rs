@@ -154,3 +154,67 @@ fn every_hero_building_effect_changes_something() {
         assert!(changed, "destroying `{id}` changed nothing");
     }
 }
+
+#[test]
+fn every_destruction_effect_can_explain_itself() {
+    // The notification used to say only "Armory destroyed", so the effect
+    // landed invisibly. Each authored effect must now have something to tell
+    // the player, except `open_path` whose result is the visible floor.
+    let game_data = GameData::load().expect("game data should load");
+
+    let mut silent = Vec::new();
+    for (id, data) in &game_data.hero_buildings {
+        let described = data.destruction_effect.describe();
+        match data.destruction_effect {
+            DestructionEffect::OpenPath => assert!(
+                described.is_none(),
+                "`{id}` opens a path; the floor says it better than text"
+            ),
+            _ => {
+                if described.is_none() {
+                    silent.push(id.clone());
+                }
+            }
+        }
+    }
+
+    assert!(
+        silent.is_empty(),
+        "these buildings would be razed with no explanation: {silent:?}"
+    );
+}
+
+#[test]
+fn the_description_names_the_number_the_player_earned() {
+    // A vague "heroes are weaker now" would be worse than nothing; the point
+    // is that the keeper can see what the demolition bought.
+    let game_data = GameData::load().expect("game data should load");
+
+    let armory = game_data.hero_buildings["armory"]
+        .destruction_effect
+        .describe()
+        .expect("the armory should explain itself");
+    let DestructionEffect::ReduceHeroStats { attack, defense } =
+        game_data.hero_buildings["armory"].destruction_effect
+    else {
+        panic!("fixture assumption: the armory reduces hero stats");
+    };
+    assert!(
+        armory.contains(&attack.to_string()) && armory.contains(&defense.to_string()),
+        "`{armory}` should quote the authored numbers {attack}/{defense}"
+    );
+
+    let barracks = game_data.hero_buildings["barracks"]
+        .destruction_effect
+        .describe()
+        .expect("the barracks should explain itself");
+    let DestructionEffect::ReduceSpawnRate { percent } =
+        game_data.hero_buildings["barracks"].destruction_effect
+    else {
+        panic!("fixture assumption: the barracks reduces spawn rate");
+    };
+    assert!(
+        barracks.contains(&percent.to_string()),
+        "`{barracks}` should quote the authored {percent}%"
+    );
+}

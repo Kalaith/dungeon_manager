@@ -37,6 +37,29 @@ pub enum DestructionEffect {
     OpenPath,
 }
 
+impl DestructionEffect {
+    /// What razing this building buys the keeper, in the player's terms.
+    ///
+    /// The notification used to read "Armory destroyed." and stop there, so
+    /// the effect landed invisibly and there was no way to learn that
+    /// levelling the armoury had blunted every hero on the map.
+    pub fn describe(&self) -> Option<String> {
+        match self {
+            Self::WinGame => Some("the heroes' seat of power has fallen".to_string()),
+            Self::ReduceSpawnRate { percent } => {
+                Some(format!("hero reinforcements slowed by {percent}%"))
+            }
+            Self::ReduceHeroSpeed { percent } => Some(format!("heroes slowed by {percent}%")),
+            Self::ReduceHeroStats { attack, defense } => Some(format!(
+                "every hero loses {attack} attack and {defense} defence"
+            )),
+            // The tile becoming open floor *is* the effect; there is nothing
+            // to report that the player cannot already see.
+            Self::OpenPath => None,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct BuildingVisual {
     pub tile: String,
