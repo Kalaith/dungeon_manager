@@ -235,17 +235,21 @@ impl Game {
                         )
                     };
 
-                    if scene == "simulation" || scene == "wave" {
+                    if scene == "simulation" || scene == "wave" || scene == "raid" {
                         game_state.tutorial.intro_dismissed = true;
                         seed_dig_orders(&mut game_state, data);
                     }
 
-                    if scene == "wave" {
+                    if scene == "wave" || scene == "raid" {
                         // The first wave is authored 600s out, which is 36,000
                         // frames — far past any practical capture. Pull it
                         // forward so combat, hero nerve and destruction
                         // effects can be observed at all.
                         game_state.hero_base.time_until_next_wave = 2.0;
+                    }
+
+                    if scene == "raid" {
+                        seed_raiding_party(&mut game_state, data);
                     }
 
                     self.phase = GamePhase::Playing(game_state);
@@ -255,6 +259,51 @@ impl Game {
             }
         }
     }
+}
+
+/// Put an army in the field and point it at the hero base.
+///
+/// The keeper's own assault is unreachable in a normal capture for two
+/// reasons: play starts with two minions against 200 HP buildings, and the
+/// hero base sits behind solid rock that creatures cannot dig — only imps
+/// dig, and only where the keeper has marked. So the scene also launches a
+/// wave, and the raiders walk back out along the corridor the heroes tunnel
+/// in through. That is the same route a player would use, which is why it is
+/// worth seeding rather than teleporting an army to the gates.
+fn seed_raiding_party(state: &mut GameState, game_data: &GameData) {
+    use state::entities::CreatureState;
+
+    if !state.hero_base.enabled {
+        return;
+    }
+
+    // Enough to overcome the garrison; the point is to reach a demolition
+    // inside a few thousand frames, not to model a fair fight.
+    const RAIDERS: [(&str, usize); 3] = [("orc", 6), ("troll", 3), ("demon_spawn", 3)];
+
+    let heart = state
+        .find_dungeon_heart_position()
+        .unwrap_or(state.hero_base.position);
+
+    for (creature_id, count) in RAIDERS {
+        let Some(monster) = game_data.monsters.get(creature_id) else {
+            continue;
+        };
+        for _ in 0..count {
+            let creature = CreatureState::new(
+                creature_id.to_string(),
+                5,
+                monster.stats.health,
+                monster.stats.mana,
+                macroquad_toolkit::rng::random_u64(),
+            );
+            state.entities.spawn_creature(heart, creature);
+        }
+    }
+
+    // The order that sends them: creature AI reads this marker as "go and
+    // fight there".
+    state.attack_marker = Some(state.hero_base.position);
 }
 
 /// Mark diggable tiles beside the player's territory so a captured

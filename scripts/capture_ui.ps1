@@ -21,6 +21,11 @@
                      reachable in a capture. Needs ~900 frames to show a fight.
                      Note the seeded dig orders open the dungeon up, so this is
                      not a fair read on real wave-1 difficulty.
+      raid         - "wave" plus a seeded army ordered at the hero base. The
+                     keeper cannot assault it unaided: it sits behind solid
+                     rock and creatures do not dig, so the raiders follow the
+                     corridor the heroes tunnel in through. Reaches a mission
+                     victory around 6600 frames.
       skirmish, settings, missionselect - the other menu screens
 
     To see engine tracing during a capture, set DUNGEON_MANAGER_LOG (a
