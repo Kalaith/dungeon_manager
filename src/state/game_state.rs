@@ -93,6 +93,12 @@ pub struct GameState {
     /// it would let a save copied into slot 2 insist it belongs in slot 1.
     #[serde(skip)]
     pub active_slot: crate::state::save_system::SaveSlot,
+
+    /// Open slot browser, drawn over the pause menu. An overlay rather than a
+    /// `GamePhase` because the running game has to stay somewhere while the
+    /// player picks, and `GamePhase::Playing` is where it lives.
+    #[serde(skip)]
+    pub slot_browser: Option<crate::state::interaction::SlotBrowser>,
 }
 
 impl GameState {
@@ -215,6 +221,7 @@ impl GameState {
             dungeon,
             room_manager,
             active_slot: crate::state::save_system::SaveSlot::default(),
+            slot_browser: None,
             time_elapsed: 0.0,
             tick_accumulator: 0.0,
             camera: crate::state::camera_state::CameraState::new(

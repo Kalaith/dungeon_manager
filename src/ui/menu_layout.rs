@@ -118,6 +118,38 @@ pub fn pause_menu() -> PauseMenuLayout {
     }
 }
 
+/// Save-slot browser: one wide row per slot plus a Back button. Sized like the
+/// mission list because it is the same shape of choice — pick one of a short
+/// list of things that each need a line of description.
+pub const SLOT_ROW_WIDTH: f32 = 560.0;
+pub const SLOT_ROW_HEIGHT: f32 = 74.0;
+pub const SLOT_ROW_SPACING: f32 = 14.0;
+
+pub fn slot_rows(count: usize) -> Vec<Rect> {
+    let total =
+        count as f32 * SLOT_ROW_HEIGHT + (count.saturating_sub(1)) as f32 * SLOT_ROW_SPACING;
+    let top = (screen_height() / 2.0 - total / 2.0).max(120.0);
+    (0..count)
+        .map(|i| {
+            Rect::new(
+                screen_width() / 2.0 - SLOT_ROW_WIDTH / 2.0,
+                top + i as f32 * (SLOT_ROW_HEIGHT + SLOT_ROW_SPACING),
+                SLOT_ROW_WIDTH,
+                SLOT_ROW_HEIGHT,
+            )
+        })
+        .collect()
+}
+
+pub fn slot_browser_back() -> Rect {
+    Rect::new(
+        screen_width() / 2.0 - BUTTON_WIDTH / 2.0,
+        screen_height() - 80.0,
+        BUTTON_WIDTH,
+        BUTTON_HEIGHT,
+    )
+}
+
 /// "Next Mission" button on the victory screen.
 pub fn game_over_next_mission() -> Rect {
     Rect::new(

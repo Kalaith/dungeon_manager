@@ -47,6 +47,9 @@ impl InputHandler {
             GamePhase::SkirmishSetup(_) => {
                 menus::handle_skirmish_setup(phase, game_data, settings);
             }
+            GamePhase::LoadGame(_) => {
+                menus::handle_load_game(phase);
+            }
             GamePhase::Playing(state) => {
                 if let Some(ref data) = game_data {
                     // Scenario intro overlay: freeze the game until dismissed so

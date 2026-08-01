@@ -4,8 +4,67 @@
 
 use crate::data::GameData;
 use crate::state::game_state::GameState;
+use crate::state::interaction::{SlotBrowser, SlotBrowserPurpose};
 use crate::state::{GamePhase, MapType};
 use macroquad::prelude::*;
+
+/// Which row of an open browser the mouse just clicked, if any.
+///
+/// Shared by the main-menu browser and the in-game overlay so the two cannot
+/// hit-test the same rows differently. Returns `None` for an unselectable row
+/// (an empty slot when loading), which is the same as clicking the background.
+pub(crate) fn clicked_slot(browser: &SlotBrowser) -> Option<crate::state::save_system::SaveSlot> {
+    if !is_mouse_button_pressed(MouseButton::Left) {
+        return None;
+    }
+    let mouse = mouse_position();
+    let mouse = vec2(mouse.0, mouse.1);
+    let rows = crate::ui::menu_layout::slot_rows(browser.entries.len());
+
+    browser
+        .entries
+        .iter()
+        .zip(rows.iter())
+        .find(|(entry, rect)| rect.contains(mouse) && browser.is_selectable(entry))
+        .map(|(entry, _)| entry.slot)
+}
+
+/// Did the mouse just click the browser's Back button?
+pub(crate) fn clicked_slot_browser_back() -> bool {
+    let mouse = mouse_position();
+    is_mouse_button_pressed(MouseButton::Left)
+        && crate::ui::menu_layout::slot_browser_back().contains(vec2(mouse.0, mouse.1))
+}
+
+/// The main-menu slot browser: load the chosen slot, or go back.
+pub(super) fn handle_load_game(phase: &mut GamePhase) {
+    let GamePhase::LoadGame(browser) = phase else {
+        return;
+    };
+
+    if clicked_slot_browser_back() || is_key_pressed(KeyCode::Escape) {
+        *phase = GamePhase::MainMenu;
+        return;
+    }
+
+    let Some(slot) = clicked_slot(browser) else {
+        return;
+    };
+
+    match crate::state::save_system::load_game(slot) {
+        Ok(loaded_state) => {
+            println!("Game loaded successfully from {slot}!");
+            *phase = GamePhase::Playing(loaded_state);
+        }
+        Err(e) => {
+            // Nothing here can notify — the notification queue lives on
+            // `GameState`, and at the main menu there is no game yet. Returning
+            // to the menu at least does not strand the player on a dead screen.
+            eprintln!("Failed to load {slot}: {e}");
+            *phase = GamePhase::MainMenu;
+        }
+    }
+}
 
 pub(super) fn handle_main_menu(
     selected_map_type: &mut MapType,
@@ -43,22 +102,10 @@ pub(super) fn handle_main_menu(
         return;
     }
 
-    // Load Game. The main menu has no session yet, so there is no active slot to
-    // read — offer the most recently written one. Resolved on the click rather
-    // than in the button's enabled test, which runs every frame.
+    // Load Game opens the slot browser rather than loading anything itself. The
+    // browser reads every slot once, here, on the click — never in a draw.
     if clicked(layout.load) {
-        let Some(slot) = crate::state::save_system::most_recent_slot() else {
-            return;
-        };
-        match crate::state::save_system::load_game(slot) {
-            Ok(loaded_state) => {
-                println!("Game loaded successfully from {slot}!");
-                *phase = GamePhase::Playing(loaded_state);
-            }
-            Err(e) => {
-                eprintln!("Failed to load game: {}", e);
-            }
-        }
+        *phase = GamePhase::LoadGame(SlotBrowser::open(SlotBrowserPurpose::Load));
         return;
     }
 

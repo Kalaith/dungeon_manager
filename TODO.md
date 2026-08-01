@@ -25,14 +25,27 @@ despite the toolkit carrying it: `{app_data}/dungeon_manager/` on native, a
 game-qualified key in the browser. Old saves are read once from the old location
 and move forward on the next write.
 
+**The picker ships.** One browser serves both verbs — `SlotBrowserPurpose::{Save,
+Load}` over the same rows and the same geometry, because a "save over slot 2" and
+a "load slot 2" screen kept looking alike by hand is two screens that drift. It is
+a `GamePhase` from the main menu and an overlay on `GameState` in game, since
+leaving `Playing` to pick a slot would mean parking the running game somewhere.
+Rows are read **once on open**, never per frame. Captured at
+`docs/verification/ui_loadgame.png`.
+
+That capture also confirmed the relative-path bug was real and not theoretical:
+this machine had a 500KB `save_slot_1.json` from January sitting *in the repo
+directory*, and the browser found it and labelled it an earlier-version save.
+
 What remains:
 
-- **The picker UI.** Nothing yet lets the player *choose* a slot — the main menu
-  loads the most recent, and in-game save/load use the active one. This is the
-  half that makes three slots visible instead of merely present.
 - **Autosave.** Reach for the toolkit's `persistence::AutoSaveManager` before
   writing one; it is the same "already carried, never adopted" shape the slot API
-  turned out to be.
+  turned out to be. Note that `SlotBrowser` is a snapshot — an autosave landing
+  while the browser is open will not appear until it is reopened, which is fine
+  for a modal but worth knowing before wiring an autosave indicator into it.
+- **Deleting a save** has no UI. `persistence::delete_slot` is already there, and
+  three slots with no way to clear one is a corner players do reach.
 
 Still out of scope: quicksave/quickload keys, and format versioning/migration —
 though the toolkit's `load_from_slot_with_migration` and `peek_slot_version` are

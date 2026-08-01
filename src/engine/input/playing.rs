@@ -5,12 +5,64 @@
 use crate::data::GameData;
 use crate::state::entities::EntityId;
 use crate::state::game_state::GameState;
+use crate::state::interaction::{SlotBrowser, SlotBrowserPurpose};
 use crate::state::{DragSelection, InteractionMode, TilePos};
 use crate::ui::actions::ActionQueue;
 use crate::ui::sidebar::Sidebar;
 use macroquad::prelude::*;
 
 use super::tile_actions;
+
+/// The in-game slot browser: save into the chosen slot, load from it, or close.
+///
+/// A load here replaces `*state` wholesale, which is why the browser is read
+/// out of the old state before the swap — the loaded game has no browser open.
+fn handle_slot_browser(state: &mut GameState) {
+    let Some(browser) = state.slot_browser.as_ref() else {
+        return;
+    };
+    let purpose = browser.purpose;
+
+    if super::menus::clicked_slot_browser_back() || is_key_pressed(KeyCode::Escape) {
+        state.slot_browser = None;
+        return;
+    }
+
+    let Some(slot) = super::menus::clicked_slot(browser) else {
+        return;
+    };
+
+    match purpose {
+        SlotBrowserPurpose::Save => {
+            state.slot_browser = None;
+            // Saving changes which slot this session owns: the player just said
+            // where their game lives, so a later quick save follows them there.
+            state.active_slot = slot;
+            match crate::state::save_system::save_game(state, slot) {
+                Ok(()) => state
+                    .notifications
+                    .success(format!("Game saved to {slot}!")),
+                Err(e) => {
+                    state.notifications.danger(format!("Save failed: {e}"));
+                    eprintln!("Failed to save game: {e}");
+                }
+            }
+        }
+        SlotBrowserPurpose::Load => match crate::state::save_system::load_game(slot) {
+            Ok(loaded_state) => {
+                *state = loaded_state;
+                state
+                    .notifications
+                    .success(format!("Game loaded from {slot}!"));
+            }
+            Err(e) => {
+                state.slot_browser = None;
+                state.notifications.danger(format!("Load failed: {e}"));
+                eprintln!("Failed to load game: {e}");
+            }
+        },
+    }
+}
 
 /// Handle all input for the `Playing` phase. Returns `true` when the player
 /// asked to return to the main menu.
@@ -62,6 +114,14 @@ pub(super) fn handle_playing(
     }
 
     if state.paused {
+        // The slot browser sits on top of the pause menu and swallows its
+        // input while open, so a click on a slot row cannot also land on the
+        // pause button underneath it.
+        if state.slot_browser.is_some() {
+            handle_slot_browser(state);
+            return false;
+        }
+
         // Handle Pause Menu Input (rects shared with ui::menus)
         let layout = crate::ui::menu_layout::pause_menu();
         let mouse = mouse_position();
@@ -74,35 +134,15 @@ pub(super) fn handle_playing(
             state.paused = false;
         }
 
+        // Save and Load both open the browser rather than acting on the active
+        // slot. Reading every slot happens here, on the click, and never in a
+        // draw.
         if clicked(layout.save) {
-            let slot = state.active_slot;
-            match crate::state::save_system::save_game(state, slot) {
-                Ok(_) => {
-                    state
-                        .notifications
-                        .success(format!("Game saved to {slot}!"));
-                }
-                Err(e) => {
-                    state.notifications.danger(format!("Save failed: {}", e));
-                    eprintln!("Failed to save game: {}", e);
-                }
-            }
+            state.slot_browser = Some(SlotBrowser::open(SlotBrowserPurpose::Save));
         }
 
-        let load_slot = state.active_slot;
-        if clicked(layout.load) && crate::state::save_system::save_exists(load_slot) {
-            match crate::state::save_system::load_game(load_slot) {
-                Ok(loaded_state) => {
-                    *state = loaded_state;
-                    state
-                        .notifications
-                        .success(format!("Game loaded from {load_slot}!"));
-                }
-                Err(e) => {
-                    state.notifications.danger(format!("Load failed: {}", e));
-                    eprintln!("Failed to load game: {}", e);
-                }
-            }
+        if clicked(layout.load) && crate::state::save_system::any_save_exists() {
+            state.slot_browser = Some(SlotBrowser::open(SlotBrowserPurpose::Load));
         }
 
         if clicked(layout.main_menu) {

@@ -73,6 +73,9 @@ impl GameRenderer {
             GamePhase::SkirmishSetup(config) => {
                 crate::ui::menus::draw_skirmish_setup(config);
             }
+            GamePhase::LoadGame(browser) => {
+                crate::ui::slot_browser::draw(browser);
+            }
             GamePhase::Playing(_) => {
                 if let Some(inner_state) = state {
                     if let Some(ref data) = game_data {
@@ -359,7 +362,13 @@ impl GameRenderer {
         }
 
         if state.paused {
-            crate::ui::menus::draw_pause_menu();
+            // The browser replaces the pause menu rather than layering over it,
+            // matching the input layer: while it is open the pause buttons are
+            // not clickable, so drawing them would be a lie.
+            match state.slot_browser.as_ref() {
+                Some(browser) => crate::ui::slot_browser::draw(browser),
+                None => crate::ui::menus::draw_pause_menu(),
+            }
         }
 
         if state.game_over {

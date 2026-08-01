@@ -212,6 +212,14 @@ impl Game {
                 self.phase =
                     GamePhase::SkirmishSetup(crate::state::skirmish::SkirmishConfig::default());
             }
+            "loadgame" => {
+                // The save-slot browser. Whatever slots this machine happens to
+                // have are what it shows — an all-empty capture is the honest
+                // picture of a first run, and still proves the layout.
+                self.phase = GamePhase::LoadGame(crate::state::interaction::SlotBrowser::open(
+                    crate::state::interaction::SlotBrowserPurpose::Load,
+                ));
+            }
             "settings" => {
                 self.phase = GamePhase::Settings;
             }

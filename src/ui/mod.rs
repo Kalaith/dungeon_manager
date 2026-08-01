@@ -11,6 +11,7 @@ pub mod renderer;
 pub mod resources;
 pub mod sidebar;
 pub mod sidebar_renderer;
+pub mod slot_browser;
 pub mod tooltips;
 pub mod trap_buttons;
 pub mod tutorial;

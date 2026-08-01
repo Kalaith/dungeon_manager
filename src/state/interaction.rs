@@ -11,7 +11,85 @@ pub enum GamePhase {
     /// Skirmish/sandbox setup: pick a procedural map type + size, then launch a
     /// generated one-off game (makes the map generator reachable from the UI).
     SkirmishSetup(crate::state::skirmish::SkirmishConfig),
+    /// Save-slot browser reached from the main menu, where the only thing a
+    /// player can do with a slot is load it. The in-game browser is an overlay
+    /// on `GameState` instead, because leaving `Playing` to pick a slot would
+    /// mean putting the running game somewhere while the player chooses.
+    LoadGame(SlotBrowser),
     Playing(GameState),
+}
+
+/// What a slot browser does with the row the player clicks.
+///
+/// Save and load are the same list, the same geometry and the same rows — only
+/// the verb differs, and the warning attached to it. Modelling that as one
+/// browser with a purpose keeps a "save over slot 2" and a "load slot 2" from
+/// being two screens that have to be kept looking alike.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SlotBrowserPurpose {
+    Save,
+    Load,
+}
+
+impl SlotBrowserPurpose {
+    pub fn title(self) -> &'static str {
+        match self {
+            Self::Save => "SAVE TO SLOT",
+            Self::Load => "LOAD FROM SLOT",
+        }
+    }
+
+    /// An empty slot is a valid target to save into and nothing to load from.
+    pub fn allows_empty_slot(self) -> bool {
+        matches!(self, Self::Save)
+    }
+}
+
+/// One row of the browser.
+pub struct SlotBrowserEntry {
+    pub slot: crate::state::save_system::SaveSlot,
+    /// `None` for an empty slot, and also for a save written by the old build,
+    /// which has no header to read. The second still loads — it just cannot be
+    /// described, so it renders as occupied-but-unknown rather than as empty.
+    pub meta: Option<crate::state::save_system::SaveMeta>,
+    pub occupied: bool,
+    /// Most recently written slot, for a one-word hint about where "continue"
+    /// would go. Uses the stamp that already orders the slots.
+    pub latest: bool,
+}
+
+/// An open slot browser, holding what it read when it opened.
+///
+/// The rows are gathered **once, on open** rather than per frame on purpose:
+/// describing a slot means parsing its save, and a draw path that parses three
+/// save files every frame is the per-frame-IO problem this project already has
+/// a note about. A browser is a snapshot; it is reopened, not refreshed.
+pub struct SlotBrowser {
+    pub purpose: SlotBrowserPurpose,
+    pub entries: Vec<SlotBrowserEntry>,
+}
+
+impl SlotBrowser {
+    pub fn open(purpose: SlotBrowserPurpose) -> Self {
+        use crate::state::save_system::{most_recent_slot, peek_slot, save_exists, SaveSlot};
+
+        let latest = most_recent_slot();
+        let entries = SaveSlot::all()
+            .map(|slot| SlotBrowserEntry {
+                slot,
+                meta: peek_slot(slot),
+                occupied: save_exists(slot),
+                latest: latest == Some(slot),
+            })
+            .collect();
+
+        Self { purpose, entries }
+    }
+
+    /// Whether clicking this row should do anything.
+    pub fn is_selectable(&self, entry: &SlotBrowserEntry) -> bool {
+        entry.occupied || self.purpose.allows_empty_slot()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -29,4 +107,73 @@ pub enum InteractionMode {
     SetDefendMarker,
     SaveGame,
     Summon(String, crate::state::entities::EntityCategory, u32), // id, category, level
+}
+
+#[cfg(test)]
+mod slot_browser_tests {
+    use super::*;
+    use crate::state::save_system::{SaveMeta, SaveSlot};
+
+    fn entry(slot: u8, occupied: bool) -> SlotBrowserEntry {
+        SlotBrowserEntry {
+            slot: SaveSlot::new(slot).expect("test slot should be in range"),
+            meta: occupied.then(|| SaveMeta {
+                scenario_id: "the_iron_siege".to_string(),
+                wave: 2,
+                in_game_seconds: 300.0,
+                saved_at: 1.0,
+                version: "0.1.0".to_string(),
+            }),
+            occupied,
+            latest: false,
+        }
+    }
+
+    fn browser(purpose: SlotBrowserPurpose) -> SlotBrowser {
+        SlotBrowser {
+            purpose,
+            entries: vec![entry(1, true), entry(2, false)],
+        }
+    }
+
+    /// The asymmetry that makes one browser serve both verbs: you may save into
+    /// an empty slot, and there is nothing to load from one.
+    #[test]
+    fn an_empty_slot_can_be_saved_into_but_not_loaded_from() {
+        let saving = browser(SlotBrowserPurpose::Save);
+        let loading = browser(SlotBrowserPurpose::Load);
+
+        assert!(saving.is_selectable(&saving.entries[1]), "save into empty");
+        assert!(
+            !loading.is_selectable(&loading.entries[1]),
+            "load from empty"
+        );
+    }
+
+    /// An occupied slot is a target for both — saving over it is the player's
+    /// business, and refusing would make slot reuse impossible.
+    #[test]
+    fn an_occupied_slot_is_selectable_either_way() {
+        for purpose in [SlotBrowserPurpose::Save, SlotBrowserPurpose::Load] {
+            let browser = browser(purpose);
+            assert!(browser.is_selectable(&browser.entries[0]), "{purpose:?}");
+        }
+    }
+
+    /// A save from before `SaveMeta` existed has no header to describe it, but
+    /// it does load. Occupancy is what gates selection, not describability —
+    /// keying on `meta` would hide exactly the saves a player most wants back.
+    #[test]
+    fn a_headerless_save_is_still_loadable() {
+        let loading = SlotBrowser {
+            purpose: SlotBrowserPurpose::Load,
+            entries: vec![SlotBrowserEntry {
+                slot: SaveSlot::default(),
+                meta: None,
+                occupied: true,
+                latest: false,
+            }],
+        };
+        assert!(loading.is_selectable(&loading.entries[0]));
+    }
 }
