@@ -105,5 +105,18 @@
     "need_decay_multipliers": {
       "food": 1.5
     }
+  },
+  {
+    "id": "construct",
+    "description": "Animate metal. Feels nothing, wants nothing, never walks out.",
+    "anger_threshold_modifier": -100,
+    "desertion_threshold_modifier": -100,
+    "discipline_response_multiplier": 0.0,
+    "need_decay_multipliers": {
+      "food": 0.0,
+      "sleep": 0.0,
+      "gold": 0.0
+    },
+    "defense_multiplier": 1.15
   }
 ]

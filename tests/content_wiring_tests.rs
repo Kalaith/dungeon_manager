@@ -180,9 +180,10 @@ fn every_scenario_availability_entry_names_real_content() {
 }
 
 /// Status types the engine actually acts on. `poison`/`burn` tick damage in
-/// `combat::dot_damage`, `stun` blocks an attack in `resolve_combat_tick`, and
+/// `combat::dot_damage`, `stun` blocks an attack in `resolve_combat_tick`,
 /// `freeze` scales `movement_speed` on application and divides it back out on
-/// expiry.
+/// expiry, and `fear` raises a hero's breaking point in
+/// `hero_ai::current_retreat_threshold`.
 ///
 /// `speed_modifier` is deliberately absent. `apply_combat_result` multiplies
 /// speed only for `freeze`, but `expired_speed_multipliers` *divides* back out
@@ -190,7 +191,7 @@ fn every_scenario_availability_entry_names_real_content() {
 /// multiplier that was never applied and leave its victim permanently faster.
 /// Spells push that status themselves and do apply the multiplier, which is why
 /// the asymmetry has never bitten.
-const ENGINE_CONSUMED_STATUS: &[&str] = &["poison", "burn", "stun", "freeze"];
+const ENGINE_CONSUMED_STATUS: &[&str] = &["poison", "burn", "stun", "freeze", "fear"];
 
 /// Creature abilities with no combat effect wired, each tracked in TODO.md.
 /// **Shrink this list; do not grow it.** An ability here is authored on a
@@ -241,4 +242,28 @@ fn every_creature_ability_is_wired_or_declared_inert() {
     }
 
     assert_empty(problems, "creature abilities that go nowhere");
+}
+
+#[test]
+fn every_creature_trait_exists_in_traits_json() {
+    // Traits are tag strings. An unknown tag is not an error anywhere — the
+    // creature simply gets no modifier — so a typo turns a design intent into
+    // silence. This is the same failure mode as the tech and room references
+    // above, for the one content vocabulary that had no guard.
+    let known = ids("assets/data/traits.json");
+    let mut problems = Vec::new();
+
+    for creature in load("assets/data/monsters.json") {
+        let id = creature["id"].as_str().expect("id");
+        for tag in creature["traits"].as_array().expect("traits") {
+            let tag = tag.as_str().expect("trait name");
+            if !known.contains(tag) {
+                problems.push(format!(
+                    "creature `{id}` has trait `{tag}`, which traits.json does not define"
+                ));
+            }
+        }
+    }
+
+    assert_empty(problems, "creature traits that modify nothing");
 }

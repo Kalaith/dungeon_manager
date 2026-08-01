@@ -46,6 +46,38 @@ pub fn effective_retreat_threshold(hero_data: &crate::data::HeroData) -> f32 {
     hero_data.ai.threat_response.retreat_below_health * (1.0 - nerve * 0.6)
 }
 
+/// The same threshold, raised by any `fear` a creature has put on this hero.
+///
+/// This is what makes "causes fear" a mechanic rather than flavour text: a
+/// frightened hero breaks off at *more* remaining health than they otherwise
+/// would. `fear_resistance` blunts it, so the trait that already made a hero
+/// steady keeps doing so under pressure.
+///
+/// Deliberately does nothing to a `will_fight_to_death` hero. That flag is
+/// documented as "dies where they stand", and letting fear override it would
+/// quietly contradict the authored data for nine of twenty heroes.
+pub fn current_retreat_threshold(hero_state: &HeroState, hero_data: &crate::data::HeroData) -> f32 {
+    let base = effective_retreat_threshold(hero_data);
+    if base <= 0.0 {
+        return 0.0;
+    }
+
+    let fear: f32 = hero_state
+        .status_effects
+        .iter()
+        .filter(|effect| effect.effect_type == "fear")
+        .map(|effect| effect.strength)
+        .sum();
+
+    if fear <= 0.0 {
+        return base;
+    }
+
+    let resistance = hero_data.behavior.fear_resistance.clamp(0.0, 1.0);
+    // Capped below 1.0 so fear alone can never make an untouched hero flee.
+    (base + fear * (1.0 - resistance)).min(0.95)
+}
+
 /// Whether a hero should stop and reconsider what they are doing.
 ///
 /// Wave attackers keep their mission rather than wandering off to steal gold
@@ -59,7 +91,7 @@ pub fn should_reconsider_goal(hero_state: &HeroState, game_data: &GameData) -> b
     let broken = game_data
         .heroes
         .get(&hero_state.hero_id)
-        .map(|data| hero_state.should_retreat(effective_retreat_threshold(data)))
+        .map(|data| hero_state.should_retreat(current_retreat_threshold(hero_state, data)))
         .unwrap_or(false);
 
     match &hero_state.current_goal {
@@ -82,7 +114,7 @@ pub fn decide_hero_goal(
     };
 
     // Check if hero should retreat
-    if hero_state.should_retreat(effective_retreat_threshold(hero_data)) {
+    if hero_state.should_retreat(current_retreat_threshold(hero_state, hero_data)) {
         return HeroGoal::Retreat;
     }
 

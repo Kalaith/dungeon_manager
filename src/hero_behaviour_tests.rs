@@ -216,3 +216,65 @@ fn a_resting_hero_waits_for_the_wave() {
         "a resting hero should stay put until the wave launches"
     );
 }
+
+#[test]
+fn fear_makes_an_attacker_break_off_who_would_otherwise_press_on() {
+    // The Ogre's "causes fear waves" is a mechanic, not flavour: a `fear`
+    // status raises the health at which a hero gives up. The wound has to be
+    // derived from the two thresholds rather than picked — the acolyte's
+    // `fear_resistance` of 0.7 means one fear stack only moves its breaking
+    // point by 0.075, so any hand-chosen margin is a coin flip.
+    let game_data = GameData::load().expect("game data should load");
+    let data = &game_data.heroes["acolyte"];
+    let base = crate::engine::hero_ai::effective_retreat_threshold(data);
+
+    let scare = crate::state::entities::StatusEffect {
+        effect_type: "fear".to_string(),
+        duration: 6.0,
+        strength: 0.25,
+    };
+
+    let mut probe = attacker(&game_data, "acolyte", 1.0);
+    probe.status_effects.push(scare.clone());
+    let feared = crate::engine::hero_ai::current_retreat_threshold(&probe, data);
+    assert!(feared > base, "fear should raise the breaking point");
+
+    // A wound between the two: survivable while calm, not while frightened.
+    let mut hero = attacker(&game_data, "acolyte", (base + feared) / 2.0);
+    assert!(
+        !should_reconsider_goal(&hero, &game_data),
+        "at this wound the acolyte should still be pressing on"
+    );
+
+    hero.status_effects.push(scare);
+    assert!(
+        should_reconsider_goal(&hero, &game_data),
+        "a frightened attacker at the same wound should break off"
+    );
+}
+
+#[test]
+fn fear_does_not_move_a_hero_authored_to_fight_to_the_death() {
+    // `will_fight_to_death` is documented as "dies where they stand" and nine
+    // of twenty heroes carry it. Fear must not quietly overrule that.
+    let game_data = GameData::load().expect("game data should load");
+    let (id, data) = game_data
+        .heroes
+        .iter()
+        .find(|(_, d)| d.behavior.will_fight_to_death)
+        .expect("some hero should fight to the death");
+
+    let mut hero = attacker(&game_data, id, 0.01);
+    hero.status_effects
+        .push(crate::state::entities::StatusEffect {
+            effect_type: "fear".to_string(),
+            duration: 6.0,
+            strength: 5.0,
+        });
+
+    assert_eq!(
+        crate::engine::hero_ai::current_retreat_threshold(&hero, data),
+        0.0,
+        "`{id}` fights to the death; no amount of fear should change that"
+    );
+}

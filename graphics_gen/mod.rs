@@ -172,6 +172,8 @@ fn generate_monster_sprites() {
     monsters::save_sprite("monsters", "cultist", monsters::create_cultist_sprite());
     monsters::save_sprite("monsters", "hexbinder", monsters::create_hexbinder_sprite());
     monsters::save_sprite("monsters", "troll", monsters::create_troll_sprite());
+    monsters::save_sprite("monsters", "ogre", monsters::create_ogre_sprite());
+    monsters::save_sprite("monsters", "ironbound", monsters::create_ironbound_sprite());
 
     // Undead
     monsters::save_sprite("monsters", "skeleton", monsters::create_skeleton_sprite());

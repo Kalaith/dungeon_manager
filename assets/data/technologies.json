@@ -324,7 +324,7 @@
     {
         "id": "blood_sport",
         "name": "Blood Sport",
-        "description": "Unlocks the Combat Pit, where creatures level far faster than in a training hall.",
+        "description": "Unlocks the Combat Pit, where creatures level far faster than in a training hall - and the ogres bred to fight in it.",
         "cost": 26,
         "prerequisites": [
             "training_tech"
@@ -334,7 +334,9 @@
                 "combat_pit"
             ],
             "spells": [],
-            "creatures": [],
+            "creatures": [
+                "ogre"
+            ],
             "traps": []
         },
         "icon": "icons/tech/blood_sport.png"
@@ -362,7 +364,7 @@
     {
         "id": "fortification",
         "name": "Fortification",
-        "description": "Unlocks the Gatehouse, a chokepoint that hardens the creatures holding it.",
+        "description": "Unlocks the Gatehouse, a chokepoint that hardens the creatures holding it - and the ironbound that never leave their post.",
         "cost": 24,
         "prerequisites": [
             "trap_tech"
@@ -372,7 +374,9 @@
                 "gatehouse"
             ],
             "spells": [],
-            "creatures": [],
+            "creatures": [
+                "ironbound"
+            ],
             "traps": []
         },
         "icon": "icons/tech/fortification.png"

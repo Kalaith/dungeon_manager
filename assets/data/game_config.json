@@ -169,6 +169,12 @@
         "duration": 8.0,
         "strength": 1.5,
         "proc_chance": 0.4
+      },
+      "terrify": {
+        "status_type": "fear",
+        "duration": 6.0,
+        "strength": 0.25,
+        "proc_chance": 0.5
       }
     }
   }

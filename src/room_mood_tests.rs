@@ -133,3 +133,68 @@ fn every_room_with_a_modifier_resolves_through_the_hook() {
         "expected the shipped rooms to carry modifiers, saw {checked}"
     );
 }
+
+/// The Ironbound's whole identity is the `construct` trait: "immune to morale,
+/// eats nothing". Both halves go through machinery that already existed
+/// (`need_decay_multipliers` and `desertion_threshold_modifier`), so this
+/// checks the trait actually reaches them rather than trusting the JSON.
+#[cfg(test)]
+mod construct_trait {
+    use crate::data::GameData;
+    use crate::engine::creature_ai::needs::{update_mood, update_needs};
+    use crate::state::entities::CreatureState;
+
+    #[test]
+    fn a_construct_never_gets_hungry_tired_or_greedy() {
+        let game_data = GameData::load().expect("game data should load");
+        let data = &game_data.monsters["ironbound"];
+        let mut creature = CreatureState::new("ironbound".to_string(), 1, 340.0, 0.0, 1);
+
+        // Ten simulated minutes. An ordinary creature would be starving.
+        update_needs(&mut creature, 600.0, data, &game_data);
+
+        for need in ["food", "sleep", "gold"] {
+            assert_eq!(
+                creature.get_need(need),
+                100.0,
+                "`{need}` should not decay for a construct"
+            );
+        }
+    }
+
+    #[test]
+    fn a_construct_does_not_desert_even_at_rock_bottom_mood() {
+        let game_data = GameData::load().expect("game data should load");
+        let data = &game_data.monsters["ironbound"];
+        let mut creature = CreatureState::new("ironbound".to_string(), 1, 340.0, 0.0, 1);
+
+        // Drive every need to zero, which is as unhappy as a creature gets.
+        for need in ["food", "sleep", "gold"] {
+            creature.set_need(need.to_string(), 0.0);
+        }
+        update_mood(&mut creature, data, &game_data, -10.0);
+
+        assert!(
+            !creature.is_deserting,
+            "a construct should never walk out (mood {})",
+            creature.mood
+        );
+    }
+
+    /// The comparison that gives the test above its meaning: an ordinary
+    /// creature in the same state *does* starve, so the construct's immunity is
+    /// the trait rather than a quirk of the fixture.
+    #[test]
+    fn an_ordinary_creature_in_the_same_state_does_get_hungry() {
+        let game_data = GameData::load().expect("game data should load");
+        let data = &game_data.monsters["orc"];
+        let mut creature = CreatureState::new("orc".to_string(), 1, 200.0, 0.0, 1);
+
+        update_needs(&mut creature, 600.0, data, &game_data);
+
+        assert!(
+            creature.get_need("food") < 100.0,
+            "an orc should get hungry over ten minutes"
+        );
+    }
+}

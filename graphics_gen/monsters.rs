@@ -8,11 +8,13 @@ use image::RgbaImage;
 mod basic;
 mod beast;
 mod demon;
+mod tank;
 mod undead;
 
 pub use basic::*;
 pub use beast::*;
 pub use demon::*;
+pub use tank::*;
 pub use undead::*;
 
 // ============================================================================
