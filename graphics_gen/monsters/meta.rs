@@ -111,3 +111,65 @@ pub fn create_archivist_sprite() -> RgbaImage {
 
     img
 }
+
+/// Flesh Amalgam — a grafted thing assembled from parts that do not match.
+/// Every other creature is drawn symmetrically; this one deliberately is not.
+/// Mismatched limb colours, one arm far heavier than the other and a head set
+/// off-centre do the work, because "stitched together" has to be legible from
+/// the outline rather than from any surface detail at 64px.
+pub fn create_flesh_amalgam_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+
+    // Three donors, three skin tones — the graft is the point.
+    let pale = Material::flesh(186, 158, 148);
+    let grey = Material::flesh(132, 132, 124);
+    let ruddy = Material::flesh(158, 106, 96);
+    let thread = Material::matte(70, 54, 50);
+    let eye = Material::glowing(255, 236, 180);
+    let small_eye = Material::glowing(180, 255, 200);
+
+    draw_shadow(&mut img, cx, 59.0, 15.0, 5.5);
+
+    // Legs of different lengths and different donors
+    draw_cylinder_3d(&mut img, &mut depth, cx - 7.0, 44.0, 58.0, 5.0, 4.5, &grey);
+    draw_cylinder_3d(&mut img, &mut depth, cx + 7.0, 48.0, 58.0, 6.0, 3.5, &ruddy);
+
+    // Trunk, lopsided
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx - 1.0,
+        38.0,
+        8.0,
+        12.0,
+        11.0,
+        10.0,
+        &pale,
+    );
+    draw_sphere_3d(&mut img, &mut depth, cx + 7.0, 42.0, 11.0, 6.0, &ruddy);
+
+    // One heavy arm, one withered
+    draw_sphere_3d(&mut img, &mut depth, cx - 15.0, 30.0, 8.0, 7.5, &grey);
+    draw_sphere_3d(&mut img, &mut depth, cx - 17.0, 44.0, 7.0, 6.0, &grey);
+    draw_cylinder_3d(&mut img, &mut depth, cx + 14.0, 30.0, 46.0, 8.0, 2.2, &pale);
+
+    // Head off-centre, with a second smaller one that never finished
+    draw_sphere_3d(&mut img, &mut depth, cx - 3.0, 21.0, 12.0, 7.0, &pale);
+    draw_sphere_3d(&mut img, &mut depth, cx + 7.0, 26.0, 13.0, 3.6, &ruddy);
+    draw_sphere_3d(&mut img, &mut depth, cx - 5.5, 20.0, 18.0, 1.6, &eye);
+    draw_sphere_3d(&mut img, &mut depth, cx - 0.5, 21.5, 18.0, 1.1, &eye);
+    draw_sphere_3d(&mut img, &mut depth, cx + 7.5, 25.0, 16.0, 1.0, &small_eye);
+
+    // Sutures where the donors meet
+    for (x, y, z) in [
+        (-1.0f32, 29.0f32, 17.0f32),
+        (3.0, 33.0, 16.0),
+        (-9.0, 36.0, 15.0),
+    ] {
+        draw_sphere_3d(&mut img, &mut depth, cx + x, y, z, 1.2, &thread);
+    }
+
+    img
+}

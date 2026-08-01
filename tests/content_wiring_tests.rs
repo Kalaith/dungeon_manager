@@ -332,3 +332,62 @@ fn every_mutation_condition_key_is_understood() {
 
     assert_empty(problems, "mutation conditions that can never be satisfied");
 }
+
+#[test]
+fn every_creature_can_actually_be_obtained() {
+    // Fifteen creatures were added to this roster in quick succession, each
+    // wired through a different route — a tech unlock, a mutation target, or a
+    // scenario's starting availability. A creature with art, stats and no route
+    // is content the player can never see, and nothing else checks for it.
+    const STARTING_CREATURES: &[&str] = &[
+        // Spawned by the dungeon heart itself rather than unlocked.
+        "imp",
+    ];
+
+    let mut reachable: HashSet<String> = STARTING_CREATURES.iter().map(|s| s.to_string()).collect();
+
+    for tech in load("assets/data/technologies.json") {
+        for id in tech["unlocks"]["creatures"].as_array().expect("creatures") {
+            reachable.insert(id.as_str().expect("creature id").to_string());
+        }
+    }
+
+    for creature in load("assets/data/monsters.json") {
+        let Some(mutations) = creature["progression"]["mutations"].as_array() else {
+            continue;
+        };
+        for mutation in mutations {
+            reachable.insert(mutation["id"].as_str().expect("mutation id").to_string());
+        }
+    }
+
+    let scenarios = project_root().join("assets").join("scenarios");
+    for entry in std::fs::read_dir(&scenarios)
+        .unwrap_or_else(|e| panic!("failed to read {}: {e}", scenarios.display()))
+        .flatten()
+    {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("json") {
+            continue;
+        }
+        let raw = std::fs::read_to_string(&path).expect("read scenario");
+        let parsed: Value = serde_json::from_str(&raw).expect("parse scenario");
+        let scenario = parsed.get(0).unwrap_or(&parsed);
+        if let Some(entries) = scenario["availability"]["creatures"].as_object() {
+            reachable.extend(entries.keys().cloned());
+        }
+    }
+
+    let mut stranded = Vec::new();
+    for creature in load("assets/data/monsters.json") {
+        let id = creature["id"].as_str().expect("id");
+        if !reachable.contains(id) {
+            stranded.push(format!(
+                "creature `{id}` is unlocked by no tech, is no mutation's target, and \
+                 appears in no scenario's availability"
+            ));
+        }
+    }
+
+    assert_empty(stranded, "creatures the player can never obtain");
+}

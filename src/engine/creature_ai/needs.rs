@@ -9,10 +9,21 @@ use crate::state::tile_state::TilePos;
 /// Look up the `TraitData` for each trait tag a creature was authored with, skipping unknown
 /// ids. Missing an entry is a data-authoring gap, not an engine error — the trait just has no
 /// effect until it's added to `traits.json`.
-fn active_traits<'a>(monster_data: &MonsterData, game_data: &'a GameData) -> Vec<&'a TraitData> {
+/// Every trait affecting this creature: those shared by its kind, plus any
+/// grafted onto the individual.
+///
+/// Public and used by `combat::extract_combat_stats` too, which had its own
+/// copy of the monster-traits-only lookup — so a grafted `strong` raised a
+/// creature's mood and left its attack alone.
+pub fn creature_traits<'a>(
+    creature: &CreatureState,
+    monster_data: &MonsterData,
+    game_data: &'a GameData,
+) -> Vec<&'a TraitData> {
     monster_data
         .traits
         .iter()
+        .chain(creature.extra_traits.iter())
         .filter_map(|trait_id| game_data.traits.get(trait_id))
         .collect()
 }
@@ -24,7 +35,7 @@ pub fn update_needs(
     game_data: &GameData,
 ) {
     let decay_per_second = dt / 60.0;
-    let traits = active_traits(monster_data, game_data);
+    let traits = creature_traits(creature, monster_data, game_data);
 
     for (need_name, need_data) in &monster_data.needs {
         let current = creature.get_need(need_name);
@@ -81,7 +92,7 @@ pub fn calculate_mood(
         mood -= mood_penalties.angry_penalty;
     }
 
-    let trait_mood_modifier: f32 = active_traits(monster_data, game_data)
+    let trait_mood_modifier: f32 = creature_traits(creature, monster_data, game_data)
         .iter()
         .map(|t| t.mood_modifier)
         .sum();
@@ -103,7 +114,7 @@ pub fn update_mood(
     room_happiness: f32,
 ) {
     creature.mood = calculate_mood(creature, monster_data, game_data, room_happiness);
-    let traits = active_traits(monster_data, game_data);
+    let traits = creature_traits(creature, monster_data, game_data);
 
     let anger_threshold = monster_data.ai.anger_threshold
         + traits
@@ -139,7 +150,7 @@ pub fn apply_slap(
     creature.last_slapped = game_time;
 
     if let Some(&mood_change) = monster_data.ai.discipline_response.get("slap") {
-        let discipline_multiplier: f32 = active_traits(monster_data, game_data)
+        let discipline_multiplier: f32 = creature_traits(creature, monster_data, game_data)
             .iter()
             .map(|t| t.discipline_response_multiplier)
             .product();
@@ -169,7 +180,7 @@ pub fn calculate_work_efficiency(
     // the Archivist's `scholarship` raises its own output, which reaches
     // research as well as work because `execute_research` scales by this
     // same term.
-    let trait_multiplier: f32 = active_traits(monster_data, game_data)
+    let trait_multiplier: f32 = creature_traits(creature, monster_data, game_data)
         .iter()
         .map(|t| t.work_efficiency_multiplier)
         .product();

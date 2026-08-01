@@ -68,6 +68,16 @@ pub struct TraitData {
     /// output too since `execute_research` scales by the same term.
     #[serde(default = "one")]
     pub work_efficiency_multiplier: f32,
+    /// How many random traits a creature carrying this one is grafted with,
+    /// once, on first sight. Zero means it is not a grafting trait.
+    #[serde(default)]
+    pub graft_count: u32,
+    /// Whether this trait is eligible to be rolled onto a grafted creature.
+    /// Opt-in: the world-altering traits (`stonebinding`, `commanding`, …)
+    /// would be absurd on a random amalgam, so nothing is graftable unless
+    /// `traits.json` says so.
+    #[serde(default)]
+    pub graftable: bool,
 }
 
 fn one() -> f32 {

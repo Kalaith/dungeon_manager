@@ -523,6 +523,9 @@ impl GameState {
         // Must run before task execution reads command_bonus.
         crate::engine::command_aura::apply_command_auras(self, game_data);
 
+        // Grafted creatures rolling the traits that make them individuals
+        crate::engine::grafting::graft_random_traits(self, game_data);
+
         // Creatures evolving once their authored conditions are met
         crate::engine::mutation::apply_mutations(self, game_data);
 

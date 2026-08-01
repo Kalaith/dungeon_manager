@@ -3,6 +3,7 @@ pub mod combat;
 pub mod command_aura;
 pub mod creature_ai;
 mod creature_targets;
+pub mod grafting;
 pub mod hero_abilities;
 pub mod hero_ai;
 pub mod hero_parties;

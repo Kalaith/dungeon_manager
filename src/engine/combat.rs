@@ -168,12 +168,15 @@ pub fn extract_combat_stats(entity: &Entity, game_data: &GameData) -> CombatStat
                 + (creature_state.level - 1) as f32
                     * game_data.config.combat.creature_level_multiplier;
 
-            // Trait-driven attack/defense multipliers (data-driven; see traits.json)
-            let trait_data: Vec<_> = creature_data
-                .traits
-                .iter()
-                .filter_map(|trait_id| game_data.traits.get(trait_id))
-                .collect();
+            // Trait-driven attack/defense multipliers (data-driven; see traits.json).
+            // Goes through the shared resolver so traits grafted onto this
+            // individual count here too — this used to be a second copy that
+            // only looked at the creature's *kind*.
+            let trait_data = crate::engine::creature_ai::needs::creature_traits(
+                creature_state,
+                creature_data,
+                game_data,
+            );
             let attack_multiplier: f32 = trait_data.iter().map(|t| t.attack_multiplier).product();
             let defense_multiplier: f32 = trait_data.iter().map(|t| t.defense_multiplier).product();
 

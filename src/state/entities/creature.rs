@@ -80,6 +80,13 @@ pub struct CreatureState {
     #[serde(default)]
     pub reinforce_timer: f32,
 
+    /// Traits grafted onto this individual rather than shared by its kind.
+    /// Rolled once by `grafting::graft_random_traits` for creatures whose type
+    /// carries a grafting trait; empty for everything else, which is also how
+    /// "not yet rolled" is represented.
+    #[serde(default)]
+    pub extra_traits: Vec<String>,
+
     /// Work-efficiency multiplier granted by a nearby commanding creature.
     /// Recomputed every tick by `command_aura::apply_command_auras`, so it is
     /// a cache rather than authored state; it lives on the creature because
@@ -132,6 +139,7 @@ impl CreatureState {
             movement_speed: 2.0, // 2 tiles per second default
             move_timer: 0.0,
             work_timer: 0.0,
+            extra_traits: Vec::new(),
             reinforce_timer: 0.0,
             command_bonus: 1.0,
         }

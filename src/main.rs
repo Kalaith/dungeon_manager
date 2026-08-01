@@ -18,6 +18,8 @@ mod combat_tests;
 #[cfg(test)]
 mod command_aura_tests;
 #[cfg(test)]
+mod grafting_tests;
+#[cfg(test)]
 mod hero_abilities_tests;
 #[cfg(test)]
 mod hero_base_tests;

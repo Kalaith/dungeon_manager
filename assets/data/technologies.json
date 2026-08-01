@@ -175,7 +175,8 @@
                 "ghost",
                 "vampire",
                 "lich",
-                "grave_hulk"
+                "grave_hulk",
+                "flesh_amalgam"
             ],
             "traps": []
         },

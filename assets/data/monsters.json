@@ -3756,5 +3756,121 @@
       ],
       "voice_set": "beast"
     }
+  },
+  {
+    "id": "flesh_amalgam",
+    "name": "Flesh Amalgam",
+    "description": "Stitched together from whatever was to hand. No two are alike — each one is grafted with traits it did not ask for, and knows it.",
+    "faction": "dungeon",
+    "role": "fighter",
+    "stats": {
+      "health": 200,
+      "mana": 0,
+      "attack": 13,
+      "defense": 7,
+      "speed": 0.9,
+      "carry_capacity": 45,
+      "sight_radius": 6
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 12.0,
+        "satisfied_by": [
+          "lair"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 30.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 6.0,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 40
+      }
+    },
+    "traits": [
+      "grafted"
+    ],
+    "ai": {
+      "base_mood": 45,
+      "anger_threshold": 30,
+      "desertion_threshold": 10,
+      "task_preferences": {
+        "fight": 1.5,
+        "guard": 1.2,
+        "wander": 1.2
+      },
+      "room_desires": {
+        "graveyard": 1.6,
+        "torture_chamber": 1.2
+      },
+      "discipline_response": {
+        "slap": -10,
+        "torture": -30,
+        "reward": 15
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        9,
+        18
+      ],
+      "attack_speed": 0.9,
+      "armor_type": "medium",
+      "resistances": {
+        "poison": 0.5,
+        "dark": 0.3
+      },
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        140,
+        350,
+        700,
+        1150
+      ],
+      "stat_growth_per_level": {
+        "health": 22,
+        "attack": 3,
+        "defense": 2
+      },
+      "max_level": 5,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 3,
+      "steals_if_unpaid": true,
+      "drops_gold_on_death": [
+        15,
+        45
+      ]
+    },
+    "spawn": {
+      "source": "ritual",
+      "min_dungeon_reputation": 170,
+      "preferred_rooms": [
+        "graveyard",
+        "ritual_circle"
+      ],
+      "spawn_weight": 0.25,
+      "max_population": 4
+    },
+    "visual": {
+      "scale": 1.15,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "amalgam"
+    }
   }
 ]
