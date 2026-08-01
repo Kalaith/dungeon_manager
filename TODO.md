@@ -80,14 +80,14 @@
 - Room sell refund is 5%; 25–50% would make experimentation viable.
 - Creature value outliers: Bile Demon overpriced, Hellhound free, Succubus mood loop, treasury desirability clustering.
 - Creature wage and need decay rates still untuned.
-- Structured playtest program: wave-1 survivability, sustainable army size, wave-10+ viability, per-mission tuning.
+- Structured playtest program: wave-1 survivability, sustainable army size, wave-10+ viability, per-mission tuning. The `wave` capture scene makes the first two observable without a ten-minute sit — a first run showed wave 1 (2 heroes) reaching the dungeon heart and taking it to 988/1000 within ~15s of launching. Treat that as a starting point rather than a verdict: the scene seeds dig orders, which opens paths a real wave-1 dungeon would not have.
 - Fold the `balance_calculator` simulations into `cargo test`/CI — its assertions are hand-rolled bools with no `#[test]`s.
 
 ## Code quality
 
 - `PlayerState::warn_once(key, message)` is the pattern for any condition checked every tick that the player still needs telling about once — used by the treasury overflow and all four spawn-blocked reasons. Reach for it rather than a bespoke bool.
 - Strip debug output. The swallowed-player-feedback subset is done: spell-cast failures, room build refusals (unresearched / not enough gold / not enough mana), trap refusals (unresearched / no Workshop / no crates) and treasury overflow all reach the player now. Save/load failures turned out to already notify — the `eprintln!` beside them is a genuine diagnostic. The spawner's four blocked reasons are done too. The per-tick tracing — 31 calls across combat, traps, imps, tasks, creatures, spells and hero waves — is now behind `trace_log!(tag, ..)`, silent unless `DUNGEON_MANAGER_LOG` names the tag. What remains unconditional is one-shot startup diagnostics (asset/font/data loading, map load, save/load) and four genuine warnings, which is roughly what should stay.
-- The screenshot harness has a `simulation` scene (intro dismissed, dig orders seeded) that actually runs the game; `gameplay` still captures the briefing overlay, which freezes the simulation by design. Both are in the default scene list. Note the shared toolkit capture script does not forward extra env vars, so `DUNGEON_MANAGER_LOG` tracing needs the exe driven directly rather than through `scripts/capture_ui.ps1`.
+- The screenshot harness has `simulation` (intro dismissed, dig orders seeded — the game actually running) and `wave` (the same with the first hero wave pulled forward from 600s to 2s, so combat is reachable at all). `gameplay` still captures the briefing overlay, which freezes the simulation by design. Note the shared toolkit capture script does not forward extra env vars, so `DUNGEON_MANAGER_LOG` tracing needs the exe driven directly rather than through `scripts/capture_ui.ps1`.
 - Error-handling hardening: ~25 `unwrap()`, 9 `expect()`, 4 `panic!` — asset loading and save handling especially.
 - Deduplicate movement and distance logic between `creature_ai` and `imp_ai` (two `manhattan_distance` impls).
 - Test coverage: combat math has one test, save/load one, UI/actions none. Add tests for menu action handlers, sidebar selection, tooltip state and dungeon command dispatch.

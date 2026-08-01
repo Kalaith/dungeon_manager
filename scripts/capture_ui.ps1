@@ -16,6 +16,11 @@
       simulation   - the same dungeon with the intro dismissed and dig orders
                      seeded, so imps work, heroes spawn and objectives advance.
                      Use this to verify anything about the running game.
+      wave         - "simulation" with the first hero wave pulled forward from
+                     its authored 600s (36,000 frames) to 2s, so combat is
+                     reachable in a capture. Needs ~900 frames to show a fight.
+                     Note the seeded dig orders open the dungeon up, so this is
+                     not a fair read on real wave-1 difficulty.
       skirmish, settings, missionselect - the other menu screens
 
     To see engine tracing during a capture, set DUNGEON_MANAGER_LOG (a

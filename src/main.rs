@@ -214,6 +214,9 @@ impl Game {
                 // Default ("gameplay"): jump straight into a playable dungeon
                 // so the capture photographs the main game view.
                 //
+                // "wave" is "simulation" with the first hero wave pulled
+                // forward, so combat is reachable in a capture at all.
+                //
                 // "simulation" goes further and dismisses the mission intro,
                 // because the intro overlay returns from input handling before
                 // `state.update` — so a `gameplay` capture photographs a frozen
@@ -232,9 +235,17 @@ impl Game {
                         )
                     };
 
-                    if scene == "simulation" {
+                    if scene == "simulation" || scene == "wave" {
                         game_state.tutorial.intro_dismissed = true;
                         seed_dig_orders(&mut game_state, data);
+                    }
+
+                    if scene == "wave" {
+                        // The first wave is authored 600s out, which is 36,000
+                        // frames — far past any practical capture. Pull it
+                        // forward so combat, hero nerve and destruction
+                        // effects can be observed at all.
+                        game_state.hero_base.time_until_next_wave = 2.0;
                     }
 
                     self.phase = GamePhase::Playing(game_state);

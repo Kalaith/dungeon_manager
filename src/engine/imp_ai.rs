@@ -577,7 +577,16 @@ pub(crate) fn complete_dig(
         }
 
         // For non-infinite resources:
-        // Convert to unclaimed floor
+        // Convert to unclaimed floor. Traced unconditionally, because plain
+        // earth yields neither gold nor mana and the yield-specific traces
+        // below skip it — which made the single most common imp action
+        // invisible even with `DUNGEON_MANAGER_LOG=imps`.
+        trace_log!(
+            "imps",
+            "Imp finished digging {:?} at {:?}",
+            tile.tile_type,
+            marked_pos
+        );
         tile.tile_type = tt::FLOOR.to_string();
         tile.ownership = Ownership::Unclaimed;
         tile.marked_for_dig = false;
