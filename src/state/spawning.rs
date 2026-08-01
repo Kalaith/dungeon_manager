@@ -33,13 +33,49 @@ pub(in crate::state) fn detect_monster_spawners(
 }
 
 impl GameState {
-    pub(in crate::state) fn spawn_random_creature(&mut self, game_data: &GameData) {
-        spawner::SpawnSystem::spawn_random_creature(
+    pub(crate) fn spawn_random_creature(&mut self, game_data: &GameData) {
+        let blocked = spawner::SpawnSystem::spawn_random_creature(
             &mut self.dungeon,
             &self.room_manager,
             &mut self.entities,
             game_data,
         );
+
+        // A spawn tick that produces nothing used to be an `eprintln!`, so a
+        // keeper whose lair was full just watched creatures stop arriving.
+        // Each reason is reported once and re-armed when it next succeeds,
+        // because the tick fires on a timer.
+        use spawner::SpawnBlocked;
+        match blocked {
+            None => {
+                for key in [
+                    "spawn_no_spawner",
+                    "spawn_unreachable",
+                    "spawn_no_lair",
+                    "spawn_no_creatures",
+                ] {
+                    self.player.clear_warning(key);
+                }
+            }
+            Some(SpawnBlocked::NoSpawner) => self.player.warn_once(
+                "spawn_no_spawner",
+                "No Monster Spawner — build one to attract creatures.",
+            ),
+            Some(SpawnBlocked::SpawnerUnreachable) => self.player.warn_once(
+                "spawn_unreachable",
+                "Your Monster Spawner is cut off from the Dungeon Heart.",
+            ),
+            Some(SpawnBlocked::NoLairSpace) => self.player.warn_once(
+                "spawn_no_lair",
+                "No free Lair space — creatures will not arrive until you build more.",
+            ),
+            Some(SpawnBlocked::NoEligibleCreatures) => self.player.warn_once(
+                "spawn_no_creatures",
+                "No creature will come for the rooms you have built.",
+            ),
+            // The run is already lost; saying so adds nothing.
+            Some(SpawnBlocked::NoDungeonHeart) => {}
+        }
     }
 
     pub fn spawn_starting_imps(&mut self, game_data: &GameData, count: usize) {

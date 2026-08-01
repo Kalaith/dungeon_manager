@@ -65,22 +65,65 @@ fn placing_a_trap_without_a_workshop_tells_the_player_why() {
 }
 
 #[test]
-fn the_treasury_overflow_warning_fires_once_per_episode() {
-    // The overflow itself happens on every dig, so an unconditional message
-    // would bury the screen.
+fn a_repeating_condition_is_reported_once_per_episode() {
+    // Both the treasury overflow and the spawn checks fire every tick, so an
+    // unconditional message would bury the screen.
     let game_data = GameData::load().expect("game data should load");
     let mut player = PlayerState::new(&game_data);
 
-    assert!(player.should_warn_treasury_full(), "first overflow is news");
-    assert!(
-        !player.should_warn_treasury_full(),
-        "the second dig in a row is not"
+    player.warn_once("treasury_full", "first");
+    assert_eq!(player.pending_messages.len(), 1, "the first time is news");
+
+    player.warn_once("treasury_full", "second");
+    assert_eq!(
+        player.pending_messages.len(),
+        1,
+        "the same condition next tick is not"
     );
 
-    player.clear_treasury_full_warning();
+    player.clear_warning("treasury_full");
+    player.warn_once("treasury_full", "third");
+    assert_eq!(
+        player.pending_messages.len(),
+        2,
+        "after the condition clears, its return is news again"
+    );
+}
+
+#[test]
+fn different_conditions_do_not_mask_each_other() {
+    // A single bool per warning would not have survived the spawner's four
+    // reasons; the keyed set is why they stay independent.
+    let game_data = GameData::load().expect("game data should load");
+    let mut player = PlayerState::new(&game_data);
+
+    player.warn_once("spawn_no_lair", "no lair");
+    player.warn_once("spawn_unreachable", "cut off");
+    assert_eq!(player.pending_messages.len(), 2);
+
+    player.clear_warning("spawn_no_lair");
+    player.warn_once("spawn_unreachable", "cut off again");
+    assert_eq!(
+        player.pending_messages.len(),
+        2,
+        "clearing one key must not re-arm another"
+    );
+}
+
+#[test]
+fn a_spawn_with_nowhere_to_sleep_tells_the_player() {
+    let game_data = GameData::load().expect("game data should load");
+    let mut state = GameState::new_for_scenario(&game_data, "dark_beginnings");
+    state.player.pending_messages.clear();
+    state.player.warned_keys.clear();
+
+    // `dark_beginnings` starts with no lair dug, so the spawn tick has
+    // nowhere to put a creature.
+    state.spawn_random_creature(&game_data);
+
     assert!(
-        player.should_warn_treasury_full(),
-        "after the vault has room again, the next overflow is news"
+        !state.player.pending_messages.is_empty() || !state.player.warned_keys.is_empty(),
+        "a blocked spawn should report why"
     );
 }
 

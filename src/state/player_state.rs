@@ -25,9 +25,13 @@ pub struct PlayerState {
     pub max_food: i32,
     pub materials: i32,
     pub max_materials: i32,
-    /// Whether the player has already been told the treasury is overflowing.
+    /// Warnings the player has already been given, by key.
+    ///
+    /// Several conditions are checked every tick — an overflowing treasury,
+    /// a spawner cut off from the heart — so reporting them unconditionally
+    /// would bury the screen. See `warn_once`.
     #[serde(default)]
-    pub treasury_full_warned: bool,
+    pub warned_keys: std::collections::HashSet<String>,
     /// Messages from engine layers that hold `&mut PlayerState` but have no
     /// access to the notification manager — imp digging, task execution.
     /// `GameState` drains these each tick.
@@ -113,7 +117,7 @@ impl PlayerState {
             max_food: game_data.config.player_initial_capacity.max_food,
             materials: game_data.config.player_starting_resources.materials,
             max_materials: game_data.config.player_initial_capacity.max_materials,
-            treasury_full_warned: false,
+            warned_keys: std::collections::HashSet::new(),
             pending_messages: Vec::new(),
 
             accumulators: ResourceAccumulator::default(),
@@ -160,25 +164,22 @@ impl PlayerState {
         self.pending_messages.push(message.into());
     }
 
-    /// True the first time the treasury overflows, and not again until it has
-    /// had room since.
+    /// Queue `message` the first time `key` is seen, and not again until
+    /// [`clear_warning`](Self::clear_warning).
     ///
-    /// The overflow fires once per dig, so warning unconditionally would bury
-    /// the screen. The player still needs telling once: gold that will not fit
-    /// spills onto the floor as a pile, which looks like gold silently
-    /// vanishing if nobody says so.
-    pub fn should_warn_treasury_full(&mut self) -> bool {
-        if self.treasury_full_warned {
-            return false;
+    /// Started as a single bool for the overflowing treasury; the spawner has
+    /// three more conditions of the same shape, and five bools would have been
+    /// worse than one set.
+    pub fn warn_once(&mut self, key: &str, message: impl Into<String>) {
+        if self.warned_keys.insert(key.to_string()) {
+            self.notify(message);
         }
-        self.treasury_full_warned = true;
-        true
     }
 
-    /// Called when the treasury demonstrably has room again, so the next
-    /// overflow is worth reporting.
-    pub fn clear_treasury_full_warning(&mut self) {
-        self.treasury_full_warned = false;
+    /// Called when a warned-about condition has demonstrably cleared, so its
+    /// next occurrence is worth reporting again.
+    pub fn clear_warning(&mut self, key: &str) {
+        self.warned_keys.remove(key);
     }
 
     /// Check whether the player has enough gold and mana for a purchase.
@@ -360,7 +361,7 @@ mod tests {
             max_food: 1000,
             materials: 100,
             max_materials: 500,
-            treasury_full_warned: false,
+            warned_keys: std::collections::HashSet::new(),
             pending_messages: Vec::new(),
             accumulators: ResourceAccumulator::default(),
             unlocked_rooms: HashSet::new(),
@@ -405,7 +406,7 @@ mod tests {
             max_food: 100,
             materials: 0,
             max_materials: 100,
-            treasury_full_warned: false,
+            warned_keys: std::collections::HashSet::new(),
             pending_messages: Vec::new(),
             accumulators: ResourceAccumulator::default(),
             unlocked_rooms: HashSet::new(),
@@ -462,7 +463,7 @@ mod tests {
             max_food: 1000,
             materials: 100,
             max_materials: 500,
-            treasury_full_warned: false,
+            warned_keys: std::collections::HashSet::new(),
             pending_messages: Vec::new(),
             accumulators: ResourceAccumulator::default(),
             unlocked_rooms: HashSet::new(),
@@ -505,7 +506,7 @@ mod tests {
             max_food: 1000,
             materials: 100,
             max_materials: 500,
-            treasury_full_warned: false,
+            warned_keys: std::collections::HashSet::new(),
             pending_messages: Vec::new(),
             accumulators: ResourceAccumulator::default(),
             unlocked_rooms: HashSet::new(),

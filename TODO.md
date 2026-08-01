@@ -85,8 +85,8 @@
 
 ## Code quality
 
-- Strip debug output. The swallowed-player-feedback subset is done: spell-cast failures, room build refusals (unresearched / not enough gold / not enough mana), trap refusals (unresearched / no Workshop / no crates) and treasury overflow all reach the player now. Save/load failures turned out to already notify — the `eprintln!` beside them is a genuine diagnostic. What is left is **actual** noise, ~90 calls, of which the per-tick ones (combat hits, imp digs, trap triggers) are the ones worth silencing first.
-- The spawner's warnings (`No available lair space`, `No monster spawners connected to dungeon heart`) are player-relevant — they explain why creatures stopped arriving — but fire on a timer, so they need the same once-per-episode treatment `should_warn_treasury_full` uses before they can become notifications.
+- `PlayerState::warn_once(key, message)` is the pattern for any condition checked every tick that the player still needs telling about once — used by the treasury overflow and all four spawn-blocked reasons. Reach for it rather than a bespoke bool.
+- Strip debug output. The swallowed-player-feedback subset is done: spell-cast failures, room build refusals (unresearched / not enough gold / not enough mana), trap refusals (unresearched / no Workshop / no crates) and treasury overflow all reach the player now. Save/load failures turned out to already notify — the `eprintln!` beside them is a genuine diagnostic. The spawner's four blocked reasons are done too. What is left is **actual** noise, ~85 calls, of which the per-tick ones (combat hits, imp digs, trap triggers) are the ones worth silencing first.
 - Error-handling hardening: ~25 `unwrap()`, 9 `expect()`, 4 `panic!` — asset loading and save handling especially.
 - Deduplicate movement and distance logic between `creature_ai` and `imp_ai` (two `manhattan_distance` impls).
 - Test coverage: combat math has one test, save/load one, UI/actions none. Add tests for menu action handlers, sidebar selection, tooltip state and dungeon command dispatch.

@@ -8,18 +8,35 @@ use crate::state::tile_state::{Ownership, TilePos};
 
 pub struct SpawnSystem;
 
+/// Why a spawn tick produced no creature.
+///
+/// Returned rather than logged: the spawner has no access to the player, and
+/// these used to be `eprintln!` warnings, so a keeper whose lair was full or
+/// whose spawner was walled off simply watched creatures stop arriving with
+/// no explanation. The caller decides which of these are worth saying aloud.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpawnBlocked {
+    /// No dungeon heart — the run is over anyway.
+    NoDungeonHeart,
+    NoSpawner,
+    /// A spawner exists but nothing can walk from it to the heart.
+    SpawnerUnreachable,
+    NoLairSpace,
+    /// Rooms built so far unlock no creature the roster knows.
+    NoEligibleCreatures,
+}
+
 impl SpawnSystem {
     pub fn spawn_random_creature(
         dungeon: &mut Dungeon,
         room_manager: &RoomManager,
         entities: &mut EntityManager,
         game_data: &GameData,
-    ) {
+    ) -> Option<SpawnBlocked> {
         // Find the dungeon heart position
         let heart_pos = dungeon.find_dungeon_heart();
         if heart_pos.is_none() {
-            eprintln!("Warning: No dungeon heart found, cannot spawn creatures");
-            return;
+            return Some(SpawnBlocked::NoDungeonHeart);
         }
         let heart_pos = heart_pos.unwrap();
 
@@ -34,8 +51,7 @@ impl SpawnSystem {
         }
 
         if spawner_tiles.is_empty() {
-            eprintln!("Warning: No monster spawners found, cannot spawn creatures");
-            return;
+            return Some(SpawnBlocked::NoSpawner);
         }
 
         // Create pathfinding grid to check connectivity
@@ -64,15 +80,13 @@ impl SpawnSystem {
         }
 
         if connected_spawners.is_empty() {
-            eprintln!("Warning: No monster spawners connected to dungeon heart");
-            return;
+            return Some(SpawnBlocked::SpawnerUnreachable);
         }
 
         // Check if we have available lair space
         let available_lair_tiles = room_manager.count_available_lair_tiles(dungeon);
         if available_lair_tiles == 0 {
-            eprintln!("Warning: No available lair space, cannot spawn creature");
-            return;
+            return Some(SpawnBlocked::NoLairSpace);
         }
 
         // Pick a random connected spawner
@@ -111,8 +125,7 @@ impl SpawnSystem {
             .collect();
 
         if valid_creatures.is_empty() {
-            eprintln!("Warning: No valid creatures to spawn based on current rooms");
-            return;
+            return Some(SpawnBlocked::NoEligibleCreatures);
         }
 
         if let Some(&creature_id) =
@@ -134,14 +147,12 @@ impl SpawnSystem {
                 creature_state.set_need("food".to_string(), 100.0);
 
                 let entity_id = entities.spawn_creature(spawn_pos, creature_state);
-                eprintln!(
-                    "Spawned creature {} at spawner {:?}",
-                    creature_id, spawn_pos
-                );
 
                 // Claim a lair tile for this creature
                 room_manager.find_and_claim_lair_tile(dungeon, entity_id);
             }
         }
+
+        None
     }
 }
