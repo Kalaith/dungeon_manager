@@ -165,7 +165,10 @@ fn orphaned_tiles(declared: &[String]) -> Vec<String> {
     // docs/ROOM_SET.md — its art is kept only until that supersession is
     // confirmed, at which point the generator should go too. Shrink this list,
     // don't grow it.
-    const AWAITING_DATA: &[&str] = &["casino"];
+    // Every generated tile is now reachable from data. The casino was the last
+    // holdout and has been deleted: docs/ROOM_SET.md names the Leisure Den its
+    // successor, that room shipped, and no data file ever referenced the casino.
+    const AWAITING_DATA: &[&str] = &[];
 
     let tiles_dir = project_root().join("assets").join("tiles");
     let mut orphans = Vec::new();

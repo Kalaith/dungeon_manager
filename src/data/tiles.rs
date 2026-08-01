@@ -49,8 +49,10 @@ pub struct LightData {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecialData {
     pub aura: Option<AuraData>,
-    #[serde(default)]
-    pub cannot_be_modified: bool,
+    // No `cannot_be_modified`: the only tile that declared it
+    // (`ancient_rune_floor`) already authors `diggable: false` and
+    // `claimable: false`, which the engine does read. A second flag saying the
+    // same thing is a drift hazard, not a feature.
     pub triggers_event: Option<serde_json::Value>,
 }
 

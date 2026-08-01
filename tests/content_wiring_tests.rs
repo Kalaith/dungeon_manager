@@ -391,3 +391,29 @@ fn every_creature_can_actually_be_obtained() {
 
     assert_empty(stranded, "creatures the player can never obtain");
 }
+
+/// Aura effect keys the engine acts on. `tile_aura::hero_fear_at` reads
+/// `hero_fear`; anything else is silently ignored, so an authored effect that
+/// is not on this list is a design intent that evaporates.
+const ENGINE_CONSUMED_AURA_EFFECTS: &[&str] = &["hero_fear"];
+
+#[test]
+fn every_tile_aura_effect_is_one_the_engine_acts_on() {
+    let mut problems = Vec::new();
+
+    for tile in load("assets/data/tiles.json") {
+        let id = tile["id"].as_str().expect("id");
+        let Some(effects) = tile["special"]["aura"]["effects"].as_object() else {
+            continue;
+        };
+        for key in effects.keys() {
+            if !ENGINE_CONSUMED_AURA_EFFECTS.contains(&key.as_str()) {
+                problems.push(format!(
+                    "tile `{id}` declares aura effect `{key}`, which no engine code reads"
+                ));
+            }
+        }
+    }
+
+    assert_empty(problems, "tile aura effects that go nowhere");
+}

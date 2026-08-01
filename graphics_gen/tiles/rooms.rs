@@ -179,19 +179,6 @@ pub fn create_torture_chamber() -> RgbaImage {
     img
 }
 
-/// Casino/gambling room - NEW
-pub fn create_casino() -> RgbaImage {
-    let mut img = create_tile_base(Rgba([30, 80, 30, 255])); // Green felt
-                                                             // Card/dice pattern
-    draw_rect(&mut img, 20, 20, 10, 14, Rgba([255, 255, 255, 255]));
-    draw_rect(&mut img, 34, 30, 10, 14, Rgba([255, 255, 255, 255]));
-    // Red diamonds on cards
-    draw_circle(&mut img, 25, 27, 2, Rgba([200, 20, 20, 255]));
-    draw_circle(&mut img, 39, 37, 2, Rgba([20, 20, 20, 255]));
-    add_noise(&mut img, 5);
-    img
-}
-
 /// Temple - dark shrine where creatures pray for mana
 pub fn create_temple() -> RgbaImage {
     let mut img = create_tile_base(Rgba([35, 25, 45, 255])); // Dark purple-gray stone

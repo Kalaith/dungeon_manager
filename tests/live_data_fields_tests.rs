@@ -54,12 +54,9 @@ const UNCONSUMED: &[&str] = &[
     "TileData::damage_per_second",
     "VisualData::fogged_sprite",
     "VisualData::animated",
-    "SpecialData::aura",
-    "SpecialData::cannot_be_modified",
+    // No event system exists, so nothing can fire the ancient_awakening that
+    // `ancient_rune_floor` declares.
     "SpecialData::triggers_event",
-    // The parent of the three above: nothing reads the block at all. Surfaced
-    // only once comments were stripped from the sweep.
-    "TileData::special",
     // Traps: magical door locking is unbuilt, and every trap is "pressure".
     "TrapEffects::lockable",
     "TrapEffects::trigger_type",

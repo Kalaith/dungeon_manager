@@ -56,7 +56,14 @@ pub fn effective_retreat_threshold(hero_data: &crate::data::HeroData) -> f32 {
 /// Deliberately does nothing to a `will_fight_to_death` hero. That flag is
 /// documented as "dies where they stand", and letting fear override it would
 /// quietly contradict the authored data for nine of twenty heroes.
-pub fn current_retreat_threshold(hero_state: &HeroState, hero_data: &crate::data::HeroData) -> f32 {
+/// `ambient_fear` is what the ground itself contributes — see
+/// `tile_aura::hero_fear_at`. It is passed in rather than looked up because
+/// this runs from two call sites, only one of which has the hero's position.
+pub fn current_retreat_threshold(
+    hero_state: &HeroState,
+    hero_data: &crate::data::HeroData,
+    ambient_fear: f32,
+) -> f32 {
     let base = effective_retreat_threshold(hero_data);
     if base <= 0.0 {
         return 0.0;
@@ -67,7 +74,8 @@ pub fn current_retreat_threshold(hero_state: &HeroState, hero_data: &crate::data
         .iter()
         .filter(|effect| effect.effect_type == "fear")
         .map(|effect| effect.strength)
-        .sum();
+        .sum::<f32>()
+        + ambient_fear.max(0.0);
 
     if fear <= 0.0 {
         return base;
@@ -87,11 +95,17 @@ pub fn current_retreat_threshold(hero_state: &HeroState, hero_data: &crate::data
 /// `retreat_below_health` was dead for the one situation it describes.
 /// Confirmed by tracing a live wave: zero goal transitions in 2500 frames of
 /// combat, including a hero fighting at a fraction of their health.
-pub fn should_reconsider_goal(hero_state: &HeroState, game_data: &GameData) -> bool {
+pub fn should_reconsider_goal(
+    hero_state: &HeroState,
+    game_data: &GameData,
+    ambient_fear: f32,
+) -> bool {
     let broken = game_data
         .heroes
         .get(&hero_state.hero_id)
-        .map(|data| hero_state.should_retreat(current_retreat_threshold(hero_state, data)))
+        .map(|data| {
+            hero_state.should_retreat(current_retreat_threshold(hero_state, data, ambient_fear))
+        })
         .unwrap_or(false);
 
     match &hero_state.current_goal {
@@ -113,8 +127,15 @@ pub fn decide_hero_goal(
         None => return HeroGoal::DestroyHeart, // fallback
     };
 
-    // Check if hero should retreat
-    if hero_state.should_retreat(current_retreat_threshold(hero_state, hero_data)) {
+    // Check if hero should retreat. The ground can contribute: a bone floor
+    // frightens whoever stands near it (`tile_aura::hero_fear_at`).
+    let ambient_fear =
+        crate::engine::tile_aura::hero_fear_at(hero_pos, &game_state.dungeon, game_data);
+    if hero_state.should_retreat(current_retreat_threshold(
+        hero_state,
+        hero_data,
+        ambient_fear,
+    )) {
         return HeroGoal::Retreat;
     }
 
@@ -480,7 +501,9 @@ pub fn update_hero_ai(
             hero_state.current_path = None;
         }
     } else {
-        let should_reevaluate = should_reconsider_goal(hero_state, game_data);
+        let ambient_fear =
+            crate::engine::tile_aura::hero_fear_at(hero_entity.pos, &game_state.dungeon, game_data);
+        let should_reevaluate = should_reconsider_goal(hero_state, game_data, ambient_fear);
 
         if should_reevaluate {
             let new_goal = decide_hero_goal(hero_entity.pos, hero_state, game_state, game_data);

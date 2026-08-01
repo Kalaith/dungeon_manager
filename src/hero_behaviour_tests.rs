@@ -159,7 +159,7 @@ fn a_healthy_attacker_presses_on() {
     let hero = attacker(&game_data, "acolyte", 1.0);
 
     assert!(
-        !should_reconsider_goal(&hero, &game_data),
+        !should_reconsider_goal(&hero, &game_data, 0.0),
         "an unhurt attacker should not stop to think about it"
     );
 }
@@ -180,7 +180,7 @@ fn a_broken_attacker_reconsiders() {
     let hero = attacker(&game_data, "acolyte", threshold * 0.5);
 
     assert!(
-        should_reconsider_goal(&hero, &game_data),
+        should_reconsider_goal(&hero, &game_data, 0.0),
         "an attacker below their breaking point should reconsider"
     );
 }
@@ -197,7 +197,7 @@ fn an_attacker_who_fights_to_the_death_never_reconsiders() {
         // A sliver of health left, and still no reconsidering.
         let hero = attacker(&game_data, id, 0.01);
         assert!(
-            !should_reconsider_goal(&hero, &game_data),
+            !should_reconsider_goal(&hero, &game_data, 0.0),
             "`{id}` is authored to fight to the death"
         );
         checked += 1;
@@ -212,7 +212,7 @@ fn a_resting_hero_waits_for_the_wave() {
     hero.current_goal = HeroGoal::RestAtSpawn(TilePos::new(1, 1));
 
     assert!(
-        !should_reconsider_goal(&hero, &game_data),
+        !should_reconsider_goal(&hero, &game_data, 0.0),
         "a resting hero should stay put until the wave launches"
     );
 }
@@ -236,19 +236,19 @@ fn fear_makes_an_attacker_break_off_who_would_otherwise_press_on() {
 
     let mut probe = attacker(&game_data, "acolyte", 1.0);
     probe.status_effects.push(scare.clone());
-    let feared = crate::engine::hero_ai::current_retreat_threshold(&probe, data);
+    let feared = crate::engine::hero_ai::current_retreat_threshold(&probe, data, 0.0);
     assert!(feared > base, "fear should raise the breaking point");
 
     // A wound between the two: survivable while calm, not while frightened.
     let mut hero = attacker(&game_data, "acolyte", (base + feared) / 2.0);
     assert!(
-        !should_reconsider_goal(&hero, &game_data),
+        !should_reconsider_goal(&hero, &game_data, 0.0),
         "at this wound the acolyte should still be pressing on"
     );
 
     hero.status_effects.push(scare);
     assert!(
-        should_reconsider_goal(&hero, &game_data),
+        should_reconsider_goal(&hero, &game_data, 0.0),
         "a frightened attacker at the same wound should break off"
     );
 }
@@ -273,7 +273,7 @@ fn fear_does_not_move_a_hero_authored_to_fight_to_the_death() {
         });
 
     assert_eq!(
-        crate::engine::hero_ai::current_retreat_threshold(&hero, data),
+        crate::engine::hero_ai::current_retreat_threshold(&hero, data, 0.0),
         0.0,
         "`{id}` fights to the death; no amount of fear should change that"
     );

@@ -42,6 +42,8 @@ mod task_system_tests;
 #[cfg(test)]
 mod threat_tests;
 #[cfg(test)]
+mod tile_aura_tests;
+#[cfg(test)]
 mod traits_tests;
 #[cfg(test)]
 mod wall_reinforcement_tests;

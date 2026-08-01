@@ -214,7 +214,6 @@
     "supports_rooms": false,
     "resources": null,
     "special": {
-      "cannot_be_modified": true,
       "triggers_event": "ancient_awakening"
     },
     "durability": null,

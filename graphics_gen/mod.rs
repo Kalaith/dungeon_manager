@@ -138,7 +138,6 @@ fn generate_tile_sprites() {
     tiles::save_tile("kennel", tiles::create_kennel());
     tiles::save_tile("dungeon_barracks", tiles::create_dungeon_barracks());
     tiles::save_tile("torture_chamber", tiles::create_torture_chamber());
-    tiles::save_tile("casino", tiles::create_casino());
     tiles::save_tile("temple", tiles::create_temple());
     tiles::save_tile("scavenger", tiles::create_scavenger());
     // docs/ROOM_SET.md "Commit" set
