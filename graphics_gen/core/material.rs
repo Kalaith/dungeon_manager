@@ -2,10 +2,29 @@
 
 use image::Rgba;
 
-// Light direction (normalized) - from top-left-front
-const LIGHT_X: f32 = -0.4;
-const LIGHT_Y: f32 = -0.5;
-const LIGHT_Z: f32 = 0.75;
+// The renderer's axes: +x is screen-right, +y is screen-down *and* into the
+// scene's near ground, +z is altitude (a point at height z is drawn at
+// `screen_y = y - z * TILT`). So an upward-facing surface has `nz ~= 1`.
+//
+// `LIGHT_*` is the unit vector pointing *from a surface toward the light* — a
+// key light above, well to the left, and slightly in front of the subject.
+//
+// The angle away from the view axis is what produces form. The camera looks
+// along `(0, TILT, 1)`, so a light near that axis lights every visible normal
+// almost equally and bodies render flat; this one sits ~38 degrees off it, far
+// enough that the right flank falls to ambient and a terminator crosses the
+// subject.
+const LIGHT_X: f32 = -0.55;
+const LIGHT_Y: f32 = 0.10;
+const LIGHT_Z: f32 = 0.83;
+
+// The camera looks down the tilted ray `wy = py + wz * TILT`, so the direction
+// from a surface toward the viewer is `(0, TILT, 1)` normalized. Blinn-Phong's
+// half-vector is `normalize(L + V)`; both are constant here, so it is folded to
+// a constant rather than recomputed per pixel.
+const HALF_X: f32 = -0.2909;
+const HALF_Y: f32 = 0.2894;
+const HALF_Z: f32 = 0.9119;
 
 // ============================================================================
 // MATERIAL SYSTEM
@@ -239,16 +258,13 @@ pub fn shade_color(normal: (f32, f32, f32), mat: &Material, _view_z: f32) -> Rgb
         (0.0, 0.0, 1.0)
     };
 
-    // Diffuse lighting (Lambert)
-    let dot = -(nx * LIGHT_X + ny * LIGHT_Y + nz * LIGHT_Z);
+    // Diffuse lighting (Lambert). `LIGHT_*` points toward the light, so a
+    // surface facing it has a positive dot product — no negation.
+    let dot = nx * LIGHT_X + ny * LIGHT_Y + nz * LIGHT_Z;
     let diffuse = dot.max(0.0) * mat.diffuse;
 
     // Specular (Blinn-Phong)
-    let hx = -LIGHT_X;
-    let hy = -LIGHT_Y;
-    let hz = -LIGHT_Z + 1.0;
-    let hlen = (hx * hx + hy * hy + hz * hz).sqrt();
-    let spec_dot = (nx * hx / hlen + ny * hy / hlen + nz * hz / hlen).max(0.0);
+    let spec_dot = (nx * HALF_X + ny * HALF_Y + nz * HALF_Z).max(0.0);
     let specular = spec_dot.powf(mat.shininess) * mat.specular;
 
     let intensity = (mat.ambient + diffuse + specular).min(1.5);
@@ -258,4 +274,96 @@ pub fn shade_color(normal: (f32, f32, f32), mat: &Material, _view_z: f32) -> Rgb
     let b = ((mat.base_color[2] as f32 * intensity).min(255.0)) as u8;
 
     Rgba([r, g, b, 255])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn luma(px: Rgba<u8>) -> f32 {
+        0.299 * px[0] as f32 + 0.587 * px[1] as f32 + 0.114 * px[2] as f32
+    }
+
+    /// The light vector must be normalized, or every diffuse term is silently
+    /// scaled and `ambient + diffuse` no longer means what the materials say.
+    #[test]
+    fn light_and_half_vectors_are_unit_length() {
+        for (name, v) in [
+            ("light", (LIGHT_X, LIGHT_Y, LIGHT_Z)),
+            ("half", (HALF_X, HALF_Y, HALF_Z)),
+        ] {
+            let len = (v.0 * v.0 + v.1 * v.1 + v.2 * v.2).sqrt();
+            assert!(
+                (len - 1.0).abs() < 0.01,
+                "{name} vector length {len} is not ~1.0"
+            );
+        }
+    }
+
+    /// `HALF_*` is `normalize(L + V)` precomputed. It is therefore a second
+    /// copy of the light direction, and the copy nothing recomputes is the one
+    /// that goes stale — move the key light and the specular highlight silently
+    /// keeps pointing at the old one. Derive it here and compare.
+    #[test]
+    fn half_vector_matches_the_light_it_was_derived_from() {
+        // View direction: the camera's ray is `wy = py + wz * TILT`, so moving
+        // toward the viewer is `(0, TILT, 1)`.
+        let tilt = crate::graphics_gen::core::TILT;
+        let v_len = (tilt * tilt + 1.0).sqrt();
+        let view = (0.0, tilt / v_len, 1.0 / v_len);
+
+        let sum = (LIGHT_X + view.0, LIGHT_Y + view.1, LIGHT_Z + view.2);
+        let len = (sum.0 * sum.0 + sum.1 * sum.1 + sum.2 * sum.2).sqrt();
+        let expected = (sum.0 / len, sum.1 / len, sum.2 / len);
+
+        for (axis, got, want) in [
+            ("x", HALF_X, expected.0),
+            ("y", HALF_Y, expected.1),
+            ("z", HALF_Z, expected.2),
+        ] {
+            assert!(
+                (got - want).abs() < 0.005,
+                "HALF_{} is {got}, but normalize(LIGHT + VIEW) gives {want} — \
+                 recompute the half-vector after moving the light",
+                axis.to_uppercase()
+            );
+        }
+    }
+
+    /// The bug this test exists for: the diffuse dot product was negated, so
+    /// `nz = 1` (an upward-facing surface, which is most of a large rounded
+    /// body in this projection) received *zero* diffuse light. Big creatures
+    /// rendered as near-black silhouettes while small spheres — mostly rim —
+    /// looked fine.
+    #[test]
+    fn upward_facing_surfaces_are_lit_not_black() {
+        let mat = Material::flesh(120, 140, 110);
+        let top = shade_color((0.0, 0.0, 1.0), &mat, 0.0);
+        let ambient_only = mat.base_color[1] as f32 * mat.ambient;
+
+        assert!(
+            luma(top) > ambient_only * 1.5,
+            "top surface {top:?} is at ambient level — diffuse is not reaching it"
+        );
+    }
+
+    /// Shading has to have a direction: the side facing the key light is
+    /// brighter than the side facing away, and the underside is darkest.
+    #[test]
+    fn shading_falls_off_away_from_the_key_light() {
+        let mat = Material::matte(180, 180, 180);
+
+        let toward = luma(shade_color((LIGHT_X, LIGHT_Y, LIGHT_Z), &mat, 0.0));
+        let top = luma(shade_color((0.0, 0.0, 1.0), &mat, 0.0));
+        let away = luma(shade_color((-LIGHT_X, -LIGHT_Y, -LIGHT_Z), &mat, 0.0));
+        let under = luma(shade_color((0.0, 0.0, -1.0), &mat, 0.0));
+
+        assert!(toward > top, "surface facing the light should be brightest");
+        assert!(top > away, "top should out-light the shadow side");
+        assert!(
+            (away - under).abs() < 1.0,
+            "both fully-shadowed normals should sit at ambient"
+        );
+        assert!(under > 0.0, "ambient should keep shadows off pure black");
+    }
 }
