@@ -293,9 +293,11 @@ fn execute_train(
         creature.max_experience *= task_config.level_up_exp_multiplier;
         creature.max_health *= task_config.level_up_health_multiplier;
         creature.health = creature.max_health;
-        eprintln!(
+        trace_log!(
+            "tasks",
             "Creature {} leveled up to {}",
-            creature.creature_id, creature.level
+            creature.creature_id,
+            creature.level
         );
     }
 }
@@ -354,9 +356,11 @@ fn execute_work(
         if room.room_type == "workshop" {
             let manufactured_trap = select_manufactured_trap(player, game_data);
             if let Some(trap_id) = &manufactured_trap {
-                eprintln!(
+                trace_log!(
+                    "tasks",
                     "Creature {} manufactured {} crate.",
-                    creature.creature_id, trap_id
+                    creature.creature_id,
+                    trap_id
                 );
             }
             return WorkResult {

@@ -344,7 +344,7 @@ fn process_pickup(
 
         if amount_collected > 0 {
             player.add_resources(amount_collected, 0, 0, 0);
-            eprintln!("Imp picked up {} gold.", amount_collected);
+            trace_log!("imps", "Imp picked up {} gold.", amount_collected);
         }
 
         // Check if pile empty
@@ -562,9 +562,11 @@ pub(crate) fn complete_dig(
             // Gem seams stay marked - imps will keep mining them continuously
             // Do NOT unmark the tile, do NOT convert to floor
             player.add_resources(gold_gained, 0, 0, 0);
-            eprintln!(
+            trace_log!(
+                "imps",
                 "Imp mined gem seam at {:?}, gained {} gold",
-                marked_pos, gold_gained
+                marked_pos,
+                gold_gained
             );
             return; // Exit early to preserve tile state
         }
@@ -616,9 +618,11 @@ pub(crate) fn complete_dig(
             }
         } else if mana_gained > 0 {
             player.mana = (player.mana + mana_gained).min(player.max_mana);
-            eprintln!(
+            trace_log!(
+                "imps",
                 "Imp mined mana crystal at {:?}, gained {} mana",
-                marked_pos, mana_gained
+                marked_pos,
+                mana_gained
             );
         }
     }
@@ -744,7 +748,7 @@ fn process_claiming(
                 tile.ownership = Ownership::Player;
                 tile.tile_type = tt::CLAIMED_FLOOR.to_string();
                 player.claimed_tile_count += 1;
-                eprintln!("Imp claimed tile at {:?}", target_pos);
+                trace_log!("imps", "Imp claimed tile at {:?}", target_pos);
             }
         }
     }

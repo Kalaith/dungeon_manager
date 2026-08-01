@@ -38,9 +38,11 @@ fn update_wave_system(state: &mut GameState, game_data: &GameData, dt: f32) {
     if state.hero_base.wave_in_progress && alive_attackers == 0 {
         state.hero_base.wave_in_progress = false;
         state.hero_base.time_until_next_wave = game_data.config.hero_waves.wave_interval / threat;
-        eprintln!(
+        trace_log!(
+            "heroes",
             "Wave {} defeated! Next wave in {:.0} seconds.",
-            state.hero_base.current_wave_number, state.hero_base.time_until_next_wave
+            state.hero_base.current_wave_number,
+            state.hero_base.time_until_next_wave
         );
     }
 
@@ -87,9 +89,11 @@ fn launch_attack_wave(state: &mut GameState, _game_data: &GameData) {
 
     state.hero_base.active_attackers = attackers_launched;
 
-    eprintln!(
+    trace_log!(
+        "heroes",
         "Wave {} launched! {} heroes attacking the dungeon!",
-        wave_number, attackers_launched
+        wave_number,
+        attackers_launched
     );
 }
 
@@ -219,7 +223,8 @@ fn spawn_hero_at(
         }
 
         state.entities.spawn_hero(spawn_pos, hero_state.clone());
-        eprintln!(
+        trace_log!(
+            "heroes",
             "Spawned {} at {:?} ({})",
             hero_id,
             spawn_pos,

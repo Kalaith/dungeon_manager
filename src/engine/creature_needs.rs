@@ -32,7 +32,7 @@ pub fn handle_creature_desertion(
                 // Check if they should desert using AI logic (mood-based)
                 if creature_task_logic::should_desert(creature, monster_data) {
                     deserting_ids.push(creature_id);
-                    eprintln!("Creature {} is deserting! (mood: {:.1}, food: {:.1}, sleep: {:.1}, gold: {:.1})",
+                    trace_log!("creatures", "Creature {} is deserting! (mood: {:.1}, food: {:.1}, sleep: {:.1}, gold: {:.1})",
                         creature.creature_id, creature.mood, food_need, sleep_need, gold_need);
                 }
             }

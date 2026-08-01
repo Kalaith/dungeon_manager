@@ -71,7 +71,7 @@ fn try_fund_trap(dungeon: &mut Dungeon, player: &mut PlayerState, pos: TilePos) 
     let trap_type = trap.trap_type.clone();
     if player.consume_trap_inventory(&trap_type, 1) {
         trap.funded = true;
-        eprintln!("Funded trap at {:?}", pos);
+        trace_log!("traps", "Funded trap at {:?}", pos);
     }
 }
 
@@ -101,7 +101,7 @@ fn progress_trap_construction(
     if trap.construction_progress >= build_time {
         trap.constructed = true;
         trap.active = true;
-        eprintln!("Trap construction complete at {:?}", pos);
+        trace_log!("traps", "Trap construction complete at {:?}", pos);
         return true;
     }
 
@@ -254,9 +254,12 @@ fn trigger_damage_trap(
     let cooldown = trap_data.effects.cooldown.unwrap_or(5.0);
 
     apply_trap_damage(entity, damage);
-    eprintln!(
+    trace_log!(
+        "traps",
         "{} triggered at {:?}! Dealt {} damage.",
-        trap_data.name, pos, damage
+        trap_data.name,
+        pos,
+        damage
     );
     set_trap_cooldown(dungeon, pos, cooldown);
 
@@ -300,7 +303,8 @@ fn trigger_area_trap(
         }
     }
 
-    eprintln!(
+    trace_log!(
+        "traps",
         "Boulder trap triggered at {:?}! Dealt {} damage to {} entities.",
         pos,
         damage,
@@ -329,9 +333,11 @@ fn trigger_alarm_trap(
         .filter(|e_pos| pos.distance_to(e_pos) <= alert_radius)
         .count();
 
-    eprintln!(
+    trace_log!(
+        "traps",
         "Alarm trap triggered at {:?}! Alerted {} creatures.",
-        pos, alerted_count
+        pos,
+        alerted_count
     );
     let cooldown = game_data.config.traps.default_cooldown;
     let cooldown_multiplier = trap_data.effects.cooldown_multiplier.unwrap_or(2.0);
@@ -360,16 +366,24 @@ fn apply_trap_damage(entity: &mut crate::state::entities::Entity, damage: f32) {
     match &mut entity.entity_type {
         EntityType::Hero(hero) => {
             hero.health = (hero.health - damage).max(0.0);
-            eprintln!(
+            trace_log!(
+                "traps",
                 "Hero {} took {} trap damage (HP: {}/{})",
-                hero.hero_id, damage, hero.health, hero.max_health
+                hero.hero_id,
+                damage,
+                hero.health,
+                hero.max_health
             );
         }
         EntityType::Creature(creature) => {
             creature.health = (creature.health - damage).max(0.0);
-            eprintln!(
+            trace_log!(
+                "traps",
                 "Creature {} took {} trap damage (HP: {}/{})",
-                creature.creature_id, damage, creature.health, creature.max_health
+                creature.creature_id,
+                damage,
+                creature.health,
+                creature.max_health
             );
         }
         EntityType::Structure(_) => {

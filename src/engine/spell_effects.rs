@@ -197,9 +197,12 @@ pub fn cast_spell(
     // Deduct costs from spell data
     game_state.player.mana -= spell.cost.mana;
     game_state.player.gold -= spell.cost.gold;
-    eprintln!(
+    trace_log!(
+        "spells",
         "Cast spell: {} (mana: {}, gold: {})",
-        spell.name, spell.cost.mana, spell.cost.gold
+        spell.name,
+        spell.cost.mana,
+        spell.cost.gold
     );
 
     // Apply effects
@@ -293,23 +296,35 @@ fn apply_damage_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &m
         match &mut entity.entity_type {
             crate::state::entities::EntityType::Creature(creature) => {
                 creature.health = (creature.health - damage).max(0.0);
-                eprintln!(
+                trace_log!(
+                    "spells",
                     "Spell damage: {} took {} damage (HP: {}/{})",
-                    creature.creature_id, damage, creature.health, creature.max_health
+                    creature.creature_id,
+                    damage,
+                    creature.health,
+                    creature.max_health
                 );
             }
             crate::state::entities::EntityType::Hero(hero) => {
                 hero.health = (hero.health - damage).max(0.0);
-                eprintln!(
+                trace_log!(
+                    "spells",
                     "Spell damage: {} took {} damage (HP: {}/{})",
-                    hero.hero_id, damage, hero.health, hero.max_health
+                    hero.hero_id,
+                    damage,
+                    hero.health,
+                    hero.max_health
                 );
             }
             crate::state::entities::EntityType::Structure(structure) => {
                 structure.take_damage(damage);
-                eprintln!(
+                trace_log!(
+                    "spells",
                     "Spell damage: {} took {} damage (HP: {}/{})",
-                    structure.building_id, damage, structure.health, structure.max_health
+                    structure.building_id,
+                    damage,
+                    structure.health,
+                    structure.max_health
                 );
             }
             crate::state::entities::EntityType::ResourcePile(_) => {}
@@ -325,23 +340,35 @@ fn apply_heal_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &mut
         match &mut entity.entity_type {
             crate::state::entities::EntityType::Creature(creature) => {
                 creature.health = (creature.health + heal_amount).min(creature.max_health);
-                eprintln!(
+                trace_log!(
+                    "spells",
                     "Spell heal: {} healed {} HP (HP: {}/{})",
-                    creature.creature_id, heal_amount, creature.health, creature.max_health
+                    creature.creature_id,
+                    heal_amount,
+                    creature.health,
+                    creature.max_health
                 );
             }
             crate::state::entities::EntityType::Hero(hero) => {
                 hero.health = (hero.health + heal_amount).min(hero.max_health);
-                eprintln!(
+                trace_log!(
+                    "spells",
                     "Spell heal: {} healed {} HP (HP: {}/{})",
-                    hero.hero_id, heal_amount, hero.health, hero.max_health
+                    hero.hero_id,
+                    heal_amount,
+                    hero.health,
+                    hero.max_health
                 );
             }
             crate::state::entities::EntityType::Structure(structure) => {
                 structure.health = (structure.health + heal_amount).min(structure.max_health);
-                eprintln!(
+                trace_log!(
+                    "spells",
                     "Spell heal: {} healed {} HP (HP: {}/{})",
-                    structure.building_id, heal_amount, structure.health, structure.max_health
+                    structure.building_id,
+                    heal_amount,
+                    structure.health,
+                    structure.max_health
                 );
             }
             crate::state::entities::EntityType::ResourcePile(_) => {} // Cannot heal a pile
@@ -418,9 +445,12 @@ fn apply_status_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &m
                             duration,
                             strength,
                         });
-                    eprintln!(
+                    trace_log!(
+                        "spells",
                         "Status applied: {} gained '{}' for {} seconds",
-                        creature.creature_id, status, duration
+                        creature.creature_id,
+                        status,
+                        duration
                     );
                 }
                 crate::state::entities::EntityType::Hero(hero) => {
@@ -433,9 +463,12 @@ fn apply_status_effect(entity_id: EntityId, effect: &SpellEffect, game_state: &m
                             duration,
                             strength,
                         });
-                    eprintln!(
+                    trace_log!(
+                        "spells",
                         "Status applied: {} gained '{}' for {} seconds",
-                        hero.hero_id, status, duration
+                        hero.hero_id,
+                        status,
+                        duration
                     );
                 }
                 crate::state::entities::EntityType::Structure(_) => {}
@@ -478,7 +511,12 @@ fn apply_tile_transform(
                         tile.marked_for_dig = false;
                     }
 
-                    eprintln!("Tile transformed at {:?} to {}", target_pos, to_type);
+                    trace_log!(
+                        "spells",
+                        "Tile transformed at {:?} to {}",
+                        target_pos,
+                        to_type
+                    );
                 }
             }
         }
@@ -500,7 +538,11 @@ fn spawn_entity_effect(
     if entity_type == "imp" {
         let max_imps = GameState::max_imps(game_data);
         if game_state.count_imps() >= max_imps {
-            eprintln!("Cannot summon imp: max cap of {} reached", max_imps);
+            trace_log!(
+                "spells",
+                "Cannot summon imp: max cap of {} reached",
+                max_imps
+            );
             return;
         }
     }
@@ -521,7 +563,7 @@ fn spawn_entity_effect(
 
     game_state.entities.spawn_creature(pos, creature_state);
 
-    eprintln!("Spell summoned {} at {:?}", entity_type, pos);
+    trace_log!("spells", "Spell summoned {} at {:?}", entity_type, pos);
 }
 
 /// Reveal map effect
@@ -538,7 +580,12 @@ fn reveal_map_effect(center: TilePos, _effect: &SpellEffect, game_state: &mut Ga
         }
     }
 
-    eprintln!("Revealed map around {:?} with radius {}", center, radius);
+    trace_log!(
+        "spells",
+        "Revealed map around {:?} with radius {}",
+        center,
+        radius
+    );
 }
 
 /// Update spell cooldowns (call once per second)

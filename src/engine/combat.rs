@@ -114,7 +114,8 @@ pub fn resolve_combat_tick(
 
     // Log combat using all stats for debug
     if actual_damage > 0.0 {
-        eprintln!(
+        trace_log!(
+            "combat",
             "Combat: {} (Lvl {}) hit {} (Lvl {}) for {:.1} damage (Type: {})",
             get_type_name(&attacker.entity_type),
             attacker_stats.level,

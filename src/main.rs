@@ -5,6 +5,8 @@ use macroquad_toolkit::capture;
 
 mod config;
 mod data;
+#[macro_use]
+mod debug_log;
 mod draw_utils;
 mod engine;
 mod sprite_variation;
