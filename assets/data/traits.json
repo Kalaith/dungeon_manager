@@ -107,6 +107,15 @@
     }
   },
   {
+    "id": "trap_savvy",
+    "description": "Keeps the dungeon's traps sharpened, loaded and hidden. Anything sprung nearby hurts more.",
+    "trap_damage_multiplier": 1.5,
+    "trap_tending_radius": 4.0,
+    "task_preference_multipliers": {
+      "work": 1.2
+    }
+  },
+  {
     "id": "construct",
     "description": "Animate metal. Feels nothing, wants nothing, never walks out.",
     "anger_threshold_modifier": -100,

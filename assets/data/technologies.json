@@ -62,7 +62,7 @@
     {
         "id": "trap_tech",
         "name": "Advanced Engineering",
-        "description": "Unlocks the Workshop and advanced traps.",
+        "description": "Unlocks the Workshop, advanced traps, and the kobolds who keep them sharp.",
         "cost": 20,
         "prerequisites": [
             "training_tech"
@@ -72,7 +72,9 @@
                 "workshop"
             ],
             "spells": [],
-            "creatures": [],
+            "creatures": [
+                "kobold"
+            ],
             "traps": [
                 "spike_trap",
                 "blowgun_trap",
@@ -88,7 +90,7 @@
     {
         "id": "beast_handling",
         "name": "Beast Handling",
-        "description": "Tame the deep's fauna: build the Kennel and command hellhounds, spiders, cave lizards and bat swarms.",
+        "description": "Tame the deep's fauna: build the Kennel and command gnolls, hellhounds, spiders, cave lizards and bat swarms.",
         "cost": 15,
         "prerequisites": [
             "training_tech"
@@ -99,6 +101,7 @@
             ],
             "spells": [],
             "creatures": [
+                "gnoll",
                 "hellhound",
                 "spider",
                 "lizard",

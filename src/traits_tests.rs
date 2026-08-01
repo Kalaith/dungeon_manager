@@ -102,3 +102,91 @@ fn discipline_response_multiplier_dampens_slap_mood_swing() {
     // Raw slap would be -20; a 0.2 discipline_response_multiplier should shrink it to -4.
     assert_eq!(creature.mood, 66.0);
 }
+
+/// `trap_savvy` is the first trait that acts on the *world* rather than on the
+/// creature carrying it — a kobold standing near a trap makes that trap hurt
+/// more. It therefore needs a different kind of test from the ones above: the
+/// subject is the trap, not the kobold.
+#[cfg(test)]
+mod trap_tending {
+    use crate::data::GameData;
+    use crate::engine::trap_system::process_trap_triggers;
+    use crate::state::dungeon::Dungeon;
+    use crate::state::entities::{CreatureState, EntityManager, HeroState};
+    use crate::state::game_state::MapType;
+    use crate::state::tile_state::{TilePos, TrapState};
+
+    const TRAP_POS: TilePos = TilePos { x: 5, y: 5 };
+
+    /// The damage a spike trap deals to a hero standing on it, with `tender`
+    /// (if any) standing one tile away.
+    ///
+    /// Retries with fresh state until the trap actually fires. Every hero in
+    /// the roster has non-zero `trap_awareness` — the lowest is the peasant's
+    /// 0.2 — so there is no hero who is guaranteed to walk into it, and a
+    /// single attempt would be flaky one time in five. The damage itself is
+    /// deterministic once it fires, so the comparison stays exact.
+    fn damage_with_tender(tender: Option<&str>) -> f32 {
+        let game_data = GameData::load().expect("game data should load");
+        assert!(
+            game_data.heroes["peasant"].behavior.trap_awareness > 0.0,
+            "if some hero ever reaches 0.0 awareness, use them and drop the retry loop"
+        );
+
+        for _ in 0..64 {
+            let mut dungeon = Dungeon::new(16, 16, &game_data, MapType::Test);
+            let tile = dungeon.get_tile_mut(TRAP_POS).expect("trap tile");
+            tile.trap = Some(TrapState {
+                trap_type: "spike_trap".to_string(),
+                funded: true,
+                constructed: true,
+                active: true,
+                triggered: false,
+                cooldown: 0.0,
+                construction_progress: 10.0,
+            });
+
+            let mut entities = EntityManager::new();
+            let hero = HeroState::new("peasant".to_string(), 1, 200.0, 0.0, TRAP_POS, 1.0, 0);
+            entities.spawn_hero(TRAP_POS, hero);
+
+            if let Some(creature_id) = tender {
+                let creature = CreatureState::new(creature_id.to_string(), 1, 90.0, 0.0, 1);
+                entities.spawn_creature(TilePos::new(6, 6), creature);
+            }
+
+            let dealt: f32 = process_trap_triggers(&mut dungeon, &mut entities, &game_data, 0.1)
+                .iter()
+                .map(|r| r.damage_dealt)
+                .sum();
+            if dealt > 0.0 {
+                return dealt;
+            }
+        }
+        panic!("the trap never fired in 64 attempts, which should be impossible");
+    }
+
+    #[test]
+    fn a_kobold_standing_by_a_trap_makes_it_hit_harder() {
+        let alone = damage_with_tender(None);
+        let tended = damage_with_tender(Some("kobold"));
+
+        assert!(alone > 0.0, "the trap should fire at all");
+        assert!(
+            tended > alone,
+            "a kobold nearby should raise trap damage: {tended} vs {alone}"
+        );
+    }
+
+    /// The control: an ordinary creature in exactly the same spot changes
+    /// nothing, so the bonus is the trait rather than mere proximity.
+    #[test]
+    fn an_ordinary_creature_nearby_changes_nothing() {
+        let alone = damage_with_tender(None);
+        let watched = damage_with_tender(Some("goblin"));
+        assert_eq!(
+            watched, alone,
+            "only `trap_savvy` should matter, not any creature"
+        );
+    }
+}

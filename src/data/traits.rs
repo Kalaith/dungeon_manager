@@ -40,6 +40,16 @@ pub struct TraitData {
     /// Multiplies the magnitude of discipline responses (slap/torture/reward mood swings).
     #[serde(default = "one")]
     pub discipline_response_multiplier: f32,
+    /// Multiplies the damage of any trap sprung near a creature with this trait
+    /// (see `trap_system::nearby_trap_tending_bonus`). Unlike the modifiers
+    /// above, this one acts on the *world* rather than on the creature holding
+    /// it, which is what lets a creature buff a structure.
+    #[serde(default = "one")]
+    pub trap_damage_multiplier: f32,
+    /// How far that bonus reaches, in tiles. Only meaningful alongside
+    /// `trap_damage_multiplier`.
+    #[serde(default)]
+    pub trap_tending_radius: f32,
 }
 
 fn one() -> f32 {

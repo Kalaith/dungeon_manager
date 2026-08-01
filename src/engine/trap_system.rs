@@ -145,11 +145,40 @@ pub fn process_trap_triggers(
                 // corridor for the militia behind them.
                 return None;
             }
+            let tending = nearby_trap_tending_bonus(pos, entities, game_data);
             trigger_trap(
-                pos, &trap_type, trap_data, hero_id, entities, dungeon, game_data,
+                pos, &trap_type, trap_data, hero_id, entities, dungeon, game_data, tending,
             )
         })
         .collect()
+}
+
+/// Damage multiplier from creatures tending this trap.
+///
+/// The Kobold's "buffs nearby traps": any creature whose traits carry a
+/// `trap_damage_multiplier` boosts traps within its `trap_tending_radius`. The
+/// best tender wins rather than the bonuses stacking, so a crowd of kobolds
+/// around one corridor is not a damage multiplier you can farm.
+///
+/// This is an entity scan, but it runs only when a trap actually fires — an
+/// event, not a frame — so it does not touch the per-frame O(n) scan problem.
+fn nearby_trap_tending_bonus(pos: TilePos, entities: &EntityManager, game_data: &GameData) -> f32 {
+    entities
+        .creatures()
+        .filter_map(|(id, creature)| {
+            let entity_pos = entities.get(id)?.pos;
+            let data = game_data.monsters.get(&creature.creature_id)?;
+            let best = data
+                .traits
+                .iter()
+                .filter_map(|tag| game_data.traits.get(tag))
+                .filter(|t| t.trap_damage_multiplier > 1.0)
+                .filter(|t| pos.distance_to(&entity_pos) <= t.trap_tending_radius)
+                .map(|t| t.trap_damage_multiplier)
+                .fold(1.0f32, f32::max);
+            Some(best)
+        })
+        .fold(1.0f32, f32::max)
 }
 
 /// Whether a hero notices the trap under their feet in time.
@@ -209,6 +238,7 @@ fn trigger_trap(
     entities: &mut EntityManager,
     dungeon: &mut Dungeon,
     game_data: &GameData,
+    tending: f32,
 ) -> Option<TrapTriggerResult> {
     // Dispatched on what the trap *does*, not which trap it is. Adding a trap
     // to `traps.json` is content work: three finished trap sprites
@@ -236,9 +266,16 @@ fn trigger_trap(
     }
 
     if effects.area {
-        trigger_area_trap(pos, trap_data, entities, dungeon)
+        trigger_area_trap(pos, trap_data, entities, dungeon, tending)
     } else {
-        trigger_damage_trap(pos, trap_data, triggering_entity, entities, dungeon)
+        trigger_damage_trap(
+            pos,
+            trap_data,
+            triggering_entity,
+            entities,
+            dungeon,
+            tending,
+        )
     }
 }
 
@@ -248,8 +285,9 @@ fn trigger_damage_trap(
     triggering_entity: EntityId,
     entities: &mut EntityManager,
     dungeon: &mut Dungeon,
+    tending: f32,
 ) -> Option<TrapTriggerResult> {
-    let damage = trap_data.effects.damage;
+    let damage = trap_data.effects.damage * tending;
     let entity = entities.get_mut(triggering_entity)?;
     let cooldown = trap_data.effects.cooldown.unwrap_or(5.0);
 
@@ -276,8 +314,9 @@ fn trigger_area_trap(
     trap_data: &crate::data::traps::TrapData,
     entities: &mut EntityManager,
     dungeon: &mut Dungeon,
+    tending: f32,
 ) -> Option<TrapTriggerResult> {
-    let damage = trap_data.effects.damage;
+    let damage = trap_data.effects.damage * tending;
     let radius = if trap_data.effects.area {
         trap_data.effects.area_radius.unwrap_or(1.5)
     } else {

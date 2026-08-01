@@ -339,3 +339,200 @@ pub fn create_hexbinder_sprite() -> RgbaImage {
 
     img
 }
+
+/// Gnoll — a fast skirmisher. Built narrow and forward-leaning against the
+/// orc's bulk, with the hyena shoulder hump doing most of the identification
+/// work; at 64px a silhouette that leans reads as "quick" where any amount of
+/// fur detail would not.
+pub fn create_gnoll_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+
+    let fur = Material::matte(150, 126, 88);
+    let dark_fur = Material::matte(104, 84, 58);
+    let eye = Material::glowing(255, 190, 70);
+    let haft = Material::wood(100, 70, 42);
+    let steel = Material::metallic(150, 152, 160);
+
+    draw_shadow(&mut img, cx, 58.0, 10.0, 4.0);
+
+    for side in [-1.0f32, 1.0] {
+        draw_cylinder_3d(
+            &mut img,
+            &mut depth,
+            cx + side * 6.0,
+            42.0,
+            58.0,
+            5.0,
+            3.2,
+            &dark_fur,
+        );
+    }
+
+    // Lean torso, then the hyena hump over the shoulders
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 35.0, 8.0, 6.5, 11.0, 6.5, &fur);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 24.0, 10.0, 7.0, 4.5, 5.0, &dark_fur,
+    );
+
+    // Head thrust forward, long snout
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 3.0,
+        20.0,
+        13.0,
+        5.0,
+        4.0,
+        4.5,
+        &fur,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 9.0,
+        21.0,
+        13.0,
+        4.0,
+        2.4,
+        2.4,
+        &dark_fur,
+    );
+    draw_cone_3d(
+        &mut img,
+        &mut depth,
+        cx - 1.0,
+        11.0,
+        18.0,
+        13.0,
+        1.8,
+        &dark_fur,
+    );
+    draw_cone_3d(
+        &mut img,
+        &mut depth,
+        cx + 5.0,
+        11.0,
+        18.0,
+        13.0,
+        1.8,
+        &dark_fur,
+    );
+    draw_sphere_3d(&mut img, &mut depth, cx + 5.0, 19.0, 17.0, 1.2, &eye);
+
+    // No tail: drawn as a cone it points up the body's flank and reads as a
+    // stray limb, and this projection has no clean way to lay one horizontally.
+    // The hump, snout and ears already carry the identification.
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 14.0,
+        16.0,
+        54.0,
+        10.0,
+        1.3,
+        &haft,
+    );
+    draw_cone_3d(
+        &mut img,
+        &mut depth,
+        cx - 14.0,
+        9.0,
+        18.0,
+        10.0,
+        2.0,
+        &steel,
+    );
+
+    img
+}
+
+/// Kobold — a small trap-savvy fighter. Deliberately the smallest silhouette in
+/// the roster: it occupies about half the frame, which is the only reliable way
+/// to say "minor" when everything is drawn at the same 64px. Oversized head and
+/// a tool it clearly did not forge itself.
+pub fn create_kobold_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+
+    let scale = Material::matte(112, 122, 78);
+    let belly = Material::matte(146, 150, 108);
+    let crest = Material::matte(196, 128, 44);
+    let eye = Material::glowing(255, 120, 60);
+    let leather = Material::leather(96, 70, 46);
+    let steel = Material::metallic(140, 142, 150);
+
+    draw_shadow(&mut img, cx, 58.0, 9.0, 3.0);
+
+    for side in [-1.0f32, 1.0] {
+        draw_cylinder_3d(
+            &mut img,
+            &mut depth,
+            cx + side * 4.0,
+            48.0,
+            58.0,
+            4.0,
+            2.6,
+            &scale,
+        );
+    }
+
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 42.0, 7.0, 7.0, 7.0, 6.0, &belly);
+    draw_sphere_3d(&mut img, &mut depth, cx, 30.0, 10.0, 6.5, &scale);
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 4.5,
+        32.0,
+        12.0,
+        4.0,
+        2.2,
+        2.2,
+        &scale,
+    );
+
+    // Spined crest
+    draw_cone_3d(&mut img, &mut depth, cx, 20.0, 27.0, 10.0, 1.7, &crest);
+    draw_cone_3d(&mut img, &mut depth, cx - 3.5, 23.0, 28.0, 9.0, 1.3, &crest);
+    draw_cone_3d(&mut img, &mut depth, cx + 3.5, 23.0, 28.0, 9.0, 1.3, &crest);
+    draw_sphere_3d(&mut img, &mut depth, cx - 2.2, 29.5, 15.0, 1.2, &eye);
+    draw_sphere_3d(&mut img, &mut depth, cx + 2.2, 29.5, 15.0, 1.2, &eye);
+
+    // Satchel of trap parts, and the mallet it maintains them with
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx - 9.0,
+        44.0,
+        6.0,
+        3.5,
+        4.0,
+        3.0,
+        &leather,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 11.0,
+        34.0,
+        50.0,
+        10.0,
+        1.2,
+        &leather,
+    );
+    draw_box_3d(
+        &mut img,
+        &mut depth,
+        cx + 11.0,
+        32.0,
+        10.0,
+        3.0,
+        1.6,
+        2.0,
+        &steel,
+    );
+
+    img
+}
