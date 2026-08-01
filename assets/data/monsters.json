@@ -2431,5 +2431,243 @@
       ],
       "voice_set": "beast"
     }
+  },
+  {
+    "id": "cultist",
+    "name": "Cultist",
+    "description": "A lesser ritualist who staffs the circle and bleeds for it. Cheap, fervent, and useless outside a ritual room.",
+    "faction": "dungeon",
+    "role": "caster",
+    "stats": {
+      "health": 85,
+      "mana": 120,
+      "attack": 4,
+      "defense": 2,
+      "speed": 0.9,
+      "carry_capacity": 30,
+      "sight_radius": 7
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 12.0,
+        "satisfied_by": [
+          "lair"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 24.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 8.0,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 60
+      }
+    },
+    "traits": [
+      "intelligent",
+      "sadistic"
+    ],
+    "ai": {
+      "base_mood": 60,
+      "anger_threshold": 25,
+      "desertion_threshold": 10,
+      "task_preferences": {
+        "ritual": 2.2,
+        "work": 1.5,
+        "research": 1.0
+      },
+      "room_desires": {
+        "ritual_circle": 2.2,
+        "temple": 1.6,
+        "prison": 1.1
+      },
+      "discipline_response": {
+        "slap": -5,
+        "torture": -25,
+        "reward": 15
+      }
+    },
+    "combat": {
+      "attack_type": "magic",
+      "damage_range": [
+        3,
+        7
+      ],
+      "attack_speed": 1.0,
+      "armor_type": "none",
+      "resistances": {
+        "dark": 0.4
+      },
+      "abilities": [
+        "fireball"
+      ]
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        90,
+        220,
+        450,
+        750
+      ],
+      "stat_growth_per_level": {
+        "health": 10,
+        "attack": 2,
+        "defense": 1
+      },
+      "max_level": 5,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 3,
+      "steals_if_unpaid": false,
+      "drops_gold_on_death": [
+        10,
+        30
+      ]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 80,
+      "preferred_rooms": [
+        "ritual_circle"
+      ],
+      "spawn_weight": 0.4,
+      "max_population": 5
+    },
+    "visual": {
+      "scale": 1.0,
+      "animations": [
+        "idle",
+        "walk",
+        "cast"
+      ],
+      "voice_set": "cultist"
+    }
+  },
+  {
+    "id": "hexbinder",
+    "name": "Hexbinder",
+    "description": "A control caster. Hits for almost nothing and makes everything around it slower, weaker and easier to kill.",
+    "faction": "dungeon",
+    "role": "caster",
+    "stats": {
+      "health": 95,
+      "mana": 150,
+      "attack": 6,
+      "defense": 3,
+      "speed": 0.85,
+      "carry_capacity": 25,
+      "sight_radius": 9
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 10.0,
+        "satisfied_by": [
+          "lair"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 22.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 12.0,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 120
+      }
+    },
+    "traits": [
+      "intelligent",
+      "arrogant"
+    ],
+    "ai": {
+      "base_mood": 55,
+      "anger_threshold": 25,
+      "desertion_threshold": 12,
+      "task_preferences": {
+        "fight": 1.8,
+        "guard": 1.6,
+        "research": 1.2
+      },
+      "room_desires": {
+        "library": 1.6,
+        "arcane_archive": 1.5,
+        "ritual_circle": 1.1
+      },
+      "discipline_response": {
+        "slap": -12,
+        "torture": -35,
+        "reward": 18
+      }
+    },
+    "combat": {
+      "attack_type": "magic",
+      "damage_range": [
+        4,
+        8
+      ],
+      "attack_speed": 1.1,
+      "armor_type": "light",
+      "resistances": {
+        "magic": 0.4,
+        "dark": 0.3
+      },
+      "abilities": [
+        "hex",
+        "curse"
+      ]
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        140,
+        340,
+        700,
+        1150
+      ],
+      "stat_growth_per_level": {
+        "health": 12,
+        "attack": 2,
+        "defense": 1
+      },
+      "max_level": 5,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 5,
+      "steals_if_unpaid": true,
+      "drops_gold_on_death": [
+        30,
+        70
+      ]
+    },
+    "spawn": {
+      "source": "portal",
+      "min_dungeon_reputation": 180,
+      "preferred_rooms": [
+        "library"
+      ],
+      "spawn_weight": 0.25,
+      "max_population": 3
+    },
+    "visual": {
+      "scale": 1.0,
+      "animations": [
+        "idle",
+        "walk",
+        "cast"
+      ],
+      "voice_set": "warlock"
+    }
   }
 ]

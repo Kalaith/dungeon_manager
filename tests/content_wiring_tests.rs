@@ -178,3 +178,67 @@ fn every_scenario_availability_entry_names_real_content() {
         "scenario availability references content that does not exist",
     );
 }
+
+/// Status types the engine actually acts on. `poison`/`burn` tick damage in
+/// `combat::dot_damage`, `stun` blocks an attack in `resolve_combat_tick`, and
+/// `freeze` scales `movement_speed` on application and divides it back out on
+/// expiry.
+///
+/// `speed_modifier` is deliberately absent. `apply_combat_result` multiplies
+/// speed only for `freeze`, but `expired_speed_multipliers` *divides* back out
+/// for both — so a creature ability authored as `speed_modifier` would revert a
+/// multiplier that was never applied and leave its victim permanently faster.
+/// Spells push that status themselves and do apply the multiplier, which is why
+/// the asymmetry has never bitten.
+const ENGINE_CONSUMED_STATUS: &[&str] = &["poison", "burn", "stun", "freeze"];
+
+/// Creature abilities with no combat effect wired, each tracked in TODO.md.
+/// **Shrink this list; do not grow it.** An ability here is authored on a
+/// creature, shown to the player, and does nothing.
+const INERT_ABILITIES: &[&str] = &["charge", "smash", "berserk", "charm"];
+
+#[test]
+fn every_creature_ability_is_wired_or_declared_inert() {
+    let config: Value = serde_json::from_str(
+        &std::fs::read_to_string(project_root().join("assets/data/game_config.json"))
+            .expect("read game_config.json"),
+    )
+    .expect("parse game_config.json");
+
+    let effects = config["status_effects"]["ability_effects"]
+        .as_object()
+        .expect("status_effects.ability_effects");
+
+    let mut problems = Vec::new();
+
+    for creature in load("assets/data/monsters.json") {
+        let id = creature["id"].as_str().expect("id");
+        let abilities = creature["combat"]["abilities"]
+            .as_array()
+            .expect("combat.abilities");
+
+        for ability in abilities {
+            let name = ability.as_str().expect("ability name");
+            if INERT_ABILITIES.contains(&name) {
+                continue;
+            }
+            match effects.get(name) {
+                None => problems.push(format!(
+                    "creature `{id}` has ability `{name}`, which is neither in \
+                     game_config's ability_effects nor declared inert"
+                )),
+                Some(effect) => {
+                    let status = effect["status_type"].as_str().unwrap_or("");
+                    if !ENGINE_CONSUMED_STATUS.contains(&status) {
+                        problems.push(format!(
+                            "creature `{id}` ability `{name}` applies status \
+                             `{status}`, which no engine code acts on"
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    assert_empty(problems, "creature abilities that go nowhere");
+}

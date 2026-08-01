@@ -157,6 +157,18 @@
         "duration": 1.5,
         "strength": 0.0,
         "proc_chance": 0.3
+      },
+      "hex": {
+        "status_type": "freeze",
+        "duration": 4.0,
+        "strength": 0.55,
+        "proc_chance": 0.45
+      },
+      "curse": {
+        "status_type": "poison",
+        "duration": 8.0,
+        "strength": 1.5,
+        "proc_chance": 0.4
       }
     }
   }

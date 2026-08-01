@@ -245,3 +245,97 @@ pub fn create_troll_sprite() -> RgbaImage {
 
     img
 }
+
+/// Cultist — a lesser ritual caster. Deliberately humbler than the warlock it
+/// stands beside: no staff, no crystal, just a robe, a burning sigil and a
+/// knife. The hood is drawn as an empty shadow with two eyes in it, which reads
+/// at 64px where a modelled face does not.
+pub fn create_cultist_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+
+    let robe = Material::matte(126, 48, 42);
+    let hood = Material::matte(92, 34, 30);
+    let shadowed = Material::matte(26, 13, 13);
+    let sigil = Material::glowing(255, 95, 60);
+    let eye = Material::glowing(255, 175, 60);
+    let steel = Material::metallic(150, 150, 160);
+    let wood = Material::matte(96, 64, 36);
+
+    draw_shadow(&mut img, cx, 58.0, 11.0, 4.0);
+
+    // Robe flaring to the floor
+    draw_cone_3d(&mut img, &mut depth, cx, 26.0, 57.0, 6.0, 12.0, &robe);
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 30.0, 8.0, 8.0, 7.0, 6.0, &robe);
+
+    // Hood, and the dark where a face would be
+    draw_sphere_3d(&mut img, &mut depth, cx, 20.0, 10.0, 7.5, &hood);
+    draw_ellipsoid_3d(
+        &mut img, &mut depth, cx, 21.0, 15.0, 4.5, 4.5, 2.0, &shadowed,
+    );
+    draw_sphere_3d(&mut img, &mut depth, cx - 2.2, 21.0, 17.0, 1.3, &eye);
+    draw_sphere_3d(&mut img, &mut depth, cx + 2.2, 21.0, 17.0, 1.3, &eye);
+
+    // Sigil burning on the chest
+    draw_sphere_3d(&mut img, &mut depth, cx, 33.0, 15.0, 3.0, &sigil);
+
+    // Sacrificial knife, held low
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 12.0,
+        34.0,
+        42.0,
+        12.0,
+        1.2,
+        &wood,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 12.0,
+        28.0,
+        12.0,
+        1.4,
+        6.0,
+        1.2,
+        &steel,
+    );
+
+    img
+}
+
+/// Hexbinder — the control caster. Reads as neither warlock (purple, staff) nor
+/// cultist (crimson, knife): a tall sickly-green silhouette with a blank mask
+/// and three hex-sigils hanging in the air around it. The sigils are the whole
+/// identity at this size, so they sit clear of the body outline.
+pub fn create_hexbinder_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+
+    let robe = Material::matte(42, 78, 70);
+    let trim = Material::matte(26, 50, 46);
+    let mask = Material::matte(206, 210, 194);
+    let eye = Material::glowing(120, 255, 160);
+    let hex = Material::glowing(90, 255, 180);
+
+    draw_shadow(&mut img, cx, 58.0, 10.0, 4.0);
+
+    draw_cone_3d(&mut img, &mut depth, cx, 24.0, 57.0, 6.0, 10.0, &robe);
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 28.0, 8.0, 7.0, 5.0, 5.0, &trim);
+
+    // Peaked hood behind a long blank mask
+    draw_cone_3d(&mut img, &mut depth, cx, 5.0, 21.0, 8.0, 6.5, &trim);
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 19.0, 12.0, 5.0, 7.5, 5.0, &mask);
+    draw_sphere_3d(&mut img, &mut depth, cx - 2.0, 18.0, 17.0, 1.3, &eye);
+    draw_sphere_3d(&mut img, &mut depth, cx + 2.0, 18.0, 17.0, 1.3, &eye);
+
+    // Three sigils hanging in the air, kept off the body so they read
+    draw_sphere_3d(&mut img, &mut depth, cx - 14.0, 32.0, 14.0, 2.8, &hex);
+    draw_sphere_3d(&mut img, &mut depth, cx + 14.0, 37.0, 14.0, 2.8, &hex);
+    draw_sphere_3d(&mut img, &mut depth, cx + 11.0, 22.0, 6.0, 2.3, &hex);
+
+    img
+}

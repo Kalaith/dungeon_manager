@@ -50,7 +50,8 @@
                 "lightning_strike"
             ],
             "creatures": [
-                "warlock"
+                "warlock",
+                "cultist"
             ],
             "traps": [
                 "magic_door"
@@ -203,7 +204,7 @@
     {
         "id": "war_magic",
         "name": "War Magic",
-        "description": "Battle sorcery to steel your horde: rally them to arms, harden their skin, and quicken their step.",
+        "description": "Battle sorcery to steel your horde: rally them to arms, harden their skin, quicken their step - and bind hexbinders to slow the enemy's.",
         "cost": 35,
         "prerequisites": [
             "ritual_tech"
@@ -218,7 +219,9 @@
                 "frost_nova",
                 "chain_lightning"
             ],
-            "creatures": [],
+            "creatures": [
+                "hexbinder"
+            ],
             "traps": []
         },
         "icon": "icons/tech/war_magic.png"
