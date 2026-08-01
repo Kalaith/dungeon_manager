@@ -49,7 +49,10 @@ pub struct HeroBase {
     pub enabled: bool,
 
     // Wave attack state
-    /// Time until the next attack wave launches
+    /// Time until the next attack wave launches, in **unscaled** seconds:
+    /// `hero_spawner::update_wave_system` counts it down at the current threat
+    /// multiplier, so real time to the wave is this divided by threat. Seeding it
+    /// raw is deliberate — it is set here before a scenario or difficulty exists.
     pub time_until_next_wave: f32,
     /// Current wave number (increments after each wave is defeated)
     pub current_wave_number: u32,

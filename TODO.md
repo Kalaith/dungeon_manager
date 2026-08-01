@@ -47,23 +47,30 @@ text reachable by the localization item later.
 
 ### 3. Wave 1
 
-The loudest playtest complaint, and the one with a concrete finding behind it:
-`hero_waves.initial_delay` is **600s (10 minutes)**, and `HeroBase::new` takes it
-raw. Threat is applied *only* to later waves (`hero_spawner.rs:40`) and to
-garrison replenishment (`hero_spawner.rs:114`) — so **wave 1 lands at exactly
-10:00 on every mission at every difficulty**, identically for the tutorial map on
-Easy and the hardest mission on Hard. It is the one wave with no scaling at all.
+**Wave 1 now scales like every other wave.** It was the one wave with no dial on
+it — `HeroBase::new` seeded the countdown from `initial_delay` (600s) and nothing
+scaled it, so the first wave landed at exactly 10:00 on the tutorial map at Easy
+and on the hardest mission at Hard alike. `update_wave_system` now counts down at
+the threat multiplier instead of dividing the interval at the moment it is set,
+which is what reaches wave 1 at all: the seed happens before a scenario or a
+difficulty exists. Three tests pin it, all verified by reverting the change.
 
-Done means: wave 1 scales by mission and difficulty like every other wave, and its
-timing is reconciled against what a player can actually build in that window.
+What remains is the half that needs measurement, not code: **reconcile the timing
+against what a player can actually build in that window.** On `the_iron_siege` at
+Normal the first wave is now ~444s (600 / 1.35); nobody has checked what a
+competent player has standing by then. Notes for taking that measurement:
 
-Two corrections to what this file used to say: the old entry claimed the balance
-numbers assert a **~33-minute** first wave — config says 600s, and the only
-assertion in `balance_calculator` is `initial_delay >= 30.0` *seconds*, so that
-figure came from somewhere else and should not be trusted. And this is not purely
-a pacing dial: the starting-gold item under Balance is the same complaint from the
-other side, since more setup time and faster setup are interchangeable fixes. Take
-the measurement before turning either.
+- The starting-gold item under Balance is the same complaint from the other side —
+  more setup time and faster setup are interchangeable fixes. Measure before
+  turning either.
+- The old entry claimed the balance numbers assert a **~33-minute** first wave.
+  They do not: config authors 600s and the only assertion in `balance_calculator`
+  is `initial_delay >= 30.0` *seconds*. That figure came from somewhere else and
+  should not be trusted.
+- `time_until_next_wave` is now denominated in *unscaled* seconds, so a save
+  written mid-countdown before this change resumes slightly faster than it was
+  stored. One-time and sub-wave, but it is the first real instance of the
+  save-migration item in the backlog.
 
 ---
 
