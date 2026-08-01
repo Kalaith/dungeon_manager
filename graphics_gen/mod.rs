@@ -182,6 +182,11 @@ fn generate_monster_sprites() {
         "flesh_amalgam",
         monsters::create_flesh_amalgam_sprite(),
     );
+    monsters::save_sprite(
+        "monsters",
+        "void_touched",
+        monsters::create_void_touched_sprite(),
+    );
     monsters::save_sprite("monsters", "troll", monsters::create_troll_sprite());
     monsters::save_sprite("monsters", "ogre", monsters::create_ogre_sprite());
     monsters::save_sprite("monsters", "ironbound", monsters::create_ironbound_sprite());

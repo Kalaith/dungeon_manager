@@ -177,5 +177,13 @@
     "graft_count": 3,
     "mood_modifier": -8,
     "anger_threshold_modifier": 10
+  },
+  {
+    "id": "void_touched",
+    "description": "Something outside noticed it, and now notices the dungeon holding it. Powerful, and impossible to hide.",
+    "threat_contribution": 0.2,
+    "attack_multiplier": 1.15,
+    "defense_multiplier": 1.1,
+    "anger_threshold_modifier": -10
   }
 ]

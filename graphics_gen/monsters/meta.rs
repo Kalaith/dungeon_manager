@@ -173,3 +173,85 @@ pub fn create_flesh_amalgam_sprite() -> RgbaImage {
 
     img
 }
+
+/// Void-Touched — what a Flesh Amalgam becomes if it spends long enough beside
+/// a ritual circle. The read is "the same silhouette, wrong": the amalgam's
+/// lopsided build is kept, but the flesh is drained to near-black and the seams
+/// glow through it. Nothing here is a new shape — corruption should look like
+/// something happening *to* a creature, not like a different creature.
+pub fn create_void_touched_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+
+    let void_flesh = Material::matte(46, 38, 62);
+    let darker = Material::matte(32, 26, 46);
+    let bruised = Material::matte(62, 44, 78);
+    let rift = Material::glowing(180, 110, 255);
+    let eye = Material::glowing(228, 190, 255);
+
+    draw_shadow(&mut img, cx, 59.0, 16.0, 5.5);
+
+    // Same lopsided frame as the amalgam it came from
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx - 7.0,
+        44.0,
+        58.0,
+        5.0,
+        4.5,
+        &darker,
+    );
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 7.0,
+        48.0,
+        58.0,
+        6.0,
+        3.5,
+        &darker,
+    );
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx - 1.0,
+        38.0,
+        8.0,
+        12.0,
+        11.0,
+        10.0,
+        &void_flesh,
+    );
+    draw_sphere_3d(&mut img, &mut depth, cx + 7.0, 42.0, 11.0, 6.0, &bruised);
+    draw_sphere_3d(&mut img, &mut depth, cx - 15.0, 30.0, 8.0, 7.5, &void_flesh);
+    draw_sphere_3d(&mut img, &mut depth, cx - 17.0, 44.0, 7.0, 6.0, &darker);
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 14.0,
+        30.0,
+        46.0,
+        8.0,
+        2.2,
+        &void_flesh,
+    );
+    draw_sphere_3d(&mut img, &mut depth, cx - 3.0, 21.0, 12.0, 7.0, &void_flesh);
+    draw_sphere_3d(&mut img, &mut depth, cx + 7.0, 26.0, 13.0, 3.6, &bruised);
+
+    // The seams have opened. Where the amalgam had sutures, this has light.
+    for (x, y, z, r) in [
+        (-1.0f32, 29.0f32, 18.0f32, 2.0f32),
+        (3.0, 33.0, 17.0, 1.7),
+        (-9.0, 36.0, 16.0, 1.7),
+        (-14.0, 30.0, 15.0, 1.5),
+    ] {
+        draw_sphere_3d(&mut img, &mut depth, cx + x, y, z, r, &rift);
+    }
+    draw_sphere_3d(&mut img, &mut depth, cx - 5.5, 20.0, 18.0, 1.8, &eye);
+    draw_sphere_3d(&mut img, &mut depth, cx - 0.5, 21.5, 18.0, 1.3, &eye);
+    draw_sphere_3d(&mut img, &mut depth, cx + 7.5, 25.0, 16.0, 1.2, &eye);
+
+    img
+}

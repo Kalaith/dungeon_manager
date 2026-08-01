@@ -23,7 +23,7 @@ pub fn update_hero_spawning(state: &mut GameState, game_data: &GameData, dt: f32
 /// Update the wave attack system - countdown timer and launch logic
 fn update_wave_system(state: &mut GameState, game_data: &GameData, dt: f32) {
     // Higher threat (mission + difficulty) shortens the gap between waves.
-    let threat = state.effective_threat_multiplier();
+    let threat = state.effective_threat_multiplier(game_data);
 
     // Count currently alive attackers to track wave status
     let alive_attackers = state
@@ -110,7 +110,8 @@ fn spawn_heroes_from_buildings(state: &mut GameState, game_data: &GameData, dt: 
 
     // Harder difficulty / higher mission threat replenishes the garrison faster;
     // razed spawn buildings slow it back down, permanently.
-    let threat = state.effective_threat_multiplier() / state.hero_base.spawn_interval_multiplier();
+    let threat =
+        state.effective_threat_multiplier(game_data) / state.hero_base.spawn_interval_multiplier();
 
     // Iterate over buildings to check timers
     for building in &mut state.hero_base.buildings {

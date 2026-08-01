@@ -772,13 +772,38 @@ impl GameState {
     /// `threat_multiplier` (1.0 if none) scaled by the chosen difficulty. Higher
     /// = the surface presses harder (faster garrison spawns, more frequent
     /// waves). Clamped to a small positive floor so it can safely divide timers.
-    pub fn effective_threat_multiplier(&self) -> f32 {
+    /// The mission dial times the difficulty scale, raised by any creatures the
+    /// surface world has noticed.
+    ///
+    /// The creature term is what makes "attracts attention" a mechanic: this
+    /// value sets both the gap between hero waves and how fast the hero
+    /// garrison replenishes, so keeping a Void-Touched costs you time.
+    pub fn effective_threat_multiplier(&self, game_data: &GameData) -> f32 {
         let scenario = self
             .scenario_runtime
             .as_ref()
             .map(|runtime| runtime.active_rules.threat_multiplier)
             .unwrap_or(1.0);
-        (scenario * self.difficulty.threat_scale()).max(0.1)
+        (scenario * self.difficulty.threat_scale() * self.creature_threat_factor(game_data))
+            .max(0.1)
+    }
+
+    /// `1.0` plus the summed `threat_contribution` of every living creature,
+    /// capped so a large horde cannot run the wave clock away entirely.
+    fn creature_threat_factor(&self, game_data: &GameData) -> f32 {
+        const MAX_CREATURE_THREAT: f32 = 1.0;
+
+        let drawn: f32 = self
+            .entities
+            .creatures()
+            .filter(|(_, creature)| creature.health > 0.0)
+            .filter_map(|(_, creature)| game_data.monsters.get(&creature.creature_id))
+            .flat_map(|data| data.traits.iter())
+            .filter_map(|tag| game_data.traits.get(tag))
+            .map(|t| t.threat_contribution)
+            .sum();
+
+        1.0 + drawn.clamp(0.0, MAX_CREATURE_THREAT)
     }
 
     pub fn find_dungeon_heart_position(&self) -> Option<TilePos> {

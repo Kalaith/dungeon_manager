@@ -40,6 +40,8 @@ mod spell_targeting_tests;
 #[cfg(test)]
 mod task_system_tests;
 #[cfg(test)]
+mod threat_tests;
+#[cfg(test)]
 mod traits_tests;
 #[cfg(test)]
 mod wall_reinforcement_tests;

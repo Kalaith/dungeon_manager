@@ -3843,7 +3843,15 @@
         "defense": 2
       },
       "max_level": 5,
-      "mutations": []
+      "mutations": [
+        {
+          "id": "void_touched",
+          "conditions": {
+            "level_at_least": 4,
+            "ritual_circle_tiles": 12
+          }
+        }
+      ]
     },
     "economy": {
       "wage_per_minute": 3,
@@ -3865,6 +3873,124 @@
     },
     "visual": {
       "scale": 1.15,
+      "animations": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "voice_set": "amalgam"
+    }
+  },
+  {
+    "id": "void_touched",
+    "name": "Void-Touched",
+    "description": "An amalgam that spent too long beside a ritual circle. Far stronger than what it was, and the surface world can feel it from above.",
+    "faction": "dungeon",
+    "role": "elite_fighter",
+    "stats": {
+      "health": 320,
+      "mana": 60,
+      "attack": 30,
+      "defense": 14,
+      "speed": 1.05,
+      "carry_capacity": 50,
+      "sight_radius": 9
+    },
+    "needs": {
+      "sleep": {
+        "decay_per_minute": 10.0,
+        "satisfied_by": [
+          "lair"
+        ]
+      },
+      "food": {
+        "decay_per_minute": 26.0,
+        "satisfied_by": [
+          "hatchery"
+        ]
+      },
+      "gold": {
+        "decay_per_minute": 8.0,
+        "satisfied_by": [
+          "treasury"
+        ],
+        "stash_amount": 90
+      }
+    },
+    "traits": [
+      "void_touched",
+      "fearless",
+      "arrogant"
+    ],
+    "ai": {
+      "base_mood": 40,
+      "anger_threshold": 30,
+      "desertion_threshold": 6,
+      "task_preferences": {
+        "fight": 2.4,
+        "guard": 1.4,
+        "wander": 1.0
+      },
+      "room_desires": {
+        "ritual_circle": 1.8,
+        "graveyard": 1.3
+      },
+      "discipline_response": {
+        "slap": -18,
+        "torture": -45,
+        "reward": 20
+      }
+    },
+    "combat": {
+      "attack_type": "melee",
+      "damage_range": [
+        22,
+        36
+      ],
+      "attack_speed": 1.0,
+      "armor_type": "medium",
+      "resistances": {
+        "dark": 0.7,
+        "magic": 0.4,
+        "poison": 0.5
+      },
+      "abilities": []
+    },
+    "progression": {
+      "xp_to_level": [
+        0,
+        300,
+        720,
+        1400,
+        2200
+      ],
+      "stat_growth_per_level": {
+        "health": 30,
+        "attack": 5,
+        "defense": 2
+      },
+      "max_level": 5,
+      "mutations": []
+    },
+    "economy": {
+      "wage_per_minute": 9,
+      "steals_if_unpaid": true,
+      "drops_gold_on_death": [
+        80,
+        180
+      ]
+    },
+    "spawn": {
+      "source": "room",
+      "min_dungeon_reputation": 9999,
+      "preferred_rooms": [
+        "ritual_circle"
+      ],
+      "spawn_weight": 0.0,
+      "max_population": 3
+    },
+    "visual": {
+      "scale": 1.2,
       "animations": [
         "idle",
         "walk",

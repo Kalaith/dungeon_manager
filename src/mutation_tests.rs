@@ -163,3 +163,26 @@ fn an_unrecognised_condition_blocks_the_mutation() {
         "an unknown condition key must not be treated as satisfied"
     );
 }
+
+/// The two-step chain: an amalgam left beside a ritual circle corrupts. This
+/// is the only place a Void-Touched can come from — it has no portal roll and
+/// no tech unlock, so if this stops working the creature becomes unreachable.
+#[test]
+fn an_amalgam_beside_a_ritual_circle_becomes_void_touched() {
+    let game_data = GameData::load().expect("game data should load");
+    let (mut state, id) = state_with(&game_data, "flesh_amalgam", 4, "ritual_circle", 12);
+
+    apply_mutations(&mut state, &game_data);
+
+    assert_eq!(kind_of(&state, id), "void_touched");
+}
+
+#[test]
+fn an_amalgam_without_a_ritual_circle_stays_itself() {
+    let game_data = GameData::load().expect("game data should load");
+    let (mut state, id) = state_with(&game_data, "flesh_amalgam", 5, "graveyard", 20);
+
+    apply_mutations(&mut state, &game_data);
+
+    assert_eq!(kind_of(&state, id), "flesh_amalgam");
+}

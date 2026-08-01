@@ -773,18 +773,18 @@ mod tests {
             crate::state::game_state::GameState::new_for_scenario(&game_data, "the_iron_siege");
 
         state.difficulty = Difficulty::Normal;
-        let normal = state.effective_threat_multiplier();
+        let normal = state.effective_threat_multiplier(&game_data);
         state.difficulty = Difficulty::Easy;
-        let easy = state.effective_threat_multiplier();
+        let easy = state.effective_threat_multiplier(&game_data);
         state.difficulty = Difficulty::Hard;
-        let hard = state.effective_threat_multiplier();
+        let hard = state.effective_threat_multiplier(&game_data);
 
         // Threat is the mission dial (1.35) times the difficulty scale, and it
         // orders Easy < Normal < Hard — proving the previously-inert
         // threat_multiplier is now actually consumed.
         assert!((normal - 1.35).abs() < 0.001, "normal={normal}");
         assert!(easy < normal && normal < hard, "{easy} < {normal} < {hard}");
-        assert!(state.effective_threat_multiplier() > 0.0);
+        assert!(state.effective_threat_multiplier(&game_data) > 0.0);
     }
 
     #[test]

@@ -72,6 +72,12 @@ pub struct TraitData {
     /// once, on first sight. Zero means it is not a grafting trait.
     #[serde(default)]
     pub graft_count: u32,
+    /// How much this creature raises the surface world's interest in the
+    /// dungeon. Added into `GameState::effective_threat_multiplier`, which sets
+    /// both the gap between hero waves and how fast the garrison replenishes —
+    /// so a creature with this is a real cost as well as an asset.
+    #[serde(default)]
+    pub threat_contribution: f32,
     /// Whether this trait is eligible to be rolled onto a grafted creature.
     /// Opt-in: the world-altering traits (`stonebinding`, `commanding`, …)
     /// would be absurd on a random amalgam, so nothing is graftable unless
