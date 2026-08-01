@@ -417,3 +417,28 @@ fn every_tile_aura_effect_is_one_the_engine_acts_on() {
 
     assert_empty(problems, "tile aura effects that go nowhere");
 }
+
+/// Light preferences the engine acts on. Anything else falls through to "no
+/// effect", so a typo turns an authored personality trait into silence — the
+/// same fail-quiet shape as mutation conditions, aura effects and abilities.
+const ENGINE_CONSUMED_LIGHT_PREFERENCES: &[&str] = &["bright", "dark", "any"];
+
+#[test]
+fn every_hero_light_preference_is_one_the_engine_understands() {
+    let mut problems = Vec::new();
+
+    for hero in load("assets/data/heroes.json") {
+        let id = hero["id"].as_str().expect("id");
+        let Some(preference) = hero["behavior"]["light_preference"].as_str() else {
+            continue;
+        };
+        if !ENGINE_CONSUMED_LIGHT_PREFERENCES.contains(&preference) {
+            problems.push(format!(
+                "hero `{id}` prefers light `{preference}`, which lighting::discomfort_for \
+                 does not recognise"
+            ));
+        }
+    }
+
+    assert_empty(problems, "hero light preferences that mean nothing");
+}

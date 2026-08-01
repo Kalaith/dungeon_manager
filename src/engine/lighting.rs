@@ -141,3 +141,31 @@ pub fn cache_creature_darkness(state: &mut GameState) {
         }
     }
 }
+
+/// How much the light where a hero stands unsettles them, as a contribution to
+/// the same ambient-fear term tile auras feed.
+///
+/// `heroes.json` authors `behavior.light_preference` as one of `bright`, `dark`
+/// or `any` — twelve heroes prefer the light, seven are indifferent, and the
+/// rogue alone prefers the dark. It had never been read.
+///
+/// Folding it into fear rather than into pathing is deliberate: it means the
+/// keeper's darkness does two things at once — it strengthens a Shadow Stalker
+/// *and* unnerves most of the hero roster — instead of being two unrelated
+/// systems that both happen to consult the light map.
+pub fn discomfort_for(light_preference: &str, pos: TilePos, light_map: &LightMap) -> f32 {
+    /// A hero fully out of their preferred light is this much less steady.
+    const MAX_DISCOMFORT: f32 = 0.2;
+
+    let lit = light_map.multiplier_at(pos);
+    let brightness = ((lit[0] + lit[1] + lit[2]) / 3.0).clamp(0.0, 1.0);
+
+    match light_preference {
+        // Unsettled in proportion to how dark it is.
+        "bright" => (1.0 - brightness) * MAX_DISCOMFORT,
+        // The reverse: a creature of the dark is uneasy under a lamp.
+        "dark" => brightness * MAX_DISCOMFORT,
+        // "any", and anything unrecognised — no effect rather than a guess.
+        _ => 0.0,
+    }
+}

@@ -130,7 +130,12 @@ pub fn decide_hero_goal(
     // Check if hero should retreat. The ground can contribute: a bone floor
     // frightens whoever stands near it (`tile_aura::hero_fear_at`).
     let ambient_fear =
-        crate::engine::tile_aura::hero_fear_at(hero_pos, &game_state.dungeon, game_data);
+        crate::engine::tile_aura::hero_fear_at(hero_pos, &game_state.dungeon, game_data)
+            + crate::engine::lighting::discomfort_for(
+                &hero_data.behavior.light_preference,
+                hero_pos,
+                &game_state.light_map,
+            );
     if hero_state.should_retreat(current_retreat_threshold(
         hero_state,
         hero_data,
@@ -501,8 +506,18 @@ pub fn update_hero_ai(
             hero_state.current_path = None;
         }
     } else {
+        let light_preference = game_data
+            .heroes
+            .get(&hero_state.hero_id)
+            .map(|d| d.behavior.light_preference.clone())
+            .unwrap_or_default();
         let ambient_fear =
-            crate::engine::tile_aura::hero_fear_at(hero_entity.pos, &game_state.dungeon, game_data);
+            crate::engine::tile_aura::hero_fear_at(hero_entity.pos, &game_state.dungeon, game_data)
+                + crate::engine::lighting::discomfort_for(
+                    &light_preference,
+                    hero_entity.pos,
+                    &game_state.light_map,
+                );
         let should_reevaluate = should_reconsider_goal(hero_state, game_data, ambient_fear);
 
         if should_reevaluate {

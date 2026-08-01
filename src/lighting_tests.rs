@@ -208,3 +208,136 @@ mod darkness_combat {
         assert_eq!(dark, lit, "only `lightless` should care about the light");
     }
 }
+
+/// `behavior.light_preference` — authored for all twenty heroes as `bright`,
+/// `dark` or `any`, and read by nothing until the lighting pass existed.
+#[cfg(test)]
+mod light_preference {
+    use super::*;
+    use crate::engine::lighting::discomfort_for;
+
+    fn map_with_light(
+        game_data: &GameData,
+        room_type: Option<&str>,
+    ) -> crate::engine::lighting::LightMap {
+        let state = match room_type {
+            Some(rt) => state_with_room(game_data, rt),
+            None => {
+                let mut s = state_with_room(game_data, "treasury");
+                s.room_manager.rooms.clear();
+                s
+            }
+        };
+        build_light_map(&state, game_data)
+    }
+
+    #[test]
+    fn a_light_preferring_hero_is_less_steady_in_the_dark() {
+        let game_data = GameData::load().expect("game data should load");
+        let dark = map_with_light(&game_data, None);
+        let lit = map_with_light(&game_data, Some("treasury"));
+
+        let in_dark = discomfort_for("bright", ROOM_AT, &dark);
+        let in_light = discomfort_for("bright", ROOM_AT, &lit);
+
+        assert!(
+            in_dark > in_light,
+            "a bright-preferring hero should be more unsettled in the dark: {in_dark} vs {in_light}"
+        );
+    }
+
+    /// The rogue is the only hero authored `dark`, and it should read the
+    /// opposite way — otherwise the field is just "everyone fears the dark".
+    #[test]
+    fn a_dark_preferring_hero_reads_the_other_way() {
+        let game_data = GameData::load().expect("game data should load");
+        assert_eq!(
+            game_data.heroes["rogue"].behavior.light_preference, "dark",
+            "this test assumes the rogue prefers the dark"
+        );
+
+        let dark = map_with_light(&game_data, None);
+        let lit = map_with_light(&game_data, Some("treasury"));
+
+        assert!(
+            discomfort_for("dark", ROOM_AT, &lit) > discomfort_for("dark", ROOM_AT, &dark),
+            "a dark-preferring hero should be uneasy under a lamp, not in the dark"
+        );
+    }
+
+    #[test]
+    fn an_indifferent_hero_is_unaffected_either_way() {
+        let game_data = GameData::load().expect("game data should load");
+        let dark = map_with_light(&game_data, None);
+        let lit = map_with_light(&game_data, Some("treasury"));
+
+        assert_eq!(discomfort_for("any", ROOM_AT, &dark), 0.0);
+        assert_eq!(discomfort_for("any", ROOM_AT, &lit), 0.0);
+    }
+
+    /// Fail-quiet by design, but only for values the guard in
+    /// `content_wiring_tests` will not let into the data.
+    #[test]
+    fn an_unrecognised_preference_has_no_effect() {
+        let game_data = GameData::load().expect("game data should load");
+        let dark = map_with_light(&game_data, None);
+
+        assert_eq!(discomfort_for("candlelit", ROOM_AT, &dark), 0.0);
+    }
+}
+
+/// End-to-end: the preference has to change what a hero actually *does*, not
+/// just what a helper returns.
+#[cfg(test)]
+mod light_preference_behaviour {
+    use super::*;
+    use crate::engine::hero_ai::{effective_retreat_threshold, should_reconsider_goal};
+    use crate::engine::lighting::discomfort_for;
+    use crate::state::entities::{HeroGoal, HeroState};
+
+    #[test]
+    fn a_wounded_knight_breaks_off_in_the_dark_but_presses_on_in_the_light() {
+        let game_data = GameData::load().expect("game data should load");
+        let data = &game_data.heroes["knight"];
+        assert_eq!(
+            data.behavior.light_preference, "bright",
+            "this test assumes the knight prefers the light"
+        );
+        assert!(
+            !data.behavior.will_fight_to_death,
+            "a hero who never retreats cannot demonstrate this"
+        );
+
+        let dark_map = {
+            let mut s = state_with_room(&game_data, "treasury");
+            s.room_manager.rooms.clear();
+            build_light_map(&s, &game_data)
+        };
+        let dark_fear = discomfort_for("bright", ROOM_AT, &dark_map);
+        assert!(dark_fear > 0.0, "the dark should unsettle a bright hero");
+
+        // A wound between the calm and frightened breaking points.
+        let base = effective_retreat_threshold(data);
+        let scared = base + dark_fear * (1.0 - data.behavior.fear_resistance.clamp(0.0, 1.0));
+        let mut hero = HeroState::new(
+            "knight".to_string(),
+            1,
+            data.stats.health,
+            data.stats.mana,
+            ROOM_AT,
+            1.0,
+            0,
+        );
+        hero.current_goal = HeroGoal::DestroyHeart;
+        hero.health = hero.max_health * ((base + scared) / 2.0);
+
+        assert!(
+            !should_reconsider_goal(&hero, &game_data, 0.0),
+            "under a lamp this wound should not break the knight"
+        );
+        assert!(
+            should_reconsider_goal(&hero, &game_data, dark_fear),
+            "the same wound in the dark should"
+        );
+    }
+}

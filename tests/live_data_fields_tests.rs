@@ -61,12 +61,10 @@ const UNCONSUMED: &[&str] = &[
     "TrapEffects::lockable",
     "TrapEffects::trigger_type",
     // Hero behaviour model, the part still unreachable. `trap_awareness`,
-    // `fear_resistance`, `will_fight_to_death` and `bravery` are wired.
-    // `door_break_chance` needs heroes to attack doors at all; the lighting
-    // pass has to exist before `light_preference` can mean anything; and
-    // `call_for_aid` needs a hero rally mechanic.
+    // `fear_resistance`, `will_fight_to_death`, `bravery` and now
+    // `light_preference` are wired. `door_break_chance` needs heroes to attack
+    // doors at all, and `call_for_aid` needs a hero rally mechanic.
     "BehaviorData::door_break_chance",
-    "BehaviorData::light_preference",
     "ThreatResponse::call_for_aid",
     "HeroProgressionData::level_range",
     "HeroProgressionData::elite_variants",
