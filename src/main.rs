@@ -213,8 +213,15 @@ impl Game {
             _ => {
                 // Default ("gameplay"): jump straight into a playable dungeon
                 // so the capture photographs the main game view.
+                //
+                // "simulation" goes further and dismisses the mission intro,
+                // because the intro overlay returns from input handling before
+                // `state.update` — so a `gameplay` capture photographs a frozen
+                // dungeon behind a modal and exercises no combat, digging or
+                // spawning at all. Both scenes are kept: the modal is a real
+                // screen worth a screenshot, it is just not the game running.
                 if let Some(ref data) = self.game_data {
-                    let game_state = if data.campaigns.contains_key("deep_dominion") {
+                    let mut game_state = if data.campaigns.contains_key("deep_dominion") {
                         GameState::new_campaign_start(data, "deep_dominion")
                     } else {
                         GameState::new_with_map_type(
@@ -224,11 +231,68 @@ impl Game {
                             self.selected_map_type.clone(),
                         )
                     };
+
+                    if scene == "simulation" {
+                        game_state.tutorial.intro_dismissed = true;
+                        seed_dig_orders(&mut game_state, data);
+                    }
+
                     self.phase = GamePhase::Playing(game_state);
                 } else {
                     self.phase = GamePhase::MainMenu;
                 }
             }
+        }
+    }
+}
+
+/// Mark diggable tiles beside the player's territory so a captured
+/// simulation has work to do.
+///
+/// Without this the imps wander: nothing is marked at mission start, so a
+/// capture would exercise pathfinding and little else.
+fn seed_dig_orders(state: &mut GameState, game_data: &GameData) {
+    use state::tile_state::{Ownership, TilePos};
+
+    let (width, height) = (state.dungeon.width, state.dungeon.height);
+    let mut to_mark = Vec::new();
+
+    for y in 0..height as i32 {
+        for x in 0..width as i32 {
+            let pos = TilePos::new(x, y);
+            let Some(tile) = state.dungeon.get_tile(pos) else {
+                continue;
+            };
+            if tile.ownership != Ownership::Unclaimed
+                || !engine::tile_types::is_diggable(&tile.tile_type, game_data)
+            {
+                continue;
+            }
+            // Only tiles the imps can actually reach: adjacent to owned floor.
+            let beside_player_ground = [
+                TilePos::new(x + 1, y),
+                TilePos::new(x - 1, y),
+                TilePos::new(x, y + 1),
+                TilePos::new(x, y - 1),
+            ]
+            .iter()
+            .any(|neighbour| {
+                state
+                    .dungeon
+                    .get_tile(*neighbour)
+                    .map(|t| t.ownership == Ownership::Player)
+                    .unwrap_or(false)
+            });
+
+            if beside_player_ground {
+                to_mark.push(pos);
+            }
+        }
+    }
+
+    for pos in to_mark {
+        if let Some(tile) = state.dungeon.get_tile_mut(pos) {
+            tile.marked_for_dig = true;
         }
     }
 }

@@ -6,15 +6,29 @@
     Thin wrapper around the shared macroquad-toolkit capture script. Builds the
     debug exe and drives it through the env-var capture hook
     (DUNGEON_MANAGER_CAPTURE_*) provided by macroquad_toolkit::capture in
-    src/main.rs. "mainmenu" captures the boot main menu; "gameplay" seeds a
-    fresh dungeon and captures the main play view.
+    src/main.rs.
+
+    Scenes:
+      mainmenu     - the boot main menu
+      gameplay     - a fresh dungeon behind the mission intro overlay. The
+                     overlay freezes the simulation by design, so this shows
+                     the briefing screen, NOT the game running.
+      simulation   - the same dungeon with the intro dismissed and dig orders
+                     seeded, so imps work, heroes spawn and objectives advance.
+                     Use this to verify anything about the running game.
+      skirmish, settings, missionselect - the other menu screens
+
+    To see engine tracing during a capture, set DUNGEON_MANAGER_LOG (a
+    comma-separated tag list, or "all") and drive the exe directly rather than
+    through this wrapper - the shared script does not forward extra env vars.
 
 .EXAMPLE
     ./scripts/capture_ui.ps1
+    ./scripts/capture_ui.ps1 -Scenes simulation -Frames 600
     ./scripts/capture_ui.ps1 -Frames 60 -SkipBuild
 #>
 param(
-    [string[]]$Scenes = @("mainmenu", "gameplay"),
+    [string[]]$Scenes = @("mainmenu", "gameplay", "simulation"),
     [int]$Frames = 150,
     [string]$OutputDir = "docs\verification",
     [switch]$SkipBuild
