@@ -46,6 +46,29 @@ pub fn effective_retreat_threshold(hero_data: &crate::data::HeroData) -> f32 {
     hero_data.ai.threat_response.retreat_below_health * (1.0 - nerve * 0.6)
 }
 
+/// Whether a hero should stop and reconsider what they are doing.
+///
+/// Wave attackers keep their mission rather than wandering off to steal gold
+/// mid-assault — but a hero who has taken enough punishment to break should
+/// still be able to. Before this, `DestroyHeart` never re-evaluated at all, so
+/// `decide_hero_goal` never ran for an attacker and every authored
+/// `retreat_below_health` was dead for the one situation it describes.
+/// Confirmed by tracing a live wave: zero goal transitions in 2500 frames of
+/// combat, including a hero fighting at a fraction of their health.
+pub fn should_reconsider_goal(hero_state: &HeroState, game_data: &GameData) -> bool {
+    let broken = game_data
+        .heroes
+        .get(&hero_state.hero_id)
+        .map(|data| hero_state.should_retreat(effective_retreat_threshold(data)))
+        .unwrap_or(false);
+
+    match &hero_state.current_goal {
+        HeroGoal::RestAtSpawn(_) => false, // Stay resting until a wave launches
+        HeroGoal::DestroyHeart => broken,  // Press on unless their nerve goes
+        _ => hero_state.current_path.is_none(), // Other goals: reconsider if lost
+    }
+}
+
 /// Decide the current goal for a hero based on their state and dungeon situation
 pub fn decide_hero_goal(
     hero_pos: TilePos,
@@ -425,17 +448,20 @@ pub fn update_hero_ai(
             hero_state.current_path = None;
         }
     } else {
-        // For wave attackers with DestroyHeart goal, don't re-evaluate - they have their mission
-        // Only re-evaluate idle heroes (RestAtSpawn with no wave) or heroes that completed their goal
-        let should_reevaluate = match &hero_state.current_goal {
-            HeroGoal::RestAtSpawn(_) => false, // Stay resting until wave launches
-            HeroGoal::DestroyHeart => false,   // Keep attacking - wave assigned this goal
-            _ => hero_state.current_path.is_none(), // Other goals: re-evaluate if lost
-        };
+        let should_reevaluate = should_reconsider_goal(hero_state, game_data);
 
         if should_reevaluate {
             let new_goal = decide_hero_goal(hero_entity.pos, hero_state, game_state, game_data);
             if new_goal != hero_state.current_goal {
+                trace_log!(
+                    "heroes",
+                    "{} goal {:?} -> {:?} (hp {:.0}/{:.0})",
+                    hero_state.hero_id,
+                    hero_state.current_goal,
+                    new_goal,
+                    hero_state.health,
+                    hero_state.max_health
+                );
                 hero_state.current_goal = new_goal;
                 hero_state.target_pos = None;
                 hero_state.target_room_id = None;
