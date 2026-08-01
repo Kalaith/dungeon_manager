@@ -536,3 +536,141 @@ pub fn create_kobold_sprite() -> RgbaImage {
 
     img
 }
+
+/// Hobgoblin — what a goblin becomes. The read has to be "same creature, but
+/// promoted": identical green, identical proportions, then armour plates, a
+/// crest and a real weapon on top. Making it a different silhouette would lose
+/// the connection the mutation is supposed to convey.
+pub fn create_hobgoblin_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+
+    let hide = Material::matte(96, 138, 74);
+    let dark_hide = Material::matte(70, 104, 56);
+    let plate = Material::metallic(112, 96, 72);
+    let crest = Material::matte(168, 52, 44);
+    let eye = Material::glowing(255, 190, 70);
+    let steel = Material::metallic(158, 160, 168);
+    let haft = Material::wood(102, 72, 42);
+
+    draw_shadow(&mut img, cx, 58.0, 12.0, 4.5);
+
+    for side in [-1.0f32, 1.0] {
+        draw_cylinder_3d(
+            &mut img,
+            &mut depth,
+            cx + side * 6.0,
+            44.0,
+            58.0,
+            5.0,
+            4.0,
+            &dark_hide,
+        );
+    }
+
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 38.0, 8.0, 10.0, 11.0, 9.0, &hide);
+    // Breastplate — the visible upgrade over a plain goblin
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 34.0, 15.0, 8.0, 7.0, 3.0, &plate);
+    draw_sphere_3d(&mut img, &mut depth, cx - 11.0, 28.0, 9.0, 5.5, &plate);
+    draw_sphere_3d(&mut img, &mut depth, cx + 11.0, 28.0, 9.0, 5.5, &plate);
+
+    draw_sphere_3d(&mut img, &mut depth, cx, 22.0, 11.0, 7.0, &hide);
+    draw_sphere_3d(&mut img, &mut depth, cx - 2.6, 22.0, 17.0, 1.4, &eye);
+    draw_sphere_3d(&mut img, &mut depth, cx + 2.6, 22.0, 17.0, 1.4, &eye);
+    // Officer's crest
+    draw_cone_3d(&mut img, &mut depth, cx, 10.0, 20.0, 10.0, 2.6, &crest);
+
+    // Spear held upright
+    draw_cylinder_3d(
+        &mut img,
+        &mut depth,
+        cx + 16.0,
+        16.0,
+        54.0,
+        12.0,
+        1.4,
+        &haft,
+    );
+    draw_cone_3d(
+        &mut img,
+        &mut depth,
+        cx + 16.0,
+        8.0,
+        18.0,
+        12.0,
+        2.2,
+        &steel,
+    );
+
+    img
+}
+
+/// Beastling — an unfinished animal that becomes something else depending on
+/// which rooms it grows up around. Drawn deliberately *unresolved*: a small
+/// lumpy quadruped with oversized feet and no strong features, so that turning
+/// into a hellhound or an ogre later reads as it finally settling on a shape.
+pub fn create_beastling_sprite() -> RgbaImage {
+    let mut img = RgbaImage::new(SPRITE_SIZE, SPRITE_SIZE);
+    let mut depth = DepthBuffer::new(SPRITE_SIZE, SPRITE_SIZE);
+    let cx = SPRITE_SIZE as f32 / 2.0;
+
+    let hide = Material::flesh(146, 122, 130);
+    let dark_hide = Material::flesh(112, 92, 100);
+    let eye = Material::glowing(190, 255, 170);
+
+    draw_shadow(&mut img, cx, 56.0, 13.0, 4.5);
+
+    // Oversized feet it has not grown into
+    for (dx, cz, r) in [
+        (-8.0f32, 4.0f32, 4.2f32),
+        (7.0, 4.0, 4.2),
+        (-5.0, 10.0, 3.6),
+    ] {
+        draw_sphere_3d(&mut img, &mut depth, cx + dx, 54.0, cz, r, &dark_hide);
+    }
+
+    // Lumpy, asymmetric body — nothing here has settled yet
+    draw_ellipsoid_3d(&mut img, &mut depth, cx, 42.0, 8.0, 11.0, 8.0, 9.0, &hide);
+    draw_sphere_3d(&mut img, &mut depth, cx - 6.0, 37.0, 11.0, 5.5, &hide);
+    draw_sphere_3d(&mut img, &mut depth, cx + 5.0, 39.0, 10.0, 4.5, &dark_hide);
+
+    // Head low and forward, half-formed
+    draw_ellipsoid_3d(
+        &mut img,
+        &mut depth,
+        cx + 2.0,
+        30.0,
+        12.0,
+        6.5,
+        5.0,
+        5.5,
+        &hide,
+    );
+    draw_sphere_3d(&mut img, &mut depth, cx - 1.0, 29.5, 17.0, 1.5, &eye);
+    draw_sphere_3d(&mut img, &mut depth, cx + 5.0, 30.5, 17.0, 1.1, &eye);
+
+    // Two nubs where horns have not decided to be horns
+    draw_cone_3d(
+        &mut img,
+        &mut depth,
+        cx - 2.0,
+        24.0,
+        29.0,
+        13.0,
+        1.8,
+        &dark_hide,
+    );
+    draw_cone_3d(
+        &mut img,
+        &mut depth,
+        cx + 6.0,
+        25.0,
+        30.0,
+        12.0,
+        1.5,
+        &dark_hide,
+    );
+
+    img
+}

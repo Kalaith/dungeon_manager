@@ -167,6 +167,8 @@ fn generate_monster_sprites() {
     // Basic creatures
     monsters::save_sprite("monsters", "imp", monsters::create_imp_sprite());
     monsters::save_sprite("monsters", "goblin", monsters::create_goblin_sprite());
+    monsters::save_sprite("monsters", "hobgoblin", monsters::create_hobgoblin_sprite());
+    monsters::save_sprite("monsters", "beastling", monsters::create_beastling_sprite());
     monsters::save_sprite("monsters", "orc", monsters::create_orc_sprite());
     monsters::save_sprite("monsters", "gnoll", monsters::create_gnoll_sprite());
     monsters::save_sprite("monsters", "kobold", monsters::create_kobold_sprite());

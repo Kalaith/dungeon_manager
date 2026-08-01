@@ -267,3 +267,68 @@ fn every_creature_trait_exists_in_traits_json() {
 
     assert_empty(problems, "creature traits that modify nothing");
 }
+
+#[test]
+fn every_mutation_target_exists() {
+    // The goblin declared a `hobgoblin` mutation for as long as this repo has
+    // existed, and no such creature was in the roster. Nothing noticed, because
+    // nothing read `mutations` at all — the reference and its consumer were
+    // missing together, which is the quietest version of this failure.
+    let creatures = ids("assets/data/monsters.json");
+    let mut problems = Vec::new();
+
+    for creature in load("assets/data/monsters.json") {
+        let id = creature["id"].as_str().expect("id");
+        let Some(mutations) = creature["progression"]["mutations"].as_array() else {
+            continue;
+        };
+        for mutation in mutations {
+            let target = mutation["id"].as_str().expect("mutation id");
+            if !creatures.contains(target) {
+                problems.push(format!(
+                    "creature `{id}` mutates into `{target}`, which is not in the roster"
+                ));
+            }
+        }
+    }
+
+    assert_empty(problems, "mutations that lead nowhere");
+}
+
+/// Condition keys the mutation engine understands. Anything else fails closed,
+/// which means the mutation silently never happens — so a typo here is a
+/// design intent that quietly evaporates.
+#[test]
+fn every_mutation_condition_key_is_understood() {
+    let mut problems = Vec::new();
+    let rooms = room_ids();
+
+    for creature in load("assets/data/monsters.json") {
+        let id = creature["id"].as_str().expect("id");
+        let Some(mutations) = creature["progression"]["mutations"].as_array() else {
+            continue;
+        };
+        for mutation in mutations {
+            let Some(conditions) = mutation["conditions"].as_object() else {
+                continue;
+            };
+            for key in conditions.keys() {
+                if key == "level_at_least" {
+                    continue;
+                }
+                match key.strip_suffix("_tiles") {
+                    Some(room) if rooms.contains(room) => {}
+                    Some(room) => problems.push(format!(
+                        "creature `{id}` gates a mutation on `{key}`, but `{room}` is not a room"
+                    )),
+                    None => problems.push(format!(
+                        "creature `{id}` gates a mutation on `{key}`, which the engine \
+                         does not understand (see engine/mutation.rs)"
+                    )),
+                }
+            }
+        }
+    }
+
+    assert_empty(problems, "mutation conditions that can never be satisfied");
+}

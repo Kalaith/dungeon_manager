@@ -60,9 +60,6 @@ const UNCONSUMED: &[&str] = &[
     // The parent of the three above: nothing reads the block at all. Surfaced
     // only once comments were stripped from the sweep.
     "TileData::special",
-    // Creature mutations are an undecided scope item; every monster ships
-    // `mutations: []`, so the condition vocabulary has never been exercised.
-    "MutationData::conditions",
     // Traps: magical door locking is unbuilt, and every trap is "pressure".
     "TrapEffects::lockable",
     "TrapEffects::trigger_type",

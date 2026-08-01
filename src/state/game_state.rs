@@ -523,6 +523,9 @@ impl GameState {
         // Must run before task execution reads command_bonus.
         crate::engine::command_aura::apply_command_auras(self, game_data);
 
+        // Creatures evolving once their authored conditions are met
+        crate::engine::mutation::apply_mutations(self, game_data);
+
         // Stone Wardens shoring up walls into rock heroes cannot tunnel
         crate::engine::wall_reinforcement::reinforce_walls(self, game_data, dt);
 

@@ -25,6 +25,7 @@ pub mod creature_needs;
 pub mod creature_task_logic;
 pub mod hero_digging;
 pub mod movement;
+pub mod mutation;
 pub mod objectives;
 pub mod prison_system;
 pub mod scenario_events;
