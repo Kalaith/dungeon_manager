@@ -19,7 +19,8 @@
     "pay_day_interval": 300.0,
     "initial_creature_spawn_delay": 10.0,
     "creature_spawn_min_interval": 15.0,
-    "creature_spawn_max_interval": 30.0
+    "creature_spawn_max_interval": 30.0,
+    "autosave_interval": 180.0
   },
   "hero_waves": {
     "initial_delay": 600.0,

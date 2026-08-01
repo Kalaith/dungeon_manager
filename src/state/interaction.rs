@@ -74,7 +74,15 @@ impl SlotBrowser {
         use crate::state::save_system::{most_recent_slot, peek_slot, save_exists, SaveSlot};
 
         let latest = most_recent_slot();
-        let entries = SaveSlot::all()
+        // Loading offers the autosave; saving does not list it, because the
+        // next autosave would take it back.
+        let slots: Vec<SaveSlot> = match purpose {
+            SlotBrowserPurpose::Load => SaveSlot::all_loadable().collect(),
+            SlotBrowserPurpose::Save => SaveSlot::all().collect(),
+        };
+
+        let entries = slots
+            .into_iter()
             .map(|slot| SlotBrowserEntry {
                 slot,
                 meta: peek_slot(slot),
@@ -88,6 +96,12 @@ impl SlotBrowser {
 
     /// Whether clicking this row should do anything.
     pub fn is_selectable(&self, entry: &SlotBrowserEntry) -> bool {
+        // The autosave is never a save target even if a row for it is somehow on
+        // screen — stated here rather than left to `open` not listing it, so the
+        // rule survives someone changing what `open` lists.
+        if entry.slot.is_auto() && !matches!(self.purpose, SlotBrowserPurpose::Load) {
+            return false;
+        }
         entry.occupied || self.purpose.allows_empty_slot()
     }
 }

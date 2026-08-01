@@ -63,6 +63,8 @@ pub struct TimingConfig {
     pub initial_creature_spawn_delay: f32,
     pub creature_spawn_min_interval: f32,
     pub creature_spawn_max_interval: f32,
+    /// Seconds of unpaused play between autosaves.
+    pub autosave_interval: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

@@ -2,59 +2,19 @@
 
 ## In scope
 
-Everything below this section is a backlog. **These three items are the committed
+Everything below this section is a backlog. **These items are the committed
 work**, and the target that binds them is one player finishing one mission
 start-to-finish without a developer sitting next to them. Each is scoped to the
 smallest version that clears that bar — not to the full item the backlog
 describes.
 
-### 1. Save slots
+**Save slots are done** — `SaveSlot` (three numbered plus an autosave) owns slot
+identity in `state/save_system.rs`, saves go to `{app_data}/dungeon_manager/`
+through the toolkit's slot API rather than to a relative path, one browser serves
+both save and load, and the autosave writes every 180s of unpaused play to a slot
+the player cannot be given. Captured at `docs/verification/ui_loadgame.png`.
 
-**The slot has one owner now.** `SaveSlot` is a newtype in `state/save_system.rs`,
-the session's choice lives on `GameState::active_slot`, and the eleven `"slot_1"`
-literals are gone. `SaveMeta` (mission, wave, in-game time, wall-clock stamp) is
-written beside the state and can be read *without* deserializing a dungeon, which
-is what a picker needs.
-
-**A worse bug was underneath it.** The native path wrote `save_slot_1.json` at a
-**relative** path — into whatever directory the process started in. Launched from
-a shortcut, from Explorer, or from a store client, the save went somewhere else or
-the directory was not writable at all. Saves now go through
-`macroquad_toolkit::persistence::slots`, which this project had never adopted
-despite the toolkit carrying it: `{app_data}/dungeon_manager/` on native, a
-game-qualified key in the browser. Old saves are read once from the old location
-and move forward on the next write.
-
-**The picker ships.** One browser serves both verbs — `SlotBrowserPurpose::{Save,
-Load}` over the same rows and the same geometry, because a "save over slot 2" and
-a "load slot 2" screen kept looking alike by hand is two screens that drift. It is
-a `GamePhase` from the main menu and an overlay on `GameState` in game, since
-leaving `Playing` to pick a slot would mean parking the running game somewhere.
-Rows are read **once on open**, never per frame. Captured at
-`docs/verification/ui_loadgame.png`.
-
-That capture also confirmed the relative-path bug was real and not theoretical:
-this machine had a 500KB `save_slot_1.json` from January sitting *in the repo
-directory*, and the browser found it and labelled it an earlier-version save.
-
-What remains:
-
-- **Autosave.** Reach for the toolkit's `persistence::AutoSaveManager` before
-  writing one; it is the same "already carried, never adopted" shape the slot API
-  turned out to be. Note that `SlotBrowser` is a snapshot — an autosave landing
-  while the browser is open will not appear until it is reopened, which is fine
-  for a modal but worth knowing before wiring an autosave indicator into it.
-- **Deleting a save** has no UI. `persistence::delete_slot` is already there, and
-  three slots with no way to clear one is a corner players do reach.
-
-Still out of scope: quicksave/quickload keys, and format versioning/migration —
-though the toolkit's `load_from_slot_with_migration` and `peek_slot_version` are
-sitting there for when that comes.
-
-Note that `TutorialState` is serialized into the save, so slot work and tutorial
-work touch the same format.
-
-### 2. Tutorial coverage
+### 1. Tutorial coverage
 
 `STEPS` in `engine/tutorial_system.rs` is six steps — dig, claim, Lair, Hatchery,
 Treasury, recruit — and stops there. A player who finishes it has never met
@@ -73,7 +33,7 @@ this project's data-driven rule. Roughly doubling its length is the wrong moment
 to keep it in Rust — move it to `assets/` first, then author. That also makes step
 text reachable by the localization item later.
 
-### 3. Wave 1
+### 2. Wave 1
 
 **Wave 1 now scales like every other wave.** It was the one wave with no dial on
 it — `HeroBase::new` seeded the countdown from `initial_delay` (600s) and nothing
@@ -174,7 +134,8 @@ competent player has standing by then. Notes for taking that measurement:
 ## UI & UX
 
 - Settings menu breadth: resolution and window modes, volume sliders, keybind remapping (keys are hardcoded in `engine/input.rs`), camera/scroll options, autosave toggle.
-- Save system, beyond the slots in scope above: quicksave/quickload, and save format versioning/migration.
+- Save system, beyond the shipped slots: quicksave/quickload, save format versioning/migration, and a way to **delete** a save (`persistence::delete_slot` is already there, and three slots with no way to clear one is a corner players reach).
+- The autosave interval is authored (`timing.autosave_interval`, 180s) but there is no toggle. `AutoSaveManager::set_enabled` is ready for one — it belongs with the settings-menu item above, not with the save system.
 - Tutorial, beyond the coverage in scope above: spells, prison/torture, the temple, contextual hints and an intro.
 - Hotkey overlay / help screen.
 - Localization: no i18n layer, all strings hardcoded English — externalize strings before it gets expensive.

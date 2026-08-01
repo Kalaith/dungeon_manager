@@ -73,6 +73,11 @@ pub struct Game {
     selected_spell: Option<String>,
     drag_selection: DragSelection,
     settings: state::settings::GameSettings,
+    /// Autosave cadence. Lives on `Game` rather than on `GameState` for two
+    /// reasons: the timer is a property of the session and has no business
+    /// inside a save file, and the manager's `update` takes a closure that
+    /// borrows the state it is saving — which it could not do from inside it.
+    autosave: macroquad_toolkit::persistence::AutoSaveManager,
 }
 
 impl Game {
@@ -91,6 +96,9 @@ impl Game {
             selected_spell: None,
             drag_selection: DragSelection::new(),
             settings: state::settings::GameSettings::load(),
+            // Re-created from config once game data loads; the interval is
+            // authored, not a constant.
+            autosave: macroquad_toolkit::persistence::AutoSaveManager::default(),
         }
     }
 
@@ -100,6 +108,9 @@ impl Game {
             match GameData::load_with_default_mod_order() {
                 Ok(data) => {
                     eprintln!("Successfully loaded game data!");
+                    self.autosave = macroquad_toolkit::persistence::AutoSaveManager::new(
+                        data.config.timing.autosave_interval,
+                    );
                     self.game_data = Some(data);
                 }
                 Err(e) => {
@@ -154,6 +165,41 @@ impl Game {
                     &mut self.interaction_mode,
                     &mut self.selected_spell,
                 );
+            }
+
+            Self::tick_autosave(&mut self.autosave, state, dt);
+        }
+    }
+
+    /// Advance the autosave timer and write if it has come due.
+    ///
+    /// Gated on the game actually running: a paused game, a finished one, or an
+    /// unread mission briefing all mean the player is not making progress worth
+    /// preserving, and a timer that ran while the pause menu sat open would
+    /// autosave the moment they walked back to the keyboard.
+    ///
+    /// Writes to [`SaveSlot::Auto`], never to the player's slot — an autosave
+    /// that overwrote the save someone deliberately made would be worse than no
+    /// autosave at all.
+    fn tick_autosave(
+        autosave: &mut macroquad_toolkit::persistence::AutoSaveManager,
+        state: &mut GameState,
+        dt: f32,
+    ) {
+        use crate::state::save_system::{save_game, should_autosave, SaveSlot};
+
+        let running = should_autosave(state);
+        let result = autosave.update(dt, running, || save_game(state, SaveSlot::Auto));
+
+        match result {
+            Ok(true) => state.notifications.info("Autosaved."),
+            Ok(false) => {}
+            Err(e) => {
+                // Same rule as every other swallowed failure in this project:
+                // the player is told, once, rather than it going to stderr.
+                state
+                    .player
+                    .warn_once("autosave_failed", format!("Autosave failed: {e}"));
             }
         }
     }

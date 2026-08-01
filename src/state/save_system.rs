@@ -28,42 +28,65 @@ const SAVE_FORMAT_VERSION: &str = "0.1.0";
 /// How many numbered slots the player gets.
 pub const SLOT_COUNT: u8 = 3;
 
-/// Which numbered slot a session reads and writes.
+/// Which slot a session reads and writes.
 ///
-/// A newtype rather than a `u8` so an out-of-range slot cannot be constructed
-/// and then quietly resolve to a filename nothing else knows about.
+/// An enum rather than a bare number because the autosave is a *kind* of slot,
+/// not a fourth numbered one: the whole point of it is that it cannot land on
+/// the save a player chose. Numbered slots stay validated at construction, so an
+/// out-of-range slot cannot resolve to a filename nothing else knows about.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct SaveSlot(u8);
+pub enum SaveSlot {
+    Numbered(u8),
+    /// Written by the timer, never by the player. Loadable like any other.
+    Auto,
+}
 
 impl Default for SaveSlot {
     fn default() -> Self {
-        Self(1)
+        Self::Numbered(1)
     }
 }
 
 impl SaveSlot {
     /// `None` outside `1..=SLOT_COUNT`.
     pub fn new(number: u8) -> Option<Self> {
-        (1..=SLOT_COUNT).contains(&number).then_some(Self(number))
+        (1..=SLOT_COUNT)
+            .contains(&number)
+            .then_some(Self::Numbered(number))
     }
 
-    pub fn number(self) -> u8 {
-        self.0
-    }
-
+    /// The numbered slots, in order. Excludes the autosave: this is the list a
+    /// player picks *into*, and the autosave is not a choice they make.
     pub fn all() -> impl Iterator<Item = Self> {
-        (1..=SLOT_COUNT).map(Self)
+        (1..=SLOT_COUNT).map(Self::Numbered)
+    }
+
+    /// Every slot that can hold a save, autosave included — what a *load* list
+    /// offers.
+    pub fn all_loadable() -> impl Iterator<Item = Self> {
+        Self::all().chain(std::iter::once(Self::Auto))
+    }
+
+    pub fn is_auto(self) -> bool {
+        matches!(self, Self::Auto)
     }
 
     /// The name the persistence layer files this slot under.
     fn key(self) -> String {
-        format!("slot_{}", self.0)
+        match self {
+            Self::Numbered(n) => format!("slot_{n}"),
+            // Matches the name the toolkit's own slot enumeration expects.
+            Self::Auto => "autosave".to_string(),
+        }
     }
 }
 
 impl std::fmt::Display for SaveSlot {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Slot {}", self.0)
+        match self {
+            Self::Numbered(n) => write!(f, "Slot {n}"),
+            Self::Auto => write!(f, "Autosave"),
+        }
     }
 }
 
@@ -150,6 +173,17 @@ pub fn load_game(slot: SaveSlot) -> Result<GameState, String> {
     Ok(state)
 }
 
+/// Whether the autosave timer should be running at all this frame.
+///
+/// A paused game, a finished one, and an unread mission briefing all mean the
+/// player is not making progress worth preserving. The pause case is the one
+/// that matters most: a timer that ran while the pause menu sat open would
+/// autosave the instant someone came back to the keyboard, which is exactly
+/// when they are least expecting their save to change.
+pub fn should_autosave(state: &GameState) -> bool {
+    !state.paused && !state.game_over && state.tutorial.intro_dismissed
+}
+
 /// Is there anything in this slot?
 ///
 /// Deliberately existence-only: the menus call this every frame while they are
@@ -159,9 +193,10 @@ pub fn save_exists(slot: SaveSlot) -> bool {
     slot_exists(GAME_NAME, &slot.key()) || legacy_exists(slot)
 }
 
-/// Any slot at all — what a "LOAD GAME" button needs to know.
+/// Any slot at all — what a "LOAD GAME" button needs to know. Counts the
+/// autosave: it is the slot most likely to be the only one a new player has.
 pub fn any_save_exists() -> bool {
-    SaveSlot::all().any(save_exists)
+    SaveSlot::all_loadable().any(save_exists)
 }
 
 /// Describe a slot for a picker. `None` if empty, or if it is a legacy save
@@ -177,7 +212,9 @@ pub fn peek_slot(slot: SaveSlot) -> Option<SaveMeta> {
 ///
 /// Parses every occupied slot, so call it from a click and not from a draw.
 pub fn most_recent_slot() -> Option<SaveSlot> {
-    let occupied: Vec<SaveSlot> = SaveSlot::all().filter(|slot| save_exists(*slot)).collect();
+    let occupied: Vec<SaveSlot> = SaveSlot::all_loadable()
+        .filter(|slot| save_exists(*slot))
+        .collect();
     occupied
         .iter()
         .filter_map(|slot| peek_slot(*slot).map(|meta| (*slot, meta.saved_at)))
@@ -284,9 +321,34 @@ mod tests {
         assert!(SaveSlot::new(0).is_none());
         assert!(SaveSlot::new(SLOT_COUNT + 1).is_none());
         assert_eq!(SaveSlot::all().count(), SLOT_COUNT as usize);
-        for slot in SaveSlot::all() {
-            assert!(SaveSlot::new(slot.number()).is_some());
+        for number in 1..=SLOT_COUNT {
+            assert_eq!(SaveSlot::new(number), Some(SaveSlot::Numbered(number)));
         }
+    }
+
+    /// The autosave is a slot the player never picks into, so it is absent from
+    /// `all()` and present in `all_loadable()`. Getting this backwards would
+    /// either hide autosaves from the load list or let a manual save land in the
+    /// slot the timer is about to overwrite.
+    #[test]
+    fn the_autosave_can_be_loaded_but_not_chosen() {
+        assert!(!SaveSlot::all().any(|slot| slot.is_auto()));
+        assert!(SaveSlot::all_loadable().any(|slot| slot.is_auto()));
+        assert_eq!(
+            SaveSlot::all_loadable().count(),
+            SLOT_COUNT as usize + 1,
+            "loadable is the numbered slots plus the autosave"
+        );
+    }
+
+    /// The autosave must not collide with any numbered slot's file.
+    #[test]
+    fn the_autosave_has_its_own_file() {
+        let numbered: Vec<String> = SaveSlot::all().map(|slot| slot.key()).collect();
+        assert!(
+            !numbered.contains(&SaveSlot::Auto.key()),
+            "autosave shares a file with a numbered slot: {numbered:?}"
+        );
     }
 
     /// Each slot must file under its own name. The whole point of the change is
@@ -333,6 +395,27 @@ mod tests {
             "saved_at should be a real clock reading, got {}",
             peeked.meta.saved_at
         );
+    }
+
+    /// The autosave must not fire while the game is not running. Each clause is
+    /// checked on its own so a future edit cannot drop one silently.
+    #[test]
+    fn the_autosave_timer_only_runs_while_the_game_does() {
+        let game_data = GameData::load().expect("game data should load");
+        let mut state = GameState::new_for_scenario(&game_data, "the_iron_siege");
+        state.tutorial.intro_dismissed = true;
+        assert!(should_autosave(&state), "a running game should autosave");
+
+        state.paused = true;
+        assert!(!should_autosave(&state), "paused");
+        state.paused = false;
+
+        state.game_over = true;
+        assert!(!should_autosave(&state), "game over");
+        state.game_over = false;
+
+        state.tutorial.intro_dismissed = false;
+        assert!(!should_autosave(&state), "briefing unread");
     }
 
     /// A save the old build wrote has no `meta`. It must still load — that is
